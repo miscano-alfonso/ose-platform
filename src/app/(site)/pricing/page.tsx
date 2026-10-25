@@ -16,6 +16,7 @@ export default async function Pricing() {
         <tbody>{rows.map((r) => <tr key={r.level + r.years + r.per}>
           <td><b>{r.level}</b></td><td>{r.years} year{r.years > 1 ? "s" : ""}</td><td>{r.lessons}</td><td>{r.per}</td><td><b>{r.total}</b></td></tr>)}</tbody>
       </table></div>
+      <div className="more" style={{ margin: "18px 0" }}><Link className="btn btn-brand" href="/calculator">Price calculator</Link></div>
       <p className="ttnote"><Link href="/faq#can-we-cancel">Cancellation policy</Link> · <Link href="/term-dates">When payments are taken</Link></p>
     </div></section>
     <KS3Bundles ks3Pence={ks3Pence} bundles={bundles}>

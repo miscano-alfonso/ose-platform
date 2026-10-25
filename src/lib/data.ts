@@ -136,3 +136,38 @@ export async function saveEnquiry(e: { name: string; email: string; levels: stri
   await withSchool((q) => q(`insert into enquiries (school_id, kind, name, email, levels, heard_about, message)
     values (current_school(), 'contact', $1, $2, $3, $4, $5)`, [e.name, e.email, e.levels, e.heard, e.message]));
 }
+
+/** Price calculator: every subject and level on sale, priced from the price plans (2-year courses as the whole course). */
+export type CalcOption = { level: string; label: string; total_pence: number; terms: number; fee_pence: number };
+export type CalcSubject = { subject: string; options: CalcOption[] };
+export type CalcYear = { label: string; start: string; subjects: CalcSubject[]; bundles: { min_courses: number; percent_off: number }[] };
+export async function getCalculator(): Promise<CalcYear[]> {
+  return withSchool(async (q) => {
+    const years = await q<{ id: string; label: string; start: string }>(`select id, label, to_char(starts_on, 'YYYY-MM-DD') as start from website_years order by starts_on`);
+    const out: CalcYear[] = [];
+    for (const y of years) {
+      const rows = await q<{ subject: string; level: string; years: number; total_pence: number; terms: number; fee_pence: number }>(`
+        select distinct on (sj.name, l.sort_order) sj.name as subject, l.name as level, pp.course_years as years,
+          (select sum(p2.total_pence)::int from price_plans p2 where p2.academic_year_id = pp.academic_year_id and p2.level_id = pp.level_id
+             and p2.course_years = pp.course_years and (pp.course_years > 1 or p2.id = pp.id)) as total_pence,
+          (select sum(p2.term_count)::int from price_plans p2 where p2.academic_year_id = pp.academic_year_id and p2.level_id = pp.level_id
+             and p2.course_years = pp.course_years and (pp.course_years > 1 or p2.id = pp.id)) as terms,
+          pp.registration_fee_pence as fee_pence
+        from course_groups g join subjects sj on sj.id = g.subject_id join levels l on l.id = g.level_id join price_plans pp on pp.id = g.price_plan_id
+        where g.academic_year_id = $1 and g.status not in ('hidden', 'closed') and g.continues_group_id is null
+        order by sj.name, l.sort_order, pp.total_pence`, [y.id]);
+      const subjects = new Map<string, CalcOption[]>();
+      for (const r of rows) {
+        const label = /gcse/i.test(r.level) && !/^pre/i.test(r.level) || /a-level/i.test(r.level) ? `${r.level} (${r.years} year${r.years > 1 ? "s" : ""})` : r.level;
+        (subjects.get(r.subject) ?? subjects.set(r.subject, []).get(r.subject)!).push({ level: r.level, label, total_pence: r.total_pence, terms: r.terms, fee_pence: r.fee_pence });
+      }
+      const order = ["English Language", "English Literature", "Maths", "Science", "Geography", "History", "Business Studies", "Biology", "Chemistry", "Physics"];
+      const list = [...subjects.entries()].map(([subject, options]) => ({ subject, options }))
+        .sort((a, b) => (order.indexOf(a.subject) + 1 || 99) - (order.indexOf(b.subject) + 1 || 99) || a.subject.localeCompare(b.subject));
+      const bundles = (await q<{ min_courses: number; percent_off: string }>(`select min_courses, percent_off::text from bundle_discounts where academic_year_id = $1 and level_id is null order by min_courses`, [y.id]))
+        .map((b) => ({ min_courses: b.min_courses, percent_off: Number(b.percent_off) }));
+      if (list.length) out.push({ label: y.label, start: y.start, subjects: list, bundles });
+    }
+    return out;
+  });
+}

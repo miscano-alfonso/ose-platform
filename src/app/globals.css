@@ -268,3 +268,26 @@ html,body{overflow-x:clip}
 .bundle .ln{font-size:clamp(20px,2vw,24px);gap:26px}
 .bundle .tot{font-size:clamp(32px,3.2vw,40px)}
 .bundle .tot s{font-size:clamp(22px,2.2vw,26px)}
+/* price calculator */
+.calc-intro{font-size:18px;margin:0 0 10px}
+.calc-tiers{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px}
+.calc-tiers span{background:var(--burst);color:#fff;font-weight:600;border-radius:999px;padding:6px 14px;font-size:15px}
+.calc-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(280px,1fr);gap:clamp(20px,4vw,48px);align-items:start}
+.calc-subjects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}
+.calc-field{display:grid;gap:6px;font-weight:600}
+.calc-field select{font:inherit;font-weight:400;padding:12px 14px;border:1px solid var(--line);border-radius:10px;background:#fff;color:var(--ink)}
+.calc-sum{background:var(--navy);color:#fff;border-radius:18px;padding:24px;position:sticky;top:120px}
+.calc-sum h2{margin:0 0 12px;font-size:24px}
+.calc-lines,.calc-inst{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px;font-size:15px}
+.calc-lines li{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dashed rgba(255,255,255,.2);padding-bottom:6px}
+.calc-sum dl{margin:0;display:grid;gap:8px}
+.calc-sum dl div{display:flex;justify-content:space-between;gap:10px;font-size:18px}
+.calc-sum dd{margin:0;color:var(--accent);font-variant-numeric:tabular-nums}
+.calc-total{border-top:1px solid rgba(255,255,255,.45);padding-top:10px;font-size:26px!important;font-weight:600}
+.calc-inst{margin-top:12px;opacity:.9}
+.calc-notes{font-size:13.5px;opacity:.8;margin:12px 0 0}
+.calc .yrtabs{margin-bottom:18px}
+.calc .yrtabs button{font:inherit;cursor:pointer}
+@media (max-width:860px){.calc-grid{grid-template-columns:1fr}.calc-sum{position:static}}
+@media (max-width:520px){.calc-subjects{grid-template-columns:1fr}}
+.calc .yrtabs button{display:grid;gap:2px;padding:10px 16px;border-radius:14px;border:1.5px solid #dfe2ef;background:#fff;color:var(--ink);min-width:200px;text-align:left}.calc .yrtabs button b{font-size:18px}.calc .yrtabs button span{font-size:13px;color:var(--muted)}.calc .yrtabs button.on{border-color:var(--brand);background:var(--brand);color:#fff}.calc .yrtabs button.on span{color:inherit}
