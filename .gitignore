@@ -7,3 +7,4 @@ _archive/
 .build-cache/
 *.log
 .DS_Store
+*.tsbuildinfo

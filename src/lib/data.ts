@@ -1,5 +1,6 @@
 import "server-only";
 import { withSchool } from "./db";
+import { money } from "./format";
 
 export type Course = {
   code: string; status: string; capacity: number | null; places_left: number | null;
@@ -74,4 +75,45 @@ export async function getBundles(): Promise<{ ks3Pence: number; bundles: Bundle[
       where not w.is_next and bd.level_id is null order by bd.min_courses`);
     return { ks3Pence: p[0]?.total_pence ?? 0, bundles: b };
   });
+}
+
+export type PriceRow = { level: string; years: number; lessons: string; per: string; total: string };
+export type Workshop = { title: string; slug: string; starts_at: string; minutes: number; price_pence: number; enrolled_price_pence: number | null;
+  summary: string | null; level: string | null; subject: string | null; teacher: string | null; places_left: number | null };
+
+/** The price table: one row per level and course length, from this year's price plans. */
+export async function getPriceRows(): Promise<PriceRow[]> {
+  const plans = await withSchool((q) => q<{ level: string; level_order: number; course_years: number; lessons_per_week: number; lessons: number; cost: number; total: number }>(`
+    select l.name as level, l.sort_order as level_order, pp.course_years, pp.lessons_per_week,
+           sum(pp.lessons)::int as lessons, min(pp.cost_per_lesson_pence)::int as cost, sum(pp.total_pence)::int as total
+    from price_plans pp join levels l on l.id = pp.level_id join website_years w on w.id = pp.academic_year_id
+    where not w.is_next
+    group by l.name, l.sort_order, pp.course_years, pp.lessons_per_week
+    order by l.sort_order, pp.course_years, pp.lessons_per_week`));
+  const rows: PriceRow[] = [];
+  for (const p of plans) {
+    // same level, same length, same price per lesson (e.g. Pre-GCSE 1 or 2 lessons a week) share a row: "34 / 68"
+    const r = rows.find((x) => x.level === p.level && x.years === p.course_years && x.per === money(p.cost));
+    if (r) { r.lessons += ` / ${p.lessons}`; r.total += ` / ${money(p.total)}`; }
+    else rows.push({ level: p.level, years: p.course_years, lessons: String(p.lessons), per: money(p.cost), total: money(p.total) });
+  }
+  return rows;
+}
+
+/** Published workshops that haven't happened yet. */
+export async function getWorkshops(): Promise<Workshop[]> {
+  return withSchool((q) => q<Workshop>(`
+    select w.title, w.slug, w.starts_at::text, w.minutes, w.price_pence, w.enrolled_price_pence, w.summary,
+           l.name as level, sj.name as subject, u.name as teacher,
+           case when w.capacity is null then null else greatest(w.capacity - (select count(*) from workshop_bookings b where b.workshop_id = w.id and b.status <> 'cancelled'), 0)::int end as places_left
+    from workshops w left join levels l on l.id = w.level_id left join subjects sj on sj.id = w.subject_id
+    left join teachers t on t.id = w.teacher_id left join users u on u.id = t.user_id
+    where w.status = 'published' and w.starts_at > now()
+    order by w.starts_at`));
+}
+
+/** Saves a contact-form message for the office to answer. */
+export async function saveEnquiry(e: { name: string; email: string; levels: string[]; heard: string | null; message: string | null }) {
+  await withSchool((q) => q(`insert into enquiries (school_id, kind, name, email, levels, heard_about, message)
+    values (current_school(), 'contact', $1, $2, $3, $4, $5)`, [e.name, e.email, e.levels, e.heard, e.message]));
 }

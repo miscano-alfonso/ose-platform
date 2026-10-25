@@ -8,7 +8,12 @@ export const metadata: Metadata = {
   robots: process.env.SITE_PASSWORD ? { index: false, follow: false } : undefined,
 };
 
-const NAV = [["Courses", "/courses"], ["Timetable", "/timetable"], ["Term dates", "/term-dates"], ["Teachers", "/teachers"]];
+// same order as the current website's menu
+const NAV = [["Courses", "/courses"], ["Other services", "/other-services"], ["Term dates", "/term-dates"], ["Teachers", "/teachers"],
+  ["Prices", "/pricing"], ["Timetable", "/timetable"], ["FAQs", "/faq"], ["Contact", "/contact"]];
+
+const Cart = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6h15l-1.5 9h-12z" /><path d="M6 6 5 3H2" /><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /></svg>;
+const Person = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -21,8 +26,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         <a className="skip" href="#main">Skip to content</a>
         <header className="s-nav"><div className="wrap">
-          <Link href="/" className="s-logo">OH-SO ED</Link>
+          <Link href="/" className="s-logo"><img src="/ose-logo.png" alt="OH-SO ED Online School" width={773} height={224} /></Link>
           <nav className="s-links" aria-label="Main">{NAV.map(([t, h]) => <Link key={h} href={h}>{t}</Link>)}</nav>
+          <div className="s-icons"><Link href="/cart" className="s-ico" aria-label="Basket"><Cart /></Link><Link href="/account" className="s-ico" aria-label="My account"><Person /></Link></div>
         </div></header>
         <main id="main">{children}</main>
         <footer className="s-foot"><div className="wrap fgrid">

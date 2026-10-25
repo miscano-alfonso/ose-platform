@@ -11,7 +11,7 @@ p{margin:0}
 
 .s-nav{background:var(--brand);color:var(--on-brand)}
 .s-nav .wrap{display:flex;align-items:center;gap:18px;min-height:64px;flex-wrap:wrap;padding-block:10px}
-.s-logo{font-size:22px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;text-decoration:none;white-space:nowrap}
+.s-logo{display:block;line-height:0;flex:none}.s-logo img{height:44px;width:auto;display:block}
 .s-links{display:flex;flex-wrap:wrap;gap:4px 18px;margin-left:auto;font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .s-links a{text-decoration:none;padding:4px 0;border-bottom:2px solid transparent}.s-links a:hover{border-bottom-color:var(--accent)}
 
@@ -103,4 +103,33 @@ p{margin:0}
 .login{max-width:420px;margin:0 auto;display:grid;gap:14px}.login label{display:grid;gap:6px;font-weight:600;font-size:14px}
 .login input{font:inherit;padding:12px 14px;border:1.5px solid var(--line);border-radius:10px}.login .note{color:var(--muted);font-size:14px}
 
-@media (max-width:760px){.term{grid-template-columns:1fr 1fr}.s-links{margin-left:0}}
+@media (max-width:760px){.term{grid-template-columns:1fr 1fr}.s-links{margin-left:0;order:3;width:100%}.s-icons{order:2;margin-left:auto}}
+
+.s-icons{display:flex;gap:8px}
+.s-ico{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--accent);color:var(--navy)}
+.s-ico:hover{filter:brightness(1.06)}
+.faq{max-width:820px;display:grid;gap:12px}
+.faq details{border:1.5px solid var(--line);border-radius:14px;background:#fff}
+.faq summary{cursor:pointer;padding:16px 20px;font-size:18px;font-weight:500;list-style:none;display:flex;justify-content:space-between;gap:16px}
+.faq summary::-webkit-details-marker{display:none}
+.faq summary::after{content:"+";font-size:24px;line-height:1;color:var(--brand)}.faq details[open] summary::after{content:"–"}
+.faq .ans{padding:0 20px 18px;display:grid;gap:10px;color:var(--muted)}.faq .ans ul{margin:0;padding-left:20px}
+.faq details:target{border-color:var(--brand)}
+.ttnote a{font-weight:600}
+.svc{display:grid;grid-template-columns:1fr auto;gap:24px;align-items:center;border:1px solid var(--line);border-radius:18px;padding:26px;box-shadow:0 6px 24px rgba(15,23,71,.08);max-width:860px;margin:0 auto}
+.svc h3{font-size:22px;margin-bottom:8px}.svc p{color:var(--muted)}
+.svc-buy{display:grid;gap:4px;justify-items:start}.svc-buy .price{font-size:30px;font-weight:600}.svc-buy small{color:var(--muted);margin-bottom:8px}
+.course .dur{font-size:14px;font-weight:400;color:var(--muted)}
+.empty{text-align:center;color:var(--muted)}
+.cform{max-width:680px;margin:0 auto;display:grid;gap:18px}
+.cform label{display:grid;gap:6px;font-weight:600;font-size:14px}
+.cform input,.cform select,.cform textarea{font:inherit;font-weight:400;padding:12px 14px;border:1.5px solid #d5d9ea;border-radius:10px;background:#fff;color:var(--ink)}
+.cform .row2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:18px}
+.cform fieldset{border:0;padding:0;margin:0}.cform legend{font-weight:600;font-size:14px;margin-bottom:8px}
+.cform .checks{display:flex;flex-wrap:wrap;gap:10px 22px}.cform .checks label{display:flex;align-items:center;gap:8px;font-weight:400;font-size:16px}
+.cform .checks input{width:18px;height:18px;padding:0}
+.cform .note{color:var(--muted);font-size:14px}.cform .btn{justify-self:start}
+.hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.notice{max-width:680px;margin:0 auto;border:1.5px solid var(--line);border-radius:14px;padding:24px;display:grid;gap:10px}
+.notice h2{font-size:26px}.notice.ok{border-color:#2f9d6c}.notice.err{border-color:var(--burst);color:#9b1c1c;padding:12px 16px}
+@media (max-width:760px){.svc{grid-template-columns:1fr}}
