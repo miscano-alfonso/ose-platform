@@ -10,6 +10,8 @@ import { setTutorRate, addAvailability, removeAvailability, bookTutoring, setTut
 import { addTeacher, saveTeacher, setTeacherArchived } from "@/lib/teachers-admin";
 import { saveWorkshop } from "@/lib/workshops-admin";
 import { audiences, recipients, sendBatch, logCampaign } from "@/lib/email";
+import { replyThread, setThreadStatus, startThread, setHidden, dismissReport, officePost, setWords, setPrizes, confirmWinners, markWinner, givePoints } from "@/lib/community";
+import { saveSiteText, saveFaq, deleteFaq, DEFAULTS } from "@/lib/site-content";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
 import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite } from "@/lib/auth";
@@ -444,4 +446,94 @@ export async function sendTestEmailAction(f: FormData): Promise<void> {
   const subject = str(f, "subject", 200) || "(no subject)", body = String(f.get("body") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 20000) || "(empty message)";
   const r = await sendBatch(`[Test] ${subject}`, body, [{ name: me.name, email: me.email }], kind === "marketing");
   redirect(`${page}?${r.sent ? "ok=" + encodeURIComponent(`Test sent to ${me.email}.`) : "err=" + encodeURIComponent(r.error ?? "The test didn’t send.")}`);
+}
+
+// ---------- messages ----------
+export async function replyThreadAction(f: FormData): Promise<void> {
+  const me = await requireSignedIn();
+  const id = str(f, "id", 40), body = String(f.get("body") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
+  const err = body ? await replyThread(me, id, body, false) : "Write a message first.";
+  revalidatePath("/admin/messages");
+  redirect(`/admin/messages/${id}${err ? "?err=" + encodeURIComponent(err) : ""}`);
+}
+export async function setThreadStatusAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40);
+  await setThreadStatus(me.id, id, str(f, "status", 6) === "closed" ? "closed" : "open");
+  revalidatePath("/admin/messages"); redirect(`/admin/messages/${id}`);
+}
+export async function startThreadAction(f: FormData): Promise<void> {
+  const me = await requireSignedIn();
+  const subject = str(f, "subject", 120), body = String(f.get("body") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
+  if (!subject || !body) redirect(`/admin/messages/new?err=${encodeURIComponent("Add a subject and a message.")}`);
+  const r = await startThread(me.id, str(f, "student", 40), subject, body);
+  redirect(r.id ? `/admin/messages/${r.id}` : `/admin/messages/new?err=${encodeURIComponent(r.error!)}`);
+}
+
+// ---------- student chat ----------
+export async function hideChatMessageAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  await setHidden(me.id, str(f, "id", 40), str(f, "hide", 1) === "1");
+  revalidatePath("/admin/student-chat"); redirect(`/admin/student-chat?chat=${str(f, "chat", 40)}`);
+}
+export async function dismissReportAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  await dismissReport(me.id, str(f, "id", 40)); revalidatePath("/admin/student-chat");
+}
+export async function officePostAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const chat = str(f, "chat", 40), err = await officePost(me.id, chat, str(f, "body", 1000));
+  revalidatePath("/admin/student-chat"); redirect(`/admin/student-chat?chat=${chat}${err ? "&err=" + encodeURIComponent(err) : ""}`);
+}
+export async function setWordsAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const words = [...new Set(String(f.get("words") ?? "").split(/\r?\n/).map((w) => w.trim().toLowerCase()).filter(Boolean).map((w) => w.slice(0, 40)))].slice(0, 500);
+  await setWords(me.id, words); revalidatePath("/admin/student-chat");
+  redirect(`/admin/student-chat?ok=${encodeURIComponent(`${words.length} blocked words saved.`)}`);
+}
+
+// ---------- rewards ----------
+export async function setPrizesAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  await setPrizes(me.id, [str(f, "p1", 120), str(f, "p2", 120), str(f, "p3", 120)]);
+  revalidatePath("/admin/rewards"); redirect(`/admin/rewards?ok=${encodeURIComponent("Prizes saved.")}`);
+}
+export async function confirmWinnersAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const term = str(f, "term", 40), err = await confirmWinners(me.id, term);
+  revalidatePath("/admin/rewards"); redirect(`/admin/rewards?term=${term}&${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Winners confirmed.")}`);
+}
+export async function markWinnerAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const field = str(f, "field", 20);
+  if (field !== "parent_emailed_at" && field !== "gift_sent_at") return;
+  await markWinner(me.id, str(f, "id", 40), field); revalidatePath("/admin/rewards");
+}
+export async function givePointsAction(f: FormData): Promise<void> {
+  const me = await requireSignedIn();
+  const pts = parseInt(str(f, "points", 2), 10), reason = str(f, "reason", 80);
+  const err = !(pts >= 1 && pts <= 10) || !reason ? "Choose 1–10 points and give a reason." : await givePoints(me, str(f, "group", 40), str(f, "student", 40), pts, reason);
+  revalidatePath("/admin/rewards"); revalidatePath("/admin/points");
+  redirect(`/admin/points?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(`+${pts} given.`)}`);
+}
+
+// ---------- website text ----------
+export async function saveSiteTextAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const vals: Record<string, string> = {};
+  for (const k of Object.keys(DEFAULTS)) vals[k] = String(f.get(k) ?? "").replace(/\r\n/g, "\n").slice(0, 1000);
+  await saveSiteText(me.id, vals);
+  revalidatePath("/", "layout"); redirect(`/admin/website?ok=${encodeURIComponent("Saved. The website shows the new text now.")}`);
+}
+export async function saveFaqAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40) || null, question = str(f, "question", 300), answer = String(f.get("answer") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
+  if (!question || !answer) redirect("/admin/website");
+  await saveFaq(me.id, id, { question, answer, sort: parseInt(str(f, "sort", 6), 10) || 0, published: f.get("published") === "on" });
+  revalidatePath("/faq"); revalidatePath("/admin/website"); redirect(`/admin/website?ok=${encodeURIComponent(id ? "Question saved." : "Question added.")}`);
+}
+export async function deleteFaqAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  await deleteFaq(me.id, str(f, "id", 40));
+  revalidatePath("/faq"); revalidatePath("/admin/website"); redirect(`/admin/website?ok=${encodeURIComponent("Question deleted.")}`);
 }

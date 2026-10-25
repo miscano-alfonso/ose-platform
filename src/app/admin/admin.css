@@ -101,3 +101,5 @@
 .adm .mini{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 8px;font:inherit;font-size:15px}
 .adm .avatar{display:inline-grid;place-items:center;width:44px;height:44px;border-radius:50%;background:var(--brand-accent);color:#0f1747;font-weight:600}
 .adm .acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.adm .b-office{border-left:4px solid var(--brand-accent)}.adm .b-teacher{border-left:4px solid var(--info)}.adm .b-parent{border-left:4px solid var(--good)}
+@media (max-width:820px){.adm .chatcols{grid-template-columns:1fr!important}}

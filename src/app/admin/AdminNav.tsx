@@ -8,7 +8,7 @@ const ITEMS: [string, string | null][] = [
   ["Dashboard", "/admin"], ["Classes", "/admin/classes"], ["Teachers", "/admin/teachers"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"], ["Timetable", "/admin/timetable"],
   ["Families", "/admin/families"], ["Attendance", "/admin/attendance"], ["Reports", "/admin/reports"], ["Payments", "/admin/payments"], ["Payroll", "/admin/payroll"],
   ["Prices & discounts", "/admin/prices"], ["Term dates", "/admin/term-dates"], ["Tasters", "/admin/tasters"], ["Waiting list & enquiries", "/admin/enquiries"],
-  ["Messages", null], ["Student chat", null], ["Rewards", null], ["Email", "/admin/email"], ["Marketing", "/admin/marketing"], ["Website", null], ["Staff & access", "/admin/staff"], ["Settings", "/admin/account"],
+  ["Messages", "/admin/messages"], ["Student chat", "/admin/student-chat"], ["Rewards", "/admin/rewards"], ["Email", "/admin/email"], ["Marketing", "/admin/marketing"], ["Website", "/admin/website"], ["Staff & access", "/admin/staff"], ["Settings", "/admin/account"],
 ];
 
 export function AdminNav({ counts }: { counts: Record<string, number> }) {

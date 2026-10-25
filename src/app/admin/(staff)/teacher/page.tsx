@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireSignedIn } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
 import { teacherReportClasses } from "@/lib/reports";
+import { listThreads } from "@/lib/community";
 
 export const dynamic = "force-dynamic";
 
@@ -23,13 +24,14 @@ export default async function TeacherHome() {
         or e.lesson_date between current_date and current_date + 7)
       order by e.lesson_date, s.starts_at`, [me.id]),
   ]);
-  const reports = await teacherReportClasses(me.id);
+  const [reports, threads] = await Promise.all([teacherReportClasses(me.id), listThreads(me.id, "open")]);
   const today = new Date().toISOString().slice(0, 10);
   const todo = lessons.filter((l) => l.d <= today && l.status === "scheduled"), soon = lessons.filter((l) => l.d > today || (l.d === today && l.status !== "scheduled"));
   const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
   return <>
     <div className="top"><div><h1>Hello, {me.name.split(" ")[0]}</h1><div className="sub">Your lessons and registers</div></div>
-      <span className="grow" />{me.role === "school_admin" && <Link className="abtn sm" href="/admin">Go to the admin</Link>}</div>
+      <span className="grow" /><Link className="abtn sm" href="/admin/points">Give reward points</Link><Link className="abtn sm" href="/admin/messages/new">Write to a family</Link>
+      {me.role === "school_admin" && <Link className="abtn sm" href="/admin">Go to the admin</Link>}</div>
     <section className="card"><h2>Registers to take</h2>
       {todo.length === 0 ? <p className="empty">All registers are up to date.</p> : todo.map((l) => <div className="li" key={l.id}>
         <div className="t"><b>{l.name} <span className="muted" style={{ fontWeight: 400 }}>{l.code}</span></b><span>{day(l.d)} · {l.time}</span></div>
@@ -38,6 +40,9 @@ export default async function TeacherHome() {
       {reports.map((r) => <div className="li" key={r.cycle_id + r.group_id}>
         <div className="t"><b>{r.name} <span className="muted" style={{ fontWeight: 400 }}>{r.code}</span></b><span>{r.cycle} · {r.done}/{r.total} done · due {day(r.comments_due)}</span></div>
         <Link className={`abtn sm${r.done < r.total ? " pri" : ""}`} href={`/admin/write/${r.cycle_id}/${r.group_id}`}>{r.done < r.total ? "Write" : "View"}</Link></div>)}</section>}
+    {threads.length > 0 && <section className="card"><h2>Messages</h2>
+      {threads.map((t) => <div className="li" key={t.id}><div className="t"><b>{t.subject}</b><span>{t.parent} · about {t.student}{t.last_sender === "parent" ? " · waiting for your reply" : ""}</span></div>
+        <Link className={`abtn sm${t.last_sender === "parent" ? " pri" : ""}`} href={`/admin/messages/${t.id}`}>Open</Link></div>)}</section>}
     <section className="card"><h2>Coming up this week</h2>
       {soon.length === 0 ? <p className="empty">No lessons in the next 7 days.</p> : soon.map((l) => <div className="li" key={l.id}>
         <div className="t"><b>{l.name} <span className="muted" style={{ fontWeight: 400 }}>{l.code}</span></b><span>{day(l.d)} · {l.time}</span></div>

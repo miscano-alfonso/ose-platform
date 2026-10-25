@@ -1,14 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getTeachers } from "@/lib/data";
+import { siteText } from "@/lib/site-content";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Teachers", description: "Meet the OH-SO ED teachers: experienced secondary subject specialists teaching live online lessons." };
 
 export default async function Teachers() {
-  const ts = await getTeachers();
+  const [ts, txt] = await Promise.all([getTeachers(), siteText()]);
   return (<>
-    <section className="s-phead"><div className="wrap"><h1>Our Teachers</h1><p>Experienced secondary subject specialists, all with up-to-date DBS certificates.</p></div></section>
+    <section className="s-phead"><div className="wrap"><h1>Our Teachers</h1><p>{txt.teachers_intro}</p></div></section>
     <section className="s-sec"><div className="wrap"><div className="tgrid">{ts.map((t) =>
       <Link className="tcard tlink" key={t.slug} href={`/teachers/${t.slug}`}>
         {t.photo

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FAQS } from "@/content/faq";
+import { getFaqs } from "@/lib/site-content";
+
+export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = { title: "FAQs", description: "Answers to the questions parents ask most: courses, subjects, joining mid-term, cancelling, lessons, class sizes, teachers, exams and SEND." };
 
@@ -18,11 +20,12 @@ function Answer({ text }: { text: string }) {
   return <>{out}</>;
 }
 
-export default function Faq() {
+export default async function Faq() {
+  const faqs = await getFaqs();
   return (<>
     <section className="s-phead"><div className="wrap"><h1>FAQs</h1><p>If your question isn’t answered here, please <Link href="/contact">get in touch</Link>.</p></div></section>
     <section className="s-sec"><div className="wrap faq">
-      {FAQS.map((f) => <details key={f.q} id={slug(f.q)}><summary>{f.q}</summary><div className="ans"><Answer text={f.a} /></div></details>)}
+      {faqs.map((f) => <details key={f.id} id={slug(f.question)}><summary>{f.question}</summary><div className="ans"><Answer text={f.answer} /></div></details>)}
     </div></section>
   </>);
 }
