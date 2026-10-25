@@ -11,7 +11,7 @@ import { addTeacher, saveTeacher, setTeacherArchived } from "@/lib/teachers-admi
 import { saveWorkshop } from "@/lib/workshops-admin";
 import { audiences, recipients, sendBatch, logCampaign } from "@/lib/email";
 import { replyThread, setThreadStatus, startThread, setHidden, dismissReport, officePost, setWords, setPrizes, confirmWinners, markWinner, givePoints } from "@/lib/community";
-import { saveSiteText, saveFaq, deleteFaq, DEFAULTS } from "@/lib/site-content";
+import { saveSiteText, saveFaq, deleteFaq, DEFAULTS, saveCoursePage } from "@/lib/site-content";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
 import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite } from "@/lib/auth";
@@ -536,4 +536,17 @@ export async function deleteFaqAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   await deleteFaq(me.id, str(f, "id", 40));
   revalidatePath("/faq"); revalidatePath("/admin/website"); redirect(`/admin/website?ok=${encodeURIComponent("Question deleted.")}`);
+}
+
+export async function saveCoursePageAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40), raw = String(f.get("topics") ?? "").replace(/\r\n/g, "\n");
+  const topics: { title: string; text: string }[] = [];
+  for (const block of raw.split(/^## /m).map((b) => b.trim()).filter(Boolean)) {
+    const [title, ...rest] = block.split("\n");
+    topics.push({ title: title.trim().slice(0, 200), text: rest.join("\n").trim().slice(0, 4000) });
+  }
+  await saveCoursePage(me.id, id, { board: str(f, "board", 60) || null, intro: str(f, "intro", 2000) || null, topics: topics.slice(0, 30), published: f.get("published") === "on" });
+  revalidatePath("/courses", "layout"); revalidatePath("/admin/website");
+  redirect(`/admin/website/courses/${id}?ok=${encodeURIComponent("Saved.")}`);
 }

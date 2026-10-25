@@ -1,9 +1,10 @@
-import { siteText, getFaqs, DEFAULTS } from "@/lib/site-content";
+import Link from "next/link";
+import { siteText, getFaqs, DEFAULTS, listCoursePages } from "@/lib/site-content";
 import { saveSiteTextAction, saveFaqAction, deleteFaqAction } from "../../actions";
 
 export default async function Website({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
   const sp = await searchParams;
-  const [txt, faqs] = await Promise.all([siteText(), getFaqs(true)]);
+  const [txt, faqs, pages] = await Promise.all([siteText(), getFaqs(true), listCoursePages()]);
   return <>
     <div className="top"><div><h1>Website</h1><div className="sub">Change the text on the website. Saved changes show straight away.</div></div><span className="grow" /><a className="abtn sm" href="/" target="_blank" rel="noreferrer">View the website</a></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}
@@ -18,6 +19,11 @@ export default async function Website({ searchParams }: { searchParams: Promise<
       <div><button className="abtn pri" type="submit">Save</button> <span className="muted" style={{ fontSize: 14 }}>Clear a box to go back to the original text.</span></div>
       <input type="hidden" name="keys" value={Object.keys(DEFAULTS).join(",")} />
     </form>
+
+    <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Course pages ({pages.length})</h2>
+    <div className="tw"><table><thead><tr><th>Course</th><th>Topics</th><th>Exam board</th><th></th></tr></thead>
+      <tbody>{pages.map((c) => <tr key={c.id}><td><b>{c.level} {c.subject}</b>{!c.published && <> <span className="pill mute">Hidden</span></>}</td><td>{c.topics.length}</td><td>{c.exam_board ?? "—"}</td>
+        <td><div className="acts"><Link className="abtn sm" href={`/admin/website/courses/${c.id}`}>Edit</Link><a className="abtn sm" href={`/courses/${c.slug}`} target="_blank" rel="noreferrer">View</a></div></td></tr>)}</tbody></table></div>
 
     <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>FAQs ({faqs.length})</h2>
     <p className="note" style={{ marginTop: -4 }}>Lines starting with “- ” show as bullet points. Lower numbers come first.</p>

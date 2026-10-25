@@ -8,6 +8,7 @@ export type Course = {
   level: string; level_order: number; subject: string; colour: string; total_pence: number;
   lessons_per_week: number; course_years: number; course_total_pence: number; teacher: string | null;
   year_label: string; year_start: string; is_next: boolean; slots: { d: number; t: string }[] | null;
+  page_slug: string; teacher_slug: string | null; teacher_photo: string | null;
 };
 export type Term = { year_label: string; is_next: boolean; year_start: string; number: number; name: string; starts_on: string; ends_on: string; bills_on: string; break_start: string | null; break_end: string | null };
 export type Teacher = { name: string; slug: string; designation: string | null; bio: string | null; subjects: string[] | null; qualifications: string[]; photo: string | null };
@@ -22,7 +23,9 @@ export type Bundle = { min_courses: number; percent_off: string };
 const COURSE_SQL = `
   select g.code, a.status::text, a.capacity, a.places_left, a.is_full, a.bookable, a.shows_times, a.shows_waitlist, a.label,
          l.name as level, l.sort_order as level_order, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour,
-         pp.total_pence, pp.lessons_per_week, pp.course_years, u.name as teacher,
+         pp.total_pence, pp.lessons_per_week, pp.course_years, u.name as teacher, t.slug as teacher_slug,
+         case when t.photo is not null then '/teacher-photo/' || t.slug else t.photo_asset end as teacher_photo,
+         lower(regexp_replace(l.name, '[^A-Za-z0-9]+', '-', 'g')) || '/' || lower(regexp_replace(sj.name, '[^A-Za-z0-9]+', '-', 'g')) as page_slug,
          -- the whole course's price: a 2-year course adds up both years' plans (e.g. iGCSE 2-year = £1,792)
          case when pp.course_years > 1 then (select sum(p2.total_pence)::int from price_plans p2
            where p2.academic_year_id = pp.academic_year_id and p2.level_id = pp.level_id and p2.course_years = pp.course_years)
@@ -169,5 +172,19 @@ export async function getCalculator(): Promise<CalcYear[]> {
       if (list.length) out.push({ label: y.label, start: y.start, subjects: list, bundles });
     }
     return out;
+  });
+}
+
+/** A course's detail page: content from course_pages plus every class of it on sale (times, teacher, price). */
+export type CoursePage = { level: string; subject: string; colour: string; topics: { title: string; text: string }[]; exam_board: string | null; intro: string | null; groups: Course[] };
+export async function getCoursePage(slug: string): Promise<CoursePage | null> {
+  return withSchool(async (q) => {
+    const groups = await q<Course>(`select * from (${COURSE_SQL}) c where c.page_slug = $1 order by c.year_start, c.code`, [slug]);
+    const page = (await q<{ level: string; subject: string; colour: string; topics: { title: string; text: string }[]; exam_board: string | null; intro: string | null }>(`
+      select l.name as level, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour, cp.topics, cp.exam_board, cp.intro
+      from course_pages cp join levels l on l.id = cp.level_id join subjects sj on sj.id = cp.subject_id where cp.slug = $1 and cp.published`, [slug]))[0];
+    if (!page && !groups.length) return null;
+    return { level: page?.level ?? groups[0].level, subject: page?.subject ?? groups[0].subject, colour: page?.colour ?? groups[0].colour,
+      topics: page?.topics ?? [], exam_board: page?.exam_board ?? null, intro: page?.intro ?? null, groups };
   });
 }

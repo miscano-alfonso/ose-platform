@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { Course } from "@/lib/data";
 import { money, DAYS, monthYear } from "@/lib/format";
 
@@ -43,7 +44,8 @@ export function CourseCard({ c }: { c: Course }) {
       <p className="price">{money(c.course_total_pence)}</p>
       {c.shows_waitlist && <p className="wltag">Waiting list</p>}
       <div className="cbtns">
-        <span className={`btn sm ${c.shows_waitlist ? "btn-line" : "btn-brand"}`} aria-disabled="true" title="Booking opens in the next update">
+        <Link className="btn sm btn-brand cread" href={`/courses/${c.page_slug}`}>Read more</Link>
+        <span className={`btn sm ${c.shows_waitlist ? "btn-line" : "btn-line"}`} aria-disabled="true" title="Booking opens in the next update">
           {c.shows_waitlist ? "Join waiting list" : "Add to cart"}
         </span>
       </div>
