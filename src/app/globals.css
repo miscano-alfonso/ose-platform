@@ -214,3 +214,8 @@ button.btn:disabled{cursor:not-allowed}
 .s-nav .wrap{max-width:1300px}
 @media (min-width:1081px) and (max-width:1220px){.s-nav .wrap{gap:16px 18px}.s-nav .s-links{gap:4px 14px;font-size:12px}.s-logo img{height:50px}}
 @media (max-width:560px){.space-dots{display:none}.hero-art{max-width:320px}}
+/* bigger hero illustration */
+.hero-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:clamp(16px,3vw,40px)}
+.hero-art{max-width:700px;margin-block:-16px}
+@media (max-width:820px){.hero-grid{grid-template-columns:1fr}.hero-art{max-width:480px;margin-block:0}}
+@media (max-width:560px){.hero-art{max-width:360px}}
