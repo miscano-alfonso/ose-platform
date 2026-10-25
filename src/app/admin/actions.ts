@@ -9,6 +9,7 @@ import { setLevelRate, buildPayRun, setAdjustment, setRunStatus } from "@/lib/pa
 import { setTutorRate, addAvailability, removeAvailability, bookTutoring, setTutoringStatus } from "@/lib/tutoring";
 import { addTeacher, saveTeacher, setTeacherArchived } from "@/lib/teachers-admin";
 import { saveWorkshop } from "@/lib/workshops-admin";
+import { audiences, recipients, sendBatch, logCampaign } from "@/lib/email";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
 import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite } from "@/lib/auth";
@@ -421,4 +422,26 @@ export async function saveWorkshopAction(f: FormData): Promise<void> {
   revalidatePath("/admin/workshops"); revalidatePath("/other-services");
   if (r.error) return back(r.error);
   redirect(`/admin/workshops/${r.id}?ok=${encodeURIComponent("Workshop saved.")}`);
+}
+
+// ---------- email (Brevo) ----------
+export async function sendEmailAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const kind = str(f, "kind", 12) === "marketing" ? "marketing" : "message", page = kind === "marketing" ? "/admin/marketing" : "/admin/email";
+  const audience = kind === "marketing" ? "marketing" : str(f, "audience", 60), subject = str(f, "subject", 200), body = String(f.get("body") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 20000);
+  if (!subject || !body || f.get("confirm") !== "on") redirect(`${page}?err=${encodeURIComponent("Add a subject and message, and tick the box to confirm.")}`);
+  const label = kind === "marketing" ? "Marketing list" : (await audiences()).find((a) => a.value === audience)?.label;
+  if (!label) redirect(`${page}?err=${encodeURIComponent("Choose who to send to.")}`);
+  const to = await recipients(audience);
+  const r = await sendBatch(subject, body, to, kind === "marketing");
+  await logCampaign(me.id, { kind, audience, label: label!, subject, body, recipients: to.length, ...r });
+  revalidatePath(page);
+  redirect(`${page}?${r.failed ? "err=" + encodeURIComponent(`${r.sent} sent, ${r.failed} failed. ${r.error ?? ""}`) : "ok=" + encodeURIComponent(`Sent to ${r.sent} ${r.sent === 1 ? "person" : "people"}.`)}`);
+}
+export async function sendTestEmailAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const kind = str(f, "kind", 12) === "marketing" ? "marketing" : "message", page = kind === "marketing" ? "/admin/marketing" : "/admin/email";
+  const subject = str(f, "subject", 200) || "(no subject)", body = String(f.get("body") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 20000) || "(empty message)";
+  const r = await sendBatch(`[Test] ${subject}`, body, [{ name: me.name, email: me.email }], kind === "marketing");
+  redirect(`${page}?${r.sent ? "ok=" + encodeURIComponent(`Test sent to ${me.email}.`) : "err=" + encodeURIComponent(r.error ?? "The test didn’t send.")}`);
 }
