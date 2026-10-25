@@ -1,0 +1,49 @@
+import { getGroups } from "@/lib/admin-data";
+import { updateGroupAction } from "../../actions";
+import { yearLabel } from "@/lib/format";
+
+const MODE: Record<string, string> = { auto: "Close when full", keep_open: "Keep open past capacity", full: "Mark as full now" };
+const LABEL: Record<string, string> = { auto: "Automatic", off: "No label", few_spaces: "Few spaces left", almost_full: "Almost full", new_group: "New Group!", launching_soon: "New Group Launching Soon!" };
+const STATUS: Record<string, string> = { open: "Open", waitlist: "Waiting list", priority: "Waiting-list priority", closed: "Closed", hidden: "Hidden" };
+const statusPill = (s: string, full: boolean) => full && (s === "open" || s === "priority") ? <span className="pill warn">Full</span>
+  : s === "open" ? <span className="pill good">Open</span> : s === "waitlist" || s === "priority" ? <span className="pill info">{STATUS[s]}</span> : <span className="pill mute">{STATUS[s]}</span>;
+
+export default async function Classes() {
+  const groups = await getGroups();
+  const years = [...new Set(groups.map((g) => g.year_label))];
+  return <>
+    <div className="top"><div><h1>Classes</h1><div className="sub">{groups.length} classes. Edit a row to change its capacity, override, website label or status.</div></div></div>
+    {years.map((y) => <div key={y}>
+      {years.length > 1 && <h2 style={{ font: "600 18px Jost", margin: "8px 0 10px" }}>{yearLabel(y)}</h2>}
+      <div className="tw"><table>
+        <thead><tr><th>Class</th><th>Teacher</th><th>Lessons</th><th>Places</th><th>Status</th><th>Website label</th></tr></thead>
+        {groups.filter((g) => g.year_label === y).map((g) => {
+          const pct = g.capacity ? Math.min(100, Math.round((g.taken / g.capacity) * 100)) : 0;
+          return <tbody key={g.id}>
+            <tr>
+              <td><span className="dot" style={{ background: g.colour }} /><b>{g.level} {g.subject}</b><div className="muted" style={{ fontSize: 12.5, marginLeft: 18 }}>{g.code}</div></td>
+              <td>{g.teacher ?? <span className="muted">Not set</span>}</td>
+              <td>{g.slots ?? <span className="muted">No lessons yet</span>}</td>
+              <td><div className="fill"><div className="track"><i className={g.is_full ? "full" : ""} style={{ width: `${pct}%` }} /></div><span>{g.taken}/{g.capacity ?? "∞"}</span></div>
+                {g.capacity_mode !== "auto" && <div className="muted" style={{ fontSize: 12 }}>{MODE[g.capacity_mode]}</div>}
+                {g.waiting > 0 && <div className="muted" style={{ fontSize: 12 }}>{g.waiting} waiting</div>}</td>
+              <td>{statusPill(g.status, g.is_full)}</td>
+              <td>{g.label ?? <span className="muted">None</span>}{g.sticky_label !== "auto" && <div className="muted" style={{ fontSize: 12 }}>set by hand</div>}</td>
+            </tr>
+            <tr className="editrow"><td colSpan={6} style={{ paddingTop: 6, paddingBottom: 8 }}>
+              <details className="edit"><summary className="abtn sm">Edit {g.code}</summary>
+                <form action={updateGroupAction} className="eform" style={{ marginTop: 10 }}>
+                  <input type="hidden" name="id" value={g.id} />
+                  <label className="fld">Capacity<input type="number" name="capacity" min={1} max={200} defaultValue={g.capacity ?? ""} style={{ width: 90 }} /></label>
+                  <label className="fld">When full<select name="capacity_mode" defaultValue={g.capacity_mode}>{Object.entries(MODE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+                  <label className="fld">Website label<select name="sticky_label" defaultValue={g.sticky_label}>{Object.entries(LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+                  <label className="fld">Status<select name="status" defaultValue={g.status}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+                  <button className="abtn pri" type="submit">Save</button>
+                </form></details></td></tr>
+          </tbody>;
+        })}
+      </table></div>
+    </div>)}
+    <p className="note">“Keep open past capacity” lets families keep booking a full class. “Mark as full now” closes booking and shows the waiting list. Every change is recorded in the audit log.</p>
+  </>;
+}
