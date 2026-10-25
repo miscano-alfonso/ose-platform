@@ -5,7 +5,7 @@ import { FAQS } from "@/content/faq";
 // Text the office can change in Admin → Website. Anything not set uses these defaults.
 export const DEFAULTS: Record<string, string> = {
   home_eyebrow: "Online school for home-educated students",
-  home_title: "Outstanding Teaching Inspiring Future Generations",
+  home_title: "Outstanding\nTeaching Inspiring\nFuture Generations",
   home_lead: "OH-SO ED provides outstanding online education for home-educated students. We offer KS3, pre-GCSE and GCSE courses taught by experienced secondary subject specialists, supported by our 98% GCSE pass rate!",
   ticker: "Join us for taster lessons\nNew courses will start in September",
   teachers_intro: "Experienced secondary subject specialists, all with up-to-date DBS certificates.",

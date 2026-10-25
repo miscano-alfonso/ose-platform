@@ -11,7 +11,7 @@ export default async function Website({ searchParams }: { searchParams: Promise<
     <form action={saveSiteTextAction} className="card" style={{ display: "grid", gap: 12 }}>
       <h2>Homepage</h2>
       <label className="fld">Small heading<input name="home_eyebrow" maxLength={120} defaultValue={txt.home_eyebrow} style={{ maxWidth: 560 }} /></label>
-      <label className="fld">Main heading<input name="home_title" maxLength={160} defaultValue={txt.home_title} style={{ maxWidth: 560 }} /></label>
+      <label className="fld">Main heading <span className="muted">(each line here is a line on the homepage)</span><textarea name="home_title" rows={3} maxLength={160} defaultValue={txt.home_title} style={{ maxWidth: 560 }} /></label>
       <label className="fld">Introduction<textarea name="home_lead" rows={4} maxLength={800} defaultValue={txt.home_lead} className="mini" style={{ width: "100%" }} /></label>
       <label className="fld">Yellow ticker (one message per line)<textarea name="ticker" rows={4} maxLength={600} defaultValue={txt.ticker} className="mini" style={{ width: "100%", maxWidth: 560 }} /></label>
       <h2 style={{ marginTop: 8 }}>Teachers page</h2>
