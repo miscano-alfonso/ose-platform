@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { withSchool } from "@/lib/db";
 import { headers } from "next/headers";
 import { parseImport, runImport, type ImportReport } from "@/lib/import";
+import { buildSchedules, setFamilyTerm } from "@/lib/payments";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite } from "@/lib/auth";
 
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
@@ -162,4 +163,20 @@ export async function setCheckAction(f: FormData) {
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'checked', 'enrolment', $2)`, [me.id, id]);
   });
   revalidatePath("/admin/families"); revalidatePath("/admin");
+}
+
+// ---------- payments ----------
+export async function buildSchedulesAction(): Promise<void> {
+  const me = await requireStaff();
+  const rep = await buildSchedules(me.id);
+  revalidatePath("/admin/payments");
+  redirect(`/admin/payments?built=${rep.places}-${rep.instalments}-${rep.markedPaid}`);
+}
+
+export async function setFamilyTermAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const to = str(f, "to"), n = parseInt(str(f, "term", 2), 10);
+  if (!["paid", "waived", "scheduled"].includes(to) || !(n >= 1 && n <= 6)) return;
+  await setFamilyTerm(me.id, str(f, "parent", 40), n, to as "paid" | "waived" | "scheduled");
+  revalidatePath("/admin/payments");
 }

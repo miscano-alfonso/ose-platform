@@ -74,3 +74,9 @@
 .adm .menu-toggle{display:none}
 @media (max-width:820px){.adm .menu-toggle{display:inline-flex;justify-self:start}.adm .side{gap:10px}.adm .nav{display:none}.adm .nav.open{display:grid}
   .adm .side .who{margin-top:0}}
+
+.termgrid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-top:10px}
+.tg{border:1px solid rgba(127,127,127,.35);border-radius:10px;padding:8px 10px;display:grid;gap:2px;font-size:13px}
+.tg small{opacity:.75}.tg-paid{border-color:#3f8a5e}.tg-failed,.tg-scheduled.late{border-color:#d9a400}.tg-waived{opacity:.6}
+.tgbtns{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+@media (max-width:820px){.termgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
