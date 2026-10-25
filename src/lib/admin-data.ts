@@ -60,7 +60,7 @@ export async function getDashboard(): Promise<{ t: DashTiles; attention: Attenti
   });
 }
 
-export type AdminGroup = {
+export type AdminGroup = { homepage: string; homepage_order: number | null; bookable: boolean;
   id: string; code: string; level: string; subject: string; colour: string; teacher: string | null; year_label: string;
   status: string; capacity: number | null; capacity_mode: string; sticky_label: string; taken: number; places_left: number | null;
   is_full: boolean; waiting: number; label: string | null; slots: string | null; waitlist_threshold: number;
@@ -68,7 +68,7 @@ export type AdminGroup = {
 export async function getGroups(): Promise<AdminGroup[]> {
   return withSchool((q) => q<AdminGroup>(`
     select g.id, g.code, l.name as level, sj.name as subject, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, y.label as year_label,
-           g.status::text, g.capacity, g.capacity_mode::text, g.sticky_label::text, a.taken, a.places_left, a.is_full, a.waiting, a.label, g.waitlist_threshold,
+           g.status::text, g.capacity, g.capacity_mode::text, g.sticky_label::text, g.homepage, g.homepage_order, a.bookable, a.taken, a.places_left, a.is_full, a.waiting, a.label, g.waitlist_threshold,
            (select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end
               || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id) as slots
     from course_groups g join course_group_availability a on a.group_id = g.id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
@@ -119,4 +119,36 @@ export async function getPricesAdmin(): Promise<{ plans: AdminPlan[]; bundles: A
       from bundle_discounts b join academic_years y on y.id = b.academic_year_id left join levels l on l.id = b.level_id
       where y.ends_on >= current_date order by y.starts_on, b.min_courses`),
   }));
+}
+
+export type StaffRow = { id: string; name: string; email: string; role: string; active: boolean; disabled: boolean; last_sign_in_at: string | null; teaches: string | null };
+export type InviteRow = { id: string; name: string; email: string; role: string; created_at: string; expires_at: string; expired: boolean; invited_by: string | null };
+export type TeacherOption = { id: string; name: string; email: string; has_account: boolean };
+export async function getStaff(): Promise<{ staff: StaffRow[]; invites: InviteRow[]; teachers: TeacherOption[] }> {
+  return withSchool(async (q) => ({
+    staff: await q<StaffRow>(`select u.id, u.name, u.email::text, u.role::text, u.password_hash is not null and u.disabled_at is null as active,
+        u.disabled_at is not null as disabled, u.last_sign_in_at::text,
+        (select string_agg(distinct g.code, ', ') from teachers t join course_groups g on g.teacher_id = t.id where t.user_id = u.id) as teaches
+      from users u where u.role in ('school_admin','teacher') and (u.password_hash is not null or u.disabled_at is not null)
+      order by u.role, u.name`),
+    invites: await q<InviteRow>(`select i.id, i.name, i.email::text, i.role::text, i.created_at::text, i.expires_at::text, i.expires_at < now() as expired, u.name as invited_by
+      from staff_invites i left join users u on u.id = i.invited_by where i.accepted_at is null and i.revoked_at is null order by i.created_at desc`),
+    teachers: await q<TeacherOption>(`select t.id, u.name, u.email::text, u.password_hash is not null as has_account
+      from teachers t join users u on u.id = t.user_id where t.archived_at is null order by u.name`),
+  }));
+}
+
+export type FamilyCourse = { id: string; code: string; name: string; status: string; needs_check: boolean; note: string | null; enrolled_on: string };
+export type FamilyChild = { id: string; name: string; email: string | null; courses: FamilyCourse[] };
+export type FamilyRow = { id: string; name: string; email: string; phone: string | null; note: string | null; children: FamilyChild[]; checks: number };
+export async function getFamilies(): Promise<FamilyRow[]> {
+  return withSchool((q) => q<FamilyRow>(`
+    select p.id, p.first_name || ' ' || p.last_name as name, p.email::text, p.phone, p.admin_note as note,
+      coalesce((select json_agg(json_build_object('id', s.id, 'name', s.first_name || ' ' || s.last_name, 'email', s.email,
+          'courses', coalesce((select json_agg(json_build_object('id', e.id, 'code', g.code, 'name', l.name || ' ' || sj.name, 'status', e.status,
+              'needs_check', e.needs_check, 'note', e.admin_note, 'enrolled_on', to_char(e.enrolled_at, 'YYYY-MM-DD')) order by l.sort_order, sj.name)
+            from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+            where e.student_id = s.id), '[]')) order by s.first_name) from students s where s.parent_id = p.id), '[]') as children,
+      (select count(*)::int from enrolments e join students s on s.id = e.student_id where s.parent_id = p.id and e.needs_check) as checks
+    from parents p order by p.last_name, p.first_name`));
 }

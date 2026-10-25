@@ -6,9 +6,9 @@ import { useState } from "react";
 // Sections from the admin prototype. Those without a link are still being moved across.
 const ITEMS: [string, string | null][] = [
   ["Dashboard", "/admin"], ["Classes", "/admin/classes"], ["1:1 tutoring", null], ["Workshops", "/admin/workshops"], ["Timetable", null],
-  ["Families", null], ["Attendance", null], ["Reports", null], ["Payments", null], ["Payroll", null],
+  ["Families", "/admin/families"], ["Attendance", null], ["Reports", null], ["Payments", null], ["Payroll", null],
   ["Prices & discounts", "/admin/prices"], ["Term dates", "/admin/term-dates"], ["Tasters", null], ["Waiting list & enquiries", "/admin/enquiries"],
-  ["Messages", null], ["Student chat", null], ["Rewards", null], ["Email", null], ["Marketing", null], ["Website", null], ["Settings", "/admin/account"],
+  ["Messages", null], ["Student chat", null], ["Rewards", null], ["Email", null], ["Marketing", null], ["Website", null], ["Staff & access", "/admin/staff"], ["Settings", "/admin/account"],
 ];
 
 export function AdminNav({ counts }: { counts: Record<string, number> }) {

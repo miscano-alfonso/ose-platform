@@ -38,6 +38,20 @@ export async function getCourses(): Promise<Course[]> {
   return withSchool((q) => q<Course>(`${COURSE_SQL} order by y.starts_on, l.sort_order, sj.name, g.code`));
 }
 
+/** Homepage "Space Available": classes set to show by hand, plus open classes with places left (unless hidden by hand). */
+export type SpaceCourse = { code: string; level: string; subject: string; colour: string; year_label: string; homepage_order: number | null };
+export async function getSpaceAvailable(): Promise<SpaceCourse[]> {
+  return withSchool((q) => q<SpaceCourse>(`
+    select distinct on (l.sort_order, sj.name) g.code, l.name as level, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour, y.label as year_label,
+           g.homepage_order, l.sort_order as lo
+    from course_group_availability a join course_groups g on g.id = a.group_id join levels l on l.id = g.level_id
+    join subjects sj on sj.id = g.subject_id join academic_years y on y.id = g.academic_year_id
+    where g.continues_group_id is null and a.on_sale and a.status not in ('hidden', 'closed')
+      and (g.homepage = 'show' or (g.homepage = 'auto' and a.bookable))
+    order by l.sort_order, sj.name, (g.homepage = 'show') desc, y.starts_on`))
+    .then((rows) => rows.sort((a, b) => (a.homepage_order ?? 999) - (b.homepage_order ?? 999)));
+}
+
 /** Bookable groups that are nearly full ("Few spaces left" or "Almost full"). */
 export async function getFewPlaces(): Promise<Course[]> {
   return withSchool((q) => q<Course>(`${COURSE_SQL} and a.bookable and a.label in ('Few spaces left', 'Almost full')

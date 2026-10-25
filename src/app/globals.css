@@ -1,6 +1,7 @@
 :root{--navy:#0f1747;--mustard:#e3cd4b;--brand:var(--navy);--accent:var(--mustard);--on-brand:#fff;--ink:#0f1747;--muted:#4b5274;--mist:#f3f4fa;--burst:#d62d2d;--line:#e7e9f3}
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
+html{background:var(--navy)}
 body{margin:0;font-family:"Jost","Futura","Century Gothic",system-ui,sans-serif;color:var(--ink);background:#fff;font-size:16px;line-height:1.55}
 a{color:inherit}
 h1,h2,h3{font-weight:500;line-height:1.12;margin:0;text-wrap:balance}
@@ -10,8 +11,8 @@ p{margin:0}
 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
 
 .s-nav{background:var(--brand);color:var(--on-brand)}
-.s-nav .wrap{display:flex;align-items:center;gap:18px;min-height:64px;flex-wrap:wrap;padding-block:10px}
-.s-logo{display:block;line-height:0;flex:none}.s-logo img{height:44px;width:auto;display:block}
+.s-nav .wrap{display:flex;align-items:center;gap:20px 26px;min-height:92px;flex-wrap:wrap;padding-block:18px}
+.s-logo{display:block;line-height:0;flex:none}.s-logo img{height:58px;width:auto;display:block}
 .s-links{display:flex;flex-wrap:wrap;gap:4px 18px;margin-left:auto;font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
 .s-links a{text-decoration:none;padding:4px 0;border-bottom:2px solid transparent}.s-links a:hover{border-bottom-color:var(--accent)}
 
@@ -154,7 +155,7 @@ button.btn:disabled{cursor:not-allowed}
 .s-burger{display:none;order:4;width:42px;height:42px;place-items:center;border-radius:10px;border:2px solid #fff;background:transparent;color:#fff;cursor:pointer;transition:background-color .15s,color .15s}
 .s-burger:hover,.s-burger[aria-expanded=true]{background:#fff;color:var(--navy)}
 .s-links a[aria-current=page]{border-bottom-color:var(--accent)}
-@media (max-width:900px){
+@media (max-width:1080px){
   .s-burger{display:grid}
   .s-icons{margin-left:auto}
   .s-nav .s-links{display:none;order:5;width:100%;margin:6px 0 4px;flex-direction:column;gap:0;font-size:15px}
@@ -162,3 +163,54 @@ button.btn:disabled{cursor:not-allowed}
   .s-nav .s-links a{padding:13px 4px;border-bottom:1px solid #2b3366}
   .s-nav .s-links a:hover,.s-nav .s-links a[aria-current=page]{color:var(--accent);border-bottom-color:#2b3366}
 }
+
+/* no white gaps: the page background is navy (so overscroll at the top and bottom matches the header and footer); content areas stay white */
+#main{background:#fff}
+
+/* nav: more room, bigger logo */
+.s-nav .s-links{gap:6px 22px}
+@media (max-width:1080px){.s-nav .wrap{min-height:76px;padding-block:12px}.s-logo img{height:48px}}
+
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* homepage hero with the illustration from ohsoed.co.uk */
+.s-hero.home{padding-block:clamp(36px,6vw,72px);overflow:hidden}
+.hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:clamp(20px,4vw,56px);align-items:center}
+.hero-art{position:relative;aspect-ratio:496/444;width:100%;max-width:520px;justify-self:end}
+.hero-banner{position:absolute;left:6.45%;top:4.5%;width:87.1%;height:auto;animation:fadeInUp 1s .7s both}
+.hero-ic{position:absolute;display:block;animation:1s both}
+.hero-ic.in-down{animation-name:slideInDown}.hero-ic.in-up{animation-name:slideInUp}
+.hero-ic img{display:block;width:100%;height:auto;animation:tada 4s linear infinite}
+@keyframes tada{0%{transform:scale(1)}10%,20%{transform:scale(.9) rotate(-3deg)}30%,50%,70%,90%{transform:scale(1.1) rotate(3deg)}40%,60%,80%{transform:scale(1.1) rotate(-3deg)}100%{transform:scale(1)}}
+@keyframes slideInDown{from{transform:translateY(-100%);opacity:0}to{transform:none;opacity:1}}
+@keyframes slideInUp{from{transform:translateY(100%);opacity:0}to{transform:none;opacity:1}}
+@keyframes fadeInUp{from{transform:translateY(30px);opacity:0}to{transform:none;opacity:1}}
+@media (max-width:820px){.hero-grid{grid-template-columns:1fr}.hero-art{justify-self:center;max-width:420px}}
+
+/* yellow ticker */
+.ticker{background:#edd54d;color:var(--navy);overflow:hidden;padding-block:clamp(14px,2vw,22px)}
+.ticker-track{display:flex;width:max-content;animation:marquee 22s linear infinite}
+.ticker-track>div{display:flex;flex:none}
+.ticker-track span{display:flex;align-items:center;gap:.9em;padding-right:1.6em;white-space:nowrap;font-size:clamp(20px,2.4vw,30px);font-weight:500;letter-spacing:.02em}
+.ticker-track b{font-size:.85em;letter-spacing:-.05em}
+@keyframes marquee{to{transform:translateX(-50%)}}
+.ticker:hover .ticker-track{animation-play-state:paused}
+
+/* Space Available */
+.space-h{text-align:center;font-size:clamp(34px,5vw,60px);font-weight:500;margin:0 0 clamp(20px,3vw,36px)}
+.space-track{display:grid;grid-auto-flow:column;grid-auto-columns:calc((100% - 3*28px)/4);gap:28px;overflow-x:auto;scroll-snap-type:x mandatory;scrollbar-width:none;padding:6px 4px 22px}
+.space-track::-webkit-scrollbar{display:none}
+.space-card{scroll-snap-align:start;display:flex;align-items:center;gap:22px;padding:28px;border:1px solid var(--line);border-radius:14px;background:#fff linear-gradient(135deg,transparent 78%,#eef0fb 78%);box-shadow:0 10px 24px rgba(15,23,71,.07);text-decoration:none;color:var(--ink);transition:border-color .2s,transform .2s}
+.space-card:hover,.space-card:focus-visible{border-color:var(--navy);transform:translateY(-2px)}
+.space-card .roundel{width:100px;height:100px}
+.space-lvl{font-size:24px;line-height:1.2}
+.space-dots{display:flex;justify-content:center;gap:12px}
+.space-dots button{width:14px;height:14px;border-radius:50%;border:2px solid transparent;background:#d6d9ef;padding:0;cursor:pointer;background-clip:content-box}
+.space-dots button[aria-current=true]{background:var(--navy);border-color:var(--navy);padding:2px;background-clip:content-box;outline:1.5px solid var(--navy);outline-offset:1px;border-color:#fff}
+@media (max-width:1000px){.space-track{grid-auto-columns:calc((100% - 28px)/2)}}
+@media (max-width:560px){.space-track{grid-auto-columns:82%;gap:16px}.space-card{padding:20px}}
+
+@media (prefers-reduced-motion:reduce){.hero-banner,.hero-ic,.hero-ic img,.ticker-track{animation:none!important}.ticker-track{width:auto;flex-wrap:wrap}.ticker-track>div+div{display:none}}
+.s-nav .wrap{max-width:1300px}
+@media (min-width:1081px) and (max-width:1220px){.s-nav .wrap{gap:16px 18px}.s-nav .s-links{gap:4px 14px;font-size:12px}.s-logo img{height:50px}}
+@media (max-width:560px){.space-dots{display:none}.hero-art{max-width:320px}}

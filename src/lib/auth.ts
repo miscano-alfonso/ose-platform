@@ -47,13 +47,14 @@ export async function signIn(email: string, password: string): Promise<string | 
       from sign_in_attempts where not ok and created_at > now() - interval '15 minutes'`, [email, ip]);
     if (fails[0].by_email >= MAX_FAILS_PER_EMAIL || fails[0].by_ip >= MAX_FAILS_PER_IP) return "locked";
     const u = await q<{ id: string; password_hash: string | null }>(
-      `select id, password_hash from users where email = $1 and role = 'school_admin'`, [email]);
+      `select id, password_hash from users where email = $1 and role in ('school_admin', 'teacher') and disabled_at is null`, [email]);
     const ok = await checkPassword(password, u[0]?.password_hash ?? null);
     await q(`insert into sign_in_attempts (school_id, email, ip, ok) values (current_school(), $1, $2, $3)`, [email, ip, ok]);
     if (!ok) return "bad";
     const token = randomBytes(32).toString("base64url");
     await q(`insert into staff_sessions (school_id, user_id, token_hash, expires_at, ip, user_agent)
              values (current_school(), $1, $2, now() + make_interval(hours => $3), $4, $5)`, [u[0].id, sha256(token), SESSION_HOURS, ip, ua]);
+    await q(`update users set last_sign_in_at = now() where id = $1`, [u[0].id]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'sign_in', 'user', $1)`, [u[0].id]);
     return { token };
   });
@@ -71,12 +72,20 @@ export async function currentStaff(): Promise<Staff | null> {
   if (!token || token.length > 100) return null;
   const rows = await withSchool((q) => q<Staff>(`
     with s as (update staff_sessions set last_seen_at = now() where token_hash = $1 and expires_at > now() returning user_id)
-    select u.id, u.name, u.email::text, u.role::text from s join users u on u.id = s.user_id where u.role = 'school_admin'`, [sha256(token)]));
+    select u.id, u.name, u.email::text, u.role::text from s join users u on u.id = s.user_id
+    where u.role in ('school_admin', 'teacher') and u.disabled_at is null`, [sha256(token)]));
   return rows[0] ?? null;
 }
 
-/** For admin pages and actions: the signed-in staff member, or a redirect to the sign-in page. */
+/** For admin pages and actions: the signed-in admin, or a redirect (teachers go to their own page). */
 export async function requireStaff(): Promise<Staff> {
+  const s = await currentStaff();
+  if (!s) redirect("/admin/login");
+  if (s.role !== "school_admin") redirect("/admin/teacher");
+  return s;
+}
+/** Any signed-in member of staff (admin or teacher). */
+export async function requireSignedIn(): Promise<Staff> {
   const s = await currentStaff();
   if (!s) redirect("/admin/login");
   return s;
@@ -128,5 +137,66 @@ export async function changePassword(userId: string, current: string, next: stri
     await q(`delete from staff_sessions where user_id = $1 and token_hash <> $2`, [userId, sha256(token)]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'password_changed', 'user', $1)`, [userId]);
     return null;
+  });
+}
+
+// ---------- invitations ----------
+const INVITE_DAYS = 7;
+export type InviteInfo = { id: string; name: string; email: string; role: string; expired: boolean; used: boolean };
+
+/** Creates an invite and returns the one-time token for the link (shown to the inviting admin once). */
+export async function createInvite(by: string, name: string, email: string, role: "school_admin" | "teacher", teacherId: string | null): Promise<{ token?: string; error?: string }> {
+  return withSchool(async (q) => {
+    const existing = await q<{ role: string; has_pw: boolean; disabled: boolean }>(
+      `select role::text, password_hash is not null as has_pw, disabled_at is not null as disabled from users where email = $1`, [email]);
+    if (existing[0]?.has_pw && !existing[0].disabled && (existing[0].role === role || existing[0].role === "school_admin"))
+      return { error: "That person already has an account with this access." };
+    await q(`update staff_invites set revoked_at = now() where email = $1 and accepted_at is null and revoked_at is null`, [email]);
+    const token = randomBytes(32).toString("base64url");
+    await q(`insert into staff_invites (school_id, email, name, role, teacher_id, token_hash, invited_by, expires_at)
+             values (current_school(), $1, $2, $3::user_role, $4, $5, $6, now() + make_interval(days => $7))`,
+      [email, name, role, teacherId, sha256(token), by, INVITE_DAYS]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'invite', 'user', $2)`,
+      [by, JSON.stringify({ email, role })]);
+    return { token };
+  });
+}
+
+export async function getInvite(token: string): Promise<InviteInfo | null> {
+  if (!token || token.length > 100) return null;
+  const r = await withSchool((q) => q<InviteInfo>(`select id, name, email::text, role::text, expires_at < now() as expired,
+      (accepted_at is not null or revoked_at is not null) as used from staff_invites where token_hash = $1`, [sha256(token)]));
+  return r[0] ?? null;
+}
+
+/** Accepting an invite: sets the password on the person's account (creating it if needed). */
+export async function acceptInvite(token: string, password: string): Promise<{ email?: string; error?: string }> {
+  if (password.length < MIN_PASSWORD) return { error: `Use a password of at least ${MIN_PASSWORD} characters.` };
+  const hash = await hashPassword(password);
+  return withSchool(async (q) => {
+    const inv = (await q<{ id: string; name: string; email: string; role: string; teacher_id: string | null; ok: boolean }>(
+      `select id, name, email::text, role::text, teacher_id, (expires_at > now() and accepted_at is null and revoked_at is null) as ok
+       from staff_invites where token_hash = $1 for update`, [sha256(token)]))[0];
+    if (!inv || !inv.ok) return { error: "This invitation link has expired or has already been used. Ask for a new one." };
+    let userId: string | undefined;
+    if (inv.teacher_id) {   // an existing teacher record: give its user account this email and password
+      userId = (await q<{ id: string }>(`update users u set email = $2, name = $3, password_hash = $4, disabled_at = null,
+          role = case when u.role = 'school_admin' then u.role else $5::user_role end
+        from teachers t where t.id = $1 and u.id = t.user_id returning u.id`, [inv.teacher_id, inv.email, inv.name, hash, inv.role]))[0]?.id;
+    }
+    if (!userId) {
+      userId = (await q<{ id: string }>(`update users set password_hash = $2, disabled_at = null, name = $3,
+          role = case when role = 'school_admin' then role else $4::user_role end where email = $1 returning id`, [inv.email, hash, inv.name, inv.role]))[0]?.id;
+    }
+    if (!userId) {
+      userId = (await q<{ id: string }>(`insert into users (school_id, email, name, role, password_hash) values (current_school(), $1, $2, $3::user_role, $4) returning id`,
+        [inv.email, inv.name, inv.role, hash]))[0].id;
+    }
+    if (inv.role === "teacher" && !inv.teacher_id) {
+      await q(`insert into teachers (school_id, user_id) select current_school(), $1 where not exists (select 1 from teachers where user_id = $1)`, [userId]);
+    }
+    await q(`update staff_invites set accepted_at = now() where id = $1`, [inv.id]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'invite_accepted', 'user', $1)`, [userId]);
+    return { email: inv.email };
   });
 }
