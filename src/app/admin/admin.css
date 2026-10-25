@@ -98,3 +98,4 @@
 .adm .regopt{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13.5px;cursor:pointer}
 .adm .regopt:has(input:checked){background:var(--ink);color:var(--panel);border-color:var(--ink)}
 .adm .regopt input{margin:0}
+.adm .mini{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 8px;font:inherit;font-size:13px}

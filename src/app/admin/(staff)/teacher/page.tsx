@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireSignedIn } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
+import { teacherReportClasses } from "@/lib/reports";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,7 @@ export default async function TeacherHome() {
         or e.lesson_date between current_date and current_date + 7)
       order by e.lesson_date, s.starts_at`, [me.id]),
   ]);
+  const reports = await teacherReportClasses(me.id);
   const today = new Date().toISOString().slice(0, 10);
   const todo = lessons.filter((l) => l.d <= today && l.status === "scheduled"), soon = lessons.filter((l) => l.d > today || (l.d === today && l.status !== "scheduled"));
   const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
@@ -32,6 +34,10 @@ export default async function TeacherHome() {
       {todo.length === 0 ? <p className="empty">All registers are up to date.</p> : todo.map((l) => <div className="li" key={l.id}>
         <div className="t"><b>{l.name} <span className="muted" style={{ fontWeight: 400 }}>{l.code}</span></b><span>{day(l.d)} · {l.time}</span></div>
         <Link className="abtn pri sm" href={`/admin/register/${l.id}`}>Take register</Link></div>)}</section>
+    {reports.length > 0 && <section className="card"><h2>Reports to write</h2>
+      {reports.map((r) => <div className="li" key={r.cycle_id + r.group_id}>
+        <div className="t"><b>{r.name} <span className="muted" style={{ fontWeight: 400 }}>{r.code}</span></b><span>{r.cycle} · {r.done}/{r.total} done · due {day(r.comments_due)}</span></div>
+        <Link className={`abtn sm${r.done < r.total ? " pri" : ""}`} href={`/admin/write/${r.cycle_id}/${r.group_id}`}>{r.done < r.total ? "Write" : "View"}</Link></div>)}</section>}
     <section className="card"><h2>Coming up this week</h2>
       {soon.length === 0 ? <p className="empty">No lessons in the next 7 days.</p> : soon.map((l) => <div className="li" key={l.id}>
         <div className="t"><b>{l.name} <span className="muted" style={{ fontWeight: 400 }}>{l.code}</span></b><span>{day(l.d)} · {l.time}</span></div>

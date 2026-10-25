@@ -5,6 +5,9 @@ import { withSchool } from "@/lib/db";
 import { headers } from "next/headers";
 import { parseImport, runImport, type ImportReport } from "@/lib/import";
 import { buildSchedules, setFamilyTerm } from "@/lib/payments";
+import { setLevelRate, buildPayRun, setAdjustment, setRunStatus } from "@/lib/payroll";
+import { setTutorRate, addAvailability, removeAvailability, bookTutoring, setTutoringStatus } from "@/lib/tutoring";
+import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
 import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite } from "@/lib/auth";
 
@@ -186,7 +189,7 @@ export async function setFamilyTermAction(f: FormData): Promise<void> {
 const back = (path: string, err: string | null, ok: string) => redirect(`${path}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok)}`);
 export async function addSlotAction(f: FormData): Promise<void> {
   const me = await requireStaff();
-  const day = parseInt(str(f, "weekday", 1), 10), start = str(f, "start", 5), mins = parseInt(str(f, "minutes", 3), 10) || 60;
+  const day = parseInt(str(f, "weekday", 1), 10), start = str(f, "start", 5), mins = parseInt(str(f, "minutes", 3), 10) || 45;
   if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(start) || mins < 15 || mins > 180) return back("/admin/timetable", "Pick a day, a start time and a length.", "");
   const err = await addSlot(me.id, str(f, "group", 40), day, start, mins, str(f, "teacher", 40) || null);
   revalidatePath("/admin/timetable"); revalidatePath("/timetable"); revalidatePath("/courses");
@@ -200,7 +203,7 @@ export async function removeSlotAction(f: FormData): Promise<void> {
 }
 export async function setClassTeacherAction(f: FormData): Promise<void> {
   const me = await requireStaff();
-  const mins = Math.max(15, Math.min(180, parseInt(str(f, "minutes", 3), 10) || 60));
+  const mins = Math.max(15, Math.min(180, parseInt(str(f, "minutes", 3), 10) || 45));
   const err = await setClassTeacher(me.id, str(f, "group", 40), str(f, "teacher", 40) || null, mins);
   revalidatePath("/admin/timetable"); revalidatePath("/teachers"); revalidatePath("/courses");
   back("/admin/timetable", err, "Class updated.");
@@ -250,4 +253,117 @@ export async function setTasterStatusAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   await setTasterStatus(me.id, str(f, "id", 40), str(f, "status", 20));
   revalidatePath("/admin/tasters");
+}
+
+// ---------- payroll ----------
+const pounds = (v: string) => { const n = Number(v.replace(/[£,\s]/g, "")); return Number.isFinite(n) ? Math.round(n * 100) : NaN; };
+const payBack = (err: string | null, ok: string) => redirect(`/admin/payroll?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok)}`);
+export async function setLevelRateAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const p = pounds(str(f, "rate", 12));
+  if (!(p >= 0 && p <= 100000)) return payBack("Enter a rate in pounds, e.g. 45.", "");
+  await setLevelRate(me.id, str(f, "level", 40), p);
+  revalidatePath("/admin/payroll"); payBack(null, "Rate saved.");
+}
+export async function buildPayRunAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const err = await buildPayRun(me.id, str(f, "term", 40));
+  revalidatePath("/admin/payroll"); payBack(err, "Pay run updated from the registers.");
+}
+export async function setAdjustmentAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const raw = str(f, "amount", 12), p = raw === "" ? 0 : pounds(raw);
+  if (!Number.isFinite(p) || Math.abs(p) > 1000000) return payBack("Enter the adjustment in pounds.", "");
+  const err = await setAdjustment(me.id, str(f, "id", 40), p, str(f, "note", 120) || null);
+  revalidatePath("/admin/payroll"); payBack(err, "Adjustment saved.");
+}
+export async function setRunStatusAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const to = str(f, "to", 10);
+  if (!["approved", "paid", "draft"].includes(to)) return;
+  await setRunStatus(me.id, str(f, "id", 40), to as "approved" | "paid" | "draft");
+  revalidatePath("/admin/payroll"); payBack(null, to === "approved" ? "Pay run approved." : to === "paid" ? "Marked as paid." : "Back to draft.");
+}
+
+// ---------- reports ----------
+const DATE = /^\d{4}-\d{2}-\d{2}$/;
+export async function createCycleAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const d = { name: str(f, "name", 80), termId: str(f, "term", 40) || null, from: str(f, "from", 10), to: str(f, "to", 10), due: str(f, "due", 10), publish: str(f, "publish", 10) };
+  if (!d.name || ![d.from, d.to, d.due, d.publish].every((x) => DATE.test(x)) || d.from > d.to) redirect(`/admin/reports?err=${encodeURIComponent("Give the report a name and all four dates (marks from must be before marks to).")}`);
+  const err = await createCycle(me.id, d);
+  revalidatePath("/admin/reports");
+  redirect(`/admin/reports${err ? "?err=" + encodeURIComponent(err) : ""}`);
+}
+export async function createEntriesAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40), n = await createEntries(me.id, id);
+  revalidatePath(`/admin/reports/${id}`);
+  redirect(`/admin/reports/${id}?ok=${encodeURIComponent(n ? `${n} reports created. Teachers can start writing from their dashboard.` : "Everyone already has a report.")}`);
+}
+export async function reviewEntryAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const cycle = str(f, "cycle", 40);
+  await reviewEntry(me.id, str(f, "id", 40), str(f, "approve", 1) === "1", str(f, "note", 300) || null);
+  revalidatePath(`/admin/reports/${cycle}`);
+}
+export async function approveAllAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40), n = await approveAllSubmitted(me.id, id);
+  revalidatePath(`/admin/reports/${id}`);
+  redirect(`/admin/reports/${id}?ok=${encodeURIComponent(`${n} approved.`)}`);
+}
+export async function publishCycleAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40), err = await publishCycle(me.id, id);
+  revalidatePath(`/admin/reports/${id}`); revalidatePath("/admin/reports");
+  redirect(`/admin/reports/${id}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Published. It will show in each family’s account once the parent area is live.")}`);
+}
+export async function saveWriteSheetAction(f: FormData): Promise<void> {
+  const me = await requireSignedIn();
+  const cycle = str(f, "cycle", 40), group = str(f, "group", 40);
+  const n = (k: string, max: number) => { const v = parseInt(str(f, k, 2), 10); return v >= 1 && v <= max ? v : null; };
+  const rows: WriteInput[] = f.getAll("ids").map(String).slice(0, 200).map((id) => ({ id, progress: n(`progress_${id}`, 5), effort: n(`effort_${id}`, 5),
+    working: n(`working_${id}`, 9), predicted: n(`predicted_${id}`, 9), comment: str(f, `comment_${id}`, 2000) }));
+  const submit = str(f, "submit", 1) === "1";
+  const err = await saveWriteSheet(me, cycle, group, rows, submit);
+  revalidatePath(`/admin/reports/${cycle}`);
+  redirect(`/admin/write/${cycle}/${group}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(submit ? "Submitted for approval." : "Drafts saved.")}`);
+}
+
+// ---------- 1:1 tutoring ----------
+const tutBack = (err: string | null, ok: string) => redirect(`/admin/tutoring?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok)}`);
+export async function setTutorRateAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const price = pounds(str(f, "price", 12)), pay = pounds(str(f, "pay", 12)), aud = str(f, "audience", 10);
+  if (!(price >= 0 && pay >= 0) || !["public", "enrolled"].includes(aud)) return tutBack("Enter both amounts in pounds.", "");
+  await setTutorRate(me.id, str(f, "level", 40), aud, price, pay);
+  revalidatePath("/admin/tutoring"); tutBack(null, "Price saved.");
+}
+export async function addAvailabilityAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const day = parseInt(str(f, "weekday", 1), 10), a = str(f, "start", 5), b = str(f, "end", 5);
+  if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(a) || !/^\d{2}:\d{2}$/.test(b) || b <= a) return tutBack("The end time must be after the start time.", "");
+  await addAvailability(me.id, str(f, "teacher", 40), day, a, b);
+  revalidatePath("/admin/tutoring"); tutBack(null, "Availability added.");
+}
+export async function removeAvailabilityAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  await removeAvailability(me.id, str(f, "id", 40));
+  revalidatePath("/admin/tutoring"); tutBack(null, "Availability removed.");
+}
+export async function bookTutoringAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const [teacherId, startsAt] = str(f, "slot", 120).split("|");
+  const email = str(f, "student_email", 120).toLowerCase();
+  const d = { parentId: str(f, "parent", 40), levelId: str(f, "level", 40), subjectId: str(f, "subject", 40), teacherId, startsAt, student: str(f, "student", 80),
+    studentEmail: EMAIL.test(email) ? email : null, focus: str(f, "focus", 300) || null };
+  if (!d.parentId || !d.student || !teacherId || !startsAt) return tutBack("Choose a time, a family and the student’s name.", "");
+  const err = await bookTutoring(me.id, d);
+  revalidatePath("/admin/tutoring"); tutBack(err, `1:1 booked for ${d.student}.`);
+}
+export async function setTutoringStatusAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  await setTutoringStatus(me.id, str(f, "id", 40), str(f, "status", 12));
+  revalidatePath("/admin/tutoring"); revalidatePath("/admin/payroll");
 }
