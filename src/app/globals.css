@@ -258,3 +258,13 @@ html{scroll-padding-top:110px}
 /* no sideways scrolling: hidden labels in the Space Available carousel stay inside their card */
 .space-track,.space-card{position:relative}
 html,body{overflow-x:clip}
+/* illustration sits inside its column, lined up with the right edge of the nav */
+.hero-art{width:100%;max-width:none;margin:0;justify-self:end;align-self:center}
+@media (max-width:820px){.hero-art{max-width:520px;justify-self:center}}
+@media (max-width:560px){.hero-art{max-width:400px}}
+/* bigger prices in the KS3 bundles */
+.bundle{gap:10px}
+.bundle h3{font-size:26px}
+.bundle .ln{font-size:clamp(20px,2vw,24px);gap:26px}
+.bundle .tot{font-size:clamp(32px,3.2vw,40px)}
+.bundle .tot s{font-size:clamp(22px,2.2vw,26px)}
