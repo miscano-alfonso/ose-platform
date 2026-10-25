@@ -13,7 +13,7 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
     {sp.err && <p className="note msg bad">{sp.err}</p>}
     {cycles.length === 0 ? <p className="empty">No reports set up for this year yet.</p> :
       <div className="tw"><table><thead><tr><th>Report</th><th>Comments due</th><th>Publish</th><th>Written</th><th>Approved</th><th>Status</th><th></th></tr></thead>
-        <tbody>{cycles.map((c) => <tr key={c.id}><td><b>{c.name}</b><div className="muted" style={{ fontSize: 12.5 }}>Marks {day(c.marks_from)} – {day(c.marks_to)}</div></td>
+        <tbody>{cycles.map((c) => <tr key={c.id}><td><b>{c.name}</b><div className="muted" style={{ fontSize: 15.5 }}>Marks {day(c.marks_from)} – {day(c.marks_to)}</div></td>
           <td>{day(c.comments_due)}</td><td>{day(c.publish_on)}</td><td>{c.total ? `${c.submitted + c.approved}/${c.total}` : <span className="muted">Not started</span>}</td>
           <td>{c.total ? `${c.approved}/${c.total}` : "—"}</td><td><span className={`pill ${STATUS[c.status][1]}`}>{STATUS[c.status][0]}</span></td>
           <td><Link className="abtn sm" href={`/admin/reports/${c.id}`}>Open</Link></td></tr>)}</tbody></table></div>}

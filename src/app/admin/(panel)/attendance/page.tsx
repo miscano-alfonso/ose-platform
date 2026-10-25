@@ -41,7 +41,7 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
           <Link className="abtn sm" href={`/admin/register/${l.id}`}>{l.status === "taught" ? "View register" : "Register"}</Link>
         </div>)}</section>)}
 
-      <h2 style={{ font: "600 18px Jost", margin: "22px 0 10px" }}>{term.name} by class</h2>
+      <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>{term.name} by class</h2>
       <div className="tw"><table><thead><tr><th>Class</th><th>Lessons taught</th><th>Registers taken</th><th>Attendance</th><th>Unexplained absences</th></tr></thead>
         <tbody>{classes.map((c) => <tr key={c.code}><td><b>{c.name}</b> <span className="muted">{c.code}</span></td><td>{c.taught}</td><td>{c.registers}</td>
           <td>{c.pct == null ? <span className="muted">—</span> : <span className={`pill ${c.pct >= 90 ? "good" : c.pct >= 80 ? "warn" : "bad"}`}>{c.pct}%</span>}</td>

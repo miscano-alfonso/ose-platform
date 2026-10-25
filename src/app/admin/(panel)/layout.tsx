@@ -18,7 +18,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <AdminNav counts={{ "/admin/enquiries": c.enq }} />
       <div className="who"><span>Signed in as<br /><b>{me.name}</b></span>
         <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form>
-        <a href="/" style={{ color: "#c9cde4", fontSize: 12.5 }}>View the website</a></div>
+        <a href="/" style={{ color: "#c9cde4", fontSize: 15.5 }}>View the website</a></div>
     </aside>
     <main className="main">{children}</main>
   </div></div>;

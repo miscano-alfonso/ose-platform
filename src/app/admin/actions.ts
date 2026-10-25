@@ -7,6 +7,8 @@ import { parseImport, runImport, type ImportReport } from "@/lib/import";
 import { buildSchedules, setFamilyTerm } from "@/lib/payments";
 import { setLevelRate, buildPayRun, setAdjustment, setRunStatus } from "@/lib/payroll";
 import { setTutorRate, addAvailability, removeAvailability, bookTutoring, setTutoringStatus } from "@/lib/tutoring";
+import { addTeacher, saveTeacher, setTeacherArchived } from "@/lib/teachers-admin";
+import { saveWorkshop } from "@/lib/workshops-admin";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
 import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite } from "@/lib/auth";
@@ -366,4 +368,57 @@ export async function setTutoringStatusAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   await setTutoringStatus(me.id, str(f, "id", 40), str(f, "status", 12));
   revalidatePath("/admin/tutoring"); revalidatePath("/admin/payroll");
+}
+
+// ---------- teachers ----------
+export async function addTeacherAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const name = str(f, "name", 80), email = str(f, "email", 120).toLowerCase();
+  if (!name || !EMAIL.test(email)) redirect(`/admin/teachers?err=${encodeURIComponent("Enter the teacher’s name and email.")}`);
+  const r = await addTeacher(me.id, name, email);
+  revalidatePath("/admin/teachers");
+  redirect(r.id ? `/admin/teachers/${r.id}?ok=${encodeURIComponent("Teacher added. Now fill in their profile.")}` : `/admin/teachers?err=${encodeURIComponent(r.error!)}`);
+}
+export async function saveTeacherAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40), back = (k: string, m: string) => redirect(`/admin/teachers/${id}?${k}=${encodeURIComponent(m)}`);
+  const file = f.get("photo");
+  let photo: { data: Buffer; type: string } | null = null;
+  if (file instanceof File && file.size > 0) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return back("err", "The photo must be a JPG, PNG or WebP.");
+    if (file.size > 3 * 1024 * 1024) return back("err", "The photo must be under 3 MB.");
+    photo = { data: Buffer.from(await file.arrayBuffer()), type: file.type };
+  }
+  const name = str(f, "name", 80);
+  if (!name) return back("err", "The teacher needs a name.");
+  const err = await saveTeacher(me.id, id, { name, designation: str(f, "designation", 80), bio: String(f.get("bio") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 6000),
+    qualifications: String(f.get("qualifications") ?? "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean).slice(0, 30).map((x) => x.slice(0, 150)),
+    slug: str(f, "slug", 60), sortOrder: Math.max(0, Math.min(99, parseInt(str(f, "sort", 2), 10) || 0)),
+    subjects: f.getAll("subjects").map(String).filter((x) => /^[0-9a-f-]{36}$/.test(x)), photo, removePhoto: f.get("remove_photo") === "on" });
+  revalidatePath("/admin/teachers"); revalidatePath("/teachers", "layout");
+  back(err ? "err" : "ok", err ?? "Profile saved.");
+}
+export async function archiveTeacherAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40);
+  await setTeacherArchived(me.id, id, str(f, "archive", 1) === "1");
+  revalidatePath("/admin/teachers"); revalidatePath("/teachers", "layout");
+  redirect(`/admin/teachers/${id}`);
+}
+
+// ---------- workshops: create and edit ----------
+export async function saveWorkshopAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40) || null, back = (m: string) => redirect(`/admin/workshops/${id ?? "new"}?err=${encodeURIComponent(m)}`);
+  const date = str(f, "date", 10), time = str(f, "time", 5), price = pounds(str(f, "price", 12) || "0"), pay = pounds(str(f, "pay", 12) || "0");
+  const ep = str(f, "enrolled_price", 12), enrolledPrice = ep ? pounds(ep) : null;
+  const cap = parseInt(str(f, "capacity", 4), 10);
+  if (!str(f, "title", 120) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return back("Give the workshop a title, a date and a start time.");
+  if (!(price >= 0) || !(pay >= 0) || (enrolledPrice != null && !(enrolledPrice >= 0))) return back("Enter prices in pounds, e.g. 15 or 0 for free.");
+  const r = await saveWorkshop(me.id, id, { title: str(f, "title", 120), levelId: str(f, "level", 40) || null, subjectId: str(f, "subject", 40) || null,
+    teacherId: str(f, "teacher", 40) || null, date, time, minutes: Math.max(15, Math.min(240, parseInt(str(f, "minutes", 3), 10) || 45)),
+    capacity: cap > 0 ? Math.min(cap, 500) : null, price, enrolledPrice, teacherPay: pay, summary: str(f, "summary", 1000) || null, publish: f.get("publish") === "on" });
+  revalidatePath("/admin/workshops"); revalidatePath("/other-services");
+  if (r.error) return back(r.error);
+  redirect(`/admin/workshops/${r.id}?ok=${encodeURIComponent("Workshop saved.")}`);
 }

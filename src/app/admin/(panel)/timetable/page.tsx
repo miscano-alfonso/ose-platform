@@ -21,7 +21,7 @@ export default async function Timetable({ searchParams }: { searchParams: Promis
       </div>)}
     </div>
 
-    <h2 style={{ font: "600 18px Jost", margin: "22px 0 10px" }}>Classes</h2>
+    <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Classes</h2>
     <p className="note" style={{ marginTop: -4 }}>Add each class’s weekly lesson times and its teacher. Times show on the website’s course cards and timetable, and lesson dates for registers are made from them (holidays skipped).</p>
     {classes.map((c) => <section className="card" key={c.id}>
       <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}>

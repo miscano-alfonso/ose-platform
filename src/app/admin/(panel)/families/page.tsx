@@ -24,7 +24,7 @@ export default async function Families({ searchParams }: { searchParams: Promise
         {f.checks > 0 && <span className="pill warn">{f.checks} to check</span>}</div>
       {f.note && <p className="note msg" style={{ margin: "4px 0 8px" }}>{f.note}</p>}
       {f.children.map((c) => <div key={c.id} style={{ marginTop: 8 }}>
-        <b>{c.name}</b>{c.email && <span className="muted" style={{ fontSize: 13 }}> · {c.email}</span>}
+        <b>{c.name}</b>{c.email && <span className="muted" style={{ fontSize: 14.5 }}> · {c.email}</span>}
         {c.courses.length === 0 ? <p className="empty">No courses.</p> : c.courses.map((k) => <div className="li" key={k.id} style={{ alignItems: "flex-start" }}>
           <span className={`pill ${k.needs_check ? "warn" : k.status === "active" ? "good" : "mute"}`}>{k.needs_check ? "Needs a check" : k.status[0].toUpperCase() + k.status.slice(1)}</span>
           <div className="t"><b>{k.name} <span className="muted" style={{ fontWeight: 400 }}>({k.code})</span></b><span>Since {k.enrolled_on}{k.note ? ` · ${k.note}` : ""}</span></div>

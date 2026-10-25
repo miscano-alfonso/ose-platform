@@ -42,9 +42,9 @@ export default async function Tasters({ searchParams }: { searchParams: Promise<
       </form>)}
     </section>
 
-    <h2 style={{ font: "600 18px Jost", margin: "22px 0 10px" }}>Upcoming</h2>
+    <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Upcoming</h2>
     {upcoming.length === 0 ? <p className="empty">No tasters booked.</p> : <List rows={upcoming} />}
-    <h2 style={{ font: "600 18px Jost", margin: "22px 0 10px" }}>Recent</h2>
+    <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Recent</h2>
     {past.length === 0 ? <p className="empty">Nothing yet.</p> : <List rows={past} />}
     <p className="note">Teachers mark whether a taster came when they take the lesson’s register. Mark “Booked a course” once the family signs up, so follow-ups stop.</p>
   </>;
@@ -53,15 +53,15 @@ export default async function Tasters({ searchParams }: { searchParams: Promise<
 function List({ rows }: { rows: Awaited<ReturnType<typeof getTasters>>["rows"] }) {
   return <div className="tw"><table><thead><tr><th>Lesson</th><th>Child</th><th>Parent</th><th>Status</th><th></th></tr></thead>
     <tbody>{rows.map((r) => <tr key={r.id}>
-      <td><b>{r.level} {r.subject}</b><div className="muted" style={{ fontSize: 12.5 }}>{day(r.lesson_date)} {r.starts_at} · <Link href={`/admin/register/${r.lesson_event_id}`}>{r.code}</Link></div></td>
-      <td>{r.child_name}<div className="muted" style={{ fontSize: 12.5 }}>{r.child_email}</div></td>
-      <td>{r.parent_name}<div className="muted" style={{ fontSize: 12.5 }}><a href={`mailto:${r.parent_email}`}>{r.parent_email}</a></div></td>
+      <td><b>{r.level} {r.subject}</b><div className="muted" style={{ fontSize: 15.5 }}>{day(r.lesson_date)} {r.starts_at} · <Link href={`/admin/register/${r.lesson_event_id}`}>{r.code}</Link></div></td>
+      <td>{r.child_name}<div className="muted" style={{ fontSize: 15.5 }}>{r.child_email}</div></td>
+      <td>{r.parent_name}<div className="muted" style={{ fontSize: 15.5 }}><a href={`mailto:${r.parent_email}`}>{r.parent_email}</a></div></td>
       <td><span className={`pill ${STATUS[r.status][1]}`}>{STATUS[r.status][0]}</span></td>
-      <td style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      <td><div className="acts">
         {r.status === "booked" && <Btn id={r.id} status="cancelled" label="Cancel" />}
         {(r.status === "attended" || r.status === "no_show") && <Btn id={r.id} status="booked_course" label="Booked a course" />}
         {r.status !== "booked" && r.status !== "cancelled" && <Btn id={r.id} status="booked" label="Reset" />}
-      </td></tr>)}</tbody></table></div>;
+      </div></td></tr>)}</tbody></table></div>;
 }
 
 function Btn({ id, status, label }: { id: string; status: string; label: string }) {

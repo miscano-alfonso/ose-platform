@@ -10,7 +10,13 @@ export type Course = {
   year_label: string; year_start: string; is_next: boolean; slots: { d: number; t: string }[] | null;
 };
 export type Term = { year_label: string; is_next: boolean; year_start: string; number: number; name: string; starts_on: string; ends_on: string; bills_on: string; break_start: string | null; break_end: string | null };
-export type Teacher = { name: string; designation: string | null; bio: string | null; subjects: string[] | null };
+export type Teacher = { name: string; slug: string; designation: string | null; bio: string | null; subjects: string[] | null; qualifications: string[]; photo: string | null };
+// a photo uploaded in the admin is served from the database; otherwise the file in public/teachers
+const TEACHER_SQL = `select u.name, t.slug, t.designation, t.bio, t.qualifications,
+    case when t.photo is not null then '/teacher-photo/' || t.slug || '?v=' || extract(epoch from t.photo_updated_at)::bigint else t.photo_asset end as photo,
+    (select array_agg(distinct sj.name order by sj.name) from course_groups g join subjects sj on sj.id = g.subject_id
+      where g.teacher_id = t.id and g.status not in ('hidden', 'closed')) as subjects
+  from teachers t join users u on u.id = t.user_id`;
 export type Bundle = { min_courses: number; percent_off: string };
 
 const COURSE_SQL = `
@@ -71,12 +77,11 @@ export async function getTerms(): Promise<Term[]> {
 }
 
 export async function getTeachers(): Promise<Teacher[]> {
-  return withSchool((q) => q<Teacher>(`
-    select u.name, t.designation, t.bio,
-           (select array_agg(distinct sj.name order by sj.name) from course_groups g join subjects sj on sj.id = g.subject_id
-             where g.teacher_id = t.id and g.status not in ('hidden', 'closed')) as subjects
-    from teachers t join users u on u.id = t.user_id
-    where t.archived_at is null order by u.name`));
+  return withSchool((q) => q<Teacher>(`${TEACHER_SQL} where t.archived_at is null order by t.sort_order, u.name`));
+}
+
+export async function getTeacher(slug: string): Promise<Teacher | null> {
+  return withSchool(async (q) => (await q<Teacher>(`${TEACHER_SQL} where t.archived_at is null and t.slug = $1`, [slug]))[0] ?? null);
 }
 
 export async function getBundles(): Promise<{ ks3Pence: number; bundles: Bundle[] }> {

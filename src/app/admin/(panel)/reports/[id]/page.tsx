@@ -24,7 +24,7 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
         <td>{k.done}/{k.total}</td><td>{k.submitted || "—"}</td><td>{k.approved === k.total ? <span className="pill good">All</span> : `${k.approved}/${k.total}`}</td>
         <td><Link className="abtn sm" href={`/admin/write/${c.id}/${k.group_id}`}>Open</Link></td></tr>)}</tbody></table></div>}
 
-    <div className="top" style={{ marginTop: 18 }}><h2 style={{ font: "600 18px Jost", margin: 0 }}>Waiting for approval ({review.length})</h2><span className="grow" />
+    <div className="top" style={{ marginTop: 18 }}><h2 style={{ font: "600 20px Jost", margin: 0 }}>Waiting for approval ({review.length})</h2><span className="grow" />
       {review.length > 1 && <form action={approveAllAction}><input type="hidden" name="id" value={c.id} /><button className="abtn sm" type="submit">Approve all {review.length}</button></form>}</div>
     {review.length === 0 ? <p className="empty">Nothing to review right now.</p> : review.map((r) => <section className="card" key={r.id}>
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "baseline" }}><h2 style={{ margin: 0 }}>{r.student}</h2><span className="muted">{r.class} · {r.teacher}</span></div>

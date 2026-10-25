@@ -16,7 +16,7 @@ export default async function Tutoring({ searchParams }: { searchParams: Promise
     <div className="top"><div><h1>1:1 tutoring</h1><div className="sub">45-minute online 1:1s · {upcoming.length} upcoming</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
 
-    <h2 style={{ font: "600 18px Jost", margin: "4px 0 10px" }}>Upcoming</h2>
+    <h2 style={{ font: "600 20px Jost", margin: "4px 0 10px" }}>Upcoming</h2>
     {upcoming.length === 0 ? <p className="empty">No 1:1s booked.</p> : <Table rows={upcoming} />}
 
     <section className="card"><h2>Book a 1:1</h2>
@@ -54,18 +54,18 @@ export default async function Tutoring({ searchParams }: { searchParams: Promise
           <button className="abtn sm" type="submit">Add</button></form></div>)}
       <p className="cs" style={{ marginTop: 8 }}>Lessons, workshops and other 1:1s are taken out automatically, and 1:1s can’t be booked less than 24 hours ahead.</p></section>
 
-    <h2 style={{ font: "600 18px Jost", margin: "22px 0 10px" }}>Recent</h2>
+    <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Recent</h2>
     {past.length === 0 ? <p className="empty">Nothing yet.</p> : <Table rows={past} />}
   </>;
 }
 
 function Table({ rows }: { rows: Awaited<ReturnType<typeof getTutoring>>["bookings"] }) {
   return <div className="tw"><table><thead><tr><th>When</th><th>Student</th><th>Family</th><th>Teacher</th><th>Price</th><th>Status</th><th></th></tr></thead>
-    <tbody>{rows.map((b) => <tr key={b.id}><td><b>{when(b.starts_at)}</b><div className="muted" style={{ fontSize: 12.5 }}>{b.level} {b.subject}</div></td>
-      <td>{b.student}{b.focus && <div className="muted" style={{ fontSize: 12.5 }}>{b.focus}</div>}</td><td>{b.parent}<div className="muted" style={{ fontSize: 12.5 }}>{b.parent_email}</div></td>
+    <tbody>{rows.map((b) => <tr key={b.id}><td><b>{when(b.starts_at)}</b><div className="muted" style={{ fontSize: 15.5 }}>{b.level} {b.subject}</div></td>
+      <td>{b.student}{b.focus && <div className="muted" style={{ fontSize: 15.5 }}>{b.focus}</div>}</td><td>{b.parent}<div className="muted" style={{ fontSize: 15.5 }}>{b.parent_email}</div></td>
       <td>{b.teacher}</td><td>{money(b.price)}</td><td><span className={`pill ${PILL[b.status]?.[1] ?? "mute"}`}>{PILL[b.status]?.[0] ?? b.status}</span></td>
-      <td style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>{b.status === "booked" && <><SBtn id={b.id} s="completed" l="Done" /><SBtn id={b.id} s="no_show" l="Didn’t come" /><SBtn id={b.id} s="cancelled" l="Cancel" /></>}
-        {b.status !== "booked" && <SBtn id={b.id} s="booked" l="Undo" />}</td></tr>)}</tbody></table></div>;
+      <td><div className="acts">{b.status === "booked" && <><SBtn id={b.id} s="completed" l="Done" /><SBtn id={b.id} s="no_show" l="Didn’t come" /><SBtn id={b.id} s="cancelled" l="Cancel" /></>}
+        {b.status !== "booked" && <SBtn id={b.id} s="booked" l="Undo" />}</div></td></tr>)}</tbody></table></div>;
 }
 function SBtn({ id, s, l }: { id: string; s: string; l: string }) {
   return <form action={setTutoringStatusAction}><input type="hidden" name="id" value={id} /><input type="hidden" name="status" value={s} /><button className="abtn sm" type="submit">{l}</button></form>;

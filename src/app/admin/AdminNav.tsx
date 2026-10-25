@@ -5,7 +5,7 @@ import { useState } from "react";
 
 // Sections from the admin prototype. Those without a link are still being moved across.
 const ITEMS: [string, string | null][] = [
-  ["Dashboard", "/admin"], ["Classes", "/admin/classes"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"], ["Timetable", "/admin/timetable"],
+  ["Dashboard", "/admin"], ["Classes", "/admin/classes"], ["Teachers", "/admin/teachers"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"], ["Timetable", "/admin/timetable"],
   ["Families", "/admin/families"], ["Attendance", "/admin/attendance"], ["Reports", "/admin/reports"], ["Payments", "/admin/payments"], ["Payroll", "/admin/payroll"],
   ["Prices & discounts", "/admin/prices"], ["Term dates", "/admin/term-dates"], ["Tasters", "/admin/tasters"], ["Waiting list & enquiries", "/admin/enquiries"],
   ["Messages", null], ["Student chat", null], ["Rewards", null], ["Email", null], ["Marketing", null], ["Website", null], ["Staff & access", "/admin/staff"], ["Settings", "/admin/account"],
@@ -18,7 +18,7 @@ export function AdminNav({ counts }: { counts: Record<string, number> }) {
     <button className="abtn side-btn menu-toggle" aria-expanded={open} aria-controls="adm-nav" onClick={() => setOpen(!open)}>{open ? "Close menu" : "Menu"}</button>
     <nav id="adm-nav" className={`nav${open ? " open" : ""}`} aria-label="Admin">
       {ITEMS.map(([label, href]) => href
-        ? <Link key={label} href={href} aria-current={path === href ? "page" : undefined} onClick={() => setOpen(false)}>{label}{counts[href] ? <b className="cnt">{counts[href]}</b> : null}</Link>
+        ? <Link key={label} href={href} aria-current={path === href || (href !== "/admin" && path.startsWith(href + "/")) ? "page" : undefined} onClick={() => setOpen(false)}>{label}{counts[href] ? <b className="cnt">{counts[href]}</b> : null}</Link>
         : <span key={label} title="Coming next">{label}<small>Soon</small></span>)}
     </nav>
   </>;

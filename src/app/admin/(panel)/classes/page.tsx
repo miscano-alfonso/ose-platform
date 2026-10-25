@@ -16,23 +16,23 @@ export default async function Classes() {
   return <>
     <div className="top"><div><h1>Classes</h1><div className="sub">{groups.length} classes. Edit a row to change its capacity, override, website label, status or whether it shows under Space Available on the homepage.</div></div></div>
     {years.map((y) => <div key={y}>
-      {years.length > 1 && <h2 style={{ font: "600 18px Jost", margin: "8px 0 10px" }}>{yearLabel(y)}</h2>}
+      {years.length > 1 && <h2 style={{ font: "600 20px Jost", margin: "8px 0 10px" }}>{yearLabel(y)}</h2>}
       <div className="tw"><table>
         <thead><tr><th>Class</th><th>Teacher</th><th>Lessons</th><th>Places</th><th>Status</th><th>Website label</th><th>Homepage</th></tr></thead>
         {groups.filter((g) => g.year_label === y).map((g) => {
           const pct = g.capacity ? Math.min(100, Math.round((g.taken / g.capacity) * 100)) : 0;
           return <tbody key={g.id}>
             <tr>
-              <td><span className="dot" style={{ background: g.colour }} /><b>{g.level} {g.subject}</b><div className="muted" style={{ fontSize: 12.5, marginLeft: 18 }}>{g.code}</div></td>
+              <td><span className="dot" style={{ background: g.colour }} /><b>{g.level} {g.subject}</b><div className="muted" style={{ fontSize: 15.5, marginLeft: 18 }}>{g.code}</div></td>
               <td>{g.teacher ?? <span className="muted">Not set</span>}</td>
               <td>{g.slots ?? <span className="muted">No lessons yet</span>}</td>
               <td><div className="fill"><div className="track"><i className={g.is_full ? "full" : ""} style={{ width: `${pct}%` }} /></div><span>{g.taken}/{g.capacity ?? "∞"}</span></div>
-                {g.capacity_mode !== "auto" && <div className="muted" style={{ fontSize: 12 }}>{MODE[g.capacity_mode]}</div>}
-                {g.waiting > 0 && <div className="muted" style={{ fontSize: 12 }}>{g.waiting} waiting</div>}</td>
+                {g.capacity_mode !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>{MODE[g.capacity_mode]}</div>}
+                {g.waiting > 0 && <div className="muted" style={{ fontSize: 13.5 }}>{g.waiting} waiting</div>}</td>
               <td>{statusPill(g.status, g.is_full)}</td>
-              <td>{g.label ?? <span className="muted">None</span>}{g.sticky_label !== "auto" && <div className="muted" style={{ fontSize: 12 }}>set by hand</div>}</td>
+              <td>{g.label ?? <span className="muted">None</span>}{g.sticky_label !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand</div>}</td>
               <td>{onHome(g) ? <span className="pill good">Space Available</span> : <span className="muted">Not shown</span>}
-                {g.homepage !== "auto" && <div className="muted" style={{ fontSize: 12 }}>set by hand{g.homepage_order ? ` · position ${g.homepage_order}` : ""}</div>}</td>
+                {g.homepage !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand{g.homepage_order ? ` · position ${g.homepage_order}` : ""}</div>}</td>
             </tr>
             <tr className="editrow"><td colSpan={7} style={{ paddingTop: 6, paddingBottom: 8 }}>
               <details className="edit"><summary className="abtn sm">Edit {g.code}</summary>

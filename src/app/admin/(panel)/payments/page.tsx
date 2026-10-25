@@ -32,7 +32,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
         <td>{t.failed ? <span className="pill warn">{money(t.failed)}</span> : <span className="muted">—</span>}</td></tr>)}</tbody>
     </table></div>
 
-    <h2 style={{ font: "600 18px Jost", margin: "22px 0 10px" }}>Families</h2>
+    <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Families</h2>
     <form className="eform" style={{ marginBottom: 14 }}>
       <label className="fld">Search<input name="q" defaultValue={sp.q} placeholder="Parent or email" /></label>
       <label className="fld">Show<select name="show" defaultValue={sp.show ?? ""}><option value="">All families</option><option value="attention">Needs attention</option></select></label>
@@ -42,7 +42,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
     <div className="tw"><table>
       <thead><tr><th>Family</th><th>Places</th><th>Paid this year</th><th>Year total</th><th>Next payment</th><th>Check</th></tr></thead>
       {list.map((f) => <tbody key={f.id}><tr>
-        <td><b>{f.name}</b><div className="muted" style={{ fontSize: 12.5 }}>{f.email}</div></td>
+        <td><b>{f.name}</b><div className="muted" style={{ fontSize: 15.5 }}>{f.email}</div></td>
         <td>{f.places}</td><td>{money(f.paid)}</td><td>{money(f.total)}</td>
         <td>{f.next_on ? <>{money(f.next_due)} <span className="muted">on {day(f.next_on)}</span></> : <span className="muted">None scheduled</span>}</td>
         <td>{f.unscheduled > 0 ? <span className="pill info">No schedule yet</span>
