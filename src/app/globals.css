@@ -255,3 +255,6 @@ button.btn:disabled{cursor:not-allowed}
 .s-nav{position:sticky;top:0;z-index:50;box-shadow:0 1px 0 rgba(255,255,255,.08),0 6px 18px rgba(0,0,0,.18)}
 html{scroll-padding-top:110px}
 @media (max-width:1080px){.s-nav .s-links.open{max-height:calc(100vh - 80px);overflow-y:auto}}
+/* no sideways scrolling: hidden labels in the Space Available carousel stay inside their card */
+.space-track,.space-card{position:relative}
+html,body{overflow-x:clip}
