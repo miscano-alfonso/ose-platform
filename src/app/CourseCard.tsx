@@ -6,6 +6,7 @@ const LABEL_CLASS: Record<string, string> = { "Few spaces left": "few", "Almost 
 // The subject roundels used on ohsoed.co.uk (files in public/roundels, named as in the OSE Drive folder).
 const ROUNDEL: [RegExp, string][] = [
   [/english/i, "OSE English Roundel.png"],
+  [/french|spanish|german|italian|latin|language/i, "OSE Language Roundel.png"],
   [/math/i, "OSE Maths Roundel.png"],
   [/science|biology|chemistry|physics/i, "OSE Science Roundel.png"],
   [/geography/i, "OSE Geography Roundel.png"],
