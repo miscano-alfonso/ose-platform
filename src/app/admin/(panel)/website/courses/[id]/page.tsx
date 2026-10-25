@@ -16,6 +16,9 @@ export default async function EditCoursePage({ params, searchParams }: { params:
     <form action={saveCoursePageAction} className="card" style={{ display: "grid", gap: 12 }}>
       <input type="hidden" name="id" value={c.id} />
       <label className="fld">Exam board (optional)<input name="board" maxLength={60} defaultValue={c.exam_board ?? ""} style={{ maxWidth: 240 }} /></label>
+      <label className="fld">Sample lesson recording: a Google Drive link (shared “anyone with the link”), a YouTube link, or a video file link<input name="video" type="url" maxLength={500} defaultValue={c.video ?? ""} placeholder="https://drive.google.com/file/d/…/view" style={{ maxWidth: 720 }} /></label>
+      <label className="fld">Recording title<input name="video_title" maxLength={120} defaultValue={c.video_title ?? ""} style={{ maxWidth: 420 }} /></label>
+      {c.video?.includes("ohsoed.co.uk/uploads") && <p className="note msg bad" style={{ margin: 0 }}>This recording is still on the old website, which goes when TechSaga closes. Upload it to Google Drive, share it as “anyone with the link”, and paste that link here.</p>}
       <label className="fld">Introduction (optional)<textarea name="intro" rows={3} maxLength={2000} defaultValue={c.intro ?? ""} className="mini" style={{ width: "100%" }} /></label>
       <label className="fld">Topics: start each topic with “## ” and its title, then its description. Lines starting “- ” show as bullet points.
         <textarea name="topics" rows={24} maxLength={20000} defaultValue={topics} className="mini" style={{ width: "100%", fontFamily: "ui-monospace, monospace", fontSize: 14 }} /></label>

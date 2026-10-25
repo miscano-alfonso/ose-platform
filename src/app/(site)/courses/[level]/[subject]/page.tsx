@@ -59,6 +59,8 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
             <span className={`btn ${c.shows_waitlist ? "btn-line" : "btn-brand"}`} aria-disabled="true" title="Booking opens in the next update">{c.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>
           </div>
         </div>)}
+        {p.video && <div className="cd-video"><h2 className="cd-h">Sample lesson</h2><Video url={p.video} title={p.video_title ?? `${p.level} ${p.subject} sample lesson`} />
+          {p.video_title && <p className="muted">{p.video_title}</p>}</div>}
         <div className="cd-tools"><Link className="btn btn-line sm" href="/courses">Back to courses</Link><PrintButton /></div>
       </div>
       <div>
@@ -68,4 +70,13 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
       </div>
     </div></section>
   </>);
+}
+
+/** A recorded lesson: Google Drive and YouTube links play in their own player; anything else as a video file. */
+function Video({ url, title }: { url: string; title: string }) {
+  const drive = /drive\.google\.com\/file\/d\/([\w-]+)/.exec(url)?.[1];
+  const yt = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{6,})/.exec(url)?.[1];
+  if (drive || yt) return <div className="cd-frame"><iframe src={drive ? `https://drive.google.com/file/d/${drive}/preview` : `https://www.youtube-nocookie.com/embed/${yt}`}
+    title={title} allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" /></div>;
+  return <video className="cd-player" controls preload="metadata" playsInline src={url} aria-label={title}>Your browser can’t play this video.</video>;
 }

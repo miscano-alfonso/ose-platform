@@ -176,15 +176,15 @@ export async function getCalculator(): Promise<CalcYear[]> {
 }
 
 /** A course's detail page: content from course_pages plus every class of it on sale (times, teacher, price). */
-export type CoursePage = { level: string; subject: string; colour: string; topics: { title: string; text: string }[]; exam_board: string | null; intro: string | null; groups: Course[] };
+export type CoursePage = { level: string; subject: string; colour: string; topics: { title: string; text: string }[]; exam_board: string | null; intro: string | null; video: string | null; video_title: string | null; groups: Course[] };
 export async function getCoursePage(slug: string): Promise<CoursePage | null> {
   return withSchool(async (q) => {
     const groups = await q<Course>(`select * from (${COURSE_SQL}) c where c.page_slug = $1 order by c.year_start, c.code`, [slug]);
-    const page = (await q<{ level: string; subject: string; colour: string; topics: { title: string; text: string }[]; exam_board: string | null; intro: string | null }>(`
-      select l.name as level, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour, cp.topics, cp.exam_board, cp.intro
+    const page = (await q<{ level: string; subject: string; colour: string; topics: { title: string; text: string }[]; exam_board: string | null; intro: string | null; video: string | null; video_title: string | null }>(`
+      select l.name as level, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour, cp.topics, cp.exam_board, cp.intro, cp.sample_video_url as video, cp.sample_title as video_title
       from course_pages cp join levels l on l.id = cp.level_id join subjects sj on sj.id = cp.subject_id where cp.slug = $1 and cp.published`, [slug]))[0];
     if (!page && !groups.length) return null;
     return { level: page?.level ?? groups[0].level, subject: page?.subject ?? groups[0].subject, colour: page?.colour ?? groups[0].colour,
-      topics: page?.topics ?? [], exam_board: page?.exam_board ?? null, intro: page?.intro ?? null, groups };
+      topics: page?.topics ?? [], exam_board: page?.exam_board ?? null, intro: page?.intro ?? null, video: page?.video ?? null, video_title: page?.video_title ?? null, groups };
   });
 }

@@ -546,7 +546,9 @@ export async function saveCoursePageAction(f: FormData): Promise<void> {
     const [title, ...rest] = block.split("\n");
     topics.push({ title: title.trim().slice(0, 200), text: rest.join("\n").trim().slice(0, 4000) });
   }
-  await saveCoursePage(me.id, id, { board: str(f, "board", 60) || null, intro: str(f, "intro", 2000) || null, topics: topics.slice(0, 30), published: f.get("published") === "on" });
+  const video = str(f, "video", 500);
+  await saveCoursePage(me.id, id, { board: str(f, "board", 60) || null, intro: str(f, "intro", 2000) || null, topics: topics.slice(0, 30), published: f.get("published") === "on",
+    video: /^https:\/\/\S+$/.test(video) ? video : null, videoTitle: str(f, "video_title", 120) || null });
   revalidatePath("/courses", "layout"); revalidatePath("/admin/website");
   redirect(`/admin/website/courses/${id}?ok=${encodeURIComponent("Saved.")}`);
 }

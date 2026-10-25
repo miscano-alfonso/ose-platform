@@ -317,3 +317,8 @@ html,body{overflow-x:clip}
 .cbtns{flex-direction:column;align-items:stretch;margin-top:auto;padding-top:10px}
 .cbtns .btn{width:100%;white-space:nowrap}
 .course{display:flex;flex-direction:column}
+
+.cd-video{margin:28px 0}
+.cd-player,.cd-frame{width:100%;aspect-ratio:16/9;border-radius:14px;background:#000;display:block}
+.cd-frame iframe{width:100%;height:100%;border:0;border-radius:14px}
+.cd-video .muted{color:var(--muted);font-size:14px;margin:8px 0 0}

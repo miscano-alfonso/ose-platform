@@ -49,18 +49,18 @@ export async function deleteFaq(actorId: string, id: string) {
 }
 
 // ---------- course detail pages ----------
-export type CoursePageAdmin = { id: string; slug: string; level: string; subject: string; exam_board: string | null; intro: string | null; topics: { title: string; text: string }[]; published: boolean };
+export type CoursePageAdmin = { id: string; slug: string; level: string; subject: string; exam_board: string | null; intro: string | null; topics: { title: string; text: string }[]; published: boolean; video: string | null; video_title: string | null };
 export async function listCoursePages() {
-  return withSchool((q) => q<CoursePageAdmin>(`select cp.id, cp.slug, l.name as level, sj.name as subject, cp.exam_board, cp.intro, cp.topics, cp.published
+  return withSchool((q) => q<CoursePageAdmin>(`select cp.id, cp.slug, l.name as level, sj.name as subject, cp.exam_board, cp.intro, cp.topics, cp.published, cp.sample_video_url as video, cp.sample_title as video_title
     from course_pages cp join levels l on l.id = cp.level_id join subjects sj on sj.id = cp.subject_id order by l.sort_order, sj.name`));
 }
 export async function getCoursePageAdmin(id: string) {
-  return withSchool(async (q) => (await q<CoursePageAdmin>(`select cp.id, cp.slug, l.name as level, sj.name as subject, cp.exam_board, cp.intro, cp.topics, cp.published
+  return withSchool(async (q) => (await q<CoursePageAdmin>(`select cp.id, cp.slug, l.name as level, sj.name as subject, cp.exam_board, cp.intro, cp.topics, cp.published, cp.sample_video_url as video, cp.sample_title as video_title
     from course_pages cp join levels l on l.id = cp.level_id join subjects sj on sj.id = cp.subject_id where cp.id = $1`, [id]))[0] ?? null);
 }
-export async function saveCoursePage(actorId: string, id: string, d: { board: string | null; intro: string | null; topics: { title: string; text: string }[]; published: boolean }) {
+export async function saveCoursePage(actorId: string, id: string, d: { board: string | null; intro: string | null; topics: { title: string; text: string }[]; published: boolean; video: string | null; videoTitle: string | null }) {
   await withSchool(async (q) => {
-    await q(`update course_pages set exam_board = $2, intro = $3, topics = $4::jsonb, published = $5::boolean where id = $1`, [id, d.board, d.intro, JSON.stringify(d.topics), d.published]);
+    await q(`update course_pages set exam_board = $2, intro = $3, topics = $4::jsonb, published = $5::boolean, sample_video_url = $6, sample_title = $7 where id = $1`, [id, d.board, d.intro, JSON.stringify(d.topics), d.published, d.video, d.videoTitle]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'update', 'course_page', $2)`, [actorId, id]);
   });
 }
