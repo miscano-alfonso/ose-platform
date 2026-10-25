@@ -328,6 +328,6 @@ html,body{overflow-x:clip}
 @media (min-width:821px){
   .hero-grid>div:first-child{position:relative;z-index:2}
   .s-hero.home h1{white-space:pre}
-  .hero-art{width:135%;max-width:none;justify-self:end;margin:-90px -11% -90px -24%}
+  .hero-art{width:135%;max-width:none;justify-self:end;margin:-90px -16% -90px -19%}
   .s-hero.home h1,.s-hero.home .lead{text-shadow:0 2px 14px rgba(13,22,66,.85)}
 }
