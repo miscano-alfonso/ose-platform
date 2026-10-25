@@ -12,6 +12,7 @@ import { saveWorkshop } from "@/lib/workshops-admin";
 import { audiences, recipients, sendBatch, logCampaign } from "@/lib/email";
 import { replyThread, setThreadStatus, startThread, setHidden, dismissReport, officePost, setWords, setPrizes, confirmWinners, markWinner, givePoints } from "@/lib/community";
 import { saveSiteText, saveFaq, deleteFaq, DEFAULTS, saveCoursePage } from "@/lib/site-content";
+import { saveRules, applyRules, copyRules, saveBundles } from "@/lib/rules";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
 import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite } from "@/lib/auth";
@@ -551,4 +552,44 @@ export async function saveCoursePageAction(f: FormData): Promise<void> {
     video: /^https:\/\/\S+$/.test(video) ? video : null, videoTitle: str(f, "video_title", 120) || null });
   revalidatePath("/courses", "layout"); revalidatePath("/admin/website");
   redirect(`/admin/website/courses/${id}?ok=${encodeURIComponent("Saved.")}`);
+}
+
+// ---------- prices & rules ----------
+const priceBack = (year: string, k: string, m: string) => redirect(`/admin/prices?year=${year}&${k}=${encodeURIComponent(m)}`);
+export async function saveRulesAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const year = str(f, "year", 40);
+  const int = (k: string, lo: number, hi: number, d: number) => { const v = parseInt(str(f, k, 3), 10); return v >= lo && v <= hi ? v : d; };
+  const levels = f.getAll("level").map(String).map((id) => {
+    const c = str(f, `cost_${id}`, 12), fee = pounds(str(f, `fee_${id}`, 12) || "0");
+    return { level_id: id, cost: c === "" ? null : pounds(c), fee: fee >= 0 ? fee : 0, tpy: int(`tpy_${id}`, 1, 6, 6), fyt: int(`fyt_${id}`, 1, 6, 6) };
+  });
+  if (levels.some((l) => l.cost != null && !(l.cost >= 0 && l.cost < 100000))) return priceBack(year, "err", "Enter each price per lesson in pounds, e.g. 8 or 12.50.");
+  const subjects = f.getAll("rule").map(String).map((k) => { const [level_id, subject_id] = k.split("_");
+    return { level_id, subject_id, lpw: int(`lpw_${k}`, 1, 5, 1), years: int(`yrs_${k}`, 1, 3, 1), remove: f.get(`del_${k}`) === "on" }; });
+  const nl = str(f, "new_level", 40), ns = str(f, "new_subject", 40);
+  if (nl && ns) subjects.push({ level_id: nl, subject_id: ns, lpw: int("new_lpw", 1, 5, 1), years: int("new_yrs", 1, 3, 1), remove: false });
+  await saveRules(me.id, year, levels, subjects);
+  revalidatePath("/admin/prices"); priceBack(year, "ok", "Rules saved. Check the prices below, then press Apply.");
+}
+export async function applyRulesAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const year = str(f, "year", 40);
+  if (f.get("confirm") !== "on") return priceBack(year, "err", "Tick the box to confirm.");
+  const n = await applyRules(me.id, year);
+  revalidatePath("/", "layout"); priceBack(year, "ok", `Prices updated${n ? ` and ${n} class${n === 1 ? "" : "es"} moved to the right price plan` : ""}.`);
+}
+export async function copyRulesAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const to = str(f, "to", 40);
+  await copyRules(me.id, str(f, "from", 40), to);
+  revalidatePath("/admin/prices"); priceBack(to, "ok", "Rules copied. Adjust them, save, then Apply.");
+}
+export async function saveBundlesAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const year = str(f, "year", 40), rows: { min: number; pct: number }[] = [];
+  for (const i of [0, 1, 2]) { const m = parseInt(str(f, `min_${i}`, 2), 10), p = Number(str(f, `pct_${i}`, 6)); if (m >= 2 && p > 0 && p < 100) rows.push({ min: m, pct: p }); }
+  if (new Set(rows.map((r) => r.min)).size !== rows.length) return priceBack(year, "err", "Each discount needs a different number of courses.");
+  await saveBundles(me.id, year, rows);
+  revalidatePath("/", "layout"); priceBack(year, "ok", "Discounts saved.");
 }
