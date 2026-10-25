@@ -328,6 +328,8 @@ html,body{overflow-x:clip}
 @media (min-width:821px){
   .hero-grid>div:first-child{position:relative;z-index:2}
   .s-hero.home h1{white-space:pre}
-  .hero-art{width:135%;max-width:none;justify-self:end;margin:-90px -16% -90px -19%}
+  .s-hero.home{position:relative;--art:min(60vw,1000px);min-height:calc(var(--art) * 0.8 + 8px);display:flex;align-items:center}
+  .s-hero.home>.wrap{width:100%}
+  .hero-art{position:absolute;top:calc(var(--art) * -0.1);right:calc(var(--art) * -0.07);width:var(--art);max-width:none;margin:0}
   .s-hero.home h1,.s-hero.home .lead{text-shadow:0 2px 14px rgba(13,22,66,.85)}
 }
