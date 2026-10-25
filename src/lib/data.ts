@@ -5,7 +5,7 @@ export type Course = {
   code: string; status: string; capacity: number | null; places_left: number | null;
   is_full: boolean; bookable: boolean; shows_times: boolean; shows_waitlist: boolean; label: string | null;
   level: string; level_order: number; subject: string; colour: string; total_pence: number;
-  lessons_per_week: number; course_years: number; teacher: string | null;
+  lessons_per_week: number; course_years: number; course_total_pence: number; teacher: string | null;
   year_label: string; year_start: string; is_next: boolean; slots: { d: number; t: string }[] | null;
 };
 export type Term = { year_label: string; is_next: boolean; year_start: string; number: number; name: string; starts_on: string; ends_on: string; bills_on: string; break_start: string | null; break_end: string | null };
@@ -16,6 +16,10 @@ const COURSE_SQL = `
   select g.code, a.status::text, a.capacity, a.places_left, a.is_full, a.bookable, a.shows_times, a.shows_waitlist, a.label,
          l.name as level, l.sort_order as level_order, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour,
          pp.total_pence, pp.lessons_per_week, pp.course_years, u.name as teacher,
+         -- the whole course's price: a 2-year course adds up both years' plans (e.g. iGCSE 2-year = £1,792)
+         case when pp.course_years > 1 then (select sum(p2.total_pence)::int from price_plans p2
+           where p2.academic_year_id = pp.academic_year_id and p2.level_id = pp.level_id and p2.course_years = pp.course_years)
+         else pp.total_pence end as course_total_pence,
          y.label as year_label, to_char(y.starts_on, 'YYYY-MM-DD') as year_start, y.starts_on > current_date as is_next,
          (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at, 'HH24:MI')) order by s.weekday, s.starts_at)
             from lesson_slots s where s.group_id = g.id) as slots
