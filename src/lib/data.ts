@@ -27,9 +27,7 @@ const COURSE_SQL = `
          case when t.photo is not null then '/teacher-photo/' || t.slug else t.photo_asset end as teacher_photo,
          lower(regexp_replace(l.name, '[^A-Za-z0-9]+', '-', 'g')) || '/' || lower(regexp_replace(sj.name, '[^A-Za-z0-9]+', '-', 'g')) as page_slug,
          -- the whole course's price: a 2-year course adds up both years' plans (e.g. iGCSE 2-year = £1,792)
-         case when pp.course_years > 1 then (select sum(p2.total_pence)::int from price_plans p2
-           where p2.academic_year_id = pp.academic_year_id and p2.level_id = pp.level_id and p2.course_years = pp.course_years)
-         else pp.total_pence end as course_total_pence,
+         (select total_pence from course_price(pp.id)) as course_total_pence,
          y.label as year_label, to_char(y.starts_on, 'YYYY-MM-DD') as year_start, y.starts_on > current_date as is_next,
          (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at, 'HH24:MI')) order by s.weekday, s.starts_at)
             from lesson_slots s where s.group_id = g.id) as slots
@@ -106,11 +104,11 @@ export type Workshop = { title: string; slug: string; starts_at: string; minutes
 /** The price table: one row per level and course length, from this year's price plans. */
 export async function getPriceRows(): Promise<PriceRow[]> {
   const plans = await withSchool((q) => q<{ level: string; level_order: number; course_years: number; lessons_per_week: number; lessons: number; cost: number; total: number }>(`
-    select l.name as level, l.sort_order as level_order, pp.course_years, pp.lessons_per_week,
-           sum(pp.lessons)::int as lessons, min(pp.cost_per_lesson_pence)::int as cost, sum(pp.total_pence)::int as total
+    select distinct on (l.sort_order, pp.course_years, pp.lessons_per_week) l.name as level, l.sort_order as level_order, pp.course_years, pp.lessons_per_week,
+           c.lessons, pp.cost_per_lesson_pence as cost, c.total_pence as total
     from price_plans pp join levels l on l.id = pp.level_id join website_years w on w.id = pp.academic_year_id
-    where not w.is_next
-    group by l.name, l.sort_order, pp.course_years, pp.lessons_per_week
+    cross join lateral course_price(pp.id) c
+    where not w.is_next and pp.year_of_course = 1
     order by l.sort_order, pp.course_years, pp.lessons_per_week`));
   const rows: PriceRow[] = [];
   for (const p of plans) {
@@ -151,10 +149,8 @@ export async function getCalculator(): Promise<CalcYear[]> {
     for (const y of years) {
       const rows = await q<{ subject: string; level: string; years: number; total_pence: number; terms: number; fee_pence: number }>(`
         select distinct on (sj.name, l.sort_order) sj.name as subject, l.name as level, pp.course_years as years,
-          (select sum(p2.total_pence)::int from price_plans p2 where p2.academic_year_id = pp.academic_year_id and p2.level_id = pp.level_id
-             and p2.course_years = pp.course_years and (pp.course_years > 1 or p2.id = pp.id)) as total_pence,
-          (select sum(p2.term_count)::int from price_plans p2 where p2.academic_year_id = pp.academic_year_id and p2.level_id = pp.level_id
-             and p2.course_years = pp.course_years and (pp.course_years > 1 or p2.id = pp.id)) as terms,
+          (select total_pence from course_price(pp.id)) as total_pence,
+          (select terms from course_price(pp.id)) as terms,
           pp.registration_fee_pence as fee_pence
         from course_groups g join subjects sj on sj.id = g.subject_id join levels l on l.id = g.level_id join price_plans pp on pp.id = g.price_plan_id
         where g.academic_year_id = $1 and g.status not in ('hidden', 'closed') and g.continues_group_id is null

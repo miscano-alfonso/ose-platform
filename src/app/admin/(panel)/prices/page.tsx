@@ -37,7 +37,8 @@ export default async function PricesAdmin({ searchParams }: { searchParams: Prom
             <td><select className="mini" name={`yrs_${k}`} defaultValue={s.years}>{[1, 2, 3].map((n) => <option key={n} value={n}>{n} year{n > 1 ? "s" : ""}</option>)}</select></td>
             <td><input type="checkbox" name={`del_${k}`} aria-label={`Remove ${s.level} ${s.subject}`} /></td></tr>; })}
             <tr><td><select className="mini" name="new_level" defaultValue=""><option value="">Add…</option>{levels.map((l) => <option key={l.level_id} value={l.level_id}>{l.level}</option>)}</select></td>
-              <td><select className="mini" name="new_subject" defaultValue=""><option value="">Subject</option>{allSubjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></td>
+              <td><select className="mini" name="new_subject" defaultValue=""><option value="">Subject</option>{allSubjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
+                <input className="mini" name="new_subject_name" maxLength={60} placeholder="…or a new subject, e.g. Media Studies" style={{ marginTop: 6, width: "100%" }} /></td>
               <td><select className="mini" name="new_lpw" defaultValue="1">{[1, 2, 3, 4, 5].map((n) => <option key={n}>{n}</option>)}</select></td>
               <td><select className="mini" name="new_yrs" defaultValue="1">{[1, 2, 3].map((n) => <option key={n} value={n}>{n} year{n > 1 ? "s" : ""}</option>)}</select></td><td /></tr></tbody></table></div>
       </section>

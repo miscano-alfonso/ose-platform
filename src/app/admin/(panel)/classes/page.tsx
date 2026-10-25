@@ -1,5 +1,6 @@
 import { getGroups } from "@/lib/admin-data";
-import { updateGroupAction } from "../../actions";
+import { classFormOptions } from "@/lib/rules";
+import { updateGroupAction, addClassAction } from "../../actions";
 import { yearLabel } from "@/lib/format";
 
 const MODE: Record<string, string> = { auto: "Close when full", keep_open: "Keep open past capacity", full: "Mark as full now" };
@@ -10,11 +11,21 @@ const onHome = (g: { homepage: string; bookable: boolean; status: string }) => g
 const statusPill = (s: string, full: boolean) => full && (s === "open" || s === "priority") ? <span className="pill warn">Full</span>
   : s === "open" ? <span className="pill good">Open</span> : s === "waitlist" || s === "priority" ? <span className="pill info">{STATUS[s]}</span> : <span className="pill mute">{STATUS[s]}</span>;
 
-export default async function Classes() {
-  const groups = await getGroups();
+export default async function Classes({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
+  const sp = await searchParams;
+  const [groups, opts] = await Promise.all([getGroups(), classFormOptions()]);
   const years = [...new Set(groups.map((g) => g.year_label))];
   return <>
     <div className="top"><div><h1>Classes</h1><div className="sub">{groups.length} classes. Edit a row to change its capacity, override, website label, status or whether it shows under Space Available on the homepage.</div></div></div>
+    {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+    <details className="card" open={!!sp.err}><summary style={{ cursor: "pointer", fontWeight: 600 }}>Add a class</summary>
+      <form action={addClassAction} className="eform" style={{ marginTop: 12 }}>
+        <label className="fld">Course<select name="course" required defaultValue=""><option value="" disabled>Choose</option>
+          {opts.years.map((y) => <optgroup key={y.id} label={y.label}>{opts.rules.filter((r) => r.year_id === y.id).map((r) => <option key={r.level_id + r.subject_id} value={`${y.id}|${r.level_id}|${r.subject_id}`}>{r.level} {r.subject}</option>)}</optgroup>)}</select></label>
+        <label className="fld">Places<input name="capacity" type="number" min={1} max={200} defaultValue={12} style={{ width: 90 }} /></label>
+        <label className="fld">Status<select name="status" defaultValue="hidden"><option value="hidden">Hidden (add times first)</option><option value="open">Open</option><option value="waitlist">Waiting list</option></select></label>
+        <button className="abtn pri" type="submit">Add class</button></form>
+      <p className="cs" style={{ marginTop: 8 }}>The list shows the subjects set up in Prices &amp; rules, which also sets the price. Then add lesson times and the teacher under Timetable.</p></details>
     {years.map((y) => <div key={y}>
       {years.length > 1 && <h2 style={{ font: "600 20px Jost", margin: "8px 0 10px" }}>{yearLabel(y)}</h2>}
       <div className="tw"><table>

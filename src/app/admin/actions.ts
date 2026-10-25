@@ -12,7 +12,8 @@ import { saveWorkshop } from "@/lib/workshops-admin";
 import { audiences, recipients, sendBatch, logCampaign } from "@/lib/email";
 import { replyThread, setThreadStatus, startThread, setHidden, dismissReport, officePost, setWords, setPrizes, confirmWinners, markWinner, givePoints } from "@/lib/community";
 import { saveSiteText, saveFaq, deleteFaq, DEFAULTS, saveCoursePage } from "@/lib/site-content";
-import { saveRules, applyRules, copyRules, saveBundles } from "@/lib/rules";
+import { saveRules, applyRules, copyRules, saveBundles, ensureSubject, addClass } from "@/lib/rules";
+import { addYear, saveTerms, addHoliday, removeHoliday } from "@/lib/terms-admin";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
 import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite } from "@/lib/auth";
@@ -567,7 +568,9 @@ export async function saveRulesAction(f: FormData): Promise<void> {
   if (levels.some((l) => l.cost != null && !(l.cost >= 0 && l.cost < 100000))) return priceBack(year, "err", "Enter each price per lesson in pounds, e.g. 8 or 12.50.");
   const subjects = f.getAll("rule").map(String).map((k) => { const [level_id, subject_id] = k.split("_");
     return { level_id, subject_id, lpw: int(`lpw_${k}`, 1, 5, 1), years: int(`yrs_${k}`, 1, 3, 1), remove: f.get(`del_${k}`) === "on" }; });
-  const nl = str(f, "new_level", 40), ns = str(f, "new_subject", 40);
+  const nl = str(f, "new_level", 40), nn = str(f, "new_subject_name", 60).replace(/\s+/g, " ");
+  const ns = nn ? await ensureSubject(me.id, nn) : str(f, "new_subject", 40);
+  if (nn && !nl) return priceBack(year, "err", "Choose the level for the new subject.");
   if (nl && ns) subjects.push({ level_id: nl, subject_id: ns, lpw: int("new_lpw", 1, 5, 1), years: int("new_yrs", 1, 3, 1), remove: false });
   await saveRules(me.id, year, levels, subjects);
   revalidatePath("/admin/prices"); priceBack(year, "ok", "Rules saved. Check the prices below, then press Apply.");
@@ -592,4 +595,46 @@ export async function saveBundlesAction(f: FormData): Promise<void> {
   if (new Set(rows.map((r) => r.min)).size !== rows.length) return priceBack(year, "err", "Each discount needs a different number of courses.");
   await saveBundles(me.id, year, rows);
   revalidatePath("/", "layout"); priceBack(year, "ok", "Discounts saved.");
+}
+
+export async function addClassAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const [yearId, levelId, subjectId] = str(f, "course", 120).split("|");
+  const status = ["hidden", "open", "waitlist"].includes(str(f, "status", 10)) ? str(f, "status", 10) : "hidden";
+  const capacity = Math.max(1, Math.min(200, parseInt(str(f, "capacity", 3), 10) || 12));
+  if (!yearId || !levelId || !subjectId) redirect(`/admin/classes?err=${encodeURIComponent("Choose a course.")}`);
+  const r = await addClass(me.id, { yearId, levelId, subjectId, capacity, status });
+  revalidatePath("/admin/classes"); revalidatePath("/courses", "layout");
+  redirect(`/admin/classes?${r.error ? "err=" + encodeURIComponent(r.error) : "ok=" + encodeURIComponent(`Class ${r.code} added. Add its lesson times and teacher under Timetable.`)}`);
+}
+
+// ---------- term dates ----------
+const termBack = (year: string | null, k: string, m: string) => redirect(`/admin/term-dates?${year ? `year=${year}&` : ""}${k}=${encodeURIComponent(m)}`);
+const ISO = /^\d{4}-\d{2}-\d{2}$/;
+export async function addYearAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const d = { label: str(f, "label", 7), starts: str(f, "starts", 10), ends: str(f, "ends", 10), sales: str(f, "sales", 10) };
+  if (!/^\d{4}\/\d{2}$/.test(d.label) || ![d.starts, d.ends, d.sales].every((x) => ISO.test(x)) || d.ends <= d.starts) return termBack(null, "err", "Give the year a name like 2027/28 and valid dates.");
+  const r = await addYear(me.id, d);
+  revalidatePath("/admin/term-dates");
+  termBack(r.id ?? null, r.error ? "err" : "ok", r.error ?? "Year added. Now add its six terms.");
+}
+export async function saveTermsAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const year = str(f, "year", 40), rows = [1, 2, 3, 4, 5, 6].map((n) => ({ number: n, starts: str(f, `s_${n}`, 10), ends: str(f, `e_${n}`, 10), bills: str(f, `b_${n}`, 10) }));
+  if (rows.some((r) => !ISO.test(r.starts) || !ISO.test(r.ends) || !ISO.test(r.bills) || r.ends < r.starts)) return termBack(year, "err", "Every term needs a first and last day (last after first) and a payment date.");
+  if (rows.some((r, i) => i > 0 && r.starts <= rows[i - 1].ends)) return termBack(year, "err", "Each term must start after the previous one ends.");
+  const r = await saveTerms(me.id, year, rows);
+  revalidatePath("/", "layout");
+  termBack(year, r.error ? "err" : "ok", r.error ?? `Term dates saved and this year’s prices updated${r.moved ? ` (${r.moved} classes moved plan)` : ""}.`);
+}
+export async function addHolidayAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const year = str(f, "year", 40) || null, s1 = str(f, "starts", 10), e1 = str(f, "ends", 10);
+  if (!ISO.test(s1) || !ISO.test(e1) || e1 < s1) return termBack(year, "err", "Check the holiday dates.");
+  await addHoliday(me.id, str(f, "name", 80), s1, e1); revalidatePath("/admin/term-dates"); termBack(year, "ok", "Holiday added.");
+}
+export async function removeHolidayAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  await removeHoliday(me.id, str(f, "id", 40)); revalidatePath("/admin/term-dates"); termBack(str(f, "year", 40) || null, "ok", "Holiday removed.");
 }

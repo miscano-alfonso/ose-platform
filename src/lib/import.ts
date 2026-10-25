@@ -114,8 +114,7 @@ export async function runImport(data: ImportFile, actorId: string): Promise<Impo
           const flag = !!k.needs_check || noPayments;
           await q(`insert into enrolments (school_id, student_id, group_id, status, list_price_pence, allow_clash, enrolled_at, needs_check, admin_note, source, course_total_pence)
             select current_school(), $1, g.id, 'active', pp.total_pence, true, coalesce($2::date, now()), $3::boolean, nullif($4::text, ''), $5::text,
-              coalesce($7::int, (select sum(p2.total_pence)::int from price_plans p2 where p2.academic_year_id = pp.academic_year_id and p2.level_id = pp.level_id
-                 and p2.course_years = pp.course_years and (pp.course_years > 1 or p2.id = pp.id)))
+              coalesce($7::int, (select total_pence from course_price(pp.id)))
             from course_groups g join price_plans pp on pp.id = g.price_plan_id where g.id = $6`,
             [st.id, k.enrolled_on ?? null, flag, note, data.source, gid, k.course_total_pence ?? null]);
           rep.enrolments++; if (flag) rep.flagged++;

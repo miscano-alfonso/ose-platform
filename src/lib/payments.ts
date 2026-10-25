@@ -21,8 +21,10 @@ export async function buildSchedules(actorId: string): Promise<ScheduleReport> {
       const pct = Number((await q<{ p: string | null }>(`select max(percent_off)::text as p from bundle_discounts
         where academic_year_id = $1 and (level_id is null or level_id = $2) and min_courses <= $3::int`, [e.year_id, e.level_id, count]))[0].p ?? 0);
       // the whole course: every year's plan for this level and course length
-      const course = (await q<{ total: number; terms: number }>(`select sum(total_pence)::int as total, sum(term_count)::int as terms from price_plans
-        where academic_year_id = $1 and level_id = $2 and course_years = $3::int and (course_years > 1 or id = $4::uuid)`, [e.year_id, e.level_id, e.course_years, e.plan_id]))[0];
+      // the whole course; a year-2 class is priced from the course's first-year plan where there is one
+      const first = (await q<{ id: string }>(`select coalesce((select p1.id from price_plans p1 join price_plans pp on pp.id = $1 where p1.academic_year_id = pp.academic_year_id
+          and p1.level_id = pp.level_id and p1.course_years = pp.course_years and p1.year_of_course = 1 and p1.lessons_per_week = pp.lessons_per_week limit 1), $1) as id`, [e.plan_id]))[0].id;
+      const course = (await q<{ total: number; terms: number }>(`select total_pence as total, terms from course_price($1)`, [first]))[0];
       // the whole-course price the family agreed when they booked (or the current price, for a new booking)
       const courseTotal = e.agreed ?? course.total;
       const perTerm = Math.round((courseTotal * (1 - pct / 100)) / course.terms);

@@ -90,3 +90,48 @@ export async function saveBundles(actorId: string, yearId: string, rows: { min: 
     await audit(q, actorId, "bundles", yearId, rows);
   });
 }
+
+/** A new subject (or the existing one with that name). New subjects get a colour from the roundel family. */
+export async function ensureSubject(actorId: string, name: string): Promise<string> {
+  return withSchool(async (q) => {
+    const found = (await q<{ id: string }>(`select id from subjects where lower(name) = lower($1)`, [name]))[0];
+    if (found) return found.id;
+    const colour = /media/i.test(name) ? "#e05a8a" : /econ/i.test(name) ? "#2f9e8f" : /relig/i.test(name) ? "#8e6bbf" : /french|spanish|german|language/i.test(name) && !/english/i.test(name) ? "#e08a3c" : "#8494c2";
+    const id = (await q<{ id: string }>(`insert into subjects (school_id, name, colour) values (current_school(), $1, $2) returning id`, [name, colour]))[0].id;
+    await audit(q, actorId, "subject", id, { name });
+    return id;
+  });
+}
+
+/** A new class, priced from the year's rules (the subject must be set up at that level in Prices & rules). */
+export async function addClass(actorId: string, d: { yearId: string; levelId: string; subjectId: string; capacity: number; status: string }): Promise<{ code?: string; error?: string }> {
+  return withSchool(async (q) => {
+    const rule = (await q<{ lpw: number; years: number; level: string; subject: string; yy: string }>(`select s.lessons_per_week as lpw, s.course_years as years, l.name as level, sj.name as subject,
+        right(split_part(y.label, '/', 1), 2) as yy from subject_rules s join levels l on l.id = s.level_id join subjects sj on sj.id = s.subject_id join academic_years y on y.id = s.academic_year_id
+      where s.academic_year_id = $1 and s.level_id = $2 and s.subject_id = $3`, [d.yearId, d.levelId, d.subjectId]))[0];
+    if (!rule) return { error: "Set this subject up at this level in Prices & rules first, so the class has a price." };
+    if (!(await q(`select 1 from level_rules where academic_year_id = $1 and level_id = $2`, [d.yearId, d.levelId])).length) return { error: "Give this level a price per lesson in Prices & rules first." };
+    await q(`select apply_course_rules($1)`, [d.yearId]);
+    const plan = (await q<{ id: string }>(`select id from price_plans where academic_year_id = $1 and level_id = $2 and lessons_per_week = $3::int and course_years = $4::int and year_of_course = 1`,
+      [d.yearId, d.levelId, rule.lpw, rule.years]))[0];
+    if (!plan) return { error: "Couldn’t find a price for this class. Check Prices & rules." };
+    const prefix = ({ KS3: "K", "Pre-GCSE": "P", iGCSE: "G", "A-Level": "A" } as Record<string, string>)[rule.level] ?? rule.level[0].toUpperCase();
+    const words = rule.subject.split(/\s+/), base = `${prefix}${words[0].slice(0, 3)}${words.slice(1).map((w) => w[0].toUpperCase()).join("")}${rule.yy}`;
+    let n = 1, code = `${base}/1`;
+    while ((await q(`select 1 from course_groups where code = $1`, [code])).length) code = `${base}/${++n}`;
+    const teacher = (await q<{ id: string }>(`select ts.teacher_id as id from teacher_subjects ts join teachers t on t.id = ts.teacher_id
+      where ts.level_id = $1 and ts.subject_id = $2 and t.archived_at is null limit 1`, [d.levelId, d.subjectId]))[0]?.id ?? null;
+    const g = (await q<{ id: string }>(`insert into course_groups (school_id, academic_year_id, level_id, subject_id, price_plan_id, teacher_id, code, capacity, status, lesson_minutes)
+      values (current_school(), $1, $2, $3, $4, $5::uuid, $6, $7::int, $8::text::group_status, 45) returning id`, [d.yearId, d.levelId, d.subjectId, plan.id, teacher, code, d.capacity, d.status]))[0];
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'create', 'course_group', $2, $3)`, [actorId, g.id, JSON.stringify({ code })]);
+    return { code };
+  });
+}
+export async function classFormOptions() {
+  return withSchool(async (q) => ({
+    years: await q<{ id: string; label: string }>(`select id, label from academic_years where ends_on >= current_date order by starts_on`),
+    rules: await q<{ year_id: string; level_id: string; level: string; subject_id: string; subject: string }>(`select s.academic_year_id as year_id, s.level_id, l.name as level, s.subject_id, sj.name as subject
+      from subject_rules s join levels l on l.id = s.level_id join subjects sj on sj.id = s.subject_id join academic_years y on y.id = s.academic_year_id
+      where y.ends_on >= current_date order by y.starts_on, l.sort_order, sj.name`),
+  }));
+}
