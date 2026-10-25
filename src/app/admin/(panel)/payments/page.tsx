@@ -54,15 +54,19 @@ export default async function Payments({ searchParams }: { searchParams: Promise
         <details className="edit"><summary className="abtn sm">Terms</summary>
           <div className="termgrid">{f.grid.map((t) => <div key={t.n} className={`tg tg-${t.status}`}>
             <b>Term {t.n}</b><span>{t.status === "none" ? "—" : money(t.amount)}</span><small>{STATE[t.status]}</small>
-            {t.status !== "none" && <form action={setFamilyTermAction} className="tgbtns">
-              <input type="hidden" name="parent" value={f.id} /><input type="hidden" name="term" value={t.n} />
-              {(t.status === "scheduled" || t.status === "failed" || t.status === "part") && <><button className="abtn sm" name="to" value="paid">Mark paid</button><button className="abtn sm" name="to" value="waived">Waive</button></>}
-              {(t.status === "paid" || t.status === "waived") && <button className="abtn sm" name="to" value="scheduled">Undo</button>}
-            </form>}
+            {t.status !== "none" && <div className="tgbtns">
+              {(t.status === "scheduled" || t.status === "failed" || t.status === "part") && <><TermBtn parent={f.id} term={t.n} to="paid" label="Mark paid" /><TermBtn parent={f.id} term={t.n} to="waived" label="Waive" /></>}
+              {(t.status === "paid" || t.status === "waived") && <TermBtn parent={f.id} term={t.n} to="scheduled" label="Undo" />}
+            </div>}
           </div>)}</div>
         </details></td></tr>}
       </tbody>)}
     </table></div>}
     <p className="note">Card payments through OH-SO ED’s Stripe account come next: once connected, each term’s payments are charged on the date shown, and failed or overdue payments are listed here. “Not recorded as paid” means a term whose charge date has passed but TechSaga’s export (taken on 12 October, before Term 2 was charged on 19 October) didn’t show it as paid. Open “Terms” on a family to mark a term paid or waive it. Card payments never touch terms marked here.</p>
   </>;
+}
+
+function TermBtn({ parent, term, to, label }: { parent: string; term: number; to: string; label: string }) {
+  return <form action={setFamilyTermAction}><input type="hidden" name="parent" value={parent} /><input type="hidden" name="term" value={term} />
+    <input type="hidden" name="to" value={to} /><button className="abtn sm" type="submit">{label}</button></form>;
 }

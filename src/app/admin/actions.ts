@@ -5,6 +5,7 @@ import { withSchool } from "@/lib/db";
 import { headers } from "next/headers";
 import { parseImport, runImport, type ImportReport } from "@/lib/import";
 import { buildSchedules, setFamilyTerm } from "@/lib/payments";
+import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite } from "@/lib/auth";
 
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
@@ -87,7 +88,7 @@ export async function setEnquiryHandledAction(f: FormData) {
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, $2, 'enquiry', $3)`,
       [me.id, handled ? "handled" : "reopened", id]);
   });
-  revalidatePath("/admin/enquiries"); revalidatePath("/admin");
+  revalidatePath("/admin/enquiries"); revalidatePath("/admin"); revalidatePath("/admin/tasters");
 }
 
 // ---------- staff ----------
@@ -179,4 +180,74 @@ export async function setFamilyTermAction(f: FormData): Promise<void> {
   if (!["paid", "waived", "scheduled"].includes(to) || !(n >= 1 && n <= 6)) return;
   await setFamilyTerm(me.id, str(f, "parent", 40), n, to as "paid" | "waived" | "scheduled");
   revalidatePath("/admin/payments");
+}
+
+// ---------- timetable ----------
+const back = (path: string, err: string | null, ok: string) => redirect(`${path}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok)}`);
+export async function addSlotAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const day = parseInt(str(f, "weekday", 1), 10), start = str(f, "start", 5), mins = parseInt(str(f, "minutes", 3), 10) || 60;
+  if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(start) || mins < 15 || mins > 180) return back("/admin/timetable", "Pick a day, a start time and a length.", "");
+  const err = await addSlot(me.id, str(f, "group", 40), day, start, mins, str(f, "teacher", 40) || null);
+  revalidatePath("/admin/timetable"); revalidatePath("/timetable"); revalidatePath("/courses");
+  back("/admin/timetable", err, "Lesson time added.");
+}
+export async function removeSlotAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const note = await removeSlot(me.id, str(f, "id", 40));
+  revalidatePath("/admin/timetable"); revalidatePath("/timetable"); revalidatePath("/courses");
+  back("/admin/timetable", note, "Lesson time removed.");
+}
+export async function setClassTeacherAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const mins = Math.max(15, Math.min(180, parseInt(str(f, "minutes", 3), 10) || 60));
+  const err = await setClassTeacher(me.id, str(f, "group", 40), str(f, "teacher", 40) || null, mins);
+  revalidatePath("/admin/timetable"); revalidatePath("/teachers"); revalidatePath("/courses");
+  back("/admin/timetable", err, "Class updated.");
+}
+
+// ---------- attendance ----------
+export async function makeLessonDatesAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const term = str(f, "term", 40);
+  const n = await makeLessonDates(me.id, term);
+  revalidatePath("/admin/attendance");
+  redirect(`/admin/attendance?term=${term}&ok=${encodeURIComponent(n ? `${n} lesson dates added.` : "Lesson dates are up to date.")}`);
+}
+export async function saveRegisterAction(f: FormData): Promise<void> {
+  const me = await requireSignedIn();
+  const id = str(f, "id", 40), marks: Record<string, string> = {}, tasters: Record<string, string> = {};
+  for (const [k, v] of f.entries()) {
+    if (typeof v !== "string") continue;
+    if (k.startsWith("m_")) marks[k.slice(2)] = v; else if (k.startsWith("t_")) tasters[k.slice(2)] = v;
+  }
+  const err = await saveRegister(me, id, marks, tasters, f.get("taught") === "on", str(f, "note", 300) || null);
+  revalidatePath("/admin/attendance");
+  redirect(`/admin/register/${id}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Register saved.")}`);
+}
+export async function cancelLessonAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40);
+  await cancelLesson(me.id, id, str(f, "note", 200));
+  revalidatePath("/admin/attendance");
+  redirect(`/admin/register/${id}?ok=${encodeURIComponent("Lesson cancelled. Any tasters booked into it were cancelled too.")}`);
+}
+
+// ---------- tasters ----------
+export async function bookTasterAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const email = (k: string) => { const v = str(f, k, 120).toLowerCase(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? v : ""; };
+  const d = { parentFirst: str(f, "pfirst", 60), parentLast: str(f, "plast", 60), parentEmail: email("pemail"), childName: str(f, "child", 80),
+    childEmail: email("child_email"), message: str(f, "message", 300) || null, lessonId: str(f, "lesson", 40) };
+  const group = str(f, "group", 40);
+  if (!d.parentFirst || !d.parentLast || !d.parentEmail || !d.childName || !d.childEmail || !d.lessonId)
+    redirect(`/admin/tasters?group=${group}&err=${encodeURIComponent("Fill in every field with valid emails.")}`);
+  const err = await bookTaster(me.id, d);
+  revalidatePath("/admin/tasters");
+  redirect(`/admin/tasters?${err ? `group=${group}&err=${encodeURIComponent(err)}` : "ok=" + encodeURIComponent(`Taster booked for ${d.childName}.`)}`);
+}
+export async function setTasterStatusAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  await setTasterStatus(me.id, str(f, "id", 40), str(f, "status", 20));
+  revalidatePath("/admin/tasters");
 }

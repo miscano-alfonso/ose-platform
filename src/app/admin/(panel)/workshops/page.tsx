@@ -16,12 +16,16 @@ export default async function Workshops() {
         <td>{w.teacher ?? <span className="muted">Not set</span>}</td><td className="n">{w.price_pence ? money(w.price_pence) : "Free"}</td>
         <td className="n">{w.booked}{w.capacity ? ` / ${w.capacity}` : ""}</td>
         <td><span className={`pill ${PILL[w.status]}`}>{w.status[0].toUpperCase() + w.status.slice(1)}</span></td>
-        <td><form action={setWorkshopStatusAction} style={{ display: "flex", gap: 6 }}><input type="hidden" name="id" value={w.id} />
-          {w.status !== "published" && <button className="abtn sm" name="status" value="published">Publish</button>}
-          {w.status === "published" && <button className="abtn sm" name="status" value="draft">Unpublish</button>}
-          {w.status !== "cancelled" && <button className="abtn sm" name="status" value="cancelled">Cancel</button>}
-        </form></td></tr>)}</tbody>
+        <td style={{ display: "flex", gap: 6 }}>
+          {w.status !== "published" && <WBtn id={w.id} status="published" label="Publish" />}
+          {w.status === "published" && <WBtn id={w.id} status="draft" label="Unpublish" />}
+          {w.status !== "cancelled" && <WBtn id={w.id} status="cancelled" label="Cancel" />}
+        </td></tr>)}</tbody>
     </table></div>
     <p className="note">Creating and editing workshops comes with the next update.</p>
   </>;
+}
+
+function WBtn({ id, status, label }: { id: string; status: string; label: string }) {
+  return <form action={setWorkshopStatusAction}><input type="hidden" name="id" value={id} /><input type="hidden" name="status" value={status} /><button className="abtn sm" type="submit">{label}</button></form>;
 }
