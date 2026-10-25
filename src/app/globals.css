@@ -242,3 +242,12 @@ button.btn:disabled{cursor:not-allowed}
 .tp-mini span{color:var(--muted);font-size:14px}
 .tp-mini:hover,.tp-mini[aria-current=page]{border-color:var(--navy)}
 @media (max-width:760px){.tprofile{grid-template-columns:1fr}}
+/* hero illustration: as large as the old site's */
+.s-hero.home .wrap{max-width:1320px}
+.hero-grid{grid-template-columns:minmax(0,.9fr) minmax(0,1.25fr);gap:clamp(8px,2vw,24px)}
+.hero-art{max-width:860px;width:112%;margin:-40px -6% -40px 0}
+@media (max-width:820px){.hero-art{width:100%;max-width:520px;margin:0}}
+@media (max-width:560px){.hero-art{max-width:400px}}
+/* every section lines up with the logo */
+.wrap,.s-hero.home .wrap,.s-nav .wrap{max-width:1300px}
+@media (max-width:820px){.hero-grid{grid-template-columns:1fr}.hero-art{justify-self:center}}
