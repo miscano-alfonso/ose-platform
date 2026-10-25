@@ -29,7 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <div><div className="fl">OH-SO ED</div><p>Outstanding online education for home-educated students.</p></div>
           <div><h2 className="fh">Quick links</h2><ul>{NAV.map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}</ul></div>
           <div><h2 className="fh">Follow us</h2><ul><li>Facebook /ohsoedonline</li><li>LinkedIn /ohsoed</li></ul></div>
-        </div><div className="wrap copy">© {new Date().getFullYear()} Oh-so Educate Ltd</div></footer>
+        </div><div className="wrap copy"><span>© {new Date().getFullYear()} Oh-so Educate Ltd</span><Link href="/admin/login" className="adminlink">Admin login</Link></div></footer>
       </body>
     </html>
   );
