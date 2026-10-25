@@ -7,7 +7,8 @@ const nextConfig: NextConfig = {
     return [{
       source: "/:path*",
       headers: [
-        { key: "X-Frame-Options", value: "DENY" },
+        { key: "X-Frame-Options", value: "SAMEORIGIN" }, // the page-styles builder previews the site in a frame
+        { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
         { key: "X-Content-Type-Options", value: "nosniff" },
         { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
         { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },

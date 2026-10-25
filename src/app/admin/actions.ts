@@ -11,7 +11,8 @@ import { addTeacher, saveTeacher, setTeacherArchived } from "@/lib/teachers-admi
 import { saveWorkshop } from "@/lib/workshops-admin";
 import { audiences, recipients, sendBatch, logCampaign } from "@/lib/email";
 import { replyThread, setThreadStatus, startThread, setHidden, dismissReport, officePost, setWords, setPrizes, confirmWinners, markWinner, givePoints } from "@/lib/community";
-import { saveSiteText, saveFaq, deleteFaq, DEFAULTS, saveCoursePage } from "@/lib/site-content";
+import { saveSiteText, saveFaq, deleteFaq, DEFAULTS, saveCoursePage, saveStyles } from "@/lib/site-content";
+import { cleanStyles } from "@/lib/styles";
 import { saveRules, applyRules, copyRules, saveBundles, ensureSubject, addClass } from "@/lib/rules";
 import { addYear, saveTerms, addHoliday, removeHoliday } from "@/lib/terms-admin";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
@@ -637,4 +638,12 @@ export async function addHolidayAction(f: FormData): Promise<void> {
 export async function removeHolidayAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   await removeHoliday(me.id, str(f, "id", 40)); revalidatePath("/admin/term-dates"); termBack(str(f, "year", 40) || null, "ok", "Holiday removed.");
+}
+
+export async function saveStylesAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  let raw: unknown = null;
+  try { raw = JSON.parse(String(f.get("styles") ?? "")); } catch { /* treated as empty */ }
+  await saveStyles(me.id, cleanStyles(raw));
+  revalidatePath("/", "layout"); redirect(`/admin/styles?ok=${encodeURIComponent("Saved. The website uses the new sizes now.")}`);
 }
