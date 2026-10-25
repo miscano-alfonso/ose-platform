@@ -10,8 +10,8 @@ export type ScheduleReport = { places: number; instalments: number; markedPaid: 
 export async function buildSchedules(actorId: string): Promise<ScheduleReport> {
   const rep: ScheduleReport = { places: 0, instalments: 0, markedPaid: 0, skipped: 0 };
   await withSchool(async (q) => {
-    const rows = await q<{ id: string; student_id: string; year_id: string; plan_id: string; term_count: number; level_id: string; course_years: number; note: string | null }>(`
-      select e.id, e.student_id, g.academic_year_id as year_id, pp.id as plan_id, pp.term_count, pp.level_id, pp.course_years, e.admin_note as note
+    const rows = await q<{ id: string; student_id: string; year_id: string; plan_id: string; term_count: number; level_id: string; course_years: number; note: string | null; agreed: number | null }>(`
+      select e.id, e.student_id, g.academic_year_id as year_id, pp.id as plan_id, pp.term_count, pp.level_id, pp.course_years, e.admin_note as note, e.course_total_pence as agreed
       from enrolments e join course_groups g on g.id = e.group_id join price_plans pp on pp.id = g.price_plan_id
       where e.status = 'active' and not e.is_taster and not exists (select 1 from instalments i where i.enrolment_id = e.id)`);
     for (const e of rows) {
@@ -23,8 +23,10 @@ export async function buildSchedules(actorId: string): Promise<ScheduleReport> {
       // the whole course: every year's plan for this level and course length
       const course = (await q<{ total: number; terms: number }>(`select sum(total_pence)::int as total, sum(term_count)::int as terms from price_plans
         where academic_year_id = $1 and level_id = $2 and course_years = $3::int and (course_years > 1 or id = $4::uuid)`, [e.year_id, e.level_id, e.course_years, e.plan_id]))[0];
-      const perTerm = Math.round((course.total * (1 - pct / 100)) / course.terms);
-      const list = Math.round((course.total * e.term_count) / course.terms);
+      // the whole-course price the family agreed when they booked (or the current price, for a new booking)
+      const courseTotal = e.agreed ?? course.total;
+      const perTerm = Math.round((courseTotal * (1 - pct / 100)) / course.terms);
+      const list = Math.round((courseTotal * e.term_count) / course.terms);
       const terms = await q<{ id: string; number: number; bills_on: string }>(`select id, number, bills_on::text from terms
         where academic_year_id = $1 and number <= $2::int order by number`, [e.year_id, e.term_count]);
       if (!terms.length) { rep.skipped++; continue; }

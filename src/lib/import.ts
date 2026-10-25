@@ -3,7 +3,7 @@ import { withSchool } from "./db";
 
 // Importing families from the old system (TechSaga). The file is made outside the app and uploaded by an admin;
 // nothing personal is kept in the code. Re-running the same file changes nothing that's already there.
-export type ImportCourse = { level: string; subject: string; enrolled_on?: string; techsaga_terms_paid?: string; needs_check?: boolean; note?: string };
+export type ImportCourse = { level: string; subject: string; enrolled_on?: string; techsaga_terms_paid?: string; needs_check?: boolean; note?: string; course_total_pence?: number };
 export type ImportChild = { first: string; last: string; email?: string | null; courses: ImportCourse[] };
 export type ImportFamily = { parent: { first: string; last: string; email: string; phone?: string | null }; note?: string | null; children: ImportChild[] };
 export type ImportFile = { format: "ose-families-1"; year: string; source?: string; families: ImportFamily[] };
@@ -33,7 +33,8 @@ export function parseImport(text: string): { data?: ImportFile; errors?: string[
       (c.courses || []).forEach((k) => {
         if (!LEVELS.includes(s(k?.level)) || !s(k?.subject)) { errors.push(`${where}, ${s(c.first)}: a course needs a level (${LEVELS.join(", ")}) and subject.`); return; }
         courses.push({ level: s(k.level), subject: s(k.subject, 80), enrolled_on: DATE.test(s(k.enrolled_on)) ? s(k.enrolled_on) : undefined,
-          techsaga_terms_paid: s(k.techsaga_terms_paid, 20) || undefined, needs_check: !!k.needs_check, note: s(k.note, 1000) || undefined });
+          techsaga_terms_paid: s(k.techsaga_terms_paid, 20) || undefined, needs_check: !!k.needs_check, note: s(k.note, 1000) || undefined,
+          course_total_pence: Number.isInteger(k.course_total_pence) && k.course_total_pence! > 0 && k.course_total_pence! < 1000000 ? k.course_total_pence : undefined });
       });
       const ce = s(c.email).toLowerCase();
       children.push({ first: s(c.first, 80), last: s(c.last, 80), email: EMAIL.test(ce) ? ce : null, courses });
@@ -111,10 +112,12 @@ export async function runImport(data: ImportFile, actorId: string): Promise<Impo
           const noPayments = k.techsaga_terms_paid === "000000";
           const note = [k.note, k.techsaga_terms_paid ? `TechSaga terms paid: ${k.techsaga_terms_paid}` : null, noPayments ? "No payments recorded in TechSaga." : null].filter(Boolean).join(" · ");
           const flag = !!k.needs_check || noPayments;
-          await q(`insert into enrolments (school_id, student_id, group_id, status, list_price_pence, allow_clash, enrolled_at, needs_check, admin_note, source)
-            select current_school(), $1, g.id, 'active', pp.total_pence, true, coalesce($2::date, now()), $3::boolean, nullif($4::text, ''), $5::text
+          await q(`insert into enrolments (school_id, student_id, group_id, status, list_price_pence, allow_clash, enrolled_at, needs_check, admin_note, source, course_total_pence)
+            select current_school(), $1, g.id, 'active', pp.total_pence, true, coalesce($2::date, now()), $3::boolean, nullif($4::text, ''), $5::text,
+              coalesce($7::int, (select sum(p2.total_pence)::int from price_plans p2 where p2.academic_year_id = pp.academic_year_id and p2.level_id = pp.level_id
+                 and p2.course_years = pp.course_years and (pp.course_years > 1 or p2.id = pp.id)))
             from course_groups g join price_plans pp on pp.id = g.price_plan_id where g.id = $6`,
-            [st.id, k.enrolled_on ?? null, flag, note, data.source, gid]);
+            [st.id, k.enrolled_on ?? null, flag, note, data.source, gid, k.course_total_pence ?? null]);
           rep.enrolments++; if (flag) rep.flagged++;
         }
       }
