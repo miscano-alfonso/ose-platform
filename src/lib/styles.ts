@@ -60,6 +60,7 @@ export const STYLE_TOKENS: StyleToken[] = [
   { id: "footer", group: "Text", label: "Footer text", sel: ".s-foot", prop: "font-size", min: 11, max: 22, step: 0.5, unit: "px" },
 
   { id: "nav", group: "Navigation & buttons", label: "Menu links", sel: ".s-nav .s-links", prop: "font-size", min: 10, max: 24, step: 0.5, unit: "px" },
+  { id: "nav_gap", group: "Navigation & buttons", label: "Space between menu links", hint: "On phones the menu is a list, so this only changes the desktop menu", sel: ".s-nav .s-links", prop: "column-gap", min: 4, max: 60, step: 1, unit: "px" },
   { id: "btn", group: "Navigation & buttons", label: "Button text", sel: ".btn", prop: "font-size", min: 10, max: 24, step: 0.5, unit: "px" },
   { id: "btn_pad", group: "Navigation & buttons", label: "Button height", hint: "Space above and below the button text", sel: ".btn", prop: "padding-block", min: 4, max: 28, step: 1, unit: "px" },
 
