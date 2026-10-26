@@ -182,6 +182,9 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
         [lesson.id, j.email, j.name, sid, j.joined.toISOString(), j.left.toISOString(), j.ext, j.code, j.organizer]);
       if (r.length) { saved++; touched.add(lesson.id); }
     }
+    // joins we couldn't tie to a student by email: try the name they joined with against the class list
+    for (const id of await matchByName(q, aliases)) touched.add(id);
+    await kvSet("aliases", aliases, q);
     for (const id of touched) await recompute(q, id);
     const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_sessions ms where ms.student_id is null and not ms.ignored and ms.participant_email is distinct from ms.organizer_email
       and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
@@ -356,4 +359,32 @@ export async function timesFromMeet(actorId: string, codes: string[]): Promise<{
   });
   await ensureLessonDates();
   return { done, problems };
+}
+
+const norm = (x: string) => x.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim();
+/** Match joins with no student to a student in that lesson's class by the name shown in Meet (full name, or a first name only one child
+ *  in the class has). Each matched email is remembered, so later joins from it match straight away. Returns the lessons changed. */
+async function matchByName(q: Q, aliases: Record<string, string>): Promise<string[]> {
+  const rows = await q<{ id: string; ev: string; email: string | null; name: string | null; roster: { id: string; first: string; last: string; known: string | null }[] }>(`
+    select ms.id, ms.lesson_event_id as ev, lower(ms.participant_email::text) as email, ms.display_name as name,
+      coalesce((select json_agg(json_build_object('id', s.id, 'first', s.first_name, 'last', s.last_name, 'known', s.known_as)) from enrolments x join students s on s.id = x.student_id
+        where x.group_id = e.group_id and x.status in ('active','completed','cancelled','swapped') and not x.is_taster), '[]') as roster
+    from meet_sessions ms join lesson_events e on e.id = ms.lesson_event_id
+    where (ms.student_id is null or (ms.matched_by is null and not exists (select 1 from enrolments x where x.group_id = e.group_id and x.student_id = ms.student_id)))
+      and not ms.ignored and ms.display_name is not null and ms.participant_email is distinct from ms.organizer_email
+      and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
+      and not exists (select 1 from taster_requests tr where lower(tr.child_email::text) = lower(ms.participant_email::text))`);
+  const changed = new Set<string>();
+  for (const r of rows) {
+    const n = norm(r.name ?? ""); if (!n) continue;
+    const parts = n.split(" ");
+    let hit = r.roster.filter((s) => norm(`${s.first} ${s.last}`) === n || (s.known && norm(`${s.known} ${s.last}`) === n));
+    if (!hit.length) hit = r.roster.filter((s) => norm(s.first) === parts[0] && (parts.length === 1 || norm(s.last).startsWith(parts[parts.length - 1].slice(0, 1))));
+    if (!hit.length) hit = r.roster.filter((s) => norm(s.first) === parts[0] || (s.known && norm(s.known) === parts[0]));
+    if (hit.length !== 1) continue;
+    await q(`update meet_sessions set student_id = $2 where id = $1`, [r.id, hit[0].id]);
+    if (r.email && !aliases[r.email]) aliases[r.email] = hit[0].id;   // a shared family email stays with the first child it matched; the name decides each time
+    changed.add(r.ev);
+  }
+  return [...changed];
 }
