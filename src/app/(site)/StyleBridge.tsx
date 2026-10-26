@@ -16,6 +16,10 @@ export function StyleBridge() {
       let live = document.getElementById("ose-live") as HTMLStyleElement | null;
       if (!live) { live = document.createElement("style"); live.id = "ose-live"; document.body.appendChild(live); }
       live.textContent = String(e.data.css ?? "");
+      const href = typeof e.data.fonts === "string" && e.data.fonts.startsWith("https://fonts.googleapis.com/") ? e.data.fonts : "";
+      let fl = document.getElementById("ose-live-fonts") as HTMLLinkElement | null;
+      if (href && !fl) { fl = document.createElement("link"); fl.id = "ose-live-fonts"; fl.rel = "stylesheet"; document.head.appendChild(fl); }
+      if (fl && fl.getAttribute("href") !== href) { if (href) fl.href = href; else fl.removeAttribute("href"); }
       const sizes: Record<string, number | null> = {};
       for (const p of (e.data.probes ?? []) as Probe[]) {
         const el = p.sel.split(",").map((s) => document.querySelector(s.trim())).find(Boolean);

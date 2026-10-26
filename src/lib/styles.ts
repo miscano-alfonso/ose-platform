@@ -4,7 +4,42 @@
 
 export type Device = "desktop" | "phone";
 export type StyleValues = Partial<Record<string, number>>;
-export type SiteStyles = { desktop: StyleValues; phone: StyleValues };
+export type FontChoice = { family?: string; weight?: number };
+/** fonts apply on every screen size; keys are "site", "headings" or a text token id */
+export type SiteStyles = { desktop: StyleValues; phone: StyleValues; fonts?: Record<string, FontChoice> };
+
+// Google Fonts the office can pick, with the weights each one has.
+export const FONTS: { name: string; fallback: string; weights: number[] }[] = [
+  { name: "Jost", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
+  { name: "Inter", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
+  { name: "Poppins", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
+  { name: "Montserrat", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
+  { name: "Nunito", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
+  { name: "Quicksand", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
+  { name: "DM Sans", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
+  { name: "Work Sans", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
+  { name: "Raleway", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
+  { name: "Open Sans", fallback: "sans-serif", weights: [300, 400, 500, 600, 700] },
+  { name: "Lato", fallback: "sans-serif", weights: [300, 400, 700] },
+  { name: "Roboto", fallback: "sans-serif", weights: [300, 400, 500, 700] },
+  { name: "Playfair Display", fallback: "serif", weights: [400, 500, 600, 700] },
+  { name: "Lora", fallback: "serif", weights: [400, 500, 600, 700] },
+  { name: "Merriweather", fallback: "serif", weights: [300, 400, 700] },
+];
+export const WEIGHTS: [number, string][] = [[300, "Light"], [400, "Regular"], [500, "Medium"], [600, "Semi-bold"], [700, "Bold"]];
+/** Font settings that cover many things at once (shown in the Fonts group). */
+export const FONT_SCOPES: { id: string; label: string; hint: string; sel: string }[] = [
+  { id: "site", label: "Website font", hint: "All text on the website, unless set below", sel: "body, button, input, select, textarea" },
+  { id: "headings", label: "Headings font", hint: "Every main heading and section heading", sel: "h1, h2, h3" },
+];
+const FONT_BY_NAME = new Map(FONTS.map((f) => [f.name, f]));
+
+/** Stylesheet link for the chosen Google Fonts (Jost is always loaded by the site). */
+export function fontsHref(s: SiteStyles): string | null {
+  const used = [...new Set(Object.values(s.fonts ?? {}).map((f) => f.family).filter((f): f is string => !!f && f !== "Jost" && FONT_BY_NAME.has(f)))].sort();
+  if (!used.length) return null;
+  return "https://fonts.googleapis.com/css2?" + used.map((n) => `family=${n.replace(/ /g, "+")}:wght@${FONT_BY_NAME.get(n)!.weights.join(";")}`).join("&") + "&display=swap";
+}
 export type StyleToken = { id: string; group: string; label: string; hint?: string; sel: string; prop: string; min: number; max: number; step: number; unit: "px" | "" };
 
 export const STYLE_GROUPS = ["Headings", "Text", "Navigation & buttons", "Spacing"] as const;
@@ -42,7 +77,7 @@ export const MEDIA: Record<Device, string> = { desktop: "(min-width:821px)", pho
 
 /** Keep only known tokens with numbers inside their range. */
 export function cleanStyles(raw: unknown): SiteStyles {
-  const out: SiteStyles = { desktop: {}, phone: {} };
+  const out: SiteStyles = { desktop: {}, phone: {}, fonts: {} };
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   for (const d of ["desktop", "phone"] as Device[]) {
     const vals = (r[d] && typeof r[d] === "object" ? r[d] : {}) as Record<string, unknown>;
@@ -51,12 +86,30 @@ export function cleanStyles(raw: unknown): SiteStyles {
       if (t && v !== null && v !== "" && Number.isFinite(n)) out[d][id] = Math.min(t.max, Math.max(t.min, Math.round(n * 100) / 100));
     }
   }
+  const fonts = (r.fonts && typeof r.fonts === "object" ? r.fonts : {}) as Record<string, unknown>;
+  const ids = new Set([...FONT_SCOPES.map((f) => f.id), ...STYLE_TOKENS.filter((t) => t.prop === "font-size").map((t) => t.id)]);
+  for (const [id, v] of Object.entries(fonts)) {
+    if (!ids.has(id) || !v || typeof v !== "object") continue;
+    const { family, weight } = v as Record<string, unknown>;
+    const c: FontChoice = {};
+    if (typeof family === "string" && FONT_BY_NAME.has(family)) c.family = family;
+    if (WEIGHTS.some(([w]) => w === Number(weight))) c.weight = Number(weight);
+    if (c.family || c.weight) out.fonts![id] = c;
+  }
+  if (!Object.keys(out.fonts!).length) delete out.fonts;
   return out;
 }
+
+/** True when nothing has been changed from the stylesheet. */
+export const isEmptyStyles = (s: SiteStyles) => !Object.keys(s.desktop).length && !Object.keys(s.phone).length && !Object.keys(s.fonts ?? {}).length;
 
 /** CSS for the saved values. `:root` in front makes each rule win over the stylesheet's own. */
 export function stylesCss(s: SiteStyles): string {
   let css = "";
+  const pre = (sel: string) => sel.split(",").map((x) => `:root ${x.trim()}`).join(",");
+  const decl = (f: FontChoice) => (f.family ? `font-family:"${f.family}",${FONT_BY_NAME.get(f.family)?.fallback ?? "sans-serif"};` : "") + (f.weight ? `font-weight:${f.weight};` : "");
+  for (const sc of FONT_SCOPES) { const f = s.fonts?.[sc.id]; if (f && (f.family || f.weight)) css += `${pre(sc.sel)}{${decl(f)}}`; }
+  for (const t of STYLE_TOKENS) { const f = s.fonts?.[t.id]; if (f && (f.family || f.weight)) css += `${pre(t.sel)}{${decl(f)}}`; }
   for (const d of ["desktop", "phone"] as Device[]) {
     const rules = STYLE_TOKENS.filter((t) => s[d]?.[t.id] != null).map((t) =>
       `${t.sel.split(",").map((x) => `:root ${x.trim()}`).join(",")}{${t.prop}:${s[d][t.id]}${t.unit}}`);

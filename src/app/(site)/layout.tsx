@@ -2,7 +2,7 @@ import Link from "next/link";
 import { SiteNav } from "./SiteNav";
 import { StyleBridge } from "./StyleBridge";
 import { getStyles } from "@/lib/site-content";
-import { stylesCss } from "@/lib/styles";
+import { stylesCss, fontsHref } from "@/lib/styles";
 import { brandSrc } from "@/lib/brand";
 
 
@@ -14,8 +14,10 @@ const Cart = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="
 const Person = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>;
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const [css, { logo }] = await Promise.all([getStyles().then(stylesCss), brandSrc()]);
+  const [styles, { logo }] = await Promise.all([getStyles(), brandSrc()]);
+  const css = stylesCss(styles), fonts = fontsHref(styles);
   return (<>
+        {fonts && <link id="ose-fonts" rel="stylesheet" href={fonts} />}
         <style id="ose-styles" dangerouslySetInnerHTML={{ __html: css }} />
         <StyleBridge />
         <a className="skip" href="#main">Skip to content</a>

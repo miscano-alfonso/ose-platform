@@ -1,7 +1,7 @@
 import "server-only";
 import { withSchool } from "./db";
 import { FAQS } from "@/content/faq";
-import { cleanStyles, type SiteStyles } from "./styles";
+import { cleanStyles, isEmptyStyles, type SiteStyles } from "./styles";
 
 // Text the office can change in Admin → Website. Anything not set uses these defaults.
 export const DEFAULTS: Record<string, string> = {
@@ -75,7 +75,7 @@ export async function getStyles(): Promise<SiteStyles> {
 }
 export async function saveStyles(actorId: string, s: SiteStyles) {
   await withSchool(async (q) => {
-    if (!Object.keys(s.desktop).length && !Object.keys(s.phone).length) await q(`delete from site_content where key = 'styles'`);
+    if (isEmptyStyles(s)) await q(`delete from site_content where key = 'styles'`);
     else await q(`insert into site_content (school_id, key, value, updated_by) values (current_school(), 'styles', $1, $2) on conflict (school_id, key) do update set value = excluded.value, updated_at = now(), updated_by = excluded.updated_by`, [JSON.stringify(s), actorId]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'update', 'site_styles', $2)`, [actorId, JSON.stringify(s)]);
   });

@@ -150,3 +150,7 @@
 .adm .tabmock{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px 8px 0 0;padding:7px 14px;font-size:13.5px}
 .adm .brand-big{border-radius:12px}
 .adm .brand-box input[type=file]{font:inherit;font-size:14px;max-width:100%}
+.adm .sb-font{grid-column:1/-1;display:flex;gap:6px;margin-top:4px}
+.adm .sb-font select{flex:1;min-width:0;font:inherit;font-size:13.5px;padding:4px 6px;border:1.5px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink)}
+.adm .sb-font.set select{border-color:#c9a400}
+.adm .sb-frow{grid-template-areas:"lab lab lab"}
