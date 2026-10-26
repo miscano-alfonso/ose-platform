@@ -1,21 +1,39 @@
 import Link from "next/link";
-import { getTasters } from "@/lib/ops";
-import { bookTasterAction, setTasterStatusAction, setEnquiryHandledAction } from "../../actions";
+import { getTasters, tasterPlaces } from "@/lib/ops";
+import { bookTasterAction, setTasterStatusAction, setEnquiryHandledAction, tasterFollowUpAction } from "../../actions";
 
 const STATUS: Record<string, [string, string]> = { booked: ["Booked", "info"], attended: ["Attended", "good"], no_show: ["Didn’t come", "warn"], cancelled: ["Cancelled", "mute"], booked_course: ["Booked a course", "good"] };
 const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 
 export default async function Tasters({ searchParams }: { searchParams: Promise<{ group?: string; ok?: string; err?: string }> }) {
   const sp = await searchParams;
-  const { rows, requests, classes, lessons } = await getTasters(sp.group ?? null);
-  const today = new Date().toISOString().slice(0, 10);
-  const upcoming = rows.filter((r) => r.lesson_date >= today && r.status === "booked").reverse();
-  const past = rows.filter((r) => !(r.lesson_date >= today && r.status === "booked"));
-  const follow = past.filter((r) => r.status === "attended").length;
+  const [{ rows, requests, classes, lessons }, places] = await Promise.all([getTasters(sp.group ?? null), tasterPlaces()]);
+  const today = new Date().toISOString().slice(0, 10), week = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
+  const upcoming = rows.filter((r) => r.lesson_date >= today).reverse();
+  const past = rows.filter((r) => r.lesson_date < today);
   const cls = classes.find((c) => c.id === sp.group);
+  const booked = upcoming.filter((r) => r.status === "booked");
+  const termStart = new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
+  const fams = new Set(rows.filter((r) => r.lesson_date >= termStart).map((r) => r.parent_email.toLowerCase()));
+  const conv = new Set(rows.filter((r) => r.lesson_date >= termStart && r.status === "booked_course").map((r) => r.parent_email.toLowerCase()));
   return <>
-    <div className="top"><div><h1>Tasters</h1><div className="sub">{upcoming.length} upcoming · {follow} attended and not yet booked · {requests.length} new request{requests.length === 1 ? "" : "s"}</div></div></div>
+    <div className="top"><div><h1>Tasters</h1><div className="sub">Free taster lessons booked on the website’s taster page: each child joins a real lesson from the timetable</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+    <div className="tiles">
+      <div className="tile"><span className="k">Coming up</span><span className="v">{booked.length}</span><span className="h">{booked.filter((r) => r.lesson_date <= week).length} in the next 7 days</span></div>
+      <div className="tile"><span className="k">Families</span><span className="v">{fams.size}</span><span className="h">this term</span></div>
+      <div className="tile"><span className="k">Booked a course after</span><span className="v">{conv.size}</span><span className="h">of {fams.size} families</span></div>
+      <div className="tile"><span className="k">Places per lesson</span><span className="v">{places}</span><span className="h">taster places in each lesson</span></div>
+    </div>
+
+    <section className="card"><h2>All tasters</h2><p className="cs">Parents can book several tasters at once (one per subject). Up to {places} taster places per lesson.</p>
+      <div className="tw" style={{ border: 0, marginBottom: 0 }}><table><thead><tr><th>Lesson</th><th>Child</th><th>Class</th><th>Status</th><th /></tr></thead><tbody>
+        <tr><td colSpan={5} style={{ background: "var(--soft)", fontWeight: 600 }}>Coming up · {upcoming.length}</td></tr>
+        {upcoming.length === 0 ? <tr><td colSpan={5} className="muted">None booked.</td></tr> : upcoming.map((r) => <Row key={r.id} r={r} today={today} />)}
+        <tr><td colSpan={5} style={{ background: "var(--soft)", fontWeight: 600 }}>Earlier</td></tr>
+        {past.length === 0 ? <tr><td colSpan={5} className="muted">Nothing yet.</td></tr> : past.map((r) => <Row key={r.id} r={r} today={today} />)}
+      </tbody></table></div>
+      <p className="note">The child gets the Google Meet invitation for that one lesson by email; the teacher sees the taster on their day. A taster who joins the Meet with the Google account given when booking is marked attended automatically. After the lesson, the follow-up email invites the family to book.</p></section>
 
     {requests.length > 0 && <section className="card"><h2>Taster requests from the website</h2>
       {requests.map((r) => <div className="li" key={r.id}><div className="t"><b>{r.name} <a className="muted" href={`mailto:${r.email}`} style={{ fontWeight: 400 }}>{r.email}</a></b>
@@ -42,26 +60,22 @@ export default async function Tasters({ searchParams }: { searchParams: Promise<
       </form>)}
     </section>
 
-    <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Upcoming</h2>
-    {upcoming.length === 0 ? <p className="empty">No tasters booked.</p> : <List rows={upcoming} />}
-    <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Recent</h2>
-    {past.length === 0 ? <p className="empty">Nothing yet.</p> : <List rows={past} />}
-    <p className="note">Teachers mark whether a taster came when they take the lesson’s register. Mark “Booked a course” once the family signs up, so follow-ups stop.</p>
   </>;
 }
 
-function List({ rows }: { rows: Awaited<ReturnType<typeof getTasters>>["rows"] }) {
-  return <div className="tw"><table><thead><tr><th>Lesson</th><th>Child</th><th>Parent</th><th>Status</th><th></th></tr></thead>
-    <tbody>{rows.map((r) => <tr key={r.id}>
-      <td><b>{r.level} {r.subject}</b><div className="muted" style={{ fontSize: 15.5 }}>{day(r.lesson_date)} {r.starts_at} · <Link href={`/admin/register/${r.lesson_event_id}`}>{r.code}</Link></div></td>
-      <td>{r.child_name}<div className="muted" style={{ fontSize: 15.5 }}>{r.child_email}</div></td>
-      <td>{r.parent_name}<div className="muted" style={{ fontSize: 15.5 }}><a href={`mailto:${r.parent_email}`}>{r.parent_email}</a></div></td>
-      <td><span className={`pill ${STATUS[r.status][1]}`}>{STATUS[r.status][0]}</span></td>
-      <td><div className="acts">
-        {r.status === "booked" && <Btn id={r.id} status="cancelled" label="Cancel" />}
-        {(r.status === "attended" || r.status === "no_show") && <Btn id={r.id} status="booked_course" label="Booked a course" />}
-        {r.status !== "booked" && r.status !== "cancelled" && <Btn id={r.id} status="booked" label="Reset" />}
-      </div></td></tr>)}</tbody></table></div>;
+function Row({ r, today }: { r: Awaited<ReturnType<typeof getTasters>>["rows"][number]; today: string }) {
+  return <tr>
+    <td><b>{day(r.lesson_date)}</b> {r.starts_at}<div className="muted" style={{ fontSize: 14.5 }}><Link href={`/admin/register/${r.lesson_event_id}`}>{r.code}</Link></div></td>
+    <td><b>{r.child_name}</b>{r.together > 1 && <> <span className="pill mute">{r.together} tasters booked together</span></>}
+      <div className="muted" style={{ fontSize: 14.5 }}>{r.parent_name} · <a href={`mailto:${r.parent_email}`}>{r.parent_email}</a></div>{r.message && <div className="muted" style={{ fontSize: 14.5 }}>“{r.message}”</div>}</td>
+    <td>{r.level} {r.subject}<div className="muted" style={{ fontSize: 14.5 }}>{r.teacher ?? "No teacher"}</div></td>
+    <td><span className={`pill ${STATUS[r.status][1]}`}>{STATUS[r.status][0]}</span></td>
+    <td><div className="acts" style={{ whiteSpace: "nowrap" }}>
+      {r.status === "booked" && r.lesson_date < today && <><Btn id={r.id} status="attended" label="Attended" /><Btn id={r.id} status="no_show" label="Didn’t come" /></>}
+      {r.status === "booked" && r.lesson_date >= today && <Btn id={r.id} status="cancelled" label="Cancel" />}
+      {r.status === "attended" && <form action={tasterFollowUpAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit">{r.followed_up_at ? "Followed up · send again" : "Send follow-up"}</button></form>}
+      {(r.status === "attended" || r.status === "no_show") && <Btn id={r.id} status="booked_course" label="Booked a course" />}
+    </div></td></tr>;
 }
 
 function Btn({ id, status, label }: { id: string; status: string; label: string }) {

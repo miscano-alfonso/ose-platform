@@ -60,7 +60,7 @@ export async function getDashboard(): Promise<{ t: DashTiles; attention: Attenti
   });
 }
 
-export type AdminGroup = { homepage: string; homepage_order: number | null; bookable: boolean; meet_url: string | null;
+export type AdminGroup = { homepage: string; homepage_order: number | null; bookable: boolean; meet_url: string | null; classroom: boolean;
   id: string; code: string; level: string; subject: string; colour: string; teacher: string | null; year_label: string;
   status: string; capacity: number | null; capacity_mode: string; sticky_label: string; taken: number; places_left: number | null;
   is_full: boolean; waiting: number; label: string | null; slots: string | null; waitlist_threshold: number;
@@ -68,7 +68,7 @@ export type AdminGroup = { homepage: string; homepage_order: number | null; book
 export async function getGroups(): Promise<AdminGroup[]> {
   return withSchool((q) => q<AdminGroup>(`
     select g.id, g.code, l.name as level, sj.name as subject, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, y.label as year_label,
-           g.status::text, g.capacity, g.capacity_mode::text, g.sticky_label::text, g.homepage, g.homepage_order, g.meet_url, a.bookable, a.taken, a.places_left, a.is_full, a.waiting, a.label, g.waitlist_threshold,
+           g.status::text, g.capacity, g.capacity_mode::text, g.sticky_label::text, g.homepage, g.homepage_order, g.meet_url, g.google_course_id is not null as classroom, a.bookable, a.taken, a.places_left, a.is_full, a.waiting, a.label, g.waitlist_threshold,
            (select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end
               || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id) as slots
     from course_groups g join course_group_availability a on a.group_id = g.id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
@@ -218,5 +218,58 @@ export async function getDashboardMore(lowPct = 50): Promise<DashMore> {
       where a.academic_year_id = ${YEAR}
       group by la.name, sa.name, lb.name, sb.name, a.weekday, a.starts_at limit 10`);
     return { att, byTerm, recent, coming, fullest, clashes };
+  });
+}
+
+export type PendingInvite = { id: string; student: string; email: string | null; class: string; invited_at: string; reminded: string | null; next: string | null };
+/** Students who haven't accepted their Google Classroom invitation yet (they can't join the Meet until they do). */
+export async function pendingInvites(): Promise<PendingInvite[]> {
+  return withSchool((q) => q<PendingInvite>(`select m.id, s.first_name || ' ' || s.last_name as student, s.email::text, l.name || ' ' || sj.name as class,
+      m.invited_at::date::text as invited_at, m.last_reminded_at::date::text as reminded,
+      (select to_char(ev.lesson_date, 'Dy DD Mon') || ' ' || to_char(sl.starts_at, 'HH24:MI') from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id
+        where ev.group_id = g.id and ev.lesson_date >= current_date and ev.status = 'scheduled' order by ev.lesson_date, sl.starts_at limit 1) as next
+    from classroom_memberships m join students s on s.id = m.student_id join course_groups g on g.id = m.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+    join enrolments e on e.group_id = m.group_id and e.student_id = m.student_id and e.status = 'active'
+    where m.state = 'invited' and g.academic_year_id = (select id from academic_years where ends_on >= current_date order by starts_on limit 1)
+    order by m.invited_at, s.first_name`));
+}
+/** Remind a student (and their parent) to accept the Google Classroom invitation. */
+export async function remindInvite(actorId: string, id: string): Promise<string | null> {
+  const { sendHtml } = await import("./email");
+  const r = (await withSchool((q) => q<{ first: string; email: string | null; parent: string; pemail: string; class: string; school: string }>(`select s.first_name as first, s.email::text,
+      p.first_name as parent, p.email::text as pemail, l.name || ' ' || sj.name as class, sc.name as school
+    from classroom_memberships m join students s on s.id = m.student_id join parents p on p.id = s.parent_id join course_groups g on g.id = m.group_id
+    join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join schools sc on sc.id = m.school_id where m.id = $1`, [id])))[0];
+  if (!r) return "That invitation wasn’t found.";
+  const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+  const sent = await sendHtml(`${r.first}: please accept the ${r.class} Google Classroom invitation`, `<p>Hello ${esc(r.first)} (and ${esc(r.parent)}),</p>
+    <p>${esc(r.first)} has been invited to the <b>${esc(r.class)}</b> Google Classroom${r.email ? ` at ${esc(r.email)}` : ""}. Please open <a href="https://classroom.google.com/">classroom.google.com</a> signed in with that Google account and press <b>Join</b>. Until then ${esc(r.first)} can’t join the lesson’s Google Meet.</p>
+    <p>Best wishes,<br>${esc(r.school)}</p>`, [r.email, r.pemail].filter(Boolean) as string[], "classroom-reminder");
+  if (!sent.ok) return sent.error ?? "Couldn’t send the reminder.";
+  await withSchool(async (q) => {
+    await q(`update classroom_memberships set last_reminded_at = now() where id = $1`, [id]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'remind', 'classroom_membership', $2, '{}')`, [actorId, id]);
+  });
+  return null;
+}
+
+export type WaitGroup = { id: string | null; name: string; colour: string; status: string; threshold: number; priority_until: string | null; priority_hours: number;
+  entries: { id: string; parent: string; child: string; email: string; joined: string; emailed: string | null; booked: string | null }[] };
+/** The prototype's waiting-list cards: one per class collecting sign-ups or in its priority window, plus "any class" sign-ups by course. */
+export async function waitingGroups(): Promise<WaitGroup[]> {
+  return withSchool(async (q) => {
+    await q(`select open_expired_priority()`).catch(() => null);
+    const ent = `coalesce((select json_agg(json_build_object('id', w.id, 'parent', w.parent_name, 'child', w.child_name, 'email', w.email, 'joined', w.created_at::date,
+        'emailed', w.emailed_at::date, 'booked', w.enrolled_at::date) order by w.created_at) from waitlist_entries w where %W), '[]')`;
+    const groups = await q<WaitGroup>(`select g.id, l.name || ' ' || sj.name || ' (' || g.code || ')' as name, coalesce(sj.colour,'#8494c2') as colour, g.status::text,
+        g.waitlist_threshold as threshold, g.priority_until::text, g.priority_hours, ${ent.replace("%W", "w.group_id = g.id")} as entries
+      from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join academic_years y on y.id = g.academic_year_id
+      where y.ends_on >= current_date and (g.status in ('waitlist','priority') or exists (select 1 from waitlist_entries w where w.group_id = g.id and w.enrolled_at is null))
+      order by g.status = 'priority' desc, l.sort_order, sj.name`);
+    const loose = await q<WaitGroup>(`select null as id, coalesce(l.name, 'Any level') || ' ' || coalesce(sj.name, '') || ' (no class yet)' as name, coalesce(sj.colour,'#8494c2') as colour,
+        'interest' as status, 5 as threshold, null as priority_until, 48 as priority_hours,
+        ${ent.replace("%W", "w.group_id is null and w.level_id is not distinct from x.level_id and w.subject_id is not distinct from x.subject_id")} as entries
+      from (select distinct level_id, subject_id from waitlist_entries where group_id is null and enrolled_at is null) x left join levels l on l.id = x.level_id left join subjects sj on sj.id = x.subject_id`);
+    return [...groups, ...loose];
   });
 }

@@ -901,3 +901,51 @@ export async function matchJoinAction(f: FormData): Promise<void> {
   const err = await matchJoin(me.id, str(f, "id", 40), f.get("ignore") ? null : sid || null);
   attBack("joins", f.get("ignore") ? "Marked as not a student." : "Matched. Their attendance is updated.", err);
 }
+
+// ---------- families (the prototype's family drawer, as a page) ----------
+const famBack = (id: string, ok?: string | null, err?: string | null) => redirect(`/admin/families/${id}` + (err ? `?err=${encodeURIComponent(err)}` : ok ? `?ok=${encodeURIComponent(ok)}` : ""));
+export async function cancelCourseAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { cancelCourse } = await import("@/lib/families");
+  const waive = f.get("waive") === "1";
+  const err = await cancelCourse(me.id, str(f, "id", 40), waive, str(f, "reason", 200) || null);
+  revalidatePath("/admin/payments");
+  famBack(str(f, "family", 40), waive ? "Cancelled and notice waived: no more payments." : "Cancelled. Notice given: lessons and payments run to the end of the notice period.", err);
+}
+export async function swapCourseAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { swapCourse } = await import("@/lib/families");
+  const start = str(f, "start", 8) === "next" ? "next" : "current";
+  const err = await swapCourse(me.id, str(f, "id", 40), str(f, "to", 40), start);
+  revalidatePath("/admin/payments");
+  famBack(str(f, "family", 40), start === "next" ? "Swap booked: the new class starts next term." : "Swapped: the child moves now; this term is re-priced.", err);
+}
+export async function familyTermAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const to = str(f, "to"), n = parseInt(str(f, "term", 2), 10), fam = str(f, "parent", 40);
+  if (["paid", "waived", "scheduled"].includes(to) && n >= 1 && n <= 6) await setFamilyTerm(me.id, fam, n, to as "paid" | "waived" | "scheduled");
+  revalidatePath("/admin/payments");
+  famBack(fam, `Term ${n} updated.`);
+}
+export async function familyCheckAction(f: FormData): Promise<void> {
+  await setCheckAction(f);
+  famBack(str(f, "family", 40), "Marked as checked.");
+}
+export async function stopContactAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { stopContact } = await import("@/lib/families");
+  await stopContact(me.id, str(f, "id", 40));
+  redirect("/admin/families?ok=" + encodeURIComponent("Sharing stopped."));
+}
+export async function tasterFollowUpAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { tasterFollowUp } = await import("@/lib/ops");
+  const err = await tasterFollowUp(me.id, str(f, "id", 40));
+  redirect(`/admin/tasters?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Follow-up email sent.")}`);
+}
+export async function remindInviteAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { remindInvite } = await import("@/lib/admin-data");
+  const err = await remindInvite(me.id, str(f, "id", 40));
+  redirect(`/admin/classes?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Reminder sent to the student and parent.")}`);
+}

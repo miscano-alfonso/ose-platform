@@ -1,36 +1,50 @@
 import Link from "next/link";
-import { getFamilies } from "@/lib/admin-data";
-import { setCheckAction } from "../../actions";
+import { familyList, contactLog, type FamState } from "@/lib/families";
+import { stopContactAction } from "../../actions";
+import { money } from "@/lib/format";
 
-export default async function Families({ searchParams }: { searchParams: Promise<{ show?: string; q?: string }> }) {
+export const dynamic = "force-dynamic";
+const STATE: Record<FamState, [string, string]> = { failed: ["bad", "Payment failed"], overdue: ["warn", "Not recorded as paid"], unscheduled: ["info", "No payment schedule"],
+  check: ["warn", "Needs a check"], paid: ["good", "Paid to date"], none: ["mute", "No courses"] };
+const CR: Record<string, [string, string]> = { pending: ["info", "Waiting"], accepted: ["good", "Shared"], declined: ["mute", "Declined"], withdrawn: ["mute", "Withdrawn"], expired: ["mute", "Expired"], revoked: ["bad", "Stopped"] };
+const day = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
+export default async function Families({ searchParams }: { searchParams: Promise<{ show?: string; q?: string; ok?: string }> }) {
   const sp = await searchParams;
-  const all = await getFamilies();
-  const q = (sp.q ?? "").toLowerCase().trim();
-  const list = all.filter((f) => (sp.show !== "checks" || f.checks > 0) &&
-    (!q || [f.name, f.email, ...f.children.map((c) => c.name)].some((x) => x.toLowerCase().includes(q))));
-  const kids = all.reduce((n, f) => n + f.children.length, 0), checks = all.reduce((n, f) => n + f.checks, 0);
+  const [all, log] = await Promise.all([familyList(), contactLog()]);
+  const q = (sp.q ?? "").toLowerCase().trim(), show = ["attention", "paid"].includes(sp.show ?? "") ? sp.show! : "all";
+  const list = all.filter((f) => (!q || [f.name, f.email, ...f.children.map((c) => c.first)].some((x) => x.toLowerCase().includes(q))) &&
+    (show === "all" || (show === "attention" && ["failed", "overdue", "unscheduled", "check"].includes(f.state)) || (show === "paid" && f.state === "paid")));
+  const kids = all.reduce((n, f) => n + f.children.length, 0);
+  const href = (s: string) => `/admin/families?${new URLSearchParams({ ...(s !== "all" ? { show: s } : {}), ...(sp.q ? { q: sp.q } : {}) })}`;
   return <>
-    <div className="top"><div><h1>Families</h1><div className="sub">{all.length} families · {kids} children · {checks} course places need a check</div></div>
+    <div className="top"><div><h1>Families</h1><div className="sub">{all.length} families · {kids} students · bookings come from the website</div></div>
       <span className="grow" /><Link className="abtn" href="/admin/import">Import families</Link></div>
-    <form className="eform" style={{ marginBottom: 14 }}>
-      <label className="fld">Search<input name="q" defaultValue={sp.q} placeholder="Parent, child or email" /></label>
-      <label className="fld">Show<select name="show" defaultValue={sp.show ?? ""}><option value="">All families</option><option value="checks">Needs a check</option></select></label>
-      <button className="abtn" type="submit">Filter</button>
-    </form>
-    {list.length === 0 && <p className="empty">{all.length ? "No families match." : "No families yet. Use Import families to bring them across from TechSaga."}</p>}
-    {list.map((f) => <section className="card" key={f.id}>
-      <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}><h2>{f.name}</h2>
-        <a href={`mailto:${f.email}`} className="muted">{f.email}</a>{f.phone && <span className="muted">{f.phone}</span>}
-        {f.checks > 0 && <span className="pill warn">{f.checks} to check</span>}</div>
-      {f.note && <p className="note msg" style={{ margin: "4px 0 8px" }}>{f.note}</p>}
-      {f.children.map((c) => <div key={c.id} style={{ marginTop: 8 }}>
-        <b>{c.name}</b>{c.email && <span className="muted" style={{ fontSize: 14.5 }}> · {c.email}</span>}
-        {c.courses.length === 0 ? <p className="empty">No courses.</p> : c.courses.map((k) => <div className="li" key={k.id} style={{ alignItems: "flex-start" }}>
-          <span className={`pill ${k.needs_check ? "warn" : k.status === "active" ? "good" : "mute"}`}>{k.needs_check ? "Needs a check" : k.status[0].toUpperCase() + k.status.slice(1)}</span>
-          <div className="t"><b>{k.name} <span className="muted" style={{ fontWeight: 400 }}>({k.code})</span></b><span>Since {k.enrolled_on}{k.note ? ` · ${k.note}` : ""}</span></div>
-          {k.needs_check && <form action={setCheckAction}><input type="hidden" name="id" value={k.id} /><button className="abtn sm" type="submit">Mark checked</button></form>}
-        </div>)}
-      </div>)}
-    </section>)}
+    {sp.ok && <p className="note msg">{sp.ok}</p>}
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+      <form method="get" action="/admin/families" style={{ display: "flex", gap: 6 }}>{show !== "all" && <input type="hidden" name="show" value={show} />}
+        <input type="search" name="q" defaultValue={sp.q} placeholder="Search parent, child or email" aria-label="Search families" className="mini" style={{ width: 280 }} />
+        <button className="abtn sm" type="submit">Search</button></form>
+      <div className="segl" role="group" aria-label="Filter">{[["all", "All"], ["attention", "Needs attention"], ["paid", "Paid to date"]].map(([k, l]) =>
+        <Link key={k} href={href(k)} aria-current={show === k ? "true" : undefined}>{l}</Link>)}</div>
+    </div>
+    <div className="tw"><table><thead><tr><th>Parent</th><th>Children</th><th className="n">Courses</th><th>Payments</th><th className="n">Next payment</th></tr></thead><tbody>
+      {list.length === 0 ? <tr><td colSpan={5} className="muted" style={{ padding: 24, textAlign: "center" }}>{all.length ? "No families match." : "No families yet. Use Import families to bring them across from TechSaga."}</td></tr>
+      : list.map((f) => <tr key={f.id} className="click">
+        <td><Link href={`/admin/families/${f.id}`} className="rowlink"><b>{f.name}</b></Link><br /><span className="muted">{f.email}</span></td>
+        <td>{f.children.map((k, i) => <div key={i}>{k.first} <span className="muted">{k.level}</span></div>)}</td>
+        <td className="n">{f.courses}</td>
+        <td><span className={`pill ${STATE[f.state][0]}`}>{STATE[f.state][1]}</span>{f.checks > 1 && <span className="muted" style={{ fontSize: 13.5 }}> · {f.checks} to check</span>}</td>
+        <td className="n">{f.next_on ? <>{money(f.next_due)}<br /><span className="muted">{day(f.next_on)}</span></> : "—"}</td></tr>)}
+    </tbody></table></div>
+
+    <section className="card" style={{ marginTop: 16 }}><h2>Parent-to-parent contact</h2>
+      <p className="cs">Requests between parents of classmates. Details are shared only when the parent asked accepts. You can stop any sharing for safeguarding reasons. {log.accepting} of {log.total} families accept requests.</p>
+      <div className="tw" style={{ border: 0, marginBottom: 0 }}><table><thead><tr><th>Sent</th><th>From</th><th>To</th><th>Class</th><th>Status</th><th /></tr></thead><tbody>
+        {log.rows.length === 0 ? <tr><td colSpan={6} className="muted">None yet.</td></tr> : log.rows.map((r) => <tr key={r.id}><td>{day(r.sent)}</td>
+          <td>{r.from_name}<br /><span className="muted">for {r.from_child}</span></td><td>{r.to_name}<br /><span className="muted">for {r.to_child}</span></td><td>{r.class}</td>
+          <td><span className={`pill ${CR[r.status]?.[0] ?? "mute"}`}>{CR[r.status]?.[1] ?? r.status}</span>{r.revoked_by === "admin" && <span className="muted"> by admin</span>}</td>
+          <td>{(r.status === "accepted" || r.status === "pending") && <form action={stopContactAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit">Stop</button></form>}</td></tr>)}
+      </tbody></table></div></section>
   </>;
 }

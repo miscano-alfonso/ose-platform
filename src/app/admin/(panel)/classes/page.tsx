@@ -1,6 +1,7 @@
-import { getGroups } from "@/lib/admin-data";
+import Link from "next/link";
+import { getGroups, pendingInvites } from "@/lib/admin-data";
 import { classFormOptions } from "@/lib/rules";
-import { updateGroupAction, addClassAction } from "../../actions";
+import { updateGroupAction, addClassAction, remindInviteAction } from "../../actions";
 import { yearLabel } from "@/lib/format";
 
 const MODE: Record<string, string> = { auto: "Close when full", keep_open: "Keep open past capacity", full: "Mark as full now" };
@@ -11,13 +12,24 @@ const onHome = (g: { homepage: string; bookable: boolean; status: string }) => g
 const statusPill = (s: string, full: boolean) => full && (s === "open" || s === "priority") ? <span className="pill warn">Full</span>
   : s === "open" ? <span className="pill good">Open</span> : s === "waitlist" || s === "priority" ? <span className="pill info">{STATUS[s]}</span> : <span className="pill mute">{STATUS[s]}</span>;
 
-export default async function Classes({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
+export default async function Classes({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; level?: string }> }) {
   const sp = await searchParams;
-  const [groups, opts] = await Promise.all([getGroups(), classFormOptions()]);
+  const [all, opts, pend] = await Promise.all([getGroups(), classFormOptions(), pendingInvites()]);
+  const levels = [...new Set(all.map((g) => g.level))];
+  const level = levels.includes(sp.level ?? "") ? sp.level! : "All";
+  const groups = all.filter((g) => level === "All" || g.level === level);
   const years = [...new Set(groups.map((g) => g.year_label))];
   return <>
     <div className="top"><div><h1>Classes</h1><div className="sub">{groups.length} classes. Edit a row to change its capacity, override, website label, status or whether it shows under Space Available on the homepage.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+    {pend.length > 0 && <section className="card"><h2>Google Classroom invitations not accepted ({pend.length})</h2>
+      <p className="cs">Students join a class’s Google Classroom by accepting the invitation sent to their school account. Until they do, they can’t join the lesson’s Google Meet.</p>
+      <div className="tw" style={{ border: 0, marginBottom: 0 }}><table><thead><tr><th>Student</th><th>Class</th><th>Invited</th><th>Next lesson</th><th /></tr></thead><tbody>
+        {pend.map((p) => <tr key={p.id}><td><b>{p.student}</b><br /><span className="muted">{p.email ?? "no Google account yet"}</span></td><td>{p.class}</td>
+          <td>{new Date(p.invited_at + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}{p.reminded ? ` · reminded ${new Date(p.reminded + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}</td>
+          <td>{p.next ?? "—"}</td><td><form action={remindInviteAction}><input type="hidden" name="id" value={p.id} /><button className="abtn sm" type="submit">Send a reminder</button></form></td></tr>)}
+      </tbody></table></div></section>}
+    <div className="segl" role="group" aria-label="Level" style={{ marginBottom: 12 }}>{["All", ...levels].map((l) => <Link key={l} href={l === "All" ? "/admin/classes" : `/admin/classes?level=${encodeURIComponent(l)}`} aria-current={l === level ? "true" : undefined}>{l}</Link>)}</div>
     <details className="card" open={!!sp.err}><summary style={{ cursor: "pointer", fontWeight: 600 }}>Add a class</summary>
       <form action={addClassAction} className="eform" style={{ marginTop: 12 }}>
         <label className="fld">Course<select name="course" required defaultValue=""><option value="" disabled>Choose</option>
@@ -29,7 +41,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
     {years.map((y) => <div key={y}>
       {years.length > 1 && <h2 style={{ font: "600 20px Jost", margin: "8px 0 10px" }}>{yearLabel(y)}</h2>}
       <div className="tw"><table>
-        <thead><tr><th>Class</th><th>Teacher</th><th>Lessons</th><th>Places</th><th>Status</th><th>Website label</th><th>Homepage</th></tr></thead>
+        <thead><tr><th>Class</th><th>Teacher</th><th>Lessons</th><th>Places</th><th>Status</th><th>Website label</th><th>Homepage</th><th>Google Classroom</th></tr></thead>
         {groups.filter((g) => g.year_label === y).map((g) => {
           const pct = g.capacity ? Math.min(100, Math.round((g.taken / g.capacity) * 100)) : 0;
           return <tbody key={g.id}>
@@ -44,8 +56,9 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
               <td>{g.label ?? <span className="muted">None</span>}{g.sticky_label !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand</div>}</td>
               <td>{onHome(g) ? <span className="pill good">Space Available</span> : <span className="muted">Not shown</span>}
                 {g.homepage !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand{g.homepage_order ? ` · position ${g.homepage_order}` : ""}</div>}</td>
+              <td>{g.classroom ? <span className="pill good">Linked</span> : <span className="pill mute">Not linked</span>}{g.meet_url ? <div className="muted" style={{ fontSize: 13.5 }}>Meet link set</div> : <div className="muted" style={{ fontSize: 13.5 }}>No Meet link</div>}</td>
             </tr>
-            <tr className="editrow"><td colSpan={7} style={{ paddingTop: 6, paddingBottom: 8 }}>
+            <tr className="editrow"><td colSpan={8} style={{ paddingTop: 6, paddingBottom: 8 }}>
               <details className="edit"><summary className="abtn sm">Edit {g.code}</summary>
                 <form action={updateGroupAction} className="eform" style={{ marginTop: 10 }}>
                   <input type="hidden" name="id" value={g.id} />

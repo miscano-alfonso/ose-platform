@@ -168,7 +168,8 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
     }
     for (const id of touched) await recompute(q, id);
     const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_sessions ms where ms.student_id is null and not ms.ignored and ms.participant_email is distinct from ms.organizer_email
-      and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))`);
+      and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
+      and not exists (select 1 from taster_requests tr where lower(tr.child_email::text) = lower(ms.participant_email::text))`);
     const info: SyncInfo = { at: new Date().toISOString(), from: new Date(from).toISOString(), to: until.toISOString(), joins: saved, lessons: touched.size, unmatched: n, by };
     await kvSet("sync", info, q);
     return info;
@@ -184,6 +185,9 @@ async function recompute(q: Q, eventId: string) {
   await q(`update attendance_marks m set mark = 'approved_absence' from absence_notices n
     where m.lesson_event_id = $1 and n.lesson_event_id = m.lesson_event_id and n.student_id = m.student_id and n.cancelled_at is null and m.mark = 'absent' and m.source = 'meet'`, [eventId]);
   await q(`update lesson_events set status = 'taught' where id = $1 and status = 'scheduled'`, [eventId]);
+  // a taster child who joined the Meet with the Google account given when booking came
+  await q(`update taster_bookings b set status = 'attended' from taster_requests r where r.id = b.request_id and b.lesson_event_id = $1 and b.status = 'booked'
+    and exists (select 1 from meet_sessions ms where ms.lesson_event_id = $1 and lower(ms.participant_email::text) = lower(r.child_email::text))`, [eventId]);
 }
 
 // ---------- the office checks joins that couldn't be matched (signed out, or a personal Google account) ----------
@@ -200,6 +204,7 @@ export async function unmatchedJoins(): Promise<UnmatchedJoin[]> {
     join subjects sj on sj.id = g.subject_id join schools sc on sc.id = ms.school_id
     where ms.student_id is null and not ms.ignored and ms.participant_email is distinct from ms.organizer_email
       and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
+      and not exists (select 1 from taster_requests tr where lower(tr.child_email::text) = lower(ms.participant_email::text))
     order by e.lesson_date desc, ms.joined_at limit 100`));
 }
 /** The office says who a join was. With an email, later joins from that email are matched to the same student automatically. */

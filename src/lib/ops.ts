@@ -197,7 +197,8 @@ export async function cancelLesson(actorId: string, eventId: string, note: strin
 
 // ---------- tasters ----------
 export type TasterRow = { id: string; status: string; lesson_date: string; starts_at: string; level: string; subject: string; code: string; child_name: string; child_email: string;
-  parent_name: string; parent_email: string; message: string | null; request_id: string; lesson_event_id: string };
+  parent_name: string; parent_email: string; message: string | null; request_id: string; lesson_event_id: string;
+  teacher: string | null; together: number; followed_up_at: string | null };
 export type TasterLesson = { lesson_event_id: string; lesson_date: string; starts_at: string; places_left: number };
 export type OpenClass = { id: string; code: string; name: string };
 
@@ -205,8 +206,8 @@ export async function getTasters(groupId: string | null): Promise<{ rows: Taster
   classes: OpenClass[]; lessons: TasterLesson[] }> {
   return withSchool(async (q) => ({
     rows: await q<TasterRow>(`select tl.id, tl.status::text, tl.lesson_date::text, to_char(tl.starts_at,'HH24:MI') as starts_at, tl.level, tl.subject, tl.code, tl.child_name,
-        tl.child_email::text, tl.parent_name, tl.parent_email::text, tl.message, tl.request_id, b.lesson_event_id
-      from taster_list tl join taster_bookings b on b.id = tl.id where tl.lesson_date >= current_date - 120 order by tl.lesson_date desc, tl.starts_at`),
+        tl.child_email::text, tl.parent_name, tl.parent_email::text, tl.message, tl.request_id, b.lesson_event_id, u.name as teacher, tl.tasters_in_request as together, b.followed_up_at::text
+      from taster_list tl join taster_bookings b on b.id = tl.id join lesson_events ev on ev.id = b.lesson_event_id left join teachers t on t.id = ev.teacher_id left join users u on u.id = t.user_id where tl.lesson_date >= current_date - 120 order by tl.lesson_date desc, tl.starts_at`),
     requests: await q(`select id, name, email::text, levels, message, created_at::text from enquiries where kind = 'taster' and handled_at is null order by created_at desc`),
     classes: await q<OpenClass>(`select g.id, g.code, l.name || ' ' || sj.name as name from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where g.status in ('open','priority') and g.academic_year_id = ${YEAR_SQL} and exists (select 1 from lesson_slots s where s.group_id = g.id) order by l.sort_order, sj.name, g.code`),
@@ -256,4 +257,27 @@ export async function ensureLessonDates(): Promise<number> {
       and not exists (select 1 from absence_notices a where a.lesson_event_id = e.id)`);
     return n;
   });
+}
+
+export async function tasterPlaces(): Promise<number> {
+  return withSchool(async (q) => (await q<{ n: number }>(`select taster_places_per_lesson::int as n from schools where id = current_school()`))[0]?.n ?? 2);
+}
+/** After a taster: email the family inviting them to book (through Brevo), and remember it was sent. */
+export async function tasterFollowUp(actorId: string, id: string): Promise<string | null> {
+  const { sendHtml } = await import("./email");
+  const r = (await withSchool((q) => q<{ child: string; parent_first: string; email: string; subject: string; level: string; school: string }>(`select r.child_name as child, r.parent_first_name as parent_first,
+      r.parent_email::text as email, sj.name as subject, l.name as level, sc.name as school from taster_bookings b join taster_requests r on r.id = b.request_id
+      join lesson_events ev on ev.id = b.lesson_event_id join course_groups g on g.id = ev.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+      join schools sc on sc.id = b.school_id where b.id = $1`, [id])))[0];
+  if (!r) return "That taster wasn’t found.";
+  const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+  const base = (process.env.SITE_URL || "").replace(/\/$/, "");
+  const sent = await sendHtml(`How did ${r.child.split(" ")[0]}’s taster go?`, `<p>Dear ${esc(r.parent_first)},</p><p>Thank you for bringing ${esc(r.child.split(" ")[0])} to the ${esc(r.level)} ${esc(r.subject)} taster lesson. We hope they enjoyed it.</p>
+    <p>If you’d like ${esc(r.child.split(" ")[0])} to join the class, you can book a place here: <a href="${base}/courses">${base ? `${base}/courses` : "our website"}</a>. Places are limited, so do get in touch if you have any questions.</p><p>Best wishes,<br>${esc(r.school)}</p>`, [r.email], "taster-follow-up");
+  if (!sent.ok) return sent.error ?? "Couldn’t send the email.";
+  await withSchool(async (q) => {
+    await q(`update taster_bookings set followed_up_at = now() where id = $1`, [id]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'follow_up', 'taster', $2, '{}')`, [actorId, id]);
+  });
+  return null;
 }
