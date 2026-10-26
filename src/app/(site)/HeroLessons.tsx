@@ -7,7 +7,7 @@ const LESSONS: Lesson[] = [
   { cls: "en", colour: "#2b5aa8", subject: "English", teacher: "Mrs Iacurci", photo: "/teachers/leanne-iacurci.webp", n: 6, kicker: "GCSE English Literature", title: "Macbeth: ambition",
     body: <><p className="hl-quote">“I have no spur to prick the sides of my intent, but only vaulting ambition…”</p><ul><li>What does the horse image suggest?</li><li>Find two more examples in Act 1</li></ul></>,
     studs: [["EM", "#3c6fd8"], ["JT", "#c0559e"], ["AK", "#2f9d77"]] },
-  { cls: "sc", colour: "#c2577a", subject: "Science", teacher: "Mrs Rowe", photo: "/teachers/rachel-rowe.webp", n: 7, kicker: "GCSE Chemistry", title: "Rates of reaction",
+  { cls: "sc", colour: "#b9b22c", subject: "Science", teacher: "Mrs Rowe", photo: "/teachers/rachel-rowe.webp", n: 7, kicker: "GCSE Chemistry", title: "Rates of reaction",
     body: <><svg viewBox="0 0 220 120" className="hl-graph" aria-hidden="true"><path d="M20 105H210M20 105V8" stroke="#3d4366" strokeWidth="2" /><path d="M20 105C60 30 100 18 205 14" stroke="#1f8a63" strokeWidth="4" fill="none" /><path d="M20 105C70 62 120 44 205 36" stroke="#e3a33b" strokeWidth="4" fill="none" strokeDasharray="6 6" /><text x="150" y="58" fontSize="13" fill="#e3a33b">20°C</text><text x="150" y="9" fontSize="13" fill="#1f8a63">40°C</text></svg><ul><li>Higher temperature, faster reaction</li></ul></>,
     studs: [["LW", "#e8834b"], ["OB", "#3c6fd8"], ["FN", "#2f9d77"]] },
   { cls: "ma", colour: "#4f9b6c", subject: "Maths", teacher: "Miss Randle", photo: "/teachers/becky-randle.webp", n: 5, kicker: "GCSE Maths", title: "Straight-line graphs",
@@ -24,7 +24,7 @@ const AROUND: { left: number; top: number; width: number; delay: number }[] = [
 
 function Win({ l, style, className }: { l: Lesson; style?: React.CSSProperties; className: string }) {
   return (
-    <div className={`hl-win hl-${l.cls} ${className}`} style={{ ["--c" as string]: l.colour, ...style }} aria-hidden="true">
+    <div className={`hl-win hl-${l.cls} ${className}`} style={{ ["--c" as string]: l.colour, ...(l.cls === "sc" ? { ["--ct" as string]: "#0f1747", ["--ck" as string]: "#7d7716" } : {}), ...style }} aria-hidden="true">
       <div className="hl-bar"><i /><i /><i /><span className="hl-t">{l.subject} · {l.teacher}</span><span className="hl-live">LIVE</span><span className="hl-n">{l.n} students</span></div>
       <div className="hl-slide">
         <div className="hl-k">{l.kicker}</div>

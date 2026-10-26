@@ -438,9 +438,9 @@ html,body{overflow-x:clip}
 @media (max-width:820px){.hero-lessons{margin-top:24px}}
 /* subject-coloured window frames */
 .hl-win{background:var(--c,#121a4f);box-shadow:0 2.4em 5em rgba(0,0,0,.5)}
-.hl-bar{background:var(--c,#0d1442);color:#fff}.hl-bar i{background:rgba(255,255,255,.45)}
+.hl-bar{background:var(--c,#0d1442);color:var(--ct,#fff)}.hl-bar i{background:rgba(255,255,255,.45)}
 .hl-live{background:rgba(255,255,255,.92);color:#d33}.hl-n{opacity:.9}
-.hl-k{color:var(--c)!important}
+.hl-k{color:var(--ck,var(--c))!important}
 /* screens floating around the boy's laptop (inside the illustration box) */
 .hero-art{container-type:inline-size}
 .hl-around{position:absolute;inset:0;pointer-events:none}
