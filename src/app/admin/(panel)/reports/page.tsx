@@ -1,13 +1,17 @@
 import Link from "next/link";
 import { getCycles } from "@/lib/reports";
+import { redirect } from "next/navigation";
 import { createCycleAction } from "../../actions";
 
 const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const STATUS: Record<string, [string, string]> = { writing: ["Writing", "warn"], review: ["Review", "info"], published: ["Published", "good"] };
 
-export default async function Reports({ searchParams }: { searchParams: Promise<{ err?: string }> }) {
+export default async function Reports({ searchParams }: { searchParams: Promise<{ err?: string; all?: string; tab?: string; ok?: string }> }) {
   const sp = await searchParams;
   const { cycles, terms } = await getCycles();
+  // as in the prototype, Reports opens on the round being written now
+  const now = cycles.find((c) => c.status !== "published") ?? [...cycles].reverse()[0];
+  if (now && !sp.all && !sp.err) redirect(`/admin/reports/${now.id}${sp.tab ? `?tab=${sp.tab}${sp.ok ? `&ok=${encodeURIComponent(sp.ok)}` : ""}` : ""}`);
   return <>
     <div className="top"><div><h1>Reports</h1><div className="sub">Termly progress reports: teachers write one per student per class, you approve and publish them to families.</div></div></div>
     {sp.err && <p className="note msg bad">{sp.err}</p>}

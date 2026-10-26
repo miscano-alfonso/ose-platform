@@ -22,6 +22,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   after(() => socialBackground());
   after(() => meetBackground()); // reads new Google Meet joins every few hours, and sends Friday's attendance alert // scheduled Instagram posts and the weekly moments report, after the page is sent
   const { logo } = await brandSrc();
+  const [x] = await withSchool((q) => q<{ rep: number; msg: number; joins: number }>(`select
+    (select count(*)::int from report_entries e join report_cycles c on c.id = e.cycle_id where e.status = 'submitted' and c.status <> 'published') as rep,
+    (select count(*)::int from message_threads th where th.status = 'open' and th.last_message_at < now() - interval '2 days'
+      and (select m.sender from messages m where m.thread_id = th.id order by m.created_at desc limit 1) = 'parent') as msg,
+    coalesce((select (value->>'unmatched')::int from meet_kv where key = 'sync'), 0) as joins`)).catch(() => [{ rep: 0, msg: 0, joins: 0 }]);
   const [c] = await withSchool((q) => q<{ enq: number; jobs: number; failed: number; tasters: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq,
     (select count(*)::int from job_applications where status = 'new') as jobs, (select count(*)::int from instalments where status = 'failed') as failed,
     (select count(*)::int from taster_bookings b join lesson_events ev on ev.id = b.lesson_event_id where b.status = 'booked' and ev.lesson_date between current_date and current_date + 7) as tasters`)).catch(async () =>
@@ -39,7 +44,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <a className="logo" href="/admin" title="Dashboard"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></a>
       <Switchers schools={schools.map((x) => ({ value: x.slug, label: x.name }))} school={school} views={views} view="admin" />
-      <AdminNav counts={{ "/admin/enquiries": c.enq, "/admin/jobs": c.jobs, "/admin/payments": c.failed, "/admin/tasters": c.tasters }} />
+      <AdminNav counts={{ "/admin/enquiries": c.enq, "/admin/jobs": c.jobs, "/admin/payments": c.failed, "/admin/tasters": c.tasters, "/admin/reports": x.rep, "/admin/messages": x.msg, "/admin/attendance": x.joins }} />
       <div className="who"><span>Signed in as<br /><b>{me.name}</b></span>
         <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form>
         <a href="/" style={{ color: "#c9cde4", fontSize: 15.5 }}>View the website</a></div>

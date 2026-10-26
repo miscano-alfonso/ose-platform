@@ -286,7 +286,7 @@ export async function setLevelRateAction(f: FormData): Promise<void> {
 export async function buildPayRunAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const err = await buildPayRun(me.id, str(f, "term", 40));
-  revalidatePath("/admin/payroll"); payBack(err, "Pay run updated from the registers.");
+  revalidatePath("/admin/payroll"); payBack(err, "Pay run updated from the lessons taught.");
 }
 export async function setAdjustmentAction(f: FormData): Promise<void> {
   const me = await requireStaff();
@@ -948,4 +948,70 @@ export async function remindInviteAction(f: FormData): Promise<void> {
   const { remindInvite } = await import("@/lib/admin-data");
   const err = await remindInvite(me.id, str(f, "id", 40));
   redirect(`/admin/classes?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Reminder sent to the student and parent.")}`);
+}
+export async function saveBandAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { saveBand } = await import("@/lib/reports");
+  const err = await saveBand(me.id, Number(str(f, "score", 1)), Number(str(f, "min", 5)));
+  const c = str(f, "cycle", 40);
+  redirect(`/admin/reports${c ? `/${c}` : ""}?tab=key&${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Grading key saved.")}`);
+}
+export async function remindTeachersAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { remindTeachers } = await import("@/lib/reports");
+  const c = str(f, "cycle", 40), r = await remindTeachers(me.id, c);
+  redirect(`/admin/reports/${c}?tab=classes&${r.sent ? "ok=" + encodeURIComponent(`Reminder sent to ${r.sent} teacher${r.sent === 1 ? "" : "s"}.`) : "err=" + encodeURIComponent(r.error ?? "Nobody has comments left to write.")}`);
+}
+
+// ---------- data protection ----------
+const dpBack = (tab: string, ok?: string | null, err?: string | null) => redirect(`/admin/privacy?tab=${tab}` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
+export async function addPrivReqAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); const P = await import("@/lib/privacy");
+  const fam = str(f, "family", 40);
+  const err = await P.addRequest(me.id, /^[0-9a-f-]{36}$/.test(fam) ? fam : null, str(f, "email", 200), str(f, "kind", 20), str(f, "detail", 500) || null);
+  dpBack("requests", "Request recorded. Reply within one month.", err);
+}
+export async function closePrivReqAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); const P = await import("@/lib/privacy");
+  await P.closeRequest(me.id, str(f, "id", 40), str(f, "status", 10) === "refused" ? "refused" : "done", str(f, "outcome", 300) || null);
+  dpBack("requests", "Request closed.");
+}
+export async function eraseFamilyAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); const P = await import("@/lib/privacy");
+  if (str(f, "confirm", 10) !== "ERASE") dpBack("requests", null, "Type ERASE to confirm.");
+  const err = await P.eraseFamily(me.id, str(f, "id", 40));
+  dpBack("requests", "Family erased. Payment records are kept without names for six years.", err);
+}
+export async function runRetentionAction(): Promise<void> {
+  const me = await requireStaff(); const P = await import("@/lib/privacy");
+  const n = await P.runRetentionNow(me.id);
+  dpBack("retention", n ? `Clean-up done: ${n} record${n === 1 ? "" : "s"} past their retention period removed.` : "Clean-up done: nothing past its retention period.");
+}
+export async function setRetentionAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); const P = await import("@/lib/privacy");
+  await P.setRetention(me.id, str(f, "kind", 40), Number(str(f, "months", 4)));
+  dpBack("retention", "Retention saved.");
+}
+export async function addBreachAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); const P = await import("@/lib/privacy");
+  const risk = str(f, "risk", 12), n = parseInt(str(f, "people", 6), 10);
+  const err = await P.addBreach(me.id, str(f, "what", 500), str(f, "data", 300), risk, Number.isFinite(n) ? n : null);
+  dpBack("breaches", risk === "unlikely" ? "Recorded." : "Recorded. Report it to the ICO within 72 hours of finding it (ico.org.uk/report).", err);
+}
+export async function breachStepAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); const P = await import("@/lib/privacy");
+  const s = str(f, "step", 8); if (s === "ico" || s === "told" || s === "closed") await P.breachStep(me.id, str(f, "id", 40), s);
+  dpBack("breaches", "Updated.");
+}
+export async function addProcessorAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); const P = await import("@/lib/privacy");
+  if (f.get("usual")) await P.addProcessor(me.id, "usual");
+  else { const name = str(f, "name", 80); if (!name) dpBack("processors", null, "Give the supplier a name.");
+    await P.addProcessor(me.id, { name, purpose: str(f, "purpose", 200), data: str(f, "data", 200), location: str(f, "location", 80), safeguard: str(f, "safeguard", 120) || null, dpa: /^\d{4}-\d\d-\d\d$/.test(str(f, "dpa", 10)) ? str(f, "dpa", 10) : null }); }
+  dpBack("processors", "Supplier added.");
+}
+export async function setDpaAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); const P = await import("@/lib/privacy");
+  const d = str(f, "on", 10); await P.setDpa(me.id, str(f, "id", 40), /^\d{4}-\d\d-\d\d$/.test(d) ? d : null);
+  dpBack("processors", "Saved.");
 }

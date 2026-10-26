@@ -18,17 +18,19 @@ const P: Record<string, string> = {
 const ICON: Record<string, string> = { "/admin/families": "fam", "/admin/attendance": "att", "/admin/payments": "pay", "/admin/messages": "mail", "/admin/enquiries": "wait", "/admin/jobs": "job",
   "/admin/tasters": "att", "/admin/reports": "rep", "/admin/tutoring": "fam", "/admin/workshops": "cal", "/admin/student-chat": "chat", "/admin/rewards": "star", "/admin/payroll": "gbp",
   "/admin/email": "mail", "/admin/newsletter": "mail", "/admin/subscribers": "fam", "/admin/email-stats": "rep", "/admin/social": "mkt", "/admin/term-dates": "cal", "/admin/prices": "price",
-  "/admin/classes": "cls", "/admin/timetable": "cal", "/admin/teachers": "fam", "/admin/website": "web", "/admin/home-ed": "web", "/admin/styles": "set", "/admin/staff": "set", "/admin/account": "set", "/admin/school": "set" };
+  "/admin/classes": "cls", "/admin/timetable": "cal", "/admin/teachers": "fam", "/admin/website": "web", "/admin/home-ed": "web", "/admin/styles": "set", "/admin/staff": "set", "/admin/account": "set", "/admin/school": "set", "/admin": "home", "/admin/privacy": "set" };
 const Icon = ({ href }: { href: string }) => <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={P[ICON[href] ?? "home"]} /></svg>;
-// Day-to-day work stays at the top level; things set once a year, and school settings, sit in groups.
+// The prototype's menu order; the newer sections (Jobs, Newsletter, Social…) sit after it, and website and school settings in groups.
 const DAILY: Item[] = [
-  ["Families", "/admin/families"], ["Attendance", "/admin/attendance"], ["Payments", "/admin/payments"], ["Messages", "/admin/messages"],
-  ["Waiting list & enquiries", "/admin/enquiries"], ["Jobs", "/admin/jobs"], ["Tasters", "/admin/tasters"], ["Reports", "/admin/reports"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"],
-  ["Student chat", "/admin/student-chat"], ["Rewards", "/admin/rewards"], ["Payroll", "/admin/payroll"], ["Email", "/admin/email"], ["Newsletter", "/admin/newsletter"], ["Subscribers", "/admin/subscribers"], ["Email stats", "/admin/email-stats"], ["Social", "/admin/social"],
+  ["Dashboard", "/admin"], ["Classes", "/admin/classes"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"], ["Timetable", "/admin/timetable"],
+  ["Families", "/admin/families"], ["Attendance", "/admin/attendance"], ["Reports", "/admin/reports"], ["Payments", "/admin/payments"], ["Payroll", "/admin/payroll"],
+  ["Prices & discounts", "/admin/prices"], ["Term dates", "/admin/term-dates"], ["Tasters", "/admin/tasters"], ["Waiting list & enquiries", "/admin/enquiries"],
+  ["Messages", "/admin/messages"], ["Student chat", "/admin/student-chat"], ["Data protection", "/admin/privacy"], ["Rewards", "/admin/rewards"], ["Email", "/admin/email"], ["Jobs", "/admin/jobs"],
 ];
 const GROUPS: [string, Item[]][] = [
-  ["Year setup", [["Term dates", "/admin/term-dates"], ["Prices & discounts", "/admin/prices"], ["Classes", "/admin/classes"], ["Timetable", "/admin/timetable"]]],
-  ["Settings", [["School settings", "/admin/school"], ["Teachers", "/admin/teachers"], ["Website", "/admin/website"], ["Home Ed hub", "/admin/home-ed"], ["Page styles", "/admin/styles"], ["Staff & access", "/admin/staff"], ["Account", "/admin/account"]]],
+  ["Marketing", [["Newsletter", "/admin/newsletter"], ["Subscribers", "/admin/subscribers"], ["Email stats", "/admin/email-stats"], ["Social", "/admin/social"]]],
+  ["Website", [["Website", "/admin/website"], ["Home Ed hub", "/admin/home-ed"], ["Page styles", "/admin/styles"]]],
+  ["Settings", [["School settings", "/admin/school"], ["Teachers", "/admin/teachers"], ["Staff & access", "/admin/staff"], ["Account", "/admin/account"]]],
 ];
 
 export function AdminNav({ counts }: { counts: Record<string, number> }) {

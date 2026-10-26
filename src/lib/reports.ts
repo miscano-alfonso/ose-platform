@@ -141,3 +141,58 @@ export async function teacherReportClasses(userId: string) {
     join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
     where t.user_id = $1 and c.status <> 'published' group by c.id, g.id, l.sort_order, l.name, sj.name order by c.comments_due, l.sort_order, sj.name`, [userId]));
 }
+
+// ---------- the prototype's Reports view: grading key, previews, by teacher, past reports, reminders ----------
+export type Band = { score: number; label: string; min_pct: number };
+export async function gradeBands(): Promise<Band[]> {
+  return withSchool((q) => q<Band>(`select score, label, min_pct::float as min_pct from grade_bands order by score desc`));
+}
+export async function saveBand(actorId: string, score: number, min: number): Promise<string | null> {
+  if (!(score >= 2 && score <= 5) || !(min >= 1 && min <= 99)) return "Enter a percentage between 1 and 99.";
+  return withSchool(async (q) => {
+    const bands = await q<Band>(`select score, label, min_pct::float as min_pct from grade_bands order by score`);
+    const lower = bands.find((b) => b.score === score - 1), higher = bands.find((b) => b.score === score + 1);
+    if ((lower && min <= lower.min_pct) || (higher && min >= higher.min_pct)) return "Each band must start above the one below it and below the one above it.";
+    await q(`update grade_bands set min_pct = $2 where score = $1`, [score, min]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'band', 'grade_bands', null, $2)`, [actorId, JSON.stringify({ score, min })]);
+    return null;
+  });
+}
+export async function cycleStudents(cycleId: string) {
+  return withSchool((q) => q<{ id: string; name: string; level: string; subjects: number; approved: number }>(`select s.id, s.first_name || ' ' || s.last_name as name,
+      string_agg(distinct rl.level, ', ') as level, count(*)::int as subjects, count(*) filter (where rl.status = 'approved')::int as approved
+    from report_lines rl join students s on s.id = rl.student_id where rl.cycle_id = $1 group by s.id order by s.first_name, s.last_name`, [cycleId]));
+}
+export async function byTeacher(cycleId: string) {
+  return withSchool((q) => q<{ teacher: string; total: number; done: number }>(`select coalesce(u.name, 'No teacher') as teacher, count(*)::int as total,
+      count(*) filter (where e.status in ('submitted','approved'))::int as done
+    from report_entries e left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id where e.cycle_id = $1 group by u.name order by u.name`, [cycleId]));
+}
+export type ReportLine = { subject: string; level: string; teacher: string | null; progress: number | null; effort: number | null; working_grade: number | null; predicted_grade: number | null; comment: string | null; status: string };
+export async function studentReport(cycleId: string, studentId: string) {
+  return withSchool(async (q) => {
+    const head = (await q<{ cycle: string; publish_on: string; student: string; school: string }>(`select c.name as cycle, c.publish_on::text, s.first_name || ' ' || s.last_name as student, sc.name as school
+      from report_cycles c, students s, schools sc where c.id = $1 and s.id = $2 and sc.id = current_school()`, [cycleId, studentId]))[0];
+    if (!head) return null;
+    const lines = await q<ReportLine>(`select rl.subject, rl.level, u.name as teacher, rl.progress, rl.effort, rl.working_grade, rl.predicted_grade, rl.comment, rl.status::text
+      from report_lines rl join report_entries e on e.id = rl.id left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id
+      where rl.cycle_id = $1 and rl.student_id = $2 order by rl.subject`, [cycleId, studentId]);
+    const bands = await q<{ score: number; label: string }>(`select score, label from grade_bands order by score desc`);
+    return { ...head, lines, bands };
+  });
+}
+/** Email each teacher who still has comments to write in this report round. */
+export async function remindTeachers(actorId: string, cycleId: string): Promise<{ sent: number; error?: string }> {
+  const { sendHtml } = await import("./email");
+  const rows = await withSchool((q) => q<{ name: string; email: string; left: number; due: string; cycle: string }>(`select u.name, u.email::text, count(*)::int as left,
+      c.comments_due::text as due, c.name as cycle from report_entries e join report_cycles c on c.id = e.cycle_id join teachers t on t.id = e.teacher_id join users u on u.id = t.user_id
+    where e.cycle_id = $1 and e.status in ('todo','draft','returned') group by u.name, u.email, c.comments_due, c.name`, [cycleId]));
+  let sent = 0, error: string | undefined;
+  for (const r of rows) {
+    const due = new Date(r.due + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+    const res = await sendHtml(`${r.cycle}: ${r.left} comment${r.left === 1 ? "" : "s"} to write by ${due}`, `<p>Hello ${r.name.split(" ")[0]},</p><p>You have ${r.left} report comment${r.left === 1 ? "" : "s"} still to write for the ${r.cycle}. They’re due by ${due}.</p><p>Sign in and open <b>Reports to write</b> to finish them.</p>`, [r.email], "report-reminder");
+    if (res.ok) sent++; else error = res.error;
+  }
+  await withSchool((q) => q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'remind', 'report_cycle', $2, $3)`, [actorId, cycleId, JSON.stringify({ sent })]));
+  return { sent, error };
+}

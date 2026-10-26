@@ -70,3 +70,43 @@ export async function setRunStatus(actorId: string, runId: string, to: "approved
     await audit(q, actorId, to, "pay_run", runId, {});
   });
 }
+
+// ---------- the prototype's Payroll view: one term at a time ----------
+const RATE = (lvl: string, tch: string, d: string) => `coalesce(
+  (select r.rate_pence from pay_rates r where r.level_id = ${lvl} and r.teacher_id = ${tch} and r.valid_from <= ${d} order by r.valid_from desc limit 1),
+  (select r.rate_pence from pay_rates r where r.level_id = ${lvl} and r.teacher_id is null and r.valid_from <= ${d} order by r.valid_from desc limit 1), 0)`;
+export type PayTermOpt = { id: string; number: number; name: string; starts_on: string; ends_on: string; pay_date: string; run_id: string | null; status: string | null };
+export type PayRow = { teacher_id: string; teacher: string; lessons: number; taught: number; by_level: Record<string, number>; lesson_pay: number; extras: number; extras_pay: number; adj: number; adj_note: string | null; gross: number; line_id: string | null };
+export type PayChange = { kind: "cancelled" | "cover"; date: string; time: string; class: string; note: string | null; teacher: string | null };
+export async function payrollTerm(termNumber: number | null) {
+  return withSchool(async (q) => {
+    const terms = await q<PayTermOpt>(`select t.id, t.number, t.name, t.starts_on::text, t.ends_on::text, coalesce(r.pay_date, term_pay_date(t.id))::text as pay_date, r.id as run_id, r.status::text
+      from terms t left join pay_runs r on r.term_id = t.id where t.academic_year_id = ${YEAR_SQL} order by t.number`);
+    const today = new Date().toISOString().slice(0, 10);
+    const term = terms.find((t) => t.number === termNumber) ?? terms.find((t) => t.starts_on <= today && today <= t.ends_on) ?? [...terms].reverse().find((t) => t.ends_on < today) ?? terms[0];
+    if (!term) return { terms, term: null, rows: [] as PayRow[], levels: [] as string[], changes: [] as PayChange[], counts: { all: 0, taught: 0, toCome: 0 } };
+    const levels = (await q<{ name: string }>(`select name from levels order by sort_order`)).map((l) => l.name);
+    const base = await q<{ teacher_id: string; teacher: string; level: string; lessons: number; taught: number; pay: number }>(`select e.teacher_id, u.name as teacher, l.name as level,
+        count(*)::int as lessons, count(*) filter (where e.status = 'taught')::int as taught,
+        sum(${RATE("g.level_id", "e.teacher_id", "e.lesson_date")})::int as pay
+      from lesson_events e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join teachers t on t.id = e.teacher_id join users u on u.id = t.user_id
+      where e.term_id = $1 and e.status <> 'cancelled' group by e.teacher_id, u.name, l.name`, [term.id]);
+    const extras = await q<{ teacher_id: string; teacher: string; sessions: number; pay: number }>(`select x.teacher_id, u.name as teacher, sum(x.sessions)::int as sessions, sum(x.pay_pence)::int as pay
+      from teacher_term_extras x join teachers t on t.id = x.teacher_id join users u on u.id = t.user_id where x.term_id = $1 group by x.teacher_id, u.name`, [term.id]).catch(() => []);
+    const lines = term.run_id ? await q<{ id: string; teacher_id: string; adj: number; note: string | null; gross: number }>(`select id, teacher_id, adjustments_pence as adj, adjustment_note as note, gross_pence as gross
+      from pay_run_lines where pay_run_id = $1`, [term.run_id]) : [];
+    const map = new Map<string, PayRow>();
+    const row = (id: string, name: string) => map.get(id) ?? (map.set(id, { teacher_id: id, teacher: name, lessons: 0, taught: 0, by_level: {}, lesson_pay: 0, extras: 0, extras_pay: 0, adj: 0, adj_note: null, gross: 0, line_id: null }), map.get(id)!);
+    for (const b of base) { const r = row(b.teacher_id, b.teacher); r.lessons += b.lessons; r.taught += b.taught; r.by_level[b.level] = (r.by_level[b.level] ?? 0) + b.lessons; r.lesson_pay += b.pay; }
+    for (const x of extras) { const r = row(x.teacher_id, x.teacher); r.extras += x.sessions; r.extras_pay += x.pay; }
+    for (const r of map.values()) { const l = lines.find((x) => x.teacher_id === r.teacher_id); if (l && term.status !== "draft") { r.adj = l.adj; r.adj_note = l.note; r.gross = l.gross; r.line_id = l.id; } else { r.adj = l?.adj ?? 0; r.adj_note = l?.note ?? null; r.line_id = l?.id ?? null; r.gross = r.lesson_pay + r.extras_pay + r.adj; } }
+    const changes = await q<PayChange>(`select case when e.status = 'cancelled' then 'cancelled' else 'cover' end as kind, e.lesson_date::text as date, to_char(s.starts_at,'HH24:MI') as time,
+        l.name || ' ' || sj.name as class, e.note, u.name as teacher
+      from lesson_events e join lesson_slots s on s.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+      left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id
+      where e.term_id = $1 and (e.status = 'cancelled' or e.teacher_id is distinct from s.teacher_id) order by e.lesson_date`, [term.id]);
+    const [counts] = await q<{ all: number; taught: number; toCome: number }>(`select count(*) filter (where status <> 'cancelled')::int as all, count(*) filter (where status = 'taught')::int as taught,
+      count(*) filter (where status = 'scheduled')::int as "toCome" from lesson_events where term_id = $1`, [term.id]);
+    return { terms, term, rows: [...map.values()].sort((a, b) => a.teacher.localeCompare(b.teacher)), levels, changes, counts };
+  });
+}
