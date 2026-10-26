@@ -17,7 +17,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   return <div className="adm"><DashStyles /><div className="app">
     <aside className="side">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <a className="logo" href="/admin"><img src={logo} alt="OH-SO ED admin" width={773} height={224} /></a>
+      <a className="logo" href="/admin" title="Dashboard"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></a>
       <AdminNav counts={{ "/admin/enquiries": c.enq, "/admin/jobs": c.jobs }} />
       <div className="who"><span>Signed in as<br /><b>{me.name}</b></span>
         <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form>
