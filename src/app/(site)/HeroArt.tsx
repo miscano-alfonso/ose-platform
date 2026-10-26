@@ -11,9 +11,9 @@ const ICONS: [string, number, number, number, "up" | "down", number][] = [
   ["bulb-icons1", 62.50, 1.13, 16.53, "down", 0.8],
 ];
 
-export function HeroArt() {
+export function HeroArt({ children }: { children?: React.ReactNode }) {
   return (
-    <div className="hero-art" aria-hidden="true">
+    <div className="hero-art" aria-hidden={children ? undefined : true}>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="hero-banner" src="/hero/banner.webp" alt="" width={880} height={863} fetchPriority="high" />
       {ICONS.map(([n, x, y, w, dir, delay], i) => (
@@ -22,6 +22,7 @@ export function HeroArt() {
           <img src={`/hero/${n}.webp`} alt="" width={180} height={180} style={{ animationDelay: `${(i % 4) * 0.35}s` }} />
         </span>
       ))}
+      {children}
     </div>
   );
 }
