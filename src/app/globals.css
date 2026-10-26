@@ -451,3 +451,20 @@ html,body{overflow-x:clip}
 .hl-beams line{stroke:#bfe9ff;stroke-width:.35;stroke-dasharray:1 1.6;opacity:.75;animation:hlBeam 2.4s linear infinite;vector-effect:non-scaling-stroke;stroke-width:2}
 @keyframes hlBeam{to{stroke-dashoffset:-10}}
 @media (prefers-reduced-motion:reduce){.hl-float,.hl-beams line{animation:none}}
+/* Homepage: Meet the Headteacher, reviews, Member Of */
+.home-head{background:#f1f2f6}
+.head-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,.8fr);gap:clamp(24px,5vw,64px);align-items:center;max-width:1040px;margin:0 auto}
+.head-text p{margin:0 0 14px;font-size:17px;line-height:1.7;color:var(--ink)}
+.head-photo{width:100%;max-width:400px;aspect-ratio:1;object-fit:cover;object-position:50% 30%;border-radius:50%;justify-self:center;box-shadow:0 20px 50px rgba(15,23,71,.15)}
+@media (max-width:820px){.head-grid{grid-template-columns:1fr}.head-photo{order:-1;max-width:260px}}
+.rev-bar{max-width:1040px;margin:0 auto 18px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;background:#f4f5fb;border-radius:14px;padding:16px 20px}
+.rev-fb{color:#1877f2;font-weight:700;letter-spacing:-.02em}
+.rev-score{display:flex;align-items:center;gap:8px;margin-top:4px;font-weight:600;font-size:18px}.rev-stars{color:#f4b400;letter-spacing:2px}.rev-score small{color:var(--muted);font-weight:400}
+.rev-widget{max-width:1040px;margin:0 auto}
+.home-member{background:#f1f2f6}
+.member-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;max-width:1040px;margin:0 auto}
+.member-card{background:#fff;border-radius:18px;padding:26px;display:grid;gap:14px;align-content:start;box-shadow:0 6px 24px rgba(15,23,71,.06)}
+.member-card img{height:140px;width:auto;max-width:100%;object-fit:contain;justify-self:center}
+.member-card p{margin:0;line-height:1.65;color:var(--ink)}.member-card a{color:var(--brand);font-weight:500}
+.member-links{font-size:14.5px}
+.calc-cta{display:flex;justify-content:center;margin-top:36px}

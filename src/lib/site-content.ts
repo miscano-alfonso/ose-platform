@@ -10,6 +10,12 @@ export const DEFAULTS: Record<string, string> = {
   home_lead: "OH-SO ED provides outstanding online education for home-educated students. We offer KS3, pre-GCSE and GCSE courses taught by experienced secondary subject specialists, supported by our 98% GCSE pass rate!",
   ticker: "Join us for taster lessons\nNew courses will start in September",
   teachers_intro: "Experienced secondary subject specialists, all with up-to-date DBS certificates.",
+  head_title: "Meet the Headteacher",
+  head_text: "I’m Leanne, Principal and English Teacher. OH-SO ED was born from the success of OH-SO ENGLISH, which I started in 2021 after leaving the mainstream classroom for good. We are now a fast-growing team, offering a number of secondary subjects to the home-educating community.\nOur OH-SO ED team are all outstanding ex-secondary practitioners who have worked for many years in secondary education within their specialisms. We’re all committed to delivering a curriculum that is more diverse, more inspirational and ultimately more fulfilling than the one delivered in the mainstream secondary classroom.",
+  reviews_rating: "4.8",
+  reviews_count: "17",
+  reviews_url: "https://www.facebook.com/ohsoedonline/reviews",
+  reviews_widget: "05669bd0-25f2-40a8-a78f-2dedcfc3dd82",
 };
 
 export async function siteText(): Promise<Record<string, string>> {

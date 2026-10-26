@@ -28,10 +28,14 @@ export function HeroArt({ children }: { children?: React.ReactNode }) {
 }
 
 export function Ticker({ items }: { items: string[] }) {
-  const run = items.map((t, i) => <span key={i}><b aria-hidden="true">✦✦✦</b>{t}</span>);
+  // Each half of the loop must be wider than the widest screen, or a gap shows: repeat short lists.
+  const chars = items.join("").length + items.length * 6;
+  const reps = Math.max(1, Math.ceil(260 / Math.max(chars, 1)));
+  const list = Array.from({ length: reps }, () => items).flat();
+  const run = list.map((t, i) => <span key={i}><b aria-hidden="true">✦✦✦</b>{t}</span>);
   return (
     <section className="ticker" aria-label={items.join(". ")}>
-      <div className="ticker-track" aria-hidden="true"><div>{run}</div><div>{run}</div></div>
+      <div className="ticker-track" aria-hidden="true" style={{ animationDuration: `${Math.round((list.join("").length + list.length * 6) * 0.28)}s` }}><div>{run}</div><div>{run}</div></div>
     </section>
   );
 }

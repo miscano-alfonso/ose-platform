@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getFewPlaces, getBundles, getSpaceAvailable } from "@/lib/data";
 import { CourseCard, roundelSrc } from "./CourseCard";
 import { HeroLessons } from "./HeroLessons";
+import { MeetHead, Reviews, MemberOf } from "./HomeExtras";
 import { HeroArt, Ticker } from "./HeroArt";
 import { SpaceAvailable } from "./SpaceAvailable";
 import { siteText } from "@/lib/site-content";
@@ -29,6 +30,9 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
       <div className="more"><Link className="btn btn-brand" href="/courses">See all courses</Link></div>
     </div></section>}
 
-    <KS3Bundles ks3Pence={ks3Pence} bundles={bundles} />
+    <KS3Bundles ks3Pence={ks3Pence} bundles={bundles}><div className="more calc-cta"><Link className="btn btn-accent" href="/calculator">Work out your price with the calculator</Link></div></KS3Bundles>
+    <MeetHead title={txt.head_title} text={txt.head_text} />
+    <Reviews rating={txt.reviews_rating} count={txt.reviews_count} url={txt.reviews_url} widget={txt.reviews_widget.replace(/[^\w-]/g, "")} />
+    <MemberOf />
   </>);
 }
