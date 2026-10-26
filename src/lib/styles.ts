@@ -28,7 +28,7 @@ export const FONTS: { name: string; fallback: string; weights: number[] }[] = [
 ];
 export const WEIGHTS: [number, string][] = [[300, "Light"], [400, "Regular"], [500, "Medium"], [600, "Semi-bold"], [700, "Bold"]];
 /** Font settings that cover many things at once (shown in the Fonts group). */
-export const FONT_SCOPES: { id: string; label: string; hint: string; sel: string }[] = [
+export const FONT_SCOPES: { id: string; label: string; hint: string; sel: string; familySel?: string }[] = [
   { id: "site", label: "Website font", hint: "All text on the website, unless set below", sel: "body, button, input, select, textarea" },
   { id: "headings", label: "Headings font", hint: "Every main heading and section heading", sel: "h1, h2, h3" },
 ];
@@ -73,11 +73,43 @@ export const STYLE_TOKENS: StyleToken[] = [
   { id: "side", group: "Spacing", label: "Page side margins", sel: ".wrap", prop: "padding-inline", min: 8, max: 96, step: 1, unit: "px" },
 ];
 
-const BY_ID = new Map(STYLE_TOKENS.map((t) => [t.id, t]));
+// ---- Dashboards (admin and teacher now; parent and student areas use the same styles when they're built) ----
+export const DASH_FONT_SCOPES: typeof FONT_SCOPES = [
+  // the dashboard stylesheet names Jost on many items, so the font goes on everything; the weight only on the base text
+  { id: "site", label: "Dashboard font", hint: "All text in the dashboards, unless set below", sel: ".adm", familySel: ".adm, .adm *" },
+  { id: "headings", label: "Headings font", hint: "Page titles and box headings", sel: ".adm h1, .adm h2, .adm h3, .adm .tile .v" },
+];
+export const DASH_TOKENS: StyleToken[] = [
+  { id: "d_h1", group: "Headings", label: "Page titles", hint: "e.g. Families, Payments", sel: ".adm .top h1", prop: "font-size", min: 18, max: 48, step: 1, unit: "px" },
+  { id: "d_h2", group: "Headings", label: "Box headings", sel: ".adm .card h2, .adm .h2", prop: "font-size", min: 14, max: 34, step: 0.5, unit: "px" },
+  { id: "d_tile", group: "Headings", label: "Dashboard numbers", hint: "The big figures in the tiles", sel: ".adm .tile .v", prop: "font-size", min: 18, max: 56, step: 1, unit: "px" },
+  { id: "d_body", group: "Text", label: "Main text", sel: ".adm", prop: "font-size", min: 12, max: 22, step: 0.5, unit: "px" },
+  { id: "d_line", group: "Text", label: "Line spacing", sel: ".adm", prop: "line-height", min: 1.1, max: 2, step: 0.05, unit: "" },
+  { id: "d_td", group: "Text", label: "Table text", sel: ".adm td", prop: "font-size", min: 11, max: 22, step: 0.5, unit: "px" },
+  { id: "d_th", group: "Text", label: "Table column titles", sel: ".adm th", prop: "font-size", min: 10, max: 20, step: 0.5, unit: "px" },
+  { id: "d_label", group: "Text", label: "Form labels", sel: ".adm .fld", prop: "font-size", min: 11, max: 20, step: 0.5, unit: "px" },
+  { id: "d_muted", group: "Text", label: "Notes and grey text", sel: ".adm .muted, .adm .note, .adm .top .sub, .adm .card .cs", prop: "font-size", min: 11, max: 20, step: 0.5, unit: "px" },
+  { id: "d_nav", group: "Navigation & buttons", label: "Side menu links", sel: ".adm .nav a, .adm .nav span", prop: "font-size", min: 12, max: 24, step: 0.5, unit: "px" },
+  { id: "d_nav_gap", group: "Navigation & buttons", label: "Space between menu links", sel: ".adm .nav a", prop: "padding-block", min: 2, max: 18, step: 1, unit: "px" },
+  { id: "d_side", group: "Navigation & buttons", label: "Side menu width", sel: ".adm .app", prop: "--side-w", min: 180, max: 340, step: 2, unit: "px" },
+  { id: "d_btn", group: "Navigation & buttons", label: "Button text", sel: ".adm .abtn", prop: "font-size", min: 11, max: 22, step: 0.5, unit: "px" },
+  { id: "d_card_pad", group: "Spacing", label: "Padding inside boxes", sel: ".adm .card, .adm .tile", prop: "padding", min: 6, max: 40, step: 1, unit: "px" },
+  { id: "d_card_gap", group: "Spacing", label: "Space between boxes", sel: ".adm .card, .adm .tw", prop: "margin-bottom", min: 0, max: 48, step: 1, unit: "px" },
+  { id: "d_row", group: "Spacing", label: "Table row height", hint: "Space above and below each row's text", sel: ".adm td", prop: "padding-block", min: 2, max: 24, step: 1, unit: "px" },
+  { id: "d_main", group: "Spacing", label: "Page margins", sel: ".adm .main", prop: "padding-inline", min: 8, max: 72, step: 1, unit: "px" },
+];
+
+export type StyleKind = "site" | "dash";
+const SCHEMES: Record<StyleKind, { tokens: StyleToken[]; scopes: typeof FONT_SCOPES }> = {
+  site: { tokens: STYLE_TOKENS, scopes: FONT_SCOPES },
+  dash: { tokens: DASH_TOKENS, scopes: DASH_FONT_SCOPES },
+};
+export const scheme = (k: StyleKind) => SCHEMES[k];
 export const MEDIA: Record<Device, string> = { desktop: "(min-width:821px)", phone: "(max-width:820px)" };
 
 /** Keep only known tokens with numbers inside their range. */
-export function cleanStyles(raw: unknown): SiteStyles {
+export function cleanStyles(raw: unknown, kind: StyleKind = "site"): SiteStyles {
+  const { tokens, scopes } = SCHEMES[kind]; const BY_ID = new Map(tokens.map((t) => [t.id, t]));
   const out: SiteStyles = { desktop: {}, phone: {}, fonts: {} };
   const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
   for (const d of ["desktop", "phone"] as Device[]) {
@@ -88,7 +120,7 @@ export function cleanStyles(raw: unknown): SiteStyles {
     }
   }
   const fonts = (r.fonts && typeof r.fonts === "object" ? r.fonts : {}) as Record<string, unknown>;
-  const ids = new Set([...FONT_SCOPES.map((f) => f.id), ...STYLE_TOKENS.filter((t) => t.prop === "font-size").map((t) => t.id)]);
+  const ids = new Set([...scopes.map((f) => f.id), ...tokens.filter((t) => t.prop === "font-size").map((t) => t.id)]);
   for (const [id, v] of Object.entries(fonts)) {
     if (!ids.has(id) || !v || typeof v !== "object") continue;
     const { family, weight } = v as Record<string, unknown>;
@@ -105,14 +137,21 @@ export function cleanStyles(raw: unknown): SiteStyles {
 export const isEmptyStyles = (s: SiteStyles) => !Object.keys(s.desktop).length && !Object.keys(s.phone).length && !Object.keys(s.fonts ?? {}).length;
 
 /** CSS for the saved values. `:root` in front makes each rule win over the stylesheet's own. */
-export function stylesCss(s: SiteStyles): string {
+export function stylesCss(s: SiteStyles, kind: StyleKind = "site"): string {
+  const { tokens, scopes } = SCHEMES[kind];
   let css = "";
   const pre = (sel: string) => sel.split(",").map((x) => `:root ${x.trim()}`).join(",");
-  const decl = (f: FontChoice) => (f.family ? `font-family:"${f.family}",${FONT_BY_NAME.get(f.family)?.fallback ?? "sans-serif"};` : "") + (f.weight ? `font-weight:${f.weight};` : "");
-  for (const sc of FONT_SCOPES) { const f = s.fonts?.[sc.id]; if (f && (f.family || f.weight)) css += `${pre(sc.sel)}{${decl(f)}}`; }
-  for (const t of STYLE_TOKENS) { const f = s.fonts?.[t.id]; if (f && (f.family || f.weight)) css += `${pre(t.sel)}{${decl(f)}}`; }
+  // dashboards: the stylesheet sets fonts with high-priority rules, so chosen fonts are marked important (more specific choices still win)
+  const imp = kind === "dash" ? " !important" : "";
+  const decl = (f: FontChoice) => (f.family ? `font-family:"${f.family}",${FONT_BY_NAME.get(f.family)?.fallback ?? "sans-serif"}${imp};` : "") + (f.weight ? `font-weight:${f.weight}${imp};` : "");
+  for (const sc of scopes) {
+    const f = s.fonts?.[sc.id]; if (!f || !(f.family || f.weight)) continue;
+    if (sc.familySel && f.family) { css += `${pre(sc.familySel)}{${decl({ family: f.family })}}`; if (f.weight) css += `${pre(sc.sel)}{${decl({ weight: f.weight })}}`; }
+    else css += `${pre(sc.sel)}{${decl(f)}}`;
+  }
+  for (const t of tokens) { const f = s.fonts?.[t.id]; if (f && (f.family || f.weight)) css += `${pre(t.sel)}{${decl(f)}}`; }
   for (const d of ["desktop", "phone"] as Device[]) {
-    const rules = STYLE_TOKENS.filter((t) => s[d]?.[t.id] != null).map((t) =>
+    const rules = tokens.filter((t) => s[d]?.[t.id] != null).map((t) =>
       `${t.sel.split(",").map((x) => `:root ${x.trim()}`).join(",")}{${t.prop}:${s[d][t.id]}${t.unit}}`);
     if (rules.length) css += `@media ${MEDIA[d]}{${rules.join("")}}`;
   }

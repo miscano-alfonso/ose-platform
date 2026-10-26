@@ -4,6 +4,7 @@ import { withSchool } from "@/lib/db";
 import { signOutAction } from "../actions";
 import { AdminNav } from "../AdminNav";
 import "../admin.css";
+import { DashStyles } from "../DashStyles";
 import { brandSrc } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const me = await requireStaff();
   const { logo } = await brandSrc();
   const [c] = await withSchool((q) => q<{ enq: number; jobs: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq, (select count(*)::int from job_applications where status = 'new') as jobs`));
-  return <div className="adm"><div className="app">
+  return <div className="adm"><DashStyles /><div className="app">
     <aside className="side">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <a className="logo" href="/admin"><img src={logo} alt="OH-SO ED admin" width={773} height={224} /></a>

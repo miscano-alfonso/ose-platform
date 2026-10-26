@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { requireSignedIn } from "@/lib/auth";
 import { signOutAction } from "../actions";
 import "../admin.css";
+import { DashStyles } from "../DashStyles";
 import { brandSrc } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +12,7 @@ export const metadata: Metadata = { title: "Staff", robots: { index: false, foll
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const me = await requireSignedIn();
   const { logo } = await brandSrc();
-  return <div className="adm"><div className="staffbar">
+  return <div className="adm"><DashStyles /><div className="staffbar">
     {/* eslint-disable-next-line @next/next/no-img-element */}
     <a href={me.role === "school_admin" ? "/admin" : "/admin/teacher"}><img src={logo} alt="OH-SO ED" width={773} height={224} /></a>
     <span className="grow" /><span>{me.name}</span>

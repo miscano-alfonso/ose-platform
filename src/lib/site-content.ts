@@ -1,7 +1,7 @@
 import "server-only";
 import { withSchool } from "./db";
 import { FAQS } from "@/content/faq";
-import { cleanStyles, isEmptyStyles, type SiteStyles } from "./styles";
+import { cleanStyles, isEmptyStyles, type SiteStyles, type StyleKind } from "./styles";
 
 // Text the office can change in Admin → Website. Anything not set uses these defaults.
 export const DEFAULTS: Record<string, string> = {
@@ -67,16 +67,17 @@ export async function saveCoursePage(actorId: string, id: string, d: { board: st
 }
 
 // Page styles (Admin → Page styles), stored as JSON under the "styles" key.
-export async function getStyles(): Promise<SiteStyles> {
+const STYLE_KEY: Record<StyleKind, string> = { site: "styles", dash: "dash_styles" };
+export async function getStyles(kind: StyleKind = "site"): Promise<SiteStyles> {
   try {
-    const rows = await withSchool((q) => q<{ value: string }>(`select value from site_content where key = 'styles'`));
-    return cleanStyles(rows[0] ? JSON.parse(rows[0].value) : null);
+    const rows = await withSchool((q) => q<{ value: string }>(`select value from site_content where key = $1`, [STYLE_KEY[kind]]));
+    return cleanStyles(rows[0] ? JSON.parse(rows[0].value) : null, kind);
   } catch { return { desktop: {}, phone: {} }; }
 }
-export async function saveStyles(actorId: string, s: SiteStyles) {
+export async function saveStyles(actorId: string, s: SiteStyles, kind: StyleKind = "site") {
   await withSchool(async (q) => {
-    if (isEmptyStyles(s)) await q(`delete from site_content where key = 'styles'`);
-    else await q(`insert into site_content (school_id, key, value, updated_by) values (current_school(), 'styles', $1, $2) on conflict (school_id, key) do update set value = excluded.value, updated_at = now(), updated_by = excluded.updated_by`, [JSON.stringify(s), actorId]);
-    await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'update', 'site_styles', $2)`, [actorId, JSON.stringify(s)]);
+    if (isEmptyStyles(s)) await q(`delete from site_content where key = $1`, [STYLE_KEY[kind]]);
+    else await q(`insert into site_content (school_id, key, value, updated_by) values (current_school(), $3, $1, $2) on conflict (school_id, key) do update set value = excluded.value, updated_at = now(), updated_by = excluded.updated_by`, [JSON.stringify(s), actorId, STYLE_KEY[kind]]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'update', $3, $2)`, [actorId, JSON.stringify(s), kind === "site" ? "site_styles" : "dashboard_styles"]);
   });
 }

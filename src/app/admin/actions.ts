@@ -647,8 +647,10 @@ export async function saveStylesAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   let raw: unknown = null;
   try { raw = JSON.parse(String(f.get("styles") ?? "")); } catch { /* treated as empty */ }
-  await saveStyles(me.id, cleanStyles(raw));
-  revalidatePath("/", "layout"); redirect(`/admin/styles?ok=${encodeURIComponent("Saved. The website uses the new sizes now.")}`);
+  const kind = f.get("kind") === "dash" ? "dash" : "site";
+  await saveStyles(me.id, cleanStyles(raw, kind), kind);
+  revalidatePath("/", "layout");
+  redirect(`/admin/styles?${kind === "dash" ? "tab=dash&" : ""}ok=${encodeURIComponent(kind === "dash" ? "Saved. The dashboards use the new styles now." : "Saved. The website uses the new sizes now.")}`);
 }
 
 // ---- 'New to Home Ed?' hub ----

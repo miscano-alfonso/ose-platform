@@ -1,26 +1,32 @@
 "use client";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { STYLE_GROUPS, STYLE_TOKENS, FONTS, WEIGHTS, FONT_SCOPES, stylesCss, fontsHref, type Device, type SiteStyles, type FontChoice } from "@/lib/styles";
+import { STYLE_GROUPS, FONTS, WEIGHTS, scheme, stylesCss, fontsHref, type Device, type SiteStyles, type FontChoice, type StyleKind } from "@/lib/styles";
 import { saveStylesAction } from "../../actions";
 
-const PAGES: [string, string][] = [["Homepage", "/"], ["Courses", "/courses"], ["Other services", "/other-services"], ["Term dates", "/term-dates"],
+const SITE_PAGES: [string, string][] = [["Homepage", "/"], ["Courses", "/courses"], ["Other services", "/other-services"], ["Term dates", "/term-dates"],
   ["Teachers", "/teachers"], ["Prices", "/pricing"], ["Calculator", "/calculator"], ["Timetable", "/timetable"], ["FAQs", "/faq"], ["Contact", "/contact"]];
 const WIDTH: Record<Device, number> = { desktop: 1440, phone: 390 };
-const PROBES = STYLE_TOKENS.map(({ id, sel, prop }) => ({ id, sel, prop }));
+const DASH_PAGES: [string, string][] = [["Admin dashboard", "/admin"], ["Families", "/admin/families"], ["Payments", "/admin/payments"], ["Classes", "/admin/classes"],
+  ["Timetable", "/admin/timetable"], ["Jobs", "/admin/jobs"], ["Registers", "/admin/attendance"], ["Messages", "/admin/messages"]];
+const HEAD_IDS = /^(hero_h1|page_h1|sec_h2|card_h3|d_h1|d_h2|d_tile)$/;
 
-export function StyleBuilder({ saved }: { saved: SiteStyles }) {
+export function StyleBuilder({ saved, kind = "site" }: { saved: SiteStyles; kind?: StyleKind }) {
+  const { tokens: TOKENS, scopes: SCOPES } = scheme(kind);
+  const PAGES = kind === "dash" ? DASH_PAGES : SITE_PAGES;
+  const PROBES = useMemo(() => TOKENS.map(({ id, sel, prop }) => ({ id, sel, prop })), [TOKENS]);
+  const noun = kind === "dash" ? "dashboard" : "website";
   const [styles, setStyles] = useState<SiteStyles>(saved);
   const [device, setDevice] = useState<Device>("desktop");
-  const [page, setPage] = useState("/");
+  const [page, setPage] = useState(PAGES[0][1]);
   const [sizes, setSizes] = useState<Record<string, number | null>>({});
   const [box, setBox] = useState({ w: 800, h: 700 });
   const frame = useRef<HTMLIFrameElement>(null);
   const wrap = useRef<HTMLDivElement>(null);
-  const css = useMemo(() => stylesCss(styles), [styles]);
+  const css = useMemo(() => stylesCss(styles, kind), [styles, kind]);
   const dirty = JSON.stringify(styles) !== JSON.stringify(saved);
 
   const fonts = useMemo(() => fontsHref(styles), [styles]);
-  const send = useCallback(() => frame.current?.contentWindow?.postMessage({ type: "ose-styles", css, fonts, probes: PROBES }, location.origin), [css, fonts]);
+  const send = useCallback(() => frame.current?.contentWindow?.postMessage({ type: "ose-styles", css, fonts, probes: PROBES }, location.origin), [css, fonts, PROBES]);
   useEffect(() => { send(); }, [send, device]);
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
@@ -77,15 +83,15 @@ export function StyleBuilder({ saved }: { saved: SiteStyles }) {
       <details className="sb-grp" open>
         <summary>Fonts</summary>
         <p className="muted sb-note">Fonts and weights apply on every screen size. Each text item below can also have its own.</p>
-        {FONT_SCOPES.map((sc) => <div key={sc.id} className="sb-row sb-frow">
+        {SCOPES.map((sc) => <div key={sc.id} className="sb-row sb-frow">
           <div className="sb-lab"><label>{sc.label}</label><small>{sc.hint}</small></div>
-          {FontPick({ id: sc.id, def: sc.id === "site" ? "Jost (current)" : "Same as website font" })}
+          {FontPick({ id: sc.id, def: sc.id === "site" ? "Jost (current)" : `Same as ${noun} font` })}
         </div>)}
         {fontCount > 0 && <button type="button" className="abtn sm" style={{ justifySelf: "start", marginTop: 6 }} onClick={() => setStyles((s) => ({ ...s, fonts: {} }))}>Reset all fonts</button>}
       </details>
       {STYLE_GROUPS.map((g) => <details key={g} className="sb-grp" open={g === "Headings"}>
         <summary>{g}</summary>
-        {STYLE_TOKENS.filter((t) => t.group === g).map((t) => {
+        {TOKENS.filter((t) => t.group === g).map((t) => {
           const v = styles[device][t.id]; const seen = sizes[t.id]; const shown = v ?? seen ?? Math.round((t.min + t.max) / 2);
           const off = v == null && seen == null;
           return <div key={t.id} className={`sb-row${v != null ? " set" : ""}`}>
@@ -93,12 +99,12 @@ export function StyleBuilder({ saved }: { saved: SiteStyles }) {
             <input id={`sb-${t.id}`} type="range" min={t.min} max={t.max} step={t.step} value={shown} onChange={(e) => set(t.id, Number(e.target.value))} />
             <span className="sb-val">{off ? "–" : t.unit ? `${shown}px` : shown}</span>
             {v != null ? <button type="button" className="abtn sm" onClick={() => set(t.id, null)} title="Back to the default">Reset</button> : <span className="sb-def">Default</span>}
-            {t.prop === "font-size" && FontPick({ id: t.id, def: /^(hero_h1|page_h1|sec_h2|card_h3)$/.test(t.id) ? "Same as headings font" : "Same as website font" })}
+            {t.prop === "font-size" && FontPick({ id: t.id, def: HEAD_IDS.test(t.id) ? "Same as headings font" : `Same as ${noun} font` })}
           </div>;
         })}
       </details>)}
       <form action={saveStylesAction} className="sb-save">
-        <input type="hidden" name="styles" value={JSON.stringify(styles)} />
+        <input type="hidden" name="styles" value={JSON.stringify(styles)} /><input type="hidden" name="kind" value={kind} />
         <button className="abtn pri" type="submit" disabled={!dirty}>{dirty ? "Save and publish" : "Saved"}</button>
         <button className="abtn" type="button" disabled={!dirty} onClick={() => setStyles(saved)}>Undo changes</button>
         <button className="abtn" type="button" onClick={() => setStyles((s) => ({ ...s, [device]: {} }))} disabled={!changed}>Reset all {device}</button>
