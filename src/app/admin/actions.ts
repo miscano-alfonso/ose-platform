@@ -1055,3 +1055,11 @@ export async function assignMeetCodeAction(f: FormData): Promise<void> {
   const err = await assignCode(me.id, str(f, "code", 12), str(f, "group", 40));
   attBack("google", "Linked. Press Re-read with the first day of term to place this class’s joins.", err);
 }
+export async function timesFromMeetAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { timesFromMeet } = await import("@/lib/meet");
+  const codes = f.getAll("code").map(String).filter((c) => /^[a-z]{10}$/.test(c));
+  const r = await timesFromMeet(me.id, codes);
+  const ok = r.done.length ? `Timetable set from Google Meet: ${r.done.join(" · ")}. Now press Re-read.` : null;
+  attBack("google", ok, r.problems.length ? r.problems.join(" · ") : ok ? null : "Nothing to change.");
+}

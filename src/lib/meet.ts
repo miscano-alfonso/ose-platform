@@ -21,7 +21,7 @@ const REPORTS_URL = () => process.env.GOOGLE_REPORTS_URL || "https://admin.googl
 type Conn = { clientId?: string; clientSecret?: string; refreshToken?: string; by?: string; at?: string; pending?: { state: string; email: string; exp: number } };
 export type SyncInfo = { at?: string; from?: string; to?: string; joins?: number; lessons?: number; unmatched?: number; error?: string; by?: string; fetched?: number; placed?: number; lessonsInWindow?: number };
 /** Meet calls Google reported that didn't line up with any timetabled lesson, grouped by meeting code (so the office can say which class it is). */
-export type Unplaced = { code: string; organizer: string | null; joins: number; first: string; last: string; when: string[] };
+export type Unplaced = { code: string; organizer: string | null; joins: number; first: string; last: string; when: string[]; slots?: Record<string, number> };
 export type AlertCfg = { on: boolean; pct: number; lastSent?: string };
 
 async function kvGet<T>(key: string, q?: Q): Promise<T | null> {
@@ -155,6 +155,11 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
     const aliases = (await kvGet<Record<string, string>>("aliases", q)) ?? {};
     let saved = 0, placed = 0; const touched = new Set<string>();
     const unplaced = new Map<string, Unplaced>();
+    const DOW: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
+    // the lesson a join belongs to, as "weekday|HH:MM": the join time rounded to the nearest quarter hour (people join a few minutes early or late)
+    const slotKey = (d: Date) => { const r = new Date(Math.round(+d / 900e3) * 900e3);
+      const p = Object.fromEntries(new Intl.DateTimeFormat("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone: "Europe/London" }).formatToParts(r).map((x) => [x.type, x.value]));
+      return `${DOW[p.weekday] ?? 0}|${p.hour}:${p.minute}`; };
     const whenOf = (d: Date) => new Intl.DateTimeFormat("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }).format(d);
     for (const j of joins) {
       const js = +j.joined, je = +j.left;
@@ -166,6 +171,7 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
         const key = j.code ?? `?${j.organizer ?? ""}`, u = unplaced.get(key) ?? { code: j.code ?? "", organizer: j.organizer, joins: 0, first: j.joined.toISOString(), last: j.joined.toISOString(), when: [] };
         u.joins++; if (j.joined.toISOString() < u.first) u.first = j.joined.toISOString(); if (j.joined.toISOString() > u.last) u.last = j.joined.toISOString();
         const w = whenOf(j.joined); if (u.when.length < 6 && !u.when.includes(w)) u.when.push(w);
+        const sk = slotKey(j.joined); u.slots = u.slots ?? {}; u.slots[sk] = (u.slots[sk] ?? 0) + 1;
         unplaced.set(key, u); continue;
       }
       placed++;
@@ -183,8 +189,10 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
     // remember calls that didn't fit a lesson (merged with earlier syncs) so the office can link them to a class
     const prevU = (await kvGet<Unplaced[]>("unplaced", q)) ?? [];
     const codes = new Set(L.map((l) => l.code).filter(Boolean));
-    const merged = new Map(prevU.filter((u) => !codes.has(u.code)).map((u) => [u.code || `?${u.organizer ?? ""}`, u]));
-    for (const [k, u] of unplaced) { const m = merged.get(k); merged.set(k, m ? { ...m, joins: m.joins + u.joins, first: m.first < u.first ? m.first : u.first, last: m.last > u.last ? m.last : u.last, when: [...new Set([...m.when, ...u.when])].slice(0, 6) } : u); }
+    // a re-read from a chosen date starts the list again; a routine sync adds to it
+    const merged = new Map(fromDate ? [] : prevU.filter((u) => !codes.has(u.code)).map((u) => [u.code || `?${u.organizer ?? ""}`, u]));
+    for (const [k, u] of unplaced) { const m = merged.get(k); merged.set(k, m ? { ...m, joins: m.joins + u.joins, first: m.first < u.first ? m.first : u.first, last: m.last > u.last ? m.last : u.last, when: [...new Set([...m.when, ...u.when])].slice(0, 6),
+      slots: Object.fromEntries([...new Set([...Object.keys(m.slots ?? {}), ...Object.keys(u.slots ?? {})])].map((k) => [k, (m.slots?.[k] ?? 0) + (u.slots?.[k] ?? 0)])) } : u); }
     await kvSet("unplaced", [...merged.values()].sort((a, b) => b.joins - a.joins).slice(0, 60), q);
     const info: SyncInfo = { at: new Date().toISOString(), from: new Date(from).toISOString(), to: until.toISOString(), joins: saved, lessons: touched.size, unmatched: n, by, fetched: joins.length, placed, lessonsInWindow: L.length };
     await kvSet("sync", info, q);
@@ -293,4 +301,59 @@ export async function assignCode(actorId: string, code: string, groupId: string)
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'meet_link', 'course_group', $2, $3)`, [actorId, groupId, JSON.stringify({ url })]);
     return null;
   });
+}
+
+/** The weekly times a Meet code is really used: the quarter-hours that account for most joins (ignoring one-offs). */
+export function usualTimes(u: Unplaced): { weekday: number; time: string }[] {
+  const e = Object.entries(u.slots ?? {}).filter(([k]) => !k.startsWith("0|")).sort((a, b) => b[1] - a[1]);
+  const top = e[0]?.[1] ?? 0, out: { weekday: number; time: string }[] = [];
+  for (const [k, n] of e) {
+    if (n < Math.max(3, top * 0.25)) continue;
+    const [wd, t] = k.split("|"), mins = +t.slice(0, 2) * 60 + +t.slice(3);
+    if (out.some((o) => o.weekday === +wd && Math.abs(+o.time.slice(0, 2) * 60 + +o.time.slice(3) - mins) <= 30)) continue;   // same lesson, people joined either side of the quarter
+    out.push({ weekday: +wd, time: t });
+  }
+  return out.sort((a, b) => a.weekday - b.weekday || a.time.localeCompare(b.time));
+}
+/** Set classes' weekly lesson times to the times their Meet codes are really used. All chosen classes are cleared first, so
+ *  wrong example times can't clash with each other. Returns what changed and anything that couldn't be placed. */
+export async function timesFromMeet(actorId: string, codes: string[]): Promise<{ done: string[]; problems: string[] }> {
+  const all = await unplacedCalls(), done: string[] = [], problems: string[] = [];
+  const { ensureLessonDates } = await import("./ops");
+  await withSchool(async (q) => {
+    const year = (await q<{ id: string }>(`select id from academic_years where ends_on >= current_date order by starts_on limit 1`))[0]?.id;
+    const jobs: { gid: string; code: string; minutes: number; teacher: string | null; times: { weekday: number; time: string }[] }[] = [];
+    for (const c of codes) {
+      const u = all.find((x) => x.code === c); if (!u) continue;
+      const url = `https://meet.google.com/${c.slice(0, 3)}-${c.slice(3, 7)}-${c.slice(7)}`;
+      const g = (await q<{ id: string; code: string; minutes: number; teacher: string | null }>(`select id, code, lesson_minutes as minutes, teacher_id as teacher from course_groups where meet_url = $1 and academic_year_id = $2 limit 1`, [url, year]))[0];
+      const times = usualTimes(u);
+      if (!g) { problems.push(`${c}: no class has this Meet link`); continue; }
+      if (!times.length) { problems.push(`${g.code}: not enough calls to tell the usual times`); continue; }
+      jobs.push({ gid: g.id, code: g.code, minutes: g.minutes || 45, teacher: g.teacher, times });
+    }
+    // clear first (only lessons nobody has marked yet are lost), then add the real times
+    for (const j of jobs) {
+      await q(`delete from lesson_events e where e.group_id = $1 and not exists (select 1 from attendance_marks m where m.lesson_event_id = e.id)
+        and not exists (select 1 from taster_bookings b where b.lesson_event_id = e.id) and not exists (select 1 from absence_notices n where n.lesson_event_id = e.id)`, [j.gid]);
+      await q(`delete from lesson_slots s where s.group_id = $1 and not exists (select 1 from lesson_events e where e.slot_id = s.id)`, [j.gid]);
+    }
+    const D = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    for (const j of jobs) {
+      const ok: string[] = [];
+      for (const t of j.times) {
+        try {
+          await q(`savepoint s1`);
+          await q(`insert into lesson_slots (school_id, academic_year_id, group_id, teacher_id, weekday, starts_at, ends_at) values (current_school(), $1, $2, $3, $4::int, $5::time, $5::time + make_interval(mins => $6::int))`,
+            [year, j.gid, j.teacher, t.weekday, t.time, j.minutes]);
+          await q(`release savepoint s1`); ok.push(`${D[t.weekday]} ${t.time}`);
+        } catch { await q(`rollback to savepoint s1`); problems.push(`${j.code} ${D[t.weekday]} ${t.time}: the teacher is already teaching then`); }
+      }
+      await q(`update course_groups set status = 'open' where id = $1 and status = 'hidden'`, [j.gid]);
+      await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'times_from_meet', 'course_group', $2, $3)`, [actorId, j.gid, JSON.stringify(ok)]);
+      if (ok.length) done.push(`${j.code}: ${ok.join(", ")}`);
+    }
+  });
+  await ensureLessonDates();
+  return { done, problems };
 }

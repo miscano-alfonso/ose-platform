@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { attendanceOverview } from "@/lib/attendance";
-import { meetStatus, unmatchedJoins, unplacedCalls } from "@/lib/meet";
+import { meetStatus, unmatchedJoins, unplacedCalls, usualTimes } from "@/lib/meet";
 import { siteBase } from "@/lib/social";
-import { saveGoogleAppAction, disconnectGoogleAction, syncMeetAction, saveAlertAction, matchJoinAction, assignMeetCodeAction } from "../../actions";
+import { saveGoogleAppAction, disconnectGoogleAction, syncMeetAction, saveAlertAction, matchJoinAction, assignMeetCodeAction, timesFromMeetAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 const dm = (d: string) => new Date(d.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -91,15 +91,27 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
           <form action={disconnectGoogleAction}><button className="abtn" type="submit">Disconnect</button></form></div>
         {g.sync.fetched != null && <p className="note" style={{ marginTop: 10 }}>In that sync Google reported {g.sync.fetched} Meet join{g.sync.fetched === 1 ? "" : "s"} (everyone leaving a call in the school’s Google Workspace); {g.sync.placed ?? 0} fitted a timetabled lesson ({g.sync.lessonsInWindow ?? 0} lessons in the period).
           {g.sync.fetched === 0 ? " Google returned nothing: check you connected with a Workspace super admin, and that lessons ran in Meet calls owned by the school’s accounts." : ""}</p>}
-        {unplaced.length > 0 && <div style={{ marginTop: 14 }}><h3 style={{ margin: "0 0 6px", font: "600 17px Jost, sans-serif" }}>Meet calls not matched to a class ({unplaced.length})</h3>
-          <p className="note" style={{ margin: "0 0 8px" }}>These calls happened but didn’t line up with a class’s Meet link or its teacher and time. Choose which class each one is: it becomes the class’s Meet link. Then press Re-read with the first day of term.</p>
-          {d.allClasses.some((c) => !c.has_times) && <p className="note msg" style={{ margin: "0 0 8px" }}>Classes marked “no lesson times yet” need their weekly times added under <a href="/admin/timetable">Timetable</a> before their joins can be placed: attendance is counted per timetabled lesson. The “When” column shows the times each call was used.</p>}
-          <div className="tw" style={{ marginBottom: 0 }}><table><thead><tr><th>Meeting code</th><th>Organiser</th><th>When</th><th className="n">Joins</th><th>Which class?</th></tr></thead><tbody>
-            {unplaced.map((u) => <tr key={u.code || u.organizer || ""}><td className="mono">{u.code ? `${u.code.slice(0, 3)}-${u.code.slice(3, 7)}-${u.code.slice(7)}` : "—"}</td><td>{u.organizer ?? "—"}</td>
-              <td style={{ fontSize: 14 }}>{u.when.join(", ")}<br /><span className="muted">{dm(u.first.slice(0, 10))} – {dm(u.last.slice(0, 10))}</span></td><td className="n">{u.joins}</td>
-              <td>{u.code ? <form action={assignMeetCodeAction} style={{ display: "flex", gap: 4 }}><input type="hidden" name="code" value={u.code} />
-                <select name="group" className="mini" defaultValue=""><option value="" disabled>Choose</option>{d.allClasses.map((c) => <option key={c.id} value={c.id}>{c.name}{c.has_times ? "" : " · no lesson times yet"}{c.meet ? " · has a Meet link" : ""}</option>)}</select><button className="abtn sm" type="submit">Link</button></form> : null}</td></tr>)}
-          </tbody></table></div></div>}
+        {unplaced.length > 0 && (() => {
+          const D = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+          const rows = unplaced.map((u) => { const url = u.code ? `https://meet.google.com/${u.code.slice(0, 3)}-${u.code.slice(3, 7)}-${u.code.slice(7)}` : null;
+            const cls = url ? d.allClasses.find((c) => c.meet === url) ?? null : null; const real = usualTimes(u).map((t) => `${D[t.weekday]} ${t.time}`).join(", ");
+            return { u, cls, real, differs: !!cls && !!real && real !== (cls.times ?? "") }; });
+          const fixable = rows.filter((r) => r.differs);
+          return <div style={{ marginTop: 14 }}><h3 style={{ margin: "0 0 6px", font: "600 17px Jost, sans-serif" }}>Meet calls not matched to a lesson ({unplaced.length})</h3>
+          <p className="note" style={{ margin: "0 0 8px" }}>These calls happened but didn’t line up with a timetabled lesson. Where the Meet code already belongs to a class, the class’s timetabled times don’t match when the calls really happen: use the Meet times. Where it doesn’t, choose the class. Then press Re-read.</p>
+          {fixable.length > 1 && <form action={timesFromMeetAction} style={{ margin: "0 0 10px" }}>{fixable.map((r) => <input key={r.u.code} type="hidden" name="code" value={r.u.code} />)}
+            <button className="abtn pri" type="submit">Use the Meet times for all {fixable.length} classes</button></form>}
+          <div className="tw" style={{ marginBottom: 0 }}><table><thead><tr><th>Meeting code</th><th>Class</th><th>Timetabled</th><th>Calls happen</th><th className="n">Joins</th><th /></tr></thead><tbody>
+            {rows.map(({ u, cls, real, differs }) => <tr key={u.code || u.organizer || ""}>
+              <td className="mono">{u.code ? `${u.code.slice(0, 3)}-${u.code.slice(3, 7)}-${u.code.slice(7)}` : "—"}<div className="muted" style={{ fontSize: 13 }}>{u.organizer ?? ""}</div></td>
+              <td>{cls ? <b>{cls.code}</b> : <span className="muted">Not linked</span>}{cls && <div className="muted" style={{ fontSize: 13 }}>{cls.name.replace(/ \(.*\)$/, "")}</div>}</td>
+              <td style={{ fontSize: 14 }}>{cls ? cls.times ?? <span className="muted">No times</span> : "—"}</td>
+              <td style={{ fontSize: 14 }}><b>{real || u.when.join(", ")}</b><br /><span className="muted">{dm(u.first.slice(0, 10))} – {dm(u.last.slice(0, 10))}</span></td>
+              <td className="n">{u.joins}</td>
+              <td>{cls ? (differs ? <form action={timesFromMeetAction}><input type="hidden" name="code" value={u.code} /><button className="abtn sm" type="submit">Use the Meet times</button></form> : <span className="muted" style={{ fontSize: 13 }}>Press Re-read</span>)
+                : u.code ? <form action={assignMeetCodeAction} style={{ display: "flex", gap: 4 }}><input type="hidden" name="code" value={u.code} />
+                <select name="group" className="mini" defaultValue=""><option value="" disabled>Choose a class</option>{d.allClasses.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.name.replace(/ \(.*\)$/, "")}{c.meet ? " · has a Meet link" : ""}</option>)}</select><button className="abtn sm" type="submit">Link</button></form> : null}</td></tr>)}
+          </tbody></table></div></div>; })()}
         <p className="note" style={{ marginTop: 10 }}>Lessons are matched by each class’s Meet link (Classes → Meet link) or, if a class has none, by its teacher’s Google account and the timetabled time. Marks you correct on a lesson’s register are never overwritten.</p>
       </> : <>
         <p className="cs">Attendance comes straight from Google: no AttendList, nothing for teachers to do. A Google Workspace super admin for the school connects once; the access is read-only (the Meet log only).</p>
