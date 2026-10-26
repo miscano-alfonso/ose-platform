@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { attendanceOverview } from "@/lib/attendance";
-import { meetStatus, unmatchedJoins } from "@/lib/meet";
+import { meetStatus, unmatchedJoins, unplacedCalls } from "@/lib/meet";
 import { siteBase } from "@/lib/social";
-import { saveGoogleAppAction, disconnectGoogleAction, syncMeetAction, saveAlertAction, matchJoinAction } from "../../actions";
+import { saveGoogleAppAction, disconnectGoogleAction, syncMeetAction, saveAlertAction, matchJoinAction, assignMeetCodeAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 const dm = (d: string) => new Date(d.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -13,7 +13,8 @@ const MARK: Record<string, [string, string]> = { present: ["✓", "Present"], la
 
 export default async function Attendance({ searchParams }: { searchParams: Promise<{ term?: string; tab?: string; cls?: string; low?: string; ok?: string; err?: string }> }) {
   const sp = await searchParams;
-  const [d, g, joins, base] = await Promise.all([attendanceOverview(sp.term ?? null, sp.cls ?? null), meetStatus(await siteBase()), unmatchedJoins(), siteBase()]);
+  const [d, g, joins, base, unplaced] = await Promise.all([attendanceOverview(sp.term ?? null, sp.cls ?? null), meetStatus(await siteBase()), unmatchedJoins(), siteBase(), unplacedCalls()]);
+  const firstDay = d.terms[0]?.starts_on ?? "";
   const tab = ["students", "lessons", "absences", "joins", "google"].includes(sp.tab ?? "") ? sp.tab! : g.connected ? "students" : "google";
   const pct = g.alert.pct, low = d.students.filter((s) => s.pct != null && s.pct < pct);
   const rows = sp.low ? low : d.students;
@@ -86,8 +87,18 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
         <p>{g.sync.at ? <>Last sync {ago(g.sync.at)}{g.sync.by && g.sync.by !== "auto" ? ` by ${g.sync.by}` : ""}: {g.sync.joins ?? 0} new joins across {g.sync.lessons ?? 0} lessons.{g.sync.error ? <span className="pill bad" style={{ marginLeft: 8 }}>{g.sync.error}</span> : null}</> : "Not synced yet."}</p>
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>
           <form action={syncMeetAction}><input type="hidden" name="tab" value="google" /><button className="abtn pri" type="submit">Sync now</button></form>
-          <form action={syncMeetAction} className="eform"><input type="hidden" name="tab" value="google" /><label className="fld">Read again from<input type="date" name="from" required /></label><button className="abtn" type="submit">Re-read</button></form>
+          <form action={syncMeetAction} className="eform"><input type="hidden" name="tab" value="google" /><label className="fld">Read again from<input type="date" name="from" required defaultValue={firstDay} /></label><button className="abtn" type="submit">Re-read</button></form>
           <form action={disconnectGoogleAction}><button className="abtn" type="submit">Disconnect</button></form></div>
+        {g.sync.fetched != null && <p className="note" style={{ marginTop: 10 }}>In that sync Google reported {g.sync.fetched} Meet join{g.sync.fetched === 1 ? "" : "s"} (everyone leaving a call in the school’s Google Workspace); {g.sync.placed ?? 0} fitted a timetabled lesson ({g.sync.lessonsInWindow ?? 0} lessons in the period).
+          {g.sync.fetched === 0 ? " Google returned nothing: check you connected with a Workspace super admin, and that lessons ran in Meet calls owned by the school’s accounts." : ""}</p>}
+        {unplaced.length > 0 && <div style={{ marginTop: 14 }}><h3 style={{ margin: "0 0 6px", font: "600 17px Jost, sans-serif" }}>Meet calls not matched to a class ({unplaced.length})</h3>
+          <p className="note" style={{ margin: "0 0 8px" }}>These calls happened but didn’t line up with a class’s Meet link or its teacher and time. Choose which class each one is: it becomes the class’s Meet link. Then press Re-read with the first day of term.</p>
+          <div className="tw" style={{ marginBottom: 0 }}><table><thead><tr><th>Meeting code</th><th>Organiser</th><th>When</th><th className="n">Joins</th><th>Which class?</th></tr></thead><tbody>
+            {unplaced.map((u) => <tr key={u.code || u.organizer || ""}><td className="mono">{u.code ? `${u.code.slice(0, 3)}-${u.code.slice(3, 7)}-${u.code.slice(7)}` : "—"}</td><td>{u.organizer ?? "—"}</td>
+              <td style={{ fontSize: 14 }}>{u.when.join(", ")}<br /><span className="muted">{dm(u.first.slice(0, 10))} – {dm(u.last.slice(0, 10))}</span></td><td className="n">{u.joins}</td>
+              <td>{u.code ? <form action={assignMeetCodeAction} style={{ display: "flex", gap: 4 }}><input type="hidden" name="code" value={u.code} />
+                <select name="group" className="mini" defaultValue=""><option value="" disabled>Choose</option>{d.classes.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}</select><button className="abtn sm" type="submit">Link</button></form> : null}</td></tr>)}
+          </tbody></table></div></div>}
         <p className="note" style={{ marginTop: 10 }}>Lessons are matched by each class’s Meet link (Classes → Meet link) or, if a class has none, by its teacher’s Google account and the timetabled time. Marks you correct on a lesson’s register are never overwritten.</p>
       </> : <>
         <p className="cs">Attendance comes straight from Google: no AttendList, nothing for teachers to do. A Google Workspace super admin for the school connects once; the access is read-only (the Meet log only).</p>

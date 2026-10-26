@@ -19,7 +19,9 @@ const TOKEN_URL = () => process.env.GOOGLE_TOKEN_URL || "https://oauth2.googleap
 const REPORTS_URL = () => process.env.GOOGLE_REPORTS_URL || "https://admin.googleapis.com/admin/reports/v1/activity/users/all/applications/meet";
 
 type Conn = { clientId?: string; clientSecret?: string; refreshToken?: string; by?: string; at?: string; pending?: { state: string; email: string; exp: number } };
-export type SyncInfo = { at?: string; from?: string; to?: string; joins?: number; lessons?: number; unmatched?: number; error?: string; by?: string };
+export type SyncInfo = { at?: string; from?: string; to?: string; joins?: number; lessons?: number; unmatched?: number; error?: string; by?: string; fetched?: number; placed?: number; lessonsInWindow?: number };
+/** Meet calls Google reported that didn't line up with any timetabled lesson, grouped by meeting code (so the office can say which class it is). */
+export type Unplaced = { code: string; organizer: string | null; joins: number; first: string; last: string; when: string[] };
 export type AlertCfg = { on: boolean; pct: number; lastSent?: string };
 
 async function kvGet<T>(key: string, q?: Q): Promise<T | null> {
@@ -151,14 +153,22 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
     const L = lessons.map((l) => ({ ...l, s: Date.parse(l.starts), e: Date.parse(l.ends), code: codeOf(l.code_url) }));
     const students = new Map((await q<{ id: string; email: string }>(`select id, lower(email::text) as email from students where email is not null`)).map((s) => [s.email, s.id]));
     const aliases = (await kvGet<Record<string, string>>("aliases", q)) ?? {};
-    let saved = 0; const touched = new Set<string>();
+    let saved = 0, placed = 0; const touched = new Set<string>();
+    const unplaced = new Map<string, Unplaced>();
+    const whenOf = (d: Date) => new Intl.DateTimeFormat("en-GB", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }).format(d);
     for (const j of joins) {
       const js = +j.joined, je = +j.left;
       const near = (l: (typeof L)[number]) => js < l.e + 30 * 60e3 && je > l.s - 30 * 60e3;
       const ov = (l: (typeof L)[number]) => Math.min(je, l.e) - Math.max(js, l.s - 15 * 60e3);
       let cand = j.code ? L.filter((l) => l.code === j.code && near(l)) : [];
       if (!cand.length && j.organizer) cand = L.filter((l) => l.teacher_email === j.organizer && near(l));
-      if (!cand.length) continue;
+      if (!cand.length) {
+        const key = j.code ?? `?${j.organizer ?? ""}`, u = unplaced.get(key) ?? { code: j.code ?? "", organizer: j.organizer, joins: 0, first: j.joined.toISOString(), last: j.joined.toISOString(), when: [] };
+        u.joins++; if (j.joined.toISOString() < u.first) u.first = j.joined.toISOString(); if (j.joined.toISOString() > u.last) u.last = j.joined.toISOString();
+        const w = whenOf(j.joined); if (u.when.length < 6 && !u.when.includes(w)) u.when.push(w);
+        unplaced.set(key, u); continue;
+      }
+      placed++;
       const lesson = cand.sort((a, b) => ov(b) - ov(a))[0];
       const sid = (j.email && (students.get(j.email) ?? aliases[j.email])) || null;
       const r = await q(`insert into meet_sessions (school_id, lesson_event_id, participant_email, display_name, student_id, joined_at, left_at, source, external_id, meeting_code, organizer_email)
@@ -170,7 +180,13 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
     const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_sessions ms where ms.student_id is null and not ms.ignored and ms.participant_email is distinct from ms.organizer_email
       and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
       and not exists (select 1 from taster_requests tr where lower(tr.child_email::text) = lower(ms.participant_email::text))`);
-    const info: SyncInfo = { at: new Date().toISOString(), from: new Date(from).toISOString(), to: until.toISOString(), joins: saved, lessons: touched.size, unmatched: n, by };
+    // remember calls that didn't fit a lesson (merged with earlier syncs) so the office can link them to a class
+    const prevU = (await kvGet<Unplaced[]>("unplaced", q)) ?? [];
+    const codes = new Set(L.map((l) => l.code).filter(Boolean));
+    const merged = new Map(prevU.filter((u) => !codes.has(u.code)).map((u) => [u.code || `?${u.organizer ?? ""}`, u]));
+    for (const [k, u] of unplaced) { const m = merged.get(k); merged.set(k, m ? { ...m, joins: m.joins + u.joins, first: m.first < u.first ? m.first : u.first, last: m.last > u.last ? m.last : u.last, when: [...new Set([...m.when, ...u.when])].slice(0, 6) } : u); }
+    await kvSet("unplaced", [...merged.values()].sort((a, b) => b.joins - a.joins).slice(0, 60), q);
+    const info: SyncInfo = { at: new Date().toISOString(), from: new Date(from).toISOString(), to: until.toISOString(), joins: saved, lessons: touched.size, unmatched: n, by, fetched: joins.length, placed, lessonsInWindow: L.length };
     await kvSet("sync", info, q);
     return info;
   });
@@ -262,4 +278,19 @@ export async function meetBackground() {
       await kvSet("alert", { ...a, lastSent: today }); await sendAlert(a);
     }
   } catch (e) { console.error("meet background", e); }
+}
+
+export async function unplacedCalls(): Promise<Unplaced[]> { return (await kvGet<Unplaced[]>("unplaced")) ?? []; }
+/** The office says which class a Meet code belongs to: it becomes the class's Meet link, and the next re-read places its joins. */
+export async function assignCode(actorId: string, code: string, groupId: string): Promise<string | null> {
+  if (!/^[a-z]{10}$/.test(code)) return "That meeting code isn’t valid.";
+  const url = `https://meet.google.com/${code.slice(0, 3)}-${code.slice(3, 7)}-${code.slice(7)}`;
+  return withSchool(async (q) => {
+    const r = await q(`update course_groups set meet_url = $2 where id = $1 returning id`, [groupId, url]);
+    if (!r.length) return "Choose a class.";
+    const u = ((await kvGet<Unplaced[]>("unplaced", q)) ?? []).filter((x) => x.code !== code);
+    await kvSet("unplaced", u, q);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'meet_link', 'course_group', $2, $3)`, [actorId, groupId, JSON.stringify({ url })]);
+    return null;
+  });
 }

@@ -887,7 +887,7 @@ export async function syncMeetAction(f: FormData): Promise<void> {
   let ok: string | null = null, err: string | null = null;
   try {
     const r = await syncMeet(me.name, /^\d{4}-\d\d-\d\d$/.test(from) ? from : undefined);
-    if (r.error) err = r.error; else ok = `Synced: ${r.joins} new Meet join${r.joins === 1 ? "" : "s"} across ${r.lessons} lesson${r.lessons === 1 ? "" : "s"}${r.unmatched ? `; ${r.unmatched} to check` : ""}.`;
+    if (r.error) err = r.error; else ok = `Synced: Google reported ${r.fetched ?? 0} Meet join${r.fetched === 1 ? "" : "s"}, ${r.placed ?? 0} fitted a lesson, ${r.joins} new${r.unmatched ? `; ${r.unmatched} to check` : ""}.${(r.fetched ?? 0) > (r.placed ?? 0) ? " See “Meet calls not matched to a class” below." : ""}`;
   } catch (e) { err = e instanceof MeetError ? e.message : "Couldn’t sync with Google. Try again."; console.error("meet sync", e); }
   attBack(str(f, "tab", 20) || "students", ok, err);
 }
@@ -1048,4 +1048,10 @@ export async function viewAsFamilyAction(f: FormData): Promise<void> {
   await viewAsFamily(me.id, kind, id);
   await withSchool((q) => q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'view_as', $2, $3)`, [me.id, kind === "p" ? "parent" : "student", id]));
   redirect(kind === "p" ? "/parent" : "/student");
+}
+export async function assignMeetCodeAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { assignCode } = await import("@/lib/meet");
+  const err = await assignCode(me.id, str(f, "code", 12), str(f, "group", 40));
+  attBack("google", "Linked. Press Re-read with the first day of term to place this class’s joins.", err);
 }
