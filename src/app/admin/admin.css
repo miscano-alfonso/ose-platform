@@ -154,3 +154,10 @@
 .adm .sb-font select{flex:1;min-width:0;font:inherit;font-size:13.5px;padding:4px 6px;border:1.5px solid var(--line);border-radius:7px;background:var(--panel);color:var(--ink)}
 .adm .sb-font.set select{border-color:#c9a400}
 .adm .sb-frow{grid-template-areas:"lab lab lab"}
+/* Jobs */
+.adm .h2{font-size:20px;font-weight:600;margin:22px 0 10px}
+.adm .appgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:16px}
+.adm .kv{display:grid;margin:0}.adm .kv div{display:grid;grid-template-columns:170px 1fr;gap:10px;padding:8px 0;border-top:1px solid var(--line);align-items:center}.adm .kv div:first-child{border-top:0}
+.adm .kv dt{color:var(--muted);font-weight:600;font-size:14.5px}.adm .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.adm .refbox{padding:10px 0;border-top:1px solid var(--line);display:grid;gap:2px}.adm .refbox:first-of-type{border-top:0}
+.adm .stmt{white-space:pre-line;line-height:1.6}

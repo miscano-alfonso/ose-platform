@@ -15,6 +15,7 @@ import { saveSiteText, saveFaq, deleteFaq, DEFAULTS, saveCoursePage, saveStyles 
 import { cleanStyles } from "@/lib/styles";
 import { saveHubSection, addHubSection, deleteHubSection, saveHubLink, deleteHubLink } from "@/lib/hub";
 import { saveBrandAsset, sniff, BRAND_TYPES } from "@/lib/brand";
+import { createJob, saveJob, deleteJob, setApplication, deleteApplication, setAlertEmail, APP_STATUSES } from "@/lib/jobs";
 import { saveRules, applyRules, copyRules, saveBundles, ensureSubject, addClass } from "@/lib/rules";
 import { addYear, saveTerms, addHoliday, removeHoliday } from "@/lib/terms-admin";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
@@ -715,4 +716,52 @@ export async function resetBrandAction(f: FormData): Promise<void> {
   await saveBrandAsset(me.id, kind, null);
   revalidatePath("/", "layout");
   redirect(`/admin/website?ok=${encodeURIComponent(kind === "logo" ? "Back to the original logo." : "Back to the original icon.")}#brand`);
+}
+
+// ---- Jobs ----
+const jobsBack = (path: string, k: "ok" | "err", m: string) => redirect(`${path}?${k}=${encodeURIComponent(m)}`);
+const jobsDone = () => { revalidatePath("/jobs", "layout"); revalidatePath("/admin/jobs", "layout"); };
+export async function createJobAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const title = str(f, "title", 160); if (!title) jobsBack("/admin/jobs", "err", "Give the vacancy a title.");
+  const id = await createJob(me.id, title);
+  jobsDone(); jobsBack(`/admin/jobs/${id}`, "ok", "Vacancy added as a draft. Fill in the details, then set it to Open.");
+}
+export async function saveJobAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40), path = `/admin/jobs/${id}`;
+  const title = str(f, "title", 160); if (!title) jobsBack(path, "err", "The vacancy needs a title.");
+  const status = (["draft", "open", "closed"] as const).find((s) => s === str(f, "status", 10)) ?? "draft";
+  const closes = str(f, "closes_on", 10);
+  if (closes && !/^\d{4}-\d{2}-\d{2}$/.test(closes)) jobsBack(path, "err", "The closing date isn't a valid date.");
+  const text = (k: string, max: number) => String(f.get(k) ?? "").replace(/\r\n/g, "\n").trim().slice(0, max);
+  await saveJob(me.id, id, { title, status, closes_on: closes || null, subjects: str(f, "subjects", 200), location: str(f, "location", 120) || "Remote (online)",
+    hours: str(f, "hours", 120), pay: str(f, "pay", 120), summary: text("summary", 400), description: text("description", 12000) });
+  jobsDone(); jobsBack(path, "ok", status === "open" ? "Saved. The vacancy is on the website." : "Saved.");
+}
+export async function deleteJobAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  if (f.get("confirm") !== "on") jobsBack("/admin/jobs", "err", "Tick the box to confirm.");
+  await deleteJob(me.id, str(f, "id", 40));
+  jobsDone(); jobsBack("/admin/jobs", "ok", "Vacancy deleted.");
+}
+export async function saveApplicationAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40), status = APP_STATUSES.find(([k]) => k === str(f, "status", 20))?.[0] ?? "new";
+  await setApplication(me.id, id, status, String(f.get("notes") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 4000));
+  jobsDone(); jobsBack(`/admin/jobs/application/${id}`, "ok", "Saved.");
+}
+export async function deleteApplicationAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const job = str(f, "job", 40);
+  if (f.get("confirm") !== "on") jobsBack(`/admin/jobs/${job}`, "err", "Tick the box to confirm.");
+  await deleteApplication(me.id, str(f, "id", 40));
+  jobsDone(); jobsBack(`/admin/jobs/${job}`, "ok", "Application deleted.");
+}
+export async function saveAlertEmailAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const email = str(f, "email", 200);
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) jobsBack("/admin/jobs", "err", "That email address doesn't look right.");
+  await setAlertEmail(me.id, email);
+  jobsBack("/admin/jobs", "ok", email ? `Alerts will go to ${email}.` : "Application alerts turned off.");
 }

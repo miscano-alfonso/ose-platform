@@ -12,12 +12,12 @@ export const metadata: Metadata = { title: "Admin", robots: { index: false, foll
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const me = await requireStaff();
   const { logo } = await brandSrc();
-  const [c] = await withSchool((q) => q<{ enq: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq`));
+  const [c] = await withSchool((q) => q<{ enq: number; jobs: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq, (select count(*)::int from job_applications where status = 'new') as jobs`));
   return <div className="adm"><div className="app">
     <aside className="side">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <a className="logo" href="/admin"><img src={logo} alt="OH-SO ED admin" width={773} height={224} /></a>
-      <AdminNav counts={{ "/admin/enquiries": c.enq }} />
+      <AdminNav counts={{ "/admin/enquiries": c.enq, "/admin/jobs": c.jobs }} />
       <div className="who"><span>Signed in as<br /><b>{me.name}</b></span>
         <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form>
         <a href="/" style={{ color: "#c9cde4", fontSize: 15.5 }}>View the website</a></div>

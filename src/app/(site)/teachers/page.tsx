@@ -17,6 +17,7 @@ export default async function Teachers() {
           ? <img className="tphoto" src={t.photo} alt="" width={640} height={480} loading="lazy" />
           : <div className="tav" aria-hidden="true">{t.name.split(" ").map((p) => p[0]).join("")}</div>}
         <h2>{t.name}</h2><p className="role">{t.designation}</p>{t.subjects?.length ? <p className="subs">{t.subjects.join(" · ")}</p> : null}
-        <span className="tmore">Read more →</span></Link>)}</div></div></section>
+        <span className="tmore">Read more →</span></Link>)}</div>
+      <p className="tjoin">Want to teach with us? <Link href="/jobs">See our current vacancies</Link>.</p></div></section>
   </>);
 }

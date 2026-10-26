@@ -7,7 +7,7 @@ type Item = [string, string];
 // Day-to-day work stays at the top level; things set once a year, and school settings, sit in groups.
 const DAILY: Item[] = [
   ["Dashboard", "/admin"], ["Families", "/admin/families"], ["Attendance", "/admin/attendance"], ["Payments", "/admin/payments"], ["Messages", "/admin/messages"],
-  ["Waiting list & enquiries", "/admin/enquiries"], ["Tasters", "/admin/tasters"], ["Reports", "/admin/reports"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"],
+  ["Waiting list & enquiries", "/admin/enquiries"], ["Jobs", "/admin/jobs"], ["Tasters", "/admin/tasters"], ["Reports", "/admin/reports"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"],
   ["Student chat", "/admin/student-chat"], ["Rewards", "/admin/rewards"], ["Payroll", "/admin/payroll"], ["Email", "/admin/email"], ["Marketing", "/admin/marketing"],
 ];
 const GROUPS: [string, Item[]][] = [
