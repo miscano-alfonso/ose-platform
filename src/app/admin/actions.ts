@@ -22,7 +22,7 @@ import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCy
 import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite, VIEWAS_COOKIE } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { SCHOOL_COOKIE, siteSchool, listSchools } from "@/lib/db";
+import { SCHOOL_COOKIE, siteSchool, schoolsFor } from "@/lib/db";
 
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -793,9 +793,9 @@ export async function saveAlertEmailAction(f: FormData): Promise<void> {
 
 // ---------- the School and "Viewing as" switchers in the admin sidebar ----------
 export async function setSchoolAction(f: FormData): Promise<void> {
-  await requireSignedIn();
+  const me = await requireSignedIn();
   const slug = str(f, "school", 40);
-  if (!(await listSchools()).some((x) => x.slug === slug)) redirect("/admin");
+  if (!(await schoolsFor(me.email)).some((x) => x.slug === slug)) redirect("/admin");
   const jar = await cookies();
   jar.delete({ name: VIEWAS_COOKIE, path: "/admin" });
   if (slug === siteSchool()) jar.delete({ name: SCHOOL_COOKIE, path: "/admin" });

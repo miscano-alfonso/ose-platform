@@ -54,3 +54,11 @@ export async function listSchools(): Promise<{ slug: string; name: string }[]> {
   try { return (await client.query("select slug, name from schools order by name")).rows; } finally { client.release(); }
 }
 export const siteSchool = () => process.env.SCHOOL_SLUG || "ohsoed";
+/** The schools a person can switch to: where their email has an admin account (always including this site's school). */
+export async function schoolsFor(email: string): Promise<{ slug: string; name: string }[]> {
+  const client = await pool().connect();
+  try {
+    return (await client.query(`select s.slug, s.name from schools s where s.slug = $2 or exists (select 1 from users u where u.school_id = s.id
+      and lower(u.email::text) = lower($1) and u.role in ('school_admin','platform_admin') and u.disabled_at is null) order by s.name`, [email, siteSchool()])).rows;
+  } finally { client.release(); }
+}

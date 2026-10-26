@@ -9,7 +9,7 @@ import "../admin.css";
 import { DashStyles } from "../DashStyles";
 import { brandSrc } from "@/lib/brand";
 import { cookies } from "next/headers";
-import { listSchools, siteSchool, SCHOOL_COOKIE } from "@/lib/db";
+import { schoolsFor, siteSchool, SCHOOL_COOKIE } from "@/lib/db";
 import { Switchers } from "../Switchers";
 
 export const dynamic = "force-dynamic";
@@ -25,7 +25,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     withSchool((q) => q<{ enq: number; jobs: number; failed: number; tasters: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq, (select count(*)::int from job_applications where status = 'new') as jobs,
       (select count(*)::int from instalments where status = 'failed') as failed, 0 as tasters`)));
   const jar = await cookies();
-  const [schools, teachers] = await Promise.all([listSchools(), withSchool((q) => q<{ id: string; name: string }>(`select u.id, u.name from teachers t join users u on u.id = t.user_id where t.archived_at is null and u.disabled_at is null order by u.name`))]);
+  const [schools, teachers] = await Promise.all([schoolsFor(me.email), withSchool((q) => q<{ id: string; name: string }>(`select u.id, u.name from teachers t join users u on u.id = t.user_id where t.archived_at is null and u.disabled_at is null order by u.name`))]);
   const school = jar.get(SCHOOL_COOKIE)?.value || siteSchool();
   const views = [{ value: "admin", label: "Admin" }, ...teachers.map((t) => ({ value: `t:${t.id}`, label: `Teacher: ${t.name}` })),
     { value: "p", label: "Parent (coming soon)", disabled: true }, { value: "s", label: "Student (coming soon)", disabled: true }];
