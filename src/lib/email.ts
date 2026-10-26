@@ -22,8 +22,10 @@ export async function audiences(): Promise<Audience[]> {
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join academic_years y on y.id = g.academic_year_id
       where y.ends_on >= current_date and exists (select 1 from enrolments e where e.group_id = g.id and e.status = 'active') order by l.sort_order, sj.name`);
     const levels = await q<{ id: string; name: string }>(`select id, name from levels order by sort_order`);
-    return [{ value: "families", label: "All current families" }, ...levels.map((l) => ({ value: `level:${l.id}`, label: `${l.name} families` })),
-      ...groups.map((g) => ({ value: `class:${g.id}`, label: g.label })), { value: "teachers", label: "All teachers" }];
+    return [{ value: "families", label: "Parents of enrolled students" }, { value: "students", label: "Enrolled students (their Google accounts)" },
+      ...levels.map((l) => ({ value: `level:${l.id}`, label: `${l.name} families` })), ...groups.map((g) => ({ value: `class:${g.id}`, label: g.label })),
+      { value: "waiting", label: "Waiting list" }, { value: "enquiries", label: "Enquired, not booked" }, { value: "lowatt", label: "Parents: attendance below 50% this term" },
+      { value: "oneoff", label: "1:1 and workshop families, no course" }, { value: "teachers", label: "All teachers" }];
   });
 }
 
@@ -32,6 +34,16 @@ export async function recipients(audience: string): Promise<Recipient[]> {
   return withSchool(async (q) => {
     if (audience === "marketing") return q<Recipient>(`select distinct on (lower(email)) name, email::text from marketing_audience order by lower(email)`);
     if (audience === "teachers") return q<Recipient>(`select u.name, u.email::text from teachers t join users u on u.id = t.user_id where t.archived_at is null`);
+    if (audience === "students") return q<Recipient>(`select distinct on (lower(s.email)) s.first_name || ' ' || s.last_name as name, s.email::text from students s join enrolments e on e.student_id = s.id
+      join course_groups g on g.id = e.group_id join academic_years y on y.id = g.academic_year_id where e.status = 'active' and not e.is_taster and y.ends_on >= current_date and s.email is not null order by lower(s.email)`);
+    if (audience === "waiting") return q<Recipient>(`select distinct on (lower(email)) parent_name as name, email::text from waitlist_entries where enrolled_at is null order by lower(email)`);
+    if (audience === "enquiries") return q<Recipient>(`select distinct on (lower(q.email)) q.name, q.email::text from enquiries q where q.created_at > now() - interval '12 months'
+      and not exists (select 1 from parents p join students s on s.parent_id = p.id join enrolments e on e.student_id = s.id where p.email = q.email and e.status = 'active') order by lower(q.email)`);
+    if (audience === "lowatt") return q<Recipient>(`select distinct on (lower(p.email)) p.first_name || ' ' || p.last_name as name, p.email::text from student_term_attendance a join students s on s.id = a.student_id
+      join parents p on p.id = s.parent_id where a.term_id = (select id from terms where current_date between starts_on and ends_on limit 1) and a.attendance_pct < 50 order by lower(p.email)`);
+    if (audience === "oneoff") return q<Recipient>(`select distinct on (lower(p.email)) p.first_name || ' ' || p.last_name as name, p.email::text from parents p
+      where (exists (select 1 from tutoring_bookings b where b.parent_id = p.id) or exists (select 1 from workshop_bookings w where w.parent_id = p.id))
+        and not exists (select 1 from students s join enrolments e on e.student_id = s.id where s.parent_id = p.id and e.status = 'active') order by lower(p.email)`);
     const [kind, id] = audience.split(":");
     const where = kind === "class" ? "g.id = $1::uuid" : kind === "level" ? "g.level_id = $1::uuid" : "true";
     return q<Recipient>(`select distinct on (lower(p.email)) p.first_name || ' ' || p.last_name as name, p.email::text
@@ -89,4 +101,26 @@ export async function sendHtml(subject: string, htmlContent: string, to: string[
     body: JSON.stringify({ sender: { email: c.email, name: c.name }, subject, htmlContent, textContent, messageVersions: to.map((email) => ({ to: [{ email }] })), tags: [tag || "social-report"] }),
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
   return res.ok ? { ok: true } : { ok: false, error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
+}
+
+/** One email (to one or more people, each sent separately), optionally scheduled with Brevo up to 72 hours ahead. Returns Brevo's message id(s). */
+export async function sendOne(to: Recipient[], subject: string, body: string, opts: { tag: string; scheduledAt?: string } ): Promise<{ ok: boolean; ids: string[]; error?: string }> {
+  const c = await creds();
+  if (!c) return { ok: false, ids: [], error: "Brevo isn’t connected yet." };
+  if (!to.length) return { ok: false, ids: [], error: "No one to send it to." };
+  const res = await fetch(SMTP_URL(), {
+    method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ sender: { email: c.email, name: c.name }, subject, htmlContent: html(body, false), textContent: body,
+      messageVersions: to.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [opts.tag], ...(opts.scheduledAt ? { scheduledAt: opts.scheduledAt } : {}) }),
+  }).catch((e) => ({ ok: false, status: 0, text: async () => String(e), json: async () => ({}) }) as Response);
+  if (!res.ok) return { ok: false, ids: [], error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
+  const j = await res.json().catch(() => ({})) as { messageId?: string; messageIds?: string[] };
+  return { ok: true, ids: j.messageIds ?? (j.messageId ? [j.messageId] : []) };
+}
+/** Cancels an email scheduled with Brevo (e.g. the lesson was cancelled). */
+export async function cancelScheduled(messageId: string): Promise<boolean> {
+  const c = await creds(); if (!c) return false;
+  const base = SMTP_URL();
+  const r = await fetch(`${base}/${encodeURIComponent(messageId)}`, { method: "DELETE", headers: { "api-key": c.key, accept: "application/json" } }).catch(() => null);
+  return !!r && (r.status === 204 || r.ok);
 }

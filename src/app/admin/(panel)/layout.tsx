@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { after } from "next/server";
 import { socialBackground } from "@/lib/social";
 import { meetBackground } from "@/lib/meet";
+import { automationsBackground } from "@/lib/automations";
 import { requireStaff } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
 import { signOutAction } from "../actions";
@@ -20,7 +21,8 @@ export const metadata: Metadata = { title: "Admin", robots: { index: false, foll
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const me = await requireStaff();
   after(() => socialBackground());
-  after(() => meetBackground()); // reads new Google Meet joins every few hours, and sends Friday's attendance alert // scheduled Instagram posts and the weekly moments report, after the page is sent
+  after(() => meetBackground());
+  after(() => automationsBackground()); // lesson reminders, taster emails, payment reminders… // reads new Google Meet joins every few hours, and sends Friday's attendance alert // scheduled Instagram posts and the weekly moments report, after the page is sent
   const { logo } = await brandSrc();
   const [x] = await withSchool((q) => q<{ rep: number; msg: number; joins: number }>(`select
     (select count(*)::int from report_entries e join report_cycles c on c.id = e.cycle_id where e.status = 'submitted' and c.status <> 'published') as rep,

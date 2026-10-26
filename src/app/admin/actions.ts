@@ -250,6 +250,7 @@ export async function cancelLessonAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const id = str(f, "id", 40);
   await cancelLesson(me.id, id, str(f, "note", 200));
+  await import("@/lib/automations").then((a) => a.cancelLessonReminders(id)).catch(() => null);
   revalidatePath("/admin/attendance");
   redirect(`/admin/register/${id}?ok=${encodeURIComponent("Lesson cancelled. Any tasters booked into it were cancelled too.")}`);
 }
@@ -264,6 +265,7 @@ export async function bookTasterAction(f: FormData): Promise<void> {
   if (!d.parentFirst || !d.parentLast || !d.parentEmail || !d.childName || !d.childEmail || !d.lessonId)
     redirect(`/admin/tasters?group=${group}&err=${encodeURIComponent("Fill in every field with valid emails.")}`);
   const err = await bookTaster(me.id, d);
+  if (!err) await import("@/lib/automations").then((a) => a.runAutomations(20)).catch(() => null);
   revalidatePath("/admin/tasters");
   redirect(`/admin/tasters?${err ? `group=${group}&err=${encodeURIComponent(err)}` : "ok=" + encodeURIComponent(`Taster booked for ${d.childName}.`)}`);
 }
@@ -1014,4 +1016,25 @@ export async function setDpaAction(f: FormData): Promise<void> {
   const me = await requireStaff(); const P = await import("@/lib/privacy");
   const d = str(f, "on", 10); await P.setDpa(me.id, str(f, "id", 40), /^\d{4}-\d\d-\d\d$/.test(d) ? d : null);
   dpBack("processors", "Saved.");
+}
+
+// ---------- automations ----------
+export async function saveAutomationAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const A = await import("@/lib/automations");
+  const key = str(f, "key", 40), m = str(f, "minutes", 6);
+  const d = { enabled: f.get("enabled") === "on", subject: str(f, "subject", 200), body: String(f.get("body") ?? "").slice(0, 5000), minutes: m === "" ? null : Number(m), to_parent: f.get("to_parent") === "on", to_student: f.get("to_student") === "on" };
+  if (f.get("test")) {
+    const r = await A.testAutomation(key, { name: me.name, email: me.email }, d);
+    redirect(`/admin/automations?open=${key}&${r.ok ? "ok=" + encodeURIComponent(`Test sent to ${me.email}.`) : "err=" + encodeURIComponent(r.error ?? "Couldn’t send the test.")}#${key}`);
+  }
+  const err = await A.saveAutomation(me.id, key, d);
+  if (!err && d.enabled) await A.runAutomations(60).catch(() => null);
+  redirect(`/admin/automations?${err ? `open=${key}&err=` + encodeURIComponent(err) : "ok=" + encodeURIComponent(d.enabled ? "Saved and switched on." : "Saved. It’s switched off.")}#${key}`);
+}
+export async function runAutomationsAction(): Promise<void> {
+  await requireStaff();
+  const A = await import("@/lib/automations");
+  const r = await A.runAutomations(300);
+  redirect(`/admin/automations?ok=${encodeURIComponent(r.sent ? `${r.sent} email${r.sent === 1 ? "" : "s"} sent or booked.` : "Nothing due right now.")}`);
 }
