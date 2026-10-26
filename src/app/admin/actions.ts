@@ -813,6 +813,7 @@ export async function setSchoolAction(f: FormData): Promise<void> {
 export async function setViewAsAction(f: FormData): Promise<void> {
   await requireStaff();
   const v = str(f, "as", 60), jar = await cookies();
+  if (v === "p" || v === "s") redirect(`/admin/view-as?kind=${v}`);
   if (v.startsWith("t:") && /^t:[0-9a-f-]{36}$/.test(v)) {
     jar.set(VIEWAS_COOKIE, v, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: 8 * 3600 });
     redirect("/admin/teacher");
@@ -1037,4 +1038,14 @@ export async function runAutomationsAction(): Promise<void> {
   const A = await import("@/lib/automations");
   const r = await A.runAutomations(300);
   redirect(`/admin/automations?ok=${encodeURIComponent(r.sent ? `${r.sent} email${r.sent === 1 ? "" : "s"} sent or booked.` : "Nothing due right now.")}`);
+}
+
+export async function viewAsFamilyAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const kind = str(f, "kind", 1) === "s" ? "s" : "p", id = str(f, "id", 40);
+  if (!/^[0-9a-f-]{36}$/.test(id)) redirect("/admin/view-as?kind=" + kind);
+  const { viewAsFamily } = await import("@/lib/family-auth");
+  await viewAsFamily(me.id, kind, id);
+  await withSchool((q) => q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'view_as', $2, $3)`, [me.id, kind === "p" ? "parent" : "student", id]));
+  redirect(kind === "p" ? "/parent" : "/student");
 }

@@ -99,8 +99,8 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
           <li>Paste the Client ID and Client secret below, save, then press Connect Google and sign in as the Workspace super admin.</li>
         </ol>
         {!g.fromEnv && <form action={saveGoogleAppAction} className="eform" style={{ marginBottom: 12 }}>
-          <label className="fld">Client ID<input name="client_id" defaultValue={g.clientId} required style={{ width: 340 }} autoComplete="off" /></label>
-          <label className="fld">Client secret<input name="client_secret" type="password" placeholder={g.hasApp ? "Saved (leave blank to keep)" : ""} style={{ width: 240 }} autoComplete="off" /></label>
+          <label className="fld">Client ID<input name="client_id" type="text" defaultValue={g.clientId} required style={{ width: 340 }} autoComplete="off" spellCheck={false} data-1p-ignore="" data-lpignore="true" placeholder="….apps.googleusercontent.com" /></label>
+          <label className="fld">Client secret<input name="client_secret" type="text" placeholder={g.hasApp ? "Saved (leave blank to keep)" : "GOCSPX-…"} style={{ width: 240 }} autoComplete="off" spellCheck={false} data-1p-ignore="" data-lpignore="true" /></label>
           <button className="abtn" type="submit">Save</button></form>}
         {g.hasApp ? <a className="abtn pri" href="/admin/meet-api?action=login">Connect Google</a> : <p className="note">Save the Client ID and secret to continue.</p>}
         {g.hasApp && !g.fromEnv && <form action={disconnectGoogleAction} style={{ marginTop: 10 }}><input type="hidden" name="forget" value="1" /><button className="abtn sm" type="submit">Remove the saved Client ID</button></form>}

@@ -40,7 +40,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     const [schools, teachers] = await Promise.all([schoolsFor(me.realEmail ?? ""), withSchool((q) => q<{ id: string; name: string }>(`select u.id, u.name from teachers t join users u on u.id = t.user_id
       where t.archived_at is null and u.disabled_at is null order by u.name`))]);
     const views = [{ value: "admin", label: "Admin" }, ...teachers.map((t) => ({ value: `t:${t.id}`, label: `Teacher: ${t.name}` })),
-      { value: "p", label: "Parent (coming soon)", disabled: true }, { value: "s", label: "Student (coming soon)", disabled: true }];
+      { value: "p", label: "Parent…" }, { value: "s", label: "Student…" }];
     switchers = <Switchers schools={schools.map((x) => ({ value: x.slug, label: x.name }))} school={jar.get(SCHOOL_COOKIE)?.value || siteSchool()} views={views} view={`t:${me.id}`} />;
   }
   return <div className="adm" style={style}><DashStyles />
