@@ -69,7 +69,7 @@ export async function loginUrl(base: string, email: string): Promise<string> {
   const stored = (await kvGet<Conn>("google")) ?? {};
   stored.pending = { state, email, exp: Date.now() + 15 * 60000 }; await kvSet("google", stored);
   const q = new URLSearchParams({ client_id: c.clientId!, redirect_uri: redirectUri(base), response_type: "code", scope: SCOPE, access_type: "offline",
-    prompt: "consent", include_granted_scopes: "true", state, login_hint: email });
+    prompt: "consent select_account", include_granted_scopes: "true", state });
   return `${AUTH_URL()}?${q}`;
 }
 
