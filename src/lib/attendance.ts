@@ -20,7 +20,7 @@ export async function attendanceOverview(termId: string | null, classId: string 
       from terms t where t.academic_year_id = ${YEAR_SQL} order by t.number`);
     const today = new Date().toISOString().slice(0, 10);
     const term = terms.find((t) => t.id === termId) ?? terms.find((t) => t.current) ?? [...terms].reverse().find((t) => t.starts_on <= today) ?? terms[0] ?? null;
-    if (!term) return { terms, term: null, overall: null, held: 0, firstHeld: null, students: [] as StudentAtt[], classes: [] as ClassOpt[], cls: null, grid: { lessons: [] as GridLesson[], rows: [] as GridRow[] }, absences: [] as Absence[] };
+    if (!term) return { terms, term: null, overall: null, held: 0, firstHeld: null, students: [] as StudentAtt[], classes: [] as ClassOpt[], allClasses: [] as (ClassOpt & { has_times: boolean; meet: string | null })[], cls: null, grid: { lessons: [] as GridLesson[], rows: [] as GridRow[] }, absences: [] as Absence[] };
     const [o] = await q<{ pct: number | null; held: number; first: string | null }>(`select
         (select round(100.0 * count(*) filter (where m.mark in ('present','late')) / nullif(count(*) filter (where m.mark <> 'approved_absence'), 0))::int
           from attendance_marks m join lesson_events e on e.id = m.lesson_event_id where e.term_id = $1) as pct,
@@ -35,6 +35,11 @@ export async function attendanceOverview(termId: string | null, classId: string 
     const classes = await q<ClassOpt>(`select g.id, l.name || ' ' || sj.name || ' (' || g.code || ')' as name from course_groups g join levels l on l.id = g.level_id
       join subjects sj on sj.id = g.subject_id where g.academic_year_id = ${YEAR_SQL} and g.status <> 'closed' and exists (select 1 from lesson_events e where e.group_id = g.id)
       order by l.sort_order, sj.name, g.code`);
+    // every class this year, for linking a Meet code (including classes with no lesson times yet)
+    const allClasses = await q<ClassOpt & { has_times: boolean; meet: string | null }>(`select g.id, l.name || ' ' || sj.name || ' (' || g.code || ')' as name,
+        exists (select 1 from lesson_slots s where s.group_id = g.id) as has_times, g.meet_url as meet
+      from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+      where g.academic_year_id = ${YEAR_SQL} and g.status <> 'closed' order by l.sort_order, sj.name, g.code`);
     const cls = classes.find((c) => c.id === classId) ?? classes[0] ?? null;
     let grid = { lessons: [] as GridLesson[], rows: [] as GridRow[] };
     if (cls) {
@@ -55,6 +60,6 @@ export async function attendanceOverview(termId: string | null, classId: string 
       from absence_notices n join lesson_events e on e.id = n.lesson_event_id join lesson_slots s on s.id = e.slot_id join students st on st.id = n.student_id
       join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where n.cancelled_at is null and e.lesson_date >= current_date - 60 order by e.lesson_date >= current_date desc, abs(e.lesson_date - current_date) limit 100`);
-    return { terms, term, overall: o.pct, held: o.held, firstHeld: o.first, students, classes, cls, grid, absences };
+    return { terms, term, overall: o.pct, held: o.held, firstHeld: o.first, students, classes, allClasses, cls, grid, absences };
   });
 }
