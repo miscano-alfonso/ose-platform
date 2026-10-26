@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getFewPlaces, getBundles, getSpaceAvailable } from "@/lib/data";
 import { CourseCard, roundelSrc } from "./CourseCard";
+import { HeroLessons } from "./HeroLessons";
 import { HeroArt, Ticker } from "./HeroArt";
 import { SpaceAvailable } from "./SpaceAvailable";
 import { siteText } from "@/lib/site-content";
@@ -8,7 +9,8 @@ import { KS3Bundles } from "./KS3Bundles";
 
 export const dynamic = "force-dynamic";
 
-export default async function Home() {
+export default async function Home({ searchParams }: { searchParams: Promise<{ hero?: string }> }) {
+  const heroMode = (await searchParams).hero; // preview only: ?hero=both or ?hero=lessons
   const [few, { ks3Pence, bundles }, space, txt] = await Promise.all([getFewPlaces(), getBundles(), getSpaceAvailable(), siteText()]);
   return (<>
     <section className="s-hero home"><div className="wrap hero-grid"><div>
@@ -16,7 +18,7 @@ export default async function Home() {
       <h1>{txt.home_title}</h1>
       <p className="lead">{txt.home_lead}</p>
       <div className="btns"><Link className="btn btn-accent" href="/contact">Book a taster!</Link><Link className="btn btn-ghost" href="/courses">Our courses</Link></div>
-    </div><HeroArt /></div></section>
+    </div>{heroMode !== "lessons" && <HeroArt />}{heroMode === "both" && <HeroLessons mode="with-art" />}{heroMode === "lessons" && <HeroLessons mode="alone" />}</div></section>
     <Ticker items={txt.ticker.split("\n").map((t) => t.trim()).filter(Boolean)} />
 
     {space.length > 0 && <SpaceAvailable items={space} roundels={space.map((c) => roundelSrc(c.subject))} />}

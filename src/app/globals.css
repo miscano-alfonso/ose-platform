@@ -402,3 +402,38 @@ html,body{overflow-x:clip}
 .apply .decl{display:flex;gap:10px;align-items:flex-start;font-weight:400;font-size:15px}.apply .decl input{margin-top:4px}
 .tjoin{text-align:center;margin:28px 0 0;font-size:17px}.tjoin a{color:var(--brand);font-weight:600}
 .apply .row2>label{min-width:0}
+/* Homepage: three live lessons taking turns (HeroLessons) */
+.hero-lessons{container-type:inline-size;width:100%}
+.hl-stage{position:relative;width:100cqw;height:66cqw;font-size:calc(100cqw / 60)}
+.hl-win{position:absolute;left:0;top:0;width:40em;height:28em;background:#121a4f;border-radius:1.1em;overflow:hidden;box-shadow:0 2.4em 5em rgba(0,0,0,.5),0 0 0 .1em rgba(255,255,255,.1) inset;transform-origin:top left;color:#1a1f3d}
+.hl-bar{height:2.6em;display:flex;align-items:center;gap:.6em;padding:0 1.1em;background:#0d1442;color:#b9c0e4;font-size:1.05em}.hl-bar i{width:.75em;height:.75em;border-radius:50%;background:#3a4380}
+.hl-t{margin-left:.5em}.hl-n{margin-left:auto;opacity:.75;font-size:.95em}
+.hl-live{display:inline-flex;align-items:center;gap:.4em;background:rgba(232,95,95,.16);color:#ff9a9a;border-radius:99em;padding:.15em .75em;font-weight:600;letter-spacing:.06em;font-size:.9em}
+.hl-live::before{content:"";width:.5em;height:.5em;border-radius:50%;background:#ff6b6b;animation:hlPulse 1.6s infinite}
+.hl-slide{position:absolute;left:1em;right:1em;top:3.6em;bottom:1em;background:#fbfaf6;border-radius:.7em;padding:1.6em 1.9em;overflow:hidden;text-align:left;text-shadow:none}
+.hl-k{font-size:.95em;letter-spacing:.14em;text-transform:uppercase;font-weight:600}
+.hl-en .hl-k{color:#b0367f}.hl-sc .hl-k{color:#1f8a63}.hl-ma .hl-k{color:#2c4fb8}
+.hl-h{margin:.2em 0 .6em;font-size:2.1em;font-weight:500;line-height:1.1;color:#1a1f3d}
+.hl-slide ul{margin:0;padding:0 12em 0 1.2em;font-size:1.15em;line-height:1.5;color:#3d4366}
+.hl-quote{font-family:Georgia,"Times New Roman",serif;font-style:italic;font-size:1.3em;line-height:1.4;border-left:.25em solid var(--accent);padding-left:.8em;margin:0 0 .8em}
+.hl-graph{width:14em;height:7.6em;display:block;margin:-.2em 0 .4em;font-family:inherit}
+.hl-row{display:flex;gap:1.2em;align-items:center}.hl-plot{width:9em;height:9em;flex:none}.hl-eq{font-size:1.9em;font-weight:500}
+.hl-pip{position:absolute;right:1.8em;bottom:1.8em;width:11.5em;height:8em;border-radius:.7em;overflow:hidden;box-shadow:0 .8em 1.6em rgba(10,16,51,.35);border:.2em solid #fff;background:#222b66}
+.hl-pip img{width:100%;height:100%;object-fit:cover;object-position:50% 35%;display:block}
+.hl-nm{position:absolute;left:.4em;bottom:.4em;background:rgba(10,16,51,.75);color:#fff;border-radius:.4em;padding:.15em .5em;font-size:.85em;display:flex;gap:.4em;align-items:center}
+.hl-wave{display:inline-flex;gap:.15em;align-items:center;height:.8em}.hl-wave b{width:.18em;height:.8em;background:var(--accent);border-radius:.2em;animation:hlTalk 1s ease-in-out infinite}.hl-wave b:nth-child(2){animation-delay:-.3s}.hl-wave b:nth-child(3){animation-delay:-.6s}
+.hl-studs{position:absolute;left:1.9em;bottom:1.8em;display:flex}.hl-studs span{width:2.4em;height:2.4em;border-radius:50%;display:grid;place-items:center;color:#fff;font-size:.85em;border:.18em solid #fbfaf6;margin-right:-.5em}
+.hl-turn{animation:hlTurn 15s ease-in-out infinite}
+@keyframes hlTurn{
+ 0%,28%{transform:translate(18em,10em) scale(1);z-index:3;filter:none}
+ 33%,61%{transform:translate(2em,3em) scale(.82);z-index:1;filter:brightness(.55) saturate(.8)}
+ 66%,95%{transform:translate(23em,0) scale(.82);z-index:2;filter:brightness(.72) saturate(.85)}
+ 100%{transform:translate(18em,10em) scale(1);z-index:3;filter:none}}
+@keyframes hlPulse{0%,100%{opacity:1}50%{opacity:.4}}@keyframes hlTalk{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+@media (prefers-reduced-motion:reduce){.hl-turn,.hl-live::before,.hl-wave b{animation:none}.hl-turn:nth-child(3){transform:translate(18em,10em);z-index:3}.hl-turn:nth-child(1){transform:translate(2em,3em) scale(.82);filter:brightness(.55)}.hl-turn:nth-child(2){transform:translate(23em,0) scale(.82);filter:brightness(.72)}}
+/* placed with the illustration: lower left of the picture, in front of it */
+@media (min-width:821px){
+  .hl-with-art{position:absolute;z-index:3;left:43%;bottom:3%;width:min(36vw,560px)}
+  .hl-alone{position:absolute;z-index:1;right:max(1vw,calc((100vw - 1340px) / 2));top:50%;transform:translateY(-50%);width:min(47vw,700px)}
+}
+@media (max-width:820px){.hero-lessons{margin-top:24px}}
