@@ -5,18 +5,18 @@ import { withSchool } from "./db";
 export const DAY = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const YEAR_SQL = `(select id from academic_years where ends_on >= current_date order by starts_on limit 1)`;
 
-export type Slot = { id: string; group_id: string; code: string; name: string; colour: string; status: string; weekday: number; starts_at: string; ends_at: string; teacher: string | null; teacher_id: string | null };
+export type Slot = { id: string; group_id: string; code: string; name: string; level: string; subject: string; colour: string; status: string; weekday: number; starts_at: string; ends_at: string; teacher: string | null; teacher_id: string | null };
 export type TClass = { id: string; code: string; name: string; colour: string; status: string; minutes: number; teacher_id: string | null; teacher: string | null; students: number; slots: number };
 export type TeacherOpt = { id: string; name: string };
 
 export async function getTimetable(): Promise<{ year: string | null; slots: Slot[]; classes: TClass[]; teachers: TeacherOpt[] }> {
   return withSchool(async (q) => {
     const y = (await q<{ label: string }>(`select label from academic_years where id = ${YEAR_SQL}`))[0];
-    const slots = await q<Slot>(`select s.id, g.id as group_id, g.code, l.name || ' ' || sj.name as name, coalesce(sj.colour,'#8494c2') as colour, g.status::text,
+    const slots = await q<Slot>(`select s.id, g.id as group_id, g.code, l.name || ' ' || sj.name as name, l.name as level, sj.name as subject, coalesce(sj.colour,'#8494c2') as colour, g.status::text,
         s.weekday, to_char(s.starts_at,'HH24:MI') as starts_at, to_char(s.ends_at,'HH24:MI') as ends_at, u.name as teacher, s.teacher_id
       from lesson_slots s join course_groups g on g.id = s.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       left join teachers t on t.id = s.teacher_id left join users u on u.id = t.user_id
-      where s.academic_year_id = ${YEAR_SQL} order by s.weekday, s.starts_at, g.code`);
+      where s.academic_year_id = ${YEAR_SQL} order by s.weekday, s.starts_at, l.sort_order, g.code`);
     const classes = await q<TClass>(`select g.id, g.code, l.name || ' ' || sj.name as name, coalesce(sj.colour,'#8494c2') as colour, g.status::text, g.lesson_minutes as minutes,
         g.teacher_id, u.name as teacher,
         (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students,
@@ -27,6 +27,13 @@ export async function getTimetable(): Promise<{ year: string | null; slots: Slot
     const teachers = await q<TeacherOpt>(`select t.id, u.name from teachers t join users u on u.id = t.user_id where t.archived_at is null order by u.name`);
     return { year: y?.label ?? null, slots, classes, teachers };
   });
+}
+
+/** Students in each class this year (ids only), to find timetable clashes for students taking two classes. */
+export async function classRosters(): Promise<Record<string, string[]>> {
+  const rows = await withSchool((q) => q<{ g: string; s: string[] }>(`select e.group_id as g, array_agg(e.student_id::text) as s from enrolments e join course_groups g on g.id = e.group_id
+    where g.academic_year_id = ${YEAR_SQL} and e.status in ('pending','active') and not e.is_taster group by e.group_id`));
+  return Object.fromEntries(rows.map((r) => [r.g, r.s]));
 }
 
 /** Adds a weekly lesson. Returns an error message the admin can act on (e.g. the teacher is already teaching then). */

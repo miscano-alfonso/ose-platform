@@ -108,3 +108,18 @@ export async function setFamilyTerm(actorId: string, parentId: string, termNumbe
       [actorId, parentId, JSON.stringify({ term: termNumber, to, instalments: rows.length })]);
   });
 }
+
+export type InstRow = { id: string; parent_id: string; family: string; student: string; course: string; term: number; due_on: string; amount: number };
+/** The prototype's Payments cards: failed payments to chase, and what's charged in the next 60 days. */
+export async function getPaymentLists(): Promise<{ failed: InstRow[]; upcoming: InstRow[]; upcomingCount: number }> {
+  return withSchool(async (q) => {
+    const sel = `select i.id, p.id as parent_id, p.first_name || ' ' || p.last_name as family, s.first_name as student, l.name || ' ' || sj.name as course,
+        t.number as term, i.due_on::text, i.amount_pence as amount
+      from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id join parents p on p.id = s.parent_id
+      join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join terms t on t.id = i.term_id`;
+    const failed = await q<InstRow>(`${sel} where i.status = 'failed' order by i.due_on, p.last_name`);
+    const upcoming = await q<InstRow>(`${sel} where i.status = 'scheduled' and i.due_on > current_date and i.due_on <= current_date + 60 and e.status = 'active'
+      order by i.due_on, p.last_name, s.first_name`);
+    return { failed, upcoming: upcoming.slice(0, 12), upcomingCount: upcoming.length };
+  });
+}

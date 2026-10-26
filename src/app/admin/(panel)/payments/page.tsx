@@ -1,4 +1,5 @@
-import { getPayments } from "@/lib/payments";
+import Link from "next/link";
+import { getPayments, getPaymentLists } from "@/lib/payments";
 import { buildSchedulesAction, setFamilyTermAction } from "../../actions";
 import { money } from "@/lib/format";
 import { yearLabel } from "@/lib/format";
@@ -8,7 +9,7 @@ const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB",
 
 export default async function Payments({ searchParams }: { searchParams: Promise<{ built?: string; show?: string; q?: string }> }) {
   const sp = await searchParams;
-  const { year, terms, families, unscheduled } = await getPayments();
+  const [{ year, terms, families, unscheduled }, lists] = await Promise.all([getPayments(), getPaymentLists()]);
   const [bp, bi, bm] = (sp.built ?? "").split("-").map(Number);
   const q = (sp.q ?? "").toLowerCase().trim();
   const diff = (f: (typeof families)[number]) => f.techsaga_next != null && f.next_due > 0 && Math.abs(f.next_due - f.techsaga_next) > 2;
@@ -24,13 +25,30 @@ export default async function Payments({ searchParams }: { searchParams: Promise
     {unscheduled > 0 && <p className="note msg">{unscheduled} course places have no payment schedule yet. “Create payment schedules” sets one payment per term at the same price TechSaga charged
       (the whole course split evenly over its terms, less the 3- or 5-course discount), and marks the terms TechSaga recorded as paid. Nothing is charged.</p>}
 
-    <div className="tw"><table>
-      <thead><tr><th>Term</th><th>Charged on</th><th>Places</th><th>Due</th><th>Paid</th><th>To collect</th><th>Failed</th></tr></thead>
+    <div className="pgrid2"><div className="dstack" style={{ display: "contents" }}>
+      <section className="card" style={{ margin: 0 }}><h2>Failed payments</h2><p className="cs">Stripe retries automatically after 3 days. You can also contact the family.</p>
+        {lists.failed.length === 0 ? <p className="empty">No failed payments.</p> : lists.failed.map((i) => <div className="li" key={i.id}>
+          <span className="pill bad">Failed</span><div className="t"><b>{i.family} · {money(i.amount)}</b><span>{i.student}, {i.course} · Term {i.term} · due {day(i.due_on)}</span></div>
+          <Link className="abtn sm" href={`/admin/families?q=${encodeURIComponent(i.family)}`}>Family</Link></div>)}</section>
+      <section className="card" style={{ margin: 0 }}><h2>Next 60 days</h2><p className="cs">{lists.upcomingCount} instalment{lists.upcomingCount === 1 ? "" : "s"} scheduled.</p>
+        {lists.upcomingCount === 0 ? <p className="empty">{unscheduled ? "Create the payment schedules to see what’s coming." : "Nothing due in the next 60 days."}</p> :
+        <div className="tw" style={{ border: 0, marginBottom: 0 }}><table><thead><tr><th>Date</th><th>Family</th><th>Course</th><th className="n">Amount</th></tr></thead><tbody>
+          {lists.upcoming.map((i) => <tr key={i.id}><td>{day(i.due_on)}</td><td>{i.family}</td><td>{i.student} · {i.course}</td><td className="n">{money(i.amount)}</td></tr>)}
+        </tbody></table></div>}
+        {lists.upcomingCount > 12 && <p className="note">and {lists.upcomingCount - 12} more</p>}</section>
+    </div></div>
+    <section className="card" style={{ marginTop: 16 }}><h2>By term</h2><p className="cs">{year ? yearLabel(year) : ""} totals across every family.</p>
+      <div className="tw" style={{ border: 0, marginBottom: 0 }}><table>
+      <thead><tr><th>Term</th><th>Bills on</th><th className="n">Places</th><th className="n">Billed</th><th className="n">Collected</th><th className="n">Failed</th><th className="n">To come</th></tr></thead>
       <tbody>{terms.map((t) => <tr key={t.number}>
-        <td><b>Term {t.number}</b></td><td>{day(t.bills_on)}</td><td>{t.places}</td><td>{money(t.due)}</td>
-        <td>{t.paid ? money(t.paid) : <span className="muted">—</span>}</td><td>{t.scheduled ? money(t.scheduled) : <span className="muted">—</span>}</td>
-        <td>{t.failed ? <span className="pill warn">{money(t.failed)}</span> : <span className="muted">—</span>}</td></tr>)}</tbody>
-    </table></div>
+        <td style={{ whiteSpace: "nowrap" }}><b>Term {t.number}</b></td><td>{day(t.bills_on)}</td><td className="n">{t.places}</td><td className="n">{money(t.due)}</td>
+        <td className="n">{t.paid ? money(t.paid) : <span className="muted">—</span>}</td>
+        <td className="n" style={{ color: t.failed ? "var(--bad)" : undefined }}>{t.failed ? money(t.failed) : <span className="muted">—</span>}</td>
+        <td className="n">{t.scheduled ? money(t.scheduled) : <span className="muted">—</span>}</td></tr>)}
+        <tr><td><b>Year</b></td><td /><td /><td className="n"><b>{money(yearTotal)}</b></td><td className="n"><b>{money(yearPaid)}</b></td>
+          <td className="n"><b>{money(terms.reduce((n, t) => n + t.failed, 0))}</b></td><td className="n"><b>{money(terms.reduce((n, t) => n + t.scheduled, 0))}</b></td></tr></tbody>
+      </table></div>
+      <p className="note">Registration fees (£25 per student per year) are collected at checkout and not shown here.</p></section>
 
     <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Families</h2>
     <form className="eform" style={{ marginBottom: 14 }}>
