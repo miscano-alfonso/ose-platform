@@ -371,3 +371,6 @@ html,body{overflow-x:clip}
 /* nine menu items: keep them on one line next to the logo and icons on narrower desktops */
 @media (min-width:1081px) and (max-width:1240px){.s-nav .s-links{gap:4px 10px;font-size:11px;letter-spacing:.04em}.s-logo img{height:46px}}
 @media (min-width:1241px) and (max-width:1360px){.s-nav .s-links{gap:4px 15px;font-size:12px}}
+/* more room above the logo and menu */
+.s-nav .wrap{padding-top:30px;padding-bottom:20px;min-height:108px}
+@media (max-width:1080px){.s-nav .wrap{padding-top:20px;padding-bottom:14px;min-height:86px}}
