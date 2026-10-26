@@ -1,13 +1,35 @@
 import Link from "next/link";
 import { siteText, getFaqs, DEFAULTS, listCoursePages } from "@/lib/site-content";
-import { saveSiteTextAction, saveFaqAction, deleteFaqAction } from "../../actions";
+import { saveSiteTextAction, saveFaqAction, deleteFaqAction, saveBrandAction, resetBrandAction } from "../../actions";
+import { brandSrc } from "@/lib/brand";
 
-export default async function Website({ searchParams }: { searchParams: Promise<{ ok?: string }> }) {
+export default async function Website({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
   const sp = await searchParams;
-  const [txt, faqs, pages] = await Promise.all([siteText(), getFaqs(true), listCoursePages()]);
+  const [txt, faqs, pages, brand] = await Promise.all([siteText(), getFaqs(true), listCoursePages(), brandSrc()]);
   return <>
     <div className="top"><div><h1>Website</h1><div className="sub">Change the text on the website. Saved changes show straight away.</div></div><span className="grow" /><a className="abtn sm" href="/" target="_blank" rel="noreferrer">View the website</a></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}
+    {sp.err && <p className="note msg err">{sp.err}</p>}
+    <section className="card" id="brand"><h2>Logo and browser icon</h2>
+      <div className="brand-grid">
+        <div className="brand-box">
+          <div className="brand-prev"><img src={brand.logo} alt="Current logo" /></div>
+          <p className="muted">Shown in the website menu, the admin and the login page, always on navy, so a white or light logo with a transparent background works best. PNG, SVG, WebP or JPG, up to 1 MB.</p>
+          <form action={saveBrandAction} className="eform"><input type="hidden" name="kind" value="logo" />
+            <input type="file" name="file" accept="image/png,image/svg+xml,image/webp,image/jpeg" required />
+            <button className="abtn pri" type="submit">Upload logo</button></form>
+          {brand.custom.logo && <form action={resetBrandAction}><input type="hidden" name="kind" value="logo" /><button className="abtn sm" type="submit">Go back to the original logo</button></form>}
+        </div>
+        <div className="brand-box">
+          <div className="brand-icons"><span className="tabmock"><img src={brand.icon} alt="Current browser icon" width={16} height={16} />OH-SO ED</span><img src={brand.icon} alt="" width={64} height={64} className="brand-big" /></div>
+          <p className="muted">The small picture in the browser tab and on phone home screens. Use a square image, at least 180 × 180 pixels. PNG or SVG, up to 512 KB.</p>
+          <form action={saveBrandAction} className="eform"><input type="hidden" name="kind" value="icon" />
+            <input type="file" name="file" accept="image/png,image/svg+xml,image/webp,image/jpeg" required />
+            <button className="abtn pri" type="submit">Upload icon</button></form>
+          {brand.custom.icon && <form action={resetBrandAction}><input type="hidden" name="kind" value="icon" /><button className="abtn sm" type="submit">Go back to the original icon</button></form>}
+        </div>
+      </div>
+    </section>
     <form action={saveSiteTextAction} className="card" style={{ display: "grid", gap: 12 }}>
       <h2>Homepage</h2>
       <label className="fld">Small heading<input name="home_eyebrow" maxLength={120} defaultValue={txt.home_eyebrow} style={{ maxWidth: 560 }} /></label>

@@ -140,3 +140,13 @@
 .adm .hubl-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;padding:6px 0 10px}
 .adm .hubl-form .wide{grid-column:1/-1}.adm .hubl-form input:not([type=checkbox]),.adm .hubl-form select,.adm .hubl-form textarea{width:100%}
 .adm .msg.err{border-color:#c0392b;color:#9b1c1c}
+/* Logo and browser icon */
+.adm .brand-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:8px}
+.adm .brand-box{display:grid;gap:10px;align-content:start}
+.adm .brand-box p{margin:0;font-size:14.5px}
+.adm .brand-prev{background:#0f1747;border-radius:12px;padding:22px;display:grid;place-items:center;min-height:120px}
+.adm .brand-prev img{max-height:72px;max-width:100%;width:auto}
+.adm .brand-icons{display:flex;align-items:center;gap:18px;background:var(--soft);border:1px solid var(--line);border-radius:12px;padding:18px;min-height:120px}
+.adm .tabmock{display:inline-flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:8px 8px 0 0;padding:7px 14px;font-size:13.5px}
+.adm .brand-big{border-radius:12px}
+.adm .brand-box input[type=file]{font:inherit;font-size:14px;max-width:100%}

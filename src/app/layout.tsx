@@ -1,11 +1,16 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import { brandSrc } from "@/lib/brand";
 
-export const metadata: Metadata = {
+export async function generateMetadata(): Promise<Metadata> {
+  const { icon } = await brandSrc();
+  return {
   title: { default: "OH-SO ED | Online school for home-educated students", template: "%s | OH-SO ED" },
   description: "Outstanding live online lessons for home-educated students: KS3, pre-GCSE and GCSE courses taught by experienced secondary subject specialists.",
   robots: process.env.SITE_PASSWORD ? { index: false, follow: false } : undefined,
-};
+  icons: { icon: icon, apple: icon },
+  };
+}
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

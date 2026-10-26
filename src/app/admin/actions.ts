@@ -14,6 +14,7 @@ import { replyThread, setThreadStatus, startThread, setHidden, dismissReport, of
 import { saveSiteText, saveFaq, deleteFaq, DEFAULTS, saveCoursePage, saveStyles } from "@/lib/site-content";
 import { cleanStyles } from "@/lib/styles";
 import { saveHubSection, addHubSection, deleteHubSection, saveHubLink, deleteHubLink } from "@/lib/hub";
+import { saveBrandAsset, sniff, BRAND_TYPES } from "@/lib/brand";
 import { saveRules, applyRules, copyRules, saveBundles, ensureSubject, addClass } from "@/lib/rules";
 import { addYear, saveTerms, addHoliday, removeHoliday } from "@/lib/terms-admin";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
@@ -689,4 +690,29 @@ export async function deleteHubLinkAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   await deleteHubLink(me.id, str(f, "id", 40));
   hubDone(); hubBack("Link deleted.", str(f, "section", 40));
+}
+
+// ---- Logo and browser icon ----
+export async function saveBrandAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const kind = str(f, "kind", 10) === "icon" ? "icon" : "logo";
+  const back = (k: "ok" | "err", m: string) => redirect(`/admin/website?${k}=${encodeURIComponent(m)}#brand`);
+  const file = f.get("file");
+  if (!(file instanceof File) || file.size === 0) back("err", "Choose an image file first.");
+  const fl = file as File;
+  const max = kind === "logo" ? 1024 * 1024 : 512 * 1024;
+  if (fl.size > max) back("err", `The ${kind === "logo" ? "logo must be under 1 MB" : "icon must be under 512 KB"}.`);
+  const data = Buffer.from(await fl.arrayBuffer());
+  const mime = sniff(data);
+  if (!mime || !BRAND_TYPES.includes(mime)) back("err", "That file isn't a PNG, SVG, WebP or JPG image.");
+  await saveBrandAsset(me.id, kind, { mime: mime!, data });
+  revalidatePath("/", "layout");
+  back("ok", kind === "logo" ? "New logo saved. It's on the website and admin now." : "New browser icon saved. Browsers can take a few minutes to show it.");
+}
+export async function resetBrandAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const kind = str(f, "kind", 10) === "icon" ? "icon" : "logo";
+  await saveBrandAsset(me.id, kind, null);
+  revalidatePath("/", "layout");
+  redirect(`/admin/website?ok=${encodeURIComponent(kind === "logo" ? "Back to the original logo." : "Back to the original icon.")}#brand`);
 }

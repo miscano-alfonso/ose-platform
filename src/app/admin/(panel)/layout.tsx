@@ -4,17 +4,19 @@ import { withSchool } from "@/lib/db";
 import { signOutAction } from "../actions";
 import { AdminNav } from "../AdminNav";
 import "../admin.css";
+import { brandSrc } from "@/lib/brand";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const me = await requireStaff();
+  const { logo } = await brandSrc();
   const [c] = await withSchool((q) => q<{ enq: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq`));
   return <div className="adm"><div className="app">
     <aside className="side">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <a className="logo" href="/admin"><img src="/ose-logo.png" alt="OH-SO ED admin" width={773} height={224} /></a>
+      <a className="logo" href="/admin"><img src={logo} alt="OH-SO ED admin" width={773} height={224} /></a>
       <AdminNav counts={{ "/admin/enquiries": c.enq }} />
       <div className="who"><span>Signed in as<br /><b>{me.name}</b></span>
         <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form>
