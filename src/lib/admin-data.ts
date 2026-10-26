@@ -60,7 +60,7 @@ export async function getDashboard(): Promise<{ t: DashTiles; attention: Attenti
   });
 }
 
-export type AdminGroup = { homepage: string; homepage_order: number | null; bookable: boolean;
+export type AdminGroup = { homepage: string; homepage_order: number | null; bookable: boolean; meet_url: string | null;
   id: string; code: string; level: string; subject: string; colour: string; teacher: string | null; year_label: string;
   status: string; capacity: number | null; capacity_mode: string; sticky_label: string; taken: number; places_left: number | null;
   is_full: boolean; waiting: number; label: string | null; slots: string | null; waitlist_threshold: number;
@@ -68,7 +68,7 @@ export type AdminGroup = { homepage: string; homepage_order: number | null; book
 export async function getGroups(): Promise<AdminGroup[]> {
   return withSchool((q) => q<AdminGroup>(`
     select g.id, g.code, l.name as level, sj.name as subject, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, y.label as year_label,
-           g.status::text, g.capacity, g.capacity_mode::text, g.sticky_label::text, g.homepage, g.homepage_order, a.bookable, a.taken, a.places_left, a.is_full, a.waiting, a.label, g.waitlist_threshold,
+           g.status::text, g.capacity, g.capacity_mode::text, g.sticky_label::text, g.homepage, g.homepage_order, g.meet_url, a.bookable, a.taken, a.places_left, a.is_full, a.waiting, a.label, g.waitlist_threshold,
            (select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end
               || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id) as slots
     from course_groups g join course_group_availability a on a.group_id = g.id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id

@@ -55,6 +55,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
                   <label className="fld">Status<select name="status" defaultValue={g.status}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
                   <label className="fld">Space Available on homepage<select name="homepage" defaultValue={g.homepage}>{Object.entries(HOME).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
                   <label className="fld">Position<input type="number" name="homepage_order" min={1} max={99} placeholder="Auto" defaultValue={g.homepage_order ?? ""} style={{ width: 80 }} /></label>
+                  <label className="fld">Google Meet link<input type="url" name="meet_url" placeholder="https://meet.google.com/abc-defg-hij" defaultValue={g.meet_url ?? ""} style={{ width: 300 }} /></label>
                   <button className="abtn pri" type="submit">Save</button>
                 </form></details></td></tr>
           </tbody>;

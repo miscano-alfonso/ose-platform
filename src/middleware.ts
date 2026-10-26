@@ -6,7 +6,7 @@ export function middleware(req: NextRequest) {
   const pass = process.env.SITE_PASSWORD;
   if (!pass) return NextResponse.next();
   // pictures and link previews that Facebook and Instagram fetch for Social posts stay reachable
-  if (/^\/(social-img|s|newsletter|teacher-photo|brand)\/|^\/teachers\/[\w.-]+\.(webp|jpe?g|png)$/.test(req.nextUrl.pathname)) return NextResponse.next();
+  if (/^\/api\/cron\/|^\/(social-img|s|newsletter|teacher-photo|brand)\/|^\/teachers\/[\w.-]+\.(webp|jpe?g|png)$/.test(req.nextUrl.pathname)) return NextResponse.next();
   const auth = req.headers.get("authorization") || "";
   const [scheme, encoded] = auth.split(" ");
   if (scheme === "Basic" && encoded) {

@@ -241,3 +241,19 @@ export async function setTasterStatus(actorId: string, id: string, status: strin
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'status', 'taster', $2, $3)`, [actorId, id, JSON.stringify({ status })]);
   });
 }
+
+/** Lesson dates follow the timetable on their own: every term of this year and next gets a dated lesson for each weekly
+ *  lesson time (holidays skipped). Safe to run often: existing dates are kept, and untouched future dates that now fall
+ *  in a holiday are removed. Runs whenever attendance, a teacher's day or the Meet sync needs them, and after timetable or term changes. */
+export async function ensureLessonDates(): Promise<number> {
+  return withSchool(async (q) => {
+    let n = 0;
+    const terms = await q<{ id: string }>(`select t.id from terms t join academic_years y on y.id = t.academic_year_id where y.ends_on >= current_date order by t.starts_on`);
+    for (const t of terms) n += (await q<{ n: number }>(`select generate_lesson_events($1) as n`, [t.id]))[0].n;
+    await q(`delete from lesson_events e where e.status = 'scheduled' and e.lesson_date > current_date
+      and exists (select 1 from holidays h where h.school_id = e.school_id and e.lesson_date between h.starts_on and h.ends_on)
+      and not exists (select 1 from attendance_marks m where m.lesson_event_id = e.id) and not exists (select 1 from taster_bookings b where b.lesson_event_id = e.id and b.status <> 'cancelled')
+      and not exists (select 1 from absence_notices a where a.lesson_event_id = e.id)`);
+    return n;
+  });
+}

@@ -1,5 +1,6 @@
 import "server-only";
 import { withSchool } from "./db";
+import { ensureLessonDates } from "./ops";
 
 // What a teacher sees in their own area (as in the prototype's teacher view: My day, 1:1s and workshops,
 // Messages, Class chats, Reward points, Reports to write, My timetable, My pay). Every query is limited to
@@ -19,6 +20,7 @@ export type MyDay = {
 };
 
 export async function myDay(userId: string): Promise<MyDay> {
+  await ensureLessonDates().catch(() => 0);
   return withSchool(async (q) => {
     const term = (await q<{ id: string; name: string; pay_date: string }>(`select id, name, term_pay_date(id)::text as pay_date from terms where id = ${TERM_NOW.replace("$1", "")}`))[0] ?? null;
     const [{ classes }] = await q<{ classes: number }>(`select count(*)::int as classes from course_groups g where g.teacher_id = ${ME} and g.academic_year_id = ${YEAR_NOW} and g.status <> 'hidden'`, [userId]);

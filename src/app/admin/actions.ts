@@ -19,7 +19,7 @@ import { createJob, saveJob, deleteJob, setApplication, deleteApplication, setAl
 import { saveRules, applyRules, copyRules, saveBundles, ensureSubject, addClass, saveNotice, saveCoupon, setCouponActive } from "@/lib/rules";
 import { addYear, saveTerms, addHoliday, removeHoliday } from "@/lib/terms-admin";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
-import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
+import { ensureLessonDates, addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
 import { markOneTaught, undoPoints, addMyHours, removeMyHours, teacherPost } from "@/lib/teacher-area";
 import { requireViewer } from "@/lib/auth";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite, VIEWAS_COOKIE } from "@/lib/auth";
@@ -73,7 +73,9 @@ export async function updateGroupAction(f: FormData) {
   const mode = str(f, "capacity_mode"), label = str(f, "sticky_label"), status = str(f, "status"), homepage = str(f, "homepage") || "auto";
   const orderRaw = str(f, "homepage_order", 3), homepageOrder = orderRaw === "" ? null : Math.max(1, Math.min(99, parseInt(orderRaw, 10) || 1));
   if (!MODES.includes(mode) || !LABELS.includes(label) || !STATUSES.includes(status) || !HOMEPAGE.includes(homepage)) return;
+  const meetRaw = str(f, "meet_url", 200), meet = /^https:\/\/meet\.google\.com\/[a-z]{3}-?[a-z]{4}-?[a-z]{3}\b/i.test(meetRaw) ? meetRaw.split("?")[0] : meetRaw === "" ? null : undefined;
   await withSchool(async (q) => {
+    if (meet !== undefined) await q(`update course_groups set meet_url = $2 where id = $1`, [id, meet]);
     const before = await q(`select capacity, capacity_mode, sticky_label, status, homepage, homepage_order from course_groups where id = $1`, [id]);
     if (!before[0]) return;
     await q(`update course_groups set capacity = $2, capacity_mode = $3::capacity_mode, sticky_label = $4::sticky_label, status = $5::group_status, homepage = $6, homepage_order = $7 where id = $1`,
@@ -207,6 +209,7 @@ export async function addSlotAction(f: FormData): Promise<void> {
   const day = parseInt(str(f, "weekday", 1), 10), start = str(f, "start", 5), mins = parseInt(str(f, "minutes", 3), 10) || 45;
   if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(start) || mins < 15 || mins > 180) return back("/admin/timetable", "Pick a day, a start time and a length.", "");
   const err = await addSlot(me.id, str(f, "group", 40), day, start, mins, str(f, "teacher", 40) || null);
+  if (!err) await ensureLessonDates().catch(() => 0);
   revalidatePath("/admin/timetable"); revalidatePath("/timetable"); revalidatePath("/courses");
   back("/admin/timetable", err, "Lesson time added.");
 }
@@ -654,6 +657,7 @@ export async function saveTermsAction(f: FormData): Promise<void> {
   if (rows.some((r) => !ISO.test(r.starts) || !ISO.test(r.ends) || !ISO.test(r.bills) || r.ends < r.starts)) return termBack(year, "err", "Every term needs a first and last day (last after first) and a payment date.");
   if (rows.some((r, i) => i > 0 && r.starts <= rows[i - 1].ends)) return termBack(year, "err", "Each term must start after the previous one ends.");
   const r = await saveTerms(me.id, year, rows);
+  if (!r.error) await ensureLessonDates().catch(() => 0);
   revalidatePath("/", "layout");
   termBack(year, r.error ? "err" : "ok", r.error ?? `Term dates saved and this year’s prices updated${r.moved ? ` (${r.moved} classes moved plan)` : ""}.`);
 }
@@ -661,11 +665,11 @@ export async function addHolidayAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const year = str(f, "year", 40) || null, s1 = str(f, "starts", 10), e1 = str(f, "ends", 10);
   if (!ISO.test(s1) || !ISO.test(e1) || e1 < s1) return termBack(year, "err", "Check the holiday dates.");
-  await addHoliday(me.id, str(f, "name", 80), s1, e1); revalidatePath("/admin/term-dates"); termBack(year, "ok", "Holiday added.");
+  await addHoliday(me.id, str(f, "name", 80), s1, e1); await ensureLessonDates().catch(() => 0); revalidatePath("/admin/term-dates"); termBack(year, "ok", "Holiday added.");
 }
 export async function removeHolidayAction(f: FormData): Promise<void> {
   const me = await requireStaff();
-  await removeHoliday(me.id, str(f, "id", 40)); revalidatePath("/admin/term-dates"); termBack(str(f, "year", 40) || null, "ok", "Holiday removed.");
+  await removeHoliday(me.id, str(f, "id", 40)); await ensureLessonDates().catch(() => 0); revalidatePath("/admin/term-dates"); termBack(str(f, "year", 40) || null, "ok", "Holiday removed.");
 }
 
 export async function saveStylesAction(f: FormData): Promise<void> {
@@ -856,4 +860,44 @@ export async function undoPointsAction(f: FormData): Promise<void> {
   const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
   const err = await undoPoints(me.id, str(f, "id", 40), real.id);
   tback("/admin/points", "Points taken back.", err);
+}
+
+// ---------- attendance from Google Meet ----------
+const attBack = (tab: string, ok?: string | null, err?: string | null) => redirect(`/admin/attendance?tab=${tab}` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
+export async function saveGoogleAppAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { saveApp, MeetError } = await import("@/lib/meet");
+  let err: string | null = null;
+  try { await saveApp(str(f, "client_id", 200), str(f, "client_secret", 200)); } catch (e) { err = e instanceof MeetError ? e.message : "Couldn’t save that."; }
+  attBack("google", "Saved. Now press Connect Google.", err);
+}
+export async function disconnectGoogleAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { disconnect } = await import("@/lib/meet");
+  await disconnect(str(f, "forget", 3) === "1");
+  attBack("google", "Google disconnected. Attendance already taken is kept.");
+}
+export async function syncMeetAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { syncMeet, MeetError } = await import("@/lib/meet");
+  const from = str(f, "from", 10);
+  let ok: string | null = null, err: string | null = null;
+  try {
+    const r = await syncMeet(me.name, /^\d{4}-\d\d-\d\d$/.test(from) ? from : undefined);
+    if (r.error) err = r.error; else ok = `Synced: ${r.joins} new Meet join${r.joins === 1 ? "" : "s"} across ${r.lessons} lesson${r.lessons === 1 ? "" : "s"}${r.unmatched ? `; ${r.unmatched} to check` : ""}.`;
+  } catch (e) { err = e instanceof MeetError ? e.message : "Couldn’t sync with Google. Try again."; console.error("meet sync", e); }
+  attBack(str(f, "tab", 20) || "students", ok, err);
+}
+export async function saveAlertAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { saveAlert } = await import("@/lib/meet");
+  await saveAlert(f.get("on") === "on", Number(str(f, "pct", 3)));
+  attBack(str(f, "tab", 20) || "students", "Weekly alert saved.");
+}
+export async function matchJoinAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { matchJoin } = await import("@/lib/meet");
+  const sid = str(f, "student", 40);
+  const err = await matchJoin(me.id, str(f, "id", 40), f.get("ignore") ? null : sid || null);
+  attBack("joins", f.get("ignore") ? "Marked as not a student." : "Matched. Their attendance is updated.", err);
 }
