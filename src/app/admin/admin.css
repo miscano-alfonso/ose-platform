@@ -133,3 +133,10 @@
 .adm .sb-frame iframe{border:0;display:block;background:#fff}
 .adm .sb-cap{margin:0;font-size:13.5px}
 @media (max-width:1000px){.adm .sb{grid-template-columns:1fr}.adm .sb-side{position:static;max-height:none}.adm .sb-view{height:70vh}}
+/* Home Ed hub editor */
+.adm .hubl{border-top:1px solid var(--line)}
+.adm .hubl summary{cursor:pointer;display:flex;justify-content:space-between;gap:12px;padding:9px 2px;font-weight:500}
+.adm .hubl summary .muted{font-size:14px;white-space:nowrap}
+.adm .hubl-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;padding:6px 0 10px}
+.adm .hubl-form .wide{grid-column:1/-1}.adm .hubl-form input:not([type=checkbox]),.adm .hubl-form select,.adm .hubl-form textarea{width:100%}
+.adm .msg.err{border-color:#c0392b;color:#9b1c1c}

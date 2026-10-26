@@ -13,6 +13,7 @@ import { audiences, recipients, sendBatch, logCampaign } from "@/lib/email";
 import { replyThread, setThreadStatus, startThread, setHidden, dismissReport, officePost, setWords, setPrizes, confirmWinners, markWinner, givePoints } from "@/lib/community";
 import { saveSiteText, saveFaq, deleteFaq, DEFAULTS, saveCoursePage, saveStyles } from "@/lib/site-content";
 import { cleanStyles } from "@/lib/styles";
+import { saveHubSection, addHubSection, deleteHubSection, saveHubLink, deleteHubLink } from "@/lib/hub";
 import { saveRules, applyRules, copyRules, saveBundles, ensureSubject, addClass } from "@/lib/rules";
 import { addYear, saveTerms, addHoliday, removeHoliday } from "@/lib/terms-admin";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
@@ -646,4 +647,46 @@ export async function saveStylesAction(f: FormData): Promise<void> {
   try { raw = JSON.parse(String(f.get("styles") ?? "")); } catch { /* treated as empty */ }
   await saveStyles(me.id, cleanStyles(raw));
   revalidatePath("/", "layout"); redirect(`/admin/styles?ok=${encodeURIComponent("Saved. The website uses the new sizes now.")}`);
+}
+
+// ---- 'New to Home Ed?' hub ----
+const hubBack = (msg: string, section?: string, err = false) =>
+  redirect(`/admin/home-ed?${err ? "err" : "ok"}=${encodeURIComponent(msg)}${section ? `&s=${section}#s-${section}` : ""}`);
+const hubDone = () => { revalidatePath("/home-ed"); revalidatePath("/admin/home-ed"); };
+
+export async function saveHubSectionAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40), title = str(f, "title", 120);
+  if (!title) hubBack("A section needs a heading.", id, true);
+  await saveHubSection(me.id, id, { title, intro: String(f.get("intro") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 2000), sort: parseInt(str(f, "sort", 6), 10) || 0, published: f.get("published") === "on" });
+  hubDone(); hubBack("Section saved.", id);
+}
+export async function addHubSectionAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const title = str(f, "title", 120); if (!title) hubBack("A section needs a heading.", undefined, true);
+  const id = await addHubSection(me.id, title);
+  hubDone(); hubBack("Section added. Now add its links.", id);
+}
+export async function deleteHubSectionAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  if (f.get("confirm") !== "on") hubBack("Tick the box to confirm.", undefined, true);
+  await deleteHubSection(me.id, str(f, "id", 40));
+  hubDone(); hubBack("Section deleted.");
+}
+export async function saveHubLinkAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40) || null, section = str(f, "section", 40);
+  const kind = (["link", "video", "date"] as const).find((k) => k === str(f, "kind", 10)) ?? "link";
+  const title = str(f, "title", 200), url = str(f, "url", 1000);
+  if (!title) hubBack("A link needs a title.", section, true);
+  if (url && !/^https:\/\/[^\s]+\.[^\s]+$/.test(url)) hubBack("Links must start with https://", section, true);
+  if (!url && kind !== "date") hubBack("Add the web address, or choose the Date type.", section, true);
+  await saveHubLink(me.id, id, section, { kind, title, url, grp: str(f, "grp", 80), description: String(f.get("description") ?? "").replace(/\s+/g, " ").trim().slice(0, 1000),
+    sort: parseInt(str(f, "sort", 6), 10), published: f.get("published") === "on" });
+  hubDone(); hubBack(id ? "Link saved." : "Link added.", section);
+}
+export async function deleteHubLinkAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  await deleteHubLink(me.id, str(f, "id", 40));
+  hubDone(); hubBack("Link deleted.", str(f, "section", 40));
 }

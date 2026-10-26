@@ -7,7 +7,7 @@ import { stylesCss } from "@/lib/styles";
 
 // same order as the current website's menu
 const NAV = [["Courses", "/courses"], ["Other services", "/other-services"], ["Term dates", "/term-dates"], ["Teachers", "/teachers"],
-  ["Prices", "/pricing"], ["Timetable", "/timetable"], ["FAQs", "/faq"], ["Contact", "/contact"]];
+  ["Prices", "/pricing"], ["Timetable", "/timetable"], ["FAQs", "/faq"], ["New to Home Ed?", "/home-ed"], ["Contact", "/contact"]];
 
 const Cart = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6h15l-1.5 9h-12z" /><path d="M6 6 5 3H2" /><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /></svg>;
 const Person = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>;

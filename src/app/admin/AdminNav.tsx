@@ -12,7 +12,7 @@ const DAILY: Item[] = [
 ];
 const GROUPS: [string, Item[]][] = [
   ["Year setup", [["Term dates", "/admin/term-dates"], ["Prices & rules", "/admin/prices"], ["Classes", "/admin/classes"], ["Timetable", "/admin/timetable"]]],
-  ["Settings", [["Teachers", "/admin/teachers"], ["Website", "/admin/website"], ["Page styles", "/admin/styles"], ["Staff & access", "/admin/staff"], ["Account", "/admin/account"]]],
+  ["Settings", [["Teachers", "/admin/teachers"], ["Website", "/admin/website"], ["Home Ed hub", "/admin/home-ed"], ["Page styles", "/admin/styles"], ["Staff & access", "/admin/staff"], ["Account", "/admin/account"]]],
 ];
 
 export function AdminNav({ counts }: { counts: Record<string, number> }) {
