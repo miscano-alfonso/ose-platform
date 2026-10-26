@@ -11,6 +11,7 @@ import { brandSrc } from "@/lib/brand";
 import { cookies } from "next/headers";
 import { schoolsFor, siteSchool, SCHOOL_COOKIE } from "@/lib/db";
 import { Switchers } from "../Switchers";
+import { Assistant } from "../Assistant";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
@@ -25,11 +26,13 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     withSchool((q) => q<{ enq: number; jobs: number; failed: number; tasters: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq, (select count(*)::int from job_applications where status = 'new') as jobs,
       (select count(*)::int from instalments where status = 'failed') as failed, 0 as tasters`)));
   const jar = await cookies();
+  const brand = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string } }>(`select brand from schools where id = current_school()`)))[0]?.brand ?? {};
+  const hex = (v: unknown, d: string) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
   const [schools, teachers] = await Promise.all([schoolsFor(me.email), withSchool((q) => q<{ id: string; name: string }>(`select u.id, u.name from teachers t join users u on u.id = t.user_id where t.archived_at is null and u.disabled_at is null order by u.name`))]);
   const school = jar.get(SCHOOL_COOKIE)?.value || siteSchool();
   const views = [{ value: "admin", label: "Admin" }, ...teachers.map((t) => ({ value: `t:${t.id}`, label: `Teacher: ${t.name}` })),
     { value: "p", label: "Parent (coming soon)", disabled: true }, { value: "s", label: "Student (coming soon)", disabled: true }];
-  return <div className="adm"><DashStyles /><div className="app">
+  return <div className="adm" style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b") }}><DashStyles /><div className="app">
     <aside className="side">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <a className="logo" href="/admin" title="Dashboard"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></a>
@@ -40,5 +43,6 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         <a href="/" style={{ color: "#c9cde4", fontSize: 15.5 }}>View the website</a></div>
     </aside>
     <main className="main">{children}</main>
+    <Assistant />
   </div></div>;
 }

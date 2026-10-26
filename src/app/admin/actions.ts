@@ -816,3 +816,13 @@ export async function stopViewingAction(): Promise<void> {
   (await cookies()).delete({ name: VIEWAS_COOKIE, path: "/admin" });
   redirect("/admin");
 }
+export async function saveSchoolAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const name = str(f, "name", 80), legal = str(f, "legal", 120), hex = (k: string, d: string) => /^#[0-9a-f]{6}$/i.test(str(f, k, 7)) ? str(f, k, 7) : d;
+  if (!name) redirect(`/admin/school?err=${encodeURIComponent("The school needs a name.")}`);
+  await withSchool(async (q) => {
+    await q(`update schools set name = $1, legal_name = nullif($2, ''), brand = brand || jsonb_build_object('primary', $3::text, 'accent', $4::text) where id = current_school()`, [name, legal, hex("primary", "#0f1747"), hex("accent", "#e3cd4b")]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'update', 'school', $2)`, [me.id, JSON.stringify({ name })]);
+  });
+  revalidatePath("/admin", "layout"); redirect(`/admin/school?ok=${encodeURIComponent("Saved.")}`);
+}

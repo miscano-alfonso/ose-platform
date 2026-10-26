@@ -591,3 +591,4 @@ export async function socialBackground() {
   try { await runDue(2); } catch { /* next visit */ }
   try { await weeklyMaybe(); } catch { /* next visit */ }
 }
+export const getAiConfig = () => aiCfg();
