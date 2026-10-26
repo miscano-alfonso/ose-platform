@@ -4,6 +4,7 @@ import { StyleBridge } from "./StyleBridge";
 import { getStyles } from "@/lib/site-content";
 import { stylesCss, fontsHref } from "@/lib/styles";
 import { brandSrc } from "@/lib/brand";
+import { NewsletterForm } from "./NewsletterForm";
 
 
 // same order as the current website's menu
@@ -31,6 +32,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <div><div className="fl">OH-SO ED</div><p>Outstanding online education for home-educated students.</p>
             <h2 className="fh fh-follow">Follow us</h2><ul><li>Facebook /ohsoedonline</li><li>LinkedIn /ohsoed</li></ul></div>
           <div className="fquick"><h2 className="fh">Quick links</h2><ul className="fcols"><li><Link href="/about">About us</Link></li>{NAV.map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}<li><Link href="/jobs">Jobs</Link></li></ul></div>
+          <NewsletterForm />
         </div><div className="wrap copy"><span>© {new Date().getFullYear()} Oh-so Educate Ltd</span><Link href="/admin/login" className="adminlink">Admin login</Link></div></footer>
       </>);
 }

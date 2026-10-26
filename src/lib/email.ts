@@ -1,9 +1,17 @@
 import "server-only";
 import { withSchool } from "./db";
 
-// Sending email through Brevo (transactional API). Needs BREVO_API_KEY and a sender verified in Brevo.
-export const emailReady = () => !!(process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL);
-const SENDER = () => ({ email: process.env.BREVO_SENDER_EMAIL!, name: process.env.BREVO_SENDER_NAME || "OH-SO ED" });
+// Sending email through Brevo (transactional API). The account is either set in the environment (BREVO_API_KEY and
+// BREVO_SENDER_EMAIL) or connected in Admin → Newsletter (key and verified sender kept in the database).
+type Creds = { key: string; email: string; name: string };
+async function creds(): Promise<Creds | null> {
+  if (process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL) return { key: process.env.BREVO_API_KEY, email: process.env.BREVO_SENDER_EMAIL, name: process.env.BREVO_SENDER_NAME || "OH-SO ED" };
+  const c = await withSchool((q) => q<{ value: { key?: string; senderEmail?: string; senderName?: string } }>(`select value from newsletter_kv where key = 'brevo'`)).then((r) => r[0]?.value).catch(() => undefined);
+  return c?.key && c.senderEmail ? { key: c.key, email: c.senderEmail, name: c.senderName || "OH-SO ED" } : null;
+}
+/** True when email can be sent (Brevo set up in the environment, or connected under Newsletter). */
+export const emailReady = async () => !!(await creds());
+const SMTP_URL = () => process.env.BREVO_API_URL || (process.env.BREVO_API_BASE ? process.env.BREVO_API_BASE.replace(/\/?$/, "/") + "smtp/email" : "https://api.brevo.com/v3/smtp/email");
 
 export type Recipient = { name: string; email: string };
 export type Audience = { value: string; label: string };
@@ -44,13 +52,14 @@ function html(body: string, marketing: boolean) {
 
 /** Sends one email per recipient (nobody sees anyone else's address), in batches. Returns how many were accepted by Brevo. */
 export async function sendBatch(subject: string, body: string, to: Recipient[], marketing: boolean): Promise<{ sent: number; failed: number; error?: string }> {
-  if (!emailReady()) return { sent: 0, failed: to.length, error: "Brevo isn’t connected yet." };
+  const c = await creds();
+  if (!c) return { sent: 0, failed: to.length, error: "Brevo isn’t connected yet." };
   let sent = 0, failed = 0, error: string | undefined;
   for (let i = 0; i < to.length; i += 500) {
     const chunk = to.slice(i, i + 500);
-    const res = await fetch(process.env.BREVO_API_URL || "https://api.brevo.com/v3/smtp/email", {
-      method: "POST", headers: { "api-key": process.env.BREVO_API_KEY!, "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ sender: SENDER(), subject, htmlContent: html(body, marketing), textContent: body,
+    const res = await fetch(SMTP_URL(), {
+      method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ sender: { email: c.email, name: c.name }, subject, htmlContent: html(body, marketing), textContent: body,
         messageVersions: chunk.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [marketing ? "marketing" : "admin-message"] }),
     }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
     if (res.ok) sent += chunk.length; else { failed += chunk.length; error = `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}`; }
@@ -70,13 +79,14 @@ export async function history(kind: string) {
 }
 
 /** Sends a ready-made HTML email (one per address). Used by Social's weekly report. */
-export async function sendHtml(subject: string, htmlContent: string, to: string[]): Promise<{ ok: boolean; error?: string }> {
-  if (!emailReady()) return { ok: false, error: "Brevo isn’t connected yet." };
+export async function sendHtml(subject: string, htmlContent: string, to: string[], tag?: string): Promise<{ ok: boolean; error?: string }> {
+  const c = await creds();
+  if (!c) return { ok: false, error: "Brevo isn’t connected yet." };
   if (!to.length) return { ok: false, error: "No one to send it to." };
   const textContent = htmlContent.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim().slice(0, 5000);
-  const res = await fetch(process.env.BREVO_API_URL || "https://api.brevo.com/v3/smtp/email", {
-    method: "POST", headers: { "api-key": process.env.BREVO_API_KEY!, "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ sender: SENDER(), subject, htmlContent, textContent, messageVersions: to.map((email) => ({ to: [{ email }] })), tags: ["social-report"] }),
+  const res = await fetch(SMTP_URL(), {
+    method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ sender: { email: c.email, name: c.name }, subject, htmlContent, textContent, messageVersions: to.map((email) => ({ to: [{ email }] })), tags: [tag || "social-report"] }),
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
   return res.ok ? { ok: true } : { ok: false, error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
 }

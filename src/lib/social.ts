@@ -16,7 +16,7 @@ const fail = (msg: string, status = 400): never => { throw new SocialError(msg, 
 // ---------- the items to post about ----------
 export type SocialItem = {
   id: string; kind: "course" | "workshop"; title: string; subtitle: string; summary: string; partner: string; cover: string; tileColor: string;
-  status: "space" | "next" | "full" | "workshop"; pubDate: string; category: string; subject: string; specs: string; topics: string[]; link: string; places: number | null;
+  status: "space" | "next" | "full" | "workshop"; pubDate: string; category: string; subject: string; specs: string; topics: string[]; link: string; places: number | null; price: string;
 };
 const plain = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/[*_#>`]/g, "").replace(/\s+/g, " ").trim();
 const list = (a: string[]) => a.length <= 1 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
@@ -56,6 +56,7 @@ export async function socialItems(): Promise<SocialItem[]> {
       partner: lead.teacher ?? "", cover: lead.teacher_photo ?? "", tileColor: lead.colour || "#8494c2", status,
       pubDate: status === "next" ? next[0].year_start : "", category: lead.level, subject: lead.subject,
       specs: [lessons, `${lead.course_years}-year course`, p?.exam_board ?? ""].filter(Boolean).join(" · "), topics, link: `/courses/${slug}`, places: places === 99 ? null : places,
+      price: lead.course_total_pence ? `£${(lead.course_total_pence / 100).toFixed(2).replace(/\.00$/, "")}${lead.course_years > 1 ? ` for ${lead.course_years} years` : " a year"}` : "",
     });
   }
   for (const w of workshops) {
@@ -63,7 +64,7 @@ export async function socialItems(): Promise<SocialItem[]> {
       id: "w." + w.slug, kind: "workshop", title: w.title, subtitle: [w.level, w.subject].filter(Boolean).join(" "), summary: plain(w.summary ?? "").slice(0, 700),
       partner: w.teacher ?? "", cover: w.image_url || w.photo || "", tileColor: w.colour || "#0f1747", status: "workshop", pubDate: w.starts_at.slice(0, 10),
       category: "Workshop", subject: w.subject ?? "", specs: [`${w.minutes} minutes`, w.price_pence ? `£${(w.price_pence / 100).toFixed(2).replace(/\.00$/, "")}` : "Free"].join(" · "),
-      topics: [], link: "/other-services#workshops", places: w.places_left,
+      topics: [], link: "/other-services#workshops", places: w.places_left, price: w.price_pence ? `£${(w.price_pence / 100).toFixed(2).replace(/\.00$/, "")}` : "Free",
     });
   }
   return out;
@@ -557,7 +558,7 @@ function momentsEmail(m: Moments, added: Moment[], items: SocialItem[], base: st
     + `</table></td></tr></table></body></html>`;
 }
 export async function sendTestReport(to: string) {
-  if (!emailReady()) fail("Email isn’t connected yet (Brevo), so the report can’t be sent.");
+  if (!(await emailReady())) fail("Email isn’t connected yet (Brevo), so the report can’t be sent.");
   const m = await momentsLoad(); const base = await siteBase();
   const recent = m.items.filter((x) => x.addedAt && Date.parse(x.addedAt) > Date.now() - 7 * 86400000);
   const r = await sendHtml("OH-SO ED social: upcoming moments (test)", momentsEmail(m, recent, await socialItems(), base, true), [to]);
@@ -577,7 +578,7 @@ export async function weeklyMaybe() {
   try {
     const [mm, added] = await scanRun("weekly");
     mm.lastAuto = new Date().toISOString(); await momentsSave(mm);
-    if (emailReady()) {
+    if (await emailReady()) {
       const base = await siteBase();
       const subj = added.length ? `OH-SO ED social: ${added.length} new moment${added.length === 1 ? "" : "s"} this week` : "OH-SO ED social: upcoming moments";
       await sendHtml(subj, momentsEmail(mm, added, await socialItems(), base), await momentsRecipients(mm));

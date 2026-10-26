@@ -8,7 +8,7 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
   const auds = await audiences();
   const options = await Promise.all(auds.map(async (a) => ({ ...a, count: (await recipients(a.value)).length })));
   const past = await history("message");
-  const ready = emailReady();
+  const ready = await emailReady();
   return <>
     <div className="top"><div><h1>Email</h1><div className="sub">Send a message to every family, a level, a class or the teachers.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}

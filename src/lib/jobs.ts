@@ -131,7 +131,7 @@ export async function setAlertEmail(actor: string, email: string) {
 /** Short email to the office; never includes the applicant's documents. Quietly does nothing until Brevo is set up. */
 export async function sendApplicationAlert(job: Job, applicant: string, appId: string, origin: string) {
   const to = await getAlertEmail();
-  if (!to || !emailReady()) return;
+  if (!to || !(await emailReady())) return;
   await sendBatch(`New application: ${job.title}`,
     `${applicant} has applied for ${job.title}.\n\nPGCE evidence and two referees were provided.\n\nRead the application in the admin:\n${origin}/admin/jobs/application/${appId}`,
     [{ name: "OH-SO ED office", email: to }], false).catch(() => {});

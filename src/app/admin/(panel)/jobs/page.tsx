@@ -32,7 +32,7 @@ export default async function JobsAdmin({ searchParams }: { searchParams: Promis
     </tbody></table></div>
 
     <form action={saveAlertEmailAction} className="card" style={{ display: "grid", gap: 10 }}><h2>Application alerts</h2>
-      <p className="muted" style={{ margin: 0 }}>When someone applies, a short email goes to this address with a link to the application. It never includes the applicant’s documents.{!emailReady() && " Emails start once the Brevo keys are added in Vercel."}</p>
+      <p className="muted" style={{ margin: 0 }}>When someone applies, a short email goes to this address with a link to the application. It never includes the applicant’s documents.{!(await emailReady()) && " Emails start once Brevo is connected (Admin → Newsletter)."}</p>
       <div className="eform"><label className="fld">Send alerts to<input name="email" type="email" maxLength={200} defaultValue={alert} placeholder="office@ohsoed.co.uk" style={{ width: 320 }} /></label><button className="abtn" type="submit">Save</button></div>
     </form>
   </>;
