@@ -29,7 +29,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         <main id="main">{children}</main>
         <footer className="s-foot"><div className="wrap fgrid">
           <div><div className="fl">OH-SO ED</div><p>Outstanding online education for home-educated students.</p></div>
-          <div><h2 className="fh">Quick links</h2><ul>{NAV.map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}<li><Link href="/jobs">Jobs</Link></li></ul></div>
+          <div><h2 className="fh">Quick links</h2><ul><li><Link href="/about">About us</Link></li>{NAV.map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}<li><Link href="/jobs">Jobs</Link></li></ul></div>
           <div><h2 className="fh">Follow us</h2><ul><li>Facebook /ohsoedonline</li><li>LinkedIn /ohsoed</li></ul></div>
         </div><div className="wrap copy"><span>© {new Date().getFullYear()} Oh-so Educate Ltd</span><Link href="/admin/login" className="adminlink">Admin login</Link></div></footer>
       </>);

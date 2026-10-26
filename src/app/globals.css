@@ -468,3 +468,15 @@ html,body{overflow-x:clip}
 .member-card p{margin:0;line-height:1.65;color:var(--ink)}.member-card a{color:var(--brand);font-weight:500}
 .member-links{font-size:14.5px}
 .calc-cta{display:flex;justify-content:center;margin-top:36px}
+/* Facebook reviews: the widget's own button, restyled as ours */
+.rev-widget .rev-ose-btn{background:var(--navy)!important;color:#fff!important;border:2px solid var(--navy)!important;border-radius:999px!important;font:600 15px/1 "Jost",sans-serif!important;letter-spacing:.06em!important;text-transform:uppercase!important;padding:14px 24px!important;text-decoration:none!important;transition:background-color .15s,color .15s}
+.rev-widget .rev-ose-btn:hover{background:#fff!important;color:var(--navy)!important}
+.rev-widget .rev-ose-btn *{color:inherit!important;font:inherit!important}
+.rev-fallback{text-align:center;margin-top:8px}
+/* About page */
+.about-grid{display:grid;grid-template-columns:minmax(0,.7fr) minmax(0,1fr);gap:clamp(24px,5vw,64px);align-items:start;max-width:1040px;margin:0 auto}
+.about-photo{position:sticky;top:110px}
+.about-text p{font-size:18px;line-height:1.65;margin:0 0 16px}
+.about-text .about-hello{font:600 24px/1.35 "Jost",sans-serif;color:var(--navy)}
+.about-text .btns{display:flex;flex-wrap:wrap;gap:12px;margin-top:10px}
+@media (max-width:820px){.about-grid{grid-template-columns:1fr}.about-photo{position:static;max-width:260px}}

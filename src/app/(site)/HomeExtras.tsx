@@ -1,5 +1,5 @@
 import Link from "next/link";
-import Script from "next/script";
+import { ReviewsWidget } from "./ReviewsWidget";
 
 // Bottom of the homepage, as on ohsoed.co.uk: Meet the Headteacher, Facebook reviews and Member Of.
 export function MeetHead({ title, text }: { title: string; text: string }) {
@@ -7,7 +7,7 @@ export function MeetHead({ title, text }: { title: string; text: string }) {
     <div className="sec-head"><h2>{title}</h2></div>
     <div className="head-grid">
       <div className="head-text">{text.split("\n").filter((p) => p.trim()).map((p, i) => <p key={i}>{p}</p>)}
-        <div className="btns"><Link className="btn btn-brand" href="/teachers/leanne-iacurci">More about us</Link><Link className="btn btn-ghost hub-ghost" href="/teachers">Meet the team</Link></div></div>
+        <div className="btns"><Link className="btn btn-brand" href="/about">More about us</Link><Link className="btn btn-ghost hub-ghost" href="/teachers">Meet the team</Link></div></div>
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img className="head-photo" src="/teachers/leanne-iacurci.webp" alt="Leanne Iacurci, Principal and English Teacher" width={640} height={345} loading="lazy" />
     </div>
@@ -15,14 +15,10 @@ export function MeetHead({ title, text }: { title: string; text: string }) {
 }
 
 /** The Facebook reviews widget the current site uses (Elfsight), with a plain link if it can't load. */
-export function Reviews({ rating, count, url, widget }: { rating: string; count: string; url: string; widget: string }) {
+export function Reviews({ url, widget }: { rating?: string; count?: string; url: string; widget: string }) {
   return <section className="s-sec home-reviews"><div className="wrap">
     <div className="sec-head"><h2>What our customers say</h2></div>
-    <div className="rev-bar">
-      <div><b className="rev-fb">facebook</b> Reviews<div className="rev-score"><span>{rating}</span><span className="rev-stars" aria-label={`${rating} out of 5 stars`}>★★★★★</span><small>({count})</small></div></div>
-      <a className="btn btn-brand rev-btn" href={url} target="_blank" rel="noopener noreferrer">Read our reviews on Facebook</a>
-    </div>
-    {widget && <><Script src="https://elfsightcdn.com/platform.js" strategy="lazyOnload" /><div className={`elfsight-app-${widget} rev-widget`} data-elfsight-app-lazy /></>}
+    <ReviewsWidget widget={widget} url={url} />
   </div></section>;
 }
 

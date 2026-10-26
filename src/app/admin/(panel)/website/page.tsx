@@ -41,11 +41,14 @@ export default async function Website({ searchParams }: { searchParams: Promise<
       <h2 style={{ marginTop: 8 }}>Homepage: Meet the Headteacher</h2>
       <label className="fld">Heading<input name="head_title" maxLength={80} defaultValue={txt.head_title} style={{ maxWidth: 420 }} /></label>
       <label className="fld">Text (each line is a paragraph)<textarea name="head_text" rows={6} maxLength={1000} defaultValue={txt.head_text} className="mini" style={{ width: "100%" }} /></label>
+      <h2 style={{ marginTop: 8 }}>About page</h2>
+      <label className="fld">Heading<input name="about_title" maxLength={80} defaultValue={txt.about_title} style={{ maxWidth: 420 }} /></label>
+      <label className="fld">Text (each line is a paragraph)<textarea name="about_text" rows={10} maxLength={4000} defaultValue={txt.about_text} className="mini" style={{ width: "100%" }} /></label>
       <h2 style={{ marginTop: 8 }}>Homepage: Facebook reviews</h2>
-      <div className="eform"><label className="fld">Star rating<input name="reviews_rating" maxLength={4} defaultValue={txt.reviews_rating} style={{ width: 80 }} /></label>
-        <label className="fld">Number of reviews<input name="reviews_count" maxLength={6} defaultValue={txt.reviews_count} style={{ width: 110 }} /></label>
+      <div className="eform"><input type="hidden" name="reviews_rating" value={txt.reviews_rating} /><input type="hidden" name="reviews_count" value={txt.reviews_count} />
         <label className="fld">Facebook reviews link<input name="reviews_url" type="url" maxLength={300} defaultValue={txt.reviews_url} style={{ width: 360 }} /></label>
         <label className="fld">Elfsight widget ID<input name="reviews_widget" maxLength={60} defaultValue={txt.reviews_widget} style={{ width: 330 }} /></label></div>
+      <p className="note" style={{ margin: 0 }}>The rating, stars and reviews come from the Elfsight widget. Its own title is hidden, and its button opens the reviews link above.</p>
       <div><button className="abtn pri" type="submit">Save</button> <span className="muted" style={{ fontSize: 14 }}>Clear a box to go back to the original text.</span></div>
       <input type="hidden" name="keys" value={Object.keys(DEFAULTS).join(",")} />
     </form>

@@ -527,7 +527,7 @@ export async function givePointsAction(f: FormData): Promise<void> {
 export async function saveSiteTextAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const vals: Record<string, string> = {};
-  for (const k of Object.keys(DEFAULTS)) vals[k] = String(f.get(k) ?? "").replace(/\r\n/g, "\n").slice(0, 1000);
+  for (const k of Object.keys(DEFAULTS)) vals[k] = String(f.get(k) ?? "").replace(/\r\n/g, "\n").slice(0, k === "about_text" ? 4000 : 1000);
   await saveSiteText(me.id, vals);
   revalidatePath("/", "layout"); redirect(`/admin/website?ok=${encodeURIComponent("Saved. The website shows the new text now.")}`);
 }
