@@ -16,11 +16,13 @@ import { cleanStyles } from "@/lib/styles";
 import { saveHubSection, addHubSection, deleteHubSection, saveHubLink, deleteHubLink } from "@/lib/hub";
 import { saveBrandAsset, sniff, BRAND_TYPES } from "@/lib/brand";
 import { createJob, saveJob, deleteJob, setApplication, deleteApplication, setAlertEmail, APP_STATUSES } from "@/lib/jobs";
-import { saveRules, applyRules, copyRules, saveBundles, ensureSubject, addClass } from "@/lib/rules";
+import { saveRules, applyRules, copyRules, saveBundles, ensureSubject, addClass, saveNotice, saveCoupon, setCouponActive } from "@/lib/rules";
 import { addYear, saveTerms, addHoliday, removeHoliday } from "@/lib/terms-admin";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
 import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
-import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite } from "@/lib/auth";
+import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite, VIEWAS_COOKIE } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { SCHOOL_COOKIE, siteSchool, listSchools } from "@/lib/db";
 
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -601,6 +603,27 @@ export async function saveBundlesAction(f: FormData): Promise<void> {
   revalidatePath("/", "layout"); priceBack(year, "ok", "Discounts saved.");
 }
 
+export async function saveNoticeAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const year = str(f, "year", 40);
+  const rows = f.getAll("level").map((v) => String(v)).filter((id) => /^[0-9a-f-]{36}$/.test(id)).map((id) => ({ level_id: id, terms: parseInt(str(f, `notice_${id}`, 1), 10) || 0 }));
+  await saveNotice(me.id, rows);
+  priceBack(year, "ok", "Notice periods saved. New bookings use them; existing bookings keep theirs.");
+}
+export async function saveCouponAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const year = str(f, "year", 40);
+  const pct = str(f, "pct", 6) ? Number(str(f, "pct", 6)) : null, amt = str(f, "amount", 8) ? Math.round(Number(str(f, "amount", 8)) * 100) : null;
+  const date = (k: string) => /^\d{4}-\d{2}-\d{2}$/.test(str(f, k, 10)) ? str(f, k, 10) : null;
+  const err = await saveCoupon(me.id, { code: str(f, "code", 30).toUpperCase().replace(/\s+/g, ""), pct: pct && pct > 0 ? pct : null, amount: amt && amt > 0 ? amt : null, from: date("from"), to: date("to"), max: parseInt(str(f, "max", 5), 10) || null });
+  priceBack(year, err ? "err" : "ok", err ?? "Coupon added. Parents can use it at checkout.");
+}
+export async function toggleCouponAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  await setCouponActive(me.id, str(f, "id", 40), str(f, "active", 5) === "1");
+  priceBack(str(f, "year", 40), "ok", "Coupon updated.");
+}
+
 export async function addClassAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const [yearId, levelId, subjectId] = str(f, "course", 120).split("|");
@@ -766,4 +789,30 @@ export async function saveAlertEmailAction(f: FormData): Promise<void> {
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) jobsBack("/admin/jobs", "err", "That email address doesn't look right.");
   await setAlertEmail(me.id, email);
   jobsBack("/admin/jobs", "ok", email ? `Alerts will go to ${email}.` : "Application alerts turned off.");
+}
+
+// ---------- the School and "Viewing as" switchers in the admin sidebar ----------
+export async function setSchoolAction(f: FormData): Promise<void> {
+  await requireSignedIn();
+  const slug = str(f, "school", 40);
+  if (!(await listSchools()).some((x) => x.slug === slug)) redirect("/admin");
+  const jar = await cookies();
+  jar.delete({ name: VIEWAS_COOKIE, path: "/admin" });
+  if (slug === siteSchool()) jar.delete({ name: SCHOOL_COOKIE, path: "/admin" });
+  else jar.set(SCHOOL_COOKIE, slug, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: 30 * 86400 });
+  redirect("/admin"); // each school has its own staff accounts: sign in there if you aren't already
+}
+export async function setViewAsAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const v = str(f, "as", 60), jar = await cookies();
+  if (v.startsWith("t:") && /^t:[0-9a-f-]{36}$/.test(v)) {
+    jar.set(VIEWAS_COOKIE, v, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: 8 * 3600 });
+    redirect("/admin/teacher");
+  }
+  jar.delete({ name: VIEWAS_COOKIE, path: "/admin" });
+  redirect("/admin");
+}
+export async function stopViewingAction(): Promise<void> {
+  (await cookies()).delete({ name: VIEWAS_COOKIE, path: "/admin" });
+  redirect("/admin");
 }

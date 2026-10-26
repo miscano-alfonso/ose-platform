@@ -22,7 +22,7 @@ export async function withSchool<T>(fn: (q: <R = Record<string, unknown>>(sql: s
   const client: PoolClient = await pool().connect();
   try {
     await client.query("begin");
-    const slug = process.env.SCHOOL_SLUG || "ohsoed";
+    const slug = (await adminSchool()) || process.env.SCHOOL_SLUG || "ohsoed";
     const s = await client.query("select id from schools where slug = $1", [slug]);
     if (!s.rows[0]) throw new Error(`school "${slug}" not found`);
     await client.query("set local role app_user");
@@ -38,3 +38,19 @@ export async function withSchool<T>(fn: (q: <R = Record<string, unknown>>(sql: s
     client.release();
   }
 }
+
+/** The school picked with the admin's School switcher (a cookie on /admin only); null means this site's own school. */
+export const SCHOOL_COOKIE = "ose_school";
+async function adminSchool(): Promise<string | null> {
+  try {
+    const { cookies } = await import("next/headers");
+    const v = (await cookies()).get(SCHOOL_COOKIE)?.value;
+    return v && /^[a-z0-9-]{2,40}$/.test(v) ? v : null;
+  } catch { return null; } // not in a request (background jobs): the site's own school
+}
+/** Every school on the platform, for the School switcher. */
+export async function listSchools(): Promise<{ slug: string; name: string }[]> {
+  const client = await pool().connect();
+  try { return (await client.query("select slug, name from schools order by name")).rows; } finally { client.release(); }
+}
+export const siteSchool = () => process.env.SCHOOL_SLUG || "ohsoed";

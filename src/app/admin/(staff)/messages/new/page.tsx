@@ -1,9 +1,9 @@
-import { requireSignedIn } from "@/lib/auth";
+import { requireViewer } from "@/lib/auth";
 import { myStudents } from "@/lib/community";
 import { startThreadAction } from "../../../actions";
 
 export default async function NewMessage({ searchParams }: { searchParams: Promise<{ err?: string }> }) {
-  const [sp, me] = await Promise.all([searchParams, requireSignedIn()]);
+  const [sp, me] = await Promise.all([searchParams, requireViewer()]);
   const students = await myStudents(me.id);
   return <>
     <p><a href="/admin/teacher">← Back</a></p>

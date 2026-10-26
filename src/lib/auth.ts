@@ -200,3 +200,18 @@ export async function acceptInvite(token: string, password: string): Promise<{ e
     return { email: inv.email };
   });
 }
+
+// ---------- "Viewing as": an admin can see the teacher area exactly as one teacher sees it ----------
+export const VIEWAS_COOKIE = "ose_viewas";
+export type Viewer = Staff & { viewing?: boolean; realName?: string };
+/** For teacher-area pages: the signed-in teacher, or the teacher an admin is viewing as. */
+export async function requireViewer(): Promise<Viewer> {
+  const me = await requireSignedIn();
+  if (me.role !== "school_admin") return me;
+  const v = (await cookies()).get(VIEWAS_COOKIE)?.value ?? "";
+  const id = v.startsWith("t:") ? v.slice(2) : "";
+  if (!/^[0-9a-f-]{36}$/.test(id)) return me;
+  const t = (await withSchool((q) => q<Staff>(`select u.id, u.name, u.email::text, 'teacher' as role from users u join teachers t on t.user_id = u.id
+    where u.id = $1 and u.disabled_at is null and t.archived_at is null`, [id])))[0];
+  return t ? { ...t, viewing: true, realName: me.name } : me;
+}

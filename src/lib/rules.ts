@@ -135,3 +135,35 @@ export async function classFormOptions() {
       where y.ends_on >= current_date order by y.starts_on, l.sort_order, sj.name`),
   }));
 }
+
+// ---------- cancellation notice and coupons (Prices & discounts) ----------
+export type NoticeRow = { level_id: string; level: string; notice_terms: number };
+export type CouponRow = { id: string; code: string; percent_off: string | null; amount_off_pence: number | null; valid_from: string | null; valid_to: string | null; max_redemptions: number | null; active: boolean; uses: number };
+export async function getNoticeAndCoupons() {
+  return withSchool(async (q) => ({
+    notice: await q<NoticeRow>(`select id as level_id, name as level, notice_terms from levels order by sort_order`),
+    coupons: await q<CouponRow>(`select c.id, c.code::text, c.percent_off::text, c.amount_off_pence, to_char(c.valid_from,'YYYY-MM-DD') as valid_from, to_char(c.valid_to,'YYYY-MM-DD') as valid_to,
+      c.max_redemptions, c.active, (select count(*)::int from orders o where o.coupon_id = c.id and o.status = 'paid') as uses from coupons c order by c.active desc, c.code`),
+  }));
+}
+export async function saveNotice(actorId: string, rows: { level_id: string; terms: number }[]) {
+  await withSchool(async (q) => {
+    for (const r of rows) await q(`update levels set notice_terms = $2 where id = $1`, [r.level_id, Math.max(0, Math.min(6, r.terms))]);
+    await audit(q, actorId, "update", null, { notice: rows });
+  });
+}
+export async function saveCoupon(actorId: string, d: { code: string; pct: number | null; amount: number | null; from: string | null; to: string | null; max: number | null }): Promise<string | null> {
+  if (!/^[A-Z0-9-]{3,30}$/.test(d.code)) return "Codes are 3–30 letters, numbers or dashes, e.g. EARLYBIRD.";
+  if ((d.pct == null) === (d.amount == null)) return "Give either a % off or an amount off.";
+  if (d.pct != null && !(d.pct > 0 && d.pct <= 100)) return "The % off must be between 1 and 100.";
+  return withSchool(async (q) => {
+    const r = await q(`insert into coupons (school_id, code, percent_off, amount_off_pence, valid_from, valid_to, max_redemptions) values (current_school(), $1, $2, $3, $4::date, $5::date, $6)
+      on conflict (school_id, code) do nothing returning id`, [d.code, d.pct, d.amount, d.from, d.to, d.max]);
+    if (!r.length) return "That code already exists.";
+    await audit(q, actorId, "create", null, { coupon: d.code });
+    return null;
+  });
+}
+export async function setCouponActive(actorId: string, id: string, active: boolean) {
+  await withSchool(async (q) => { await q(`update coupons set active = $2 where id = $1`, [id, active]); await audit(q, actorId, "update", id, { coupon_active: active }); });
+}

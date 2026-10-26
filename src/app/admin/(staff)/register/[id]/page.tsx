@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireSignedIn } from "@/lib/auth";
+import { requireViewer } from "@/lib/auth";
 import { getRegister } from "@/lib/ops";
 import { saveRegisterAction, cancelLessonAction } from "../../../actions";
 
@@ -7,7 +7,7 @@ const LABEL: Record<string, string> = { present: "Present", late: "Late", absent
 const longDay = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
 export default async function RegisterPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; err?: string }> }) {
-  const [{ id }, sp, me] = await Promise.all([params, searchParams, requireSignedIn()]);
+  const [{ id }, sp, me] = await Promise.all([params, searchParams, requireViewer()]);
   const r = await getRegister(id);
   if (!r || (me.role !== "school_admin" && r.teacher_user !== me.id)) notFound();
   const future = r.lesson_date > new Date().toISOString().slice(0, 10);

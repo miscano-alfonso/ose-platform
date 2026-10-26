@@ -152,3 +152,71 @@ export async function getFamilies(): Promise<FamilyRow[]> {
       (select count(*)::int from enrolments e join students s on s.id = e.student_id where s.parent_id = p.id and e.needs_check) as checks
     from parents p order by p.last_name, p.first_name`));
 }
+
+// ---------- dashboard extras (as in the prototype): attendance, collections by term, bookings, what's coming up, fullest classes ----------
+export type DashMore = {
+  att: { pct: number | null; low: { name: string; level: string; pct: number; att: number; held: number }[] };
+  byTerm: { number: number; name: string; bills_on: string; billed: number; paid: number; failed: number }[];
+  recent: { student: string; course: string; parent: string; on: string; amount: number; parent_id: string }[];
+  coming: { kind: string; title: string; detail: string; href?: string }[];
+  fullest: { name: string; colour: string; taken: number; capacity: number }[];
+  clashes: { title: string; detail: string }[];
+};
+export async function getDashboardMore(lowPct = 50): Promise<DashMore> {
+  return withSchool(async (q) => {
+    const term = (await q<{ id: string; name: string; starts_on: string; ends_on: string }>(`select id, name, starts_on::text, ends_on::text from terms where academic_year_id = ${YEAR}
+      order by (current_date between starts_on and ends_on) desc, (starts_on > current_date), starts_on desc limit 1`))[0];
+    // attendance this term, from the marks (Google Meet); approved absences don't count against it
+    const per = term ? await q<{ name: string; level: string; att: number; held: number }>(`
+      select s.first_name || ' ' || s.last_name as name, min(l.name) as level,
+        count(*) filter (where m.mark in ('present','late'))::int as att, count(*) filter (where m.mark <> 'approved_absence')::int as held
+      from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id join students s on s.id = m.student_id
+      join course_groups g on g.id = ev.group_id join levels l on l.id = g.level_id
+      where ev.term_id = $1 group by s.id, s.first_name, s.last_name`, [term.id]) : [];
+    const tot = per.reduce((a, x) => a + x.held, 0);
+    const att = { pct: tot ? Math.round(per.reduce((a, x) => a + x.att, 0) / tot * 100) : null,
+      low: per.filter((x) => x.held >= 3 && x.att / x.held * 100 < lowPct).map((x) => ({ ...x, pct: Math.round(x.att / x.held * 100) })).sort((a, b) => a.pct - b.pct) };
+    const byTerm = await q<DashMore["byTerm"][number]>(`select t.number, t.name, t.bills_on::text,
+        coalesce(sum(i.amount_pence) filter (where i.status not in ('cancelled','refunded')),0)::int as billed,
+        coalesce(sum(i.amount_pence - i.refunded_pence) filter (where i.status in ('paid','part_refunded')),0)::int as paid,
+        coalesce(sum(i.amount_pence) filter (where i.status = 'failed'),0)::int as failed
+      from terms t left join instalments i on i.term_id = t.id where t.academic_year_id = ${YEAR} group by t.id order by t.number`);
+    const recent = await q<DashMore["recent"][number]>(`select s.first_name || ' ' || s.last_name as student, l.name || ' ' || sj.name as course,
+        p.first_name || ' ' || p.last_name as parent, p.id as parent_id, e.enrolled_at::date::text as on, (e.list_price_pence - e.discount_pence)::int as amount
+      from enrolments e join students s on s.id = e.student_id join parents p on p.id = s.parent_id join course_groups g on g.id = e.group_id
+      join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+      where e.status in ('pending','active') and not e.is_taster order by e.enrolled_at desc limit 5`);
+    const coming: DashMore["coming"] = [];
+    const dm = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+    const nt = (await q<{ name: string; bills_on: string; n: number; amount: number; fams: number }>(`select t.name, t.bills_on::text, count(i.id)::int as n, coalesce(sum(i.amount_pence),0)::int as amount,
+        count(distinct s.parent_id)::int as fams from terms t left join instalments i on i.term_id = t.id and i.status = 'scheduled'
+        left join enrolments e on e.id = i.enrolment_id left join students s on s.id = e.student_id
+      where t.academic_year_id = ${YEAR} and t.bills_on >= current_date group by t.id order by t.bills_on limit 1`))[0];
+    if (nt && nt.n) {
+      coming.push({ kind: "info", title: `Payment reminders · before ${dm(nt.bills_on)}`, detail: `${nt.fams} families told about the ${nt.name} charge before it’s taken` });
+      coming.push({ kind: "info", title: `Charge run · ${dm(nt.bills_on)}`, detail: `${nt.n} instalments, £${(nt.amount / 100).toLocaleString("en-GB", { minimumFractionDigits: 2 })}`, href: "/admin/payments" });
+    } else coming.push({ kind: "mute", title: "No charges scheduled", detail: "Payments start when families enrol (or when the import’s schedules are created)" });
+    if (term) {
+      const end = new Date(term.ends_on + "T12:00:00Z"), dow = end.getUTCDay(); // Friday after the last day of term
+      end.setUTCDate(end.getUTCDate() + (dow < 5 ? 5 - dow : 12 - dow)); const payday = end.toISOString().slice(0, 10);
+      coming.push({ kind: "info", title: `Teacher pay · ${dm(payday)}`, detail: `Lessons taught in ${term.name}, paid the Friday after the term ends`, href: "/admin/payroll" });
+    }
+    const hol = (await q<{ name: string; starts_on: string; ends_on: string }>(`select name, starts_on::text, ends_on::text from holidays where ends_on >= current_date order by starts_on limit 1`))[0];
+    if (hol) coming.push({ kind: "mute", title: hol.name, detail: `${dm(hol.starts_on)} to ${dm(hol.ends_on)}: no lessons, no reminders` });
+    const fullest = await q<DashMore["fullest"][number]>(`select l.name || ' ' || sj.name as name, coalesce(sj.colour,'#8494c2') as colour, a.taken::int, g.capacity::int
+      from course_group_availability a join course_groups g on g.id = a.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+      where g.academic_year_id = ${YEAR} and g.capacity is not null and g.status in ('open','priority') order by a.taken::float / g.capacity desc, l.sort_order limit 10`);
+    // a student booked into two lessons at the same time
+    const clashes = await q<DashMore["clashes"][number]>(`
+      select la.name || ' ' || sa.name || ' and ' || lb.name || ' ' || sb.name as title,
+        (array['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'])[a.weekday + 1] || ' ' || to_char(a.starts_at,'HH24:MI') || ' · ' || count(distinct ea.student_id) || ' student' || case when count(distinct ea.student_id) > 1 then 's' else '' end || ' take both' as detail
+      from lesson_slots a join lesson_slots b on b.weekday = a.weekday and b.academic_year_id = a.academic_year_id and b.group_id > a.group_id and a.minutes && b.minutes
+      join enrolments ea on ea.group_id = a.group_id and ea.status in ('pending','active') and not ea.allow_clash
+      join enrolments eb on eb.group_id = b.group_id and eb.student_id = ea.student_id and eb.status in ('pending','active') and not eb.allow_clash
+      join course_groups ga on ga.id = a.group_id join levels la on la.id = ga.level_id join subjects sa on sa.id = ga.subject_id
+      join course_groups gb on gb.id = b.group_id join levels lb on lb.id = gb.level_id join subjects sb on sb.id = gb.subject_id
+      where a.academic_year_id = ${YEAR}
+      group by la.name, sa.name, lb.name, sb.name, a.weekday, a.starts_at limit 10`);
+    return { att, byTerm, recent, coming, fullest, clashes };
+  });
+}

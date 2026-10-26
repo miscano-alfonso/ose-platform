@@ -1,11 +1,11 @@
-import { requireSignedIn } from "@/lib/auth";
+import { requireViewer } from "@/lib/auth";
 import { classesForPoints } from "@/lib/community";
 import { givePointsAction } from "../../actions";
 
 const REASONS = ["Great work", "Excellent effort", "Brilliant contribution", "Homework on time", "Helping others", "Big improvement"];
 
 export default async function Points({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
-  const [sp, me] = await Promise.all([searchParams, requireSignedIn()]);
+  const [sp, me] = await Promise.all([searchParams, requireViewer()]);
   const classes = await classesForPoints(me.id, me.role === "school_admin");
   return <>
     <p><a href={me.role === "school_admin" ? "/admin/rewards" : "/admin/teacher"}>← Back</a></p>

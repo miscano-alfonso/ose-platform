@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { requireSignedIn } from "@/lib/auth";
+import { requireViewer } from "@/lib/auth";
 import { getWriteSheet } from "@/lib/reports";
 import { saveWriteSheetAction } from "../../../../actions";
 
@@ -8,7 +8,7 @@ const PILL: Record<string, [string, string]> = { todo: ["To write", "mute"], dra
 const scale = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
 
 export default async function Write({ params, searchParams }: { params: Promise<{ cycle: string; group: string }>; searchParams: Promise<{ ok?: string; err?: string }> }) {
-  const [{ cycle, group }, sp, me] = await Promise.all([params, searchParams, requireSignedIn()]);
+  const [{ cycle, group }, sp, me] = await Promise.all([params, searchParams, requireViewer()]);
   const sheet = await getWriteSheet(cycle, group);
   if (!sheet || (me.role !== "school_admin" && sheet.head.teacher_user !== me.id)) notFound();
   const { head: h, rows } = sheet;

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireSignedIn } from "@/lib/auth";
+import { requireViewer } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
 import { teacherReportClasses } from "@/lib/reports";
 import { listThreads } from "@/lib/community";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 // The teacher's dashboard: registers to take, this week's lessons and their classes.
 export default async function TeacherHome() {
-  const me = await requireSignedIn();
+  const me = await requireViewer();
   const [classes, lessons] = await withSchool(async (q) => [
     await q<{ code: string; name: string; slots: string | null; students: number }>(`
       select g.code, l.name || ' ' || sj.name as name,

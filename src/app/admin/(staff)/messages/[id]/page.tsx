@@ -1,12 +1,12 @@
 import { notFound } from "next/navigation";
-import { requireSignedIn } from "@/lib/auth";
+import { requireViewer } from "@/lib/auth";
 import { getThread } from "@/lib/community";
 import { replyThreadAction, setThreadStatusAction } from "../../../actions";
 
 const when = (s: string) => new Date(s).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 
 export default async function ThreadPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ err?: string }> }) {
-  const [{ id }, sp, me] = await Promise.all([params, searchParams, requireSignedIn()]);
+  const [{ id }, sp, me] = await Promise.all([params, searchParams, requireViewer()]);
   const t = await getThread(id);
   if (!t || (me.role !== "school_admin" && t.th.teacher_user !== me.id)) notFound();
   const { th, msgs } = t;
