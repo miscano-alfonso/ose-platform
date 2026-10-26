@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { attendanceOverview } from "@/lib/attendance";
-import { meetStatus, unmatchedJoins, unplacedCalls, usualTimes } from "@/lib/meet";
+import { meetStatus, unmatchedPeople, unplacedCalls, usualTimes } from "@/lib/meet";
 import { siteBase } from "@/lib/social";
-import { saveGoogleAppAction, disconnectGoogleAction, syncMeetAction, saveAlertAction, matchJoinAction, assignMeetCodeAction, timesFromMeetAction } from "../../actions";
+import { saveGoogleAppAction, disconnectGoogleAction, syncMeetAction, saveAlertAction, matchPersonAction, notALessonAction, assignMeetCodeAction, timesFromMeetAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 const dm = (d: string) => new Date(d.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -13,7 +13,7 @@ const MARK: Record<string, [string, string]> = { present: ["✓", "Present"], la
 
 export default async function Attendance({ searchParams }: { searchParams: Promise<{ term?: string; tab?: string; cls?: string; low?: string; ok?: string; err?: string }> }) {
   const sp = await searchParams;
-  const [d, g, joins, base, unplaced] = await Promise.all([attendanceOverview(sp.term ?? null, sp.cls ?? null), meetStatus(await siteBase()), unmatchedJoins(), siteBase(), unplacedCalls()]);
+  const [d, g, joins, base, unplaced] = await Promise.all([attendanceOverview(sp.term ?? null, sp.cls ?? null), meetStatus(await siteBase()), unmatchedPeople(), siteBase(), unplacedCalls()]);
   const firstDay = d.terms[0]?.starts_on ?? "";
   const tab = ["students", "lessons", "absences", "joins", "google"].includes(sp.tab ?? "") ? sp.tab! : g.connected ? "students" : "google";
   const pct = g.alert.pct, low = d.students.filter((s) => s.pct != null && s.pct < pct);
@@ -21,7 +21,7 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
   const upcomingAbs = d.absences.filter((a) => a.upcoming).length;
   const q = (o: Record<string, string | undefined>) => "/admin/attendance?" + new URLSearchParams(Object.entries({ term: d.term?.id, tab, cls: sp.cls, ...o }).filter(([, v]) => v) as [string, string][]);
   const TABS: [string, string][] = [["students", "Students"], ["lessons", "Lesson by lesson"], ["absences", `Reported absences${upcomingAbs ? ` (${upcomingAbs})` : ""}`],
-    ["joins", `Check Meet joins${joins.length ? ` (${joins.length})` : ""}`], ["google", g.connected ? "Google Meet" : "Connect Google Meet"]];
+    ["joins", `Check Meet joins${joins.people.length ? ` (${joins.people.length})` : ""}`], ["google", g.connected ? "Google Meet" : "Connect Google Meet"]];
   return <>
     <div className="top"><div><h1>Attendance</h1><div className="sub">{d.term ? `${d.term.name} · ` : ""}taken automatically from Google Meet</div></div>
       <span className="grow" />
@@ -74,12 +74,12 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
     </tbody></table></div>}
 
     {tab === "joins" && <>
-      <p className="note" style={{ margin: "0 0 10px" }}>These people joined a lesson’s Google Meet but weren’t signed in with a student’s Google account, so they couldn’t be matched automatically. Once you match an email, later joins from it are matched for you.</p>
-      <section className="card">{joins.length === 0 ? <p className="empty">Nothing to check.</p> : joins.map((j) => <form key={j.id} action={matchJoinAction} className="li" style={{ flexWrap: "wrap" }}>
-        <input type="hidden" name="id" value={j.id} /><span className="pill info">To check</span>
-        <div className="t"><b>“{j.who}” joined {j.lesson}</b><span>{dm(j.date)} at {j.at} · {j.minutes} min{j.email && j.email !== j.who ? ` · ${j.email}` : ""}</span></div>
-        <select name="student" className="mini" aria-label="Who was it?">{j.roster.map((s) => <option key={s.id} value={s.id}>{s.name}{s.mark === "absent" ? " (marked absent)" : ""}</option>)}</select>
-        <button className="abtn sm pri" type="submit">Mark present</button><button className="abtn sm" type="submit" name="ignore" value="1">Not a student</button></form>)}</section></>}
+      <p className="note" style={{ margin: "0 0 10px" }}>{joins.people.length ? <>{joins.people.length} {joins.people.length === 1 ? "person" : "people"} joined lessons ({joins.joins} joins) without a Google account or Meet name we could tie to a student, usually a parent’s or sibling’s account. Say who each one is <b>once</b>: every lesson they joined is updated, and their email is remembered for next time. Children marked absent in those lessons are listed first.</> : null}</p>
+      <section className="card">{joins.people.length === 0 ? <p className="empty">Nothing to check.</p> : joins.people.map((p) => <form key={p.key} action={matchPersonAction} className="li" style={{ flexWrap: "wrap" }}>
+        <input type="hidden" name="key" value={p.key} />
+        <div className="t"><b>“{p.who}”</b><span>{p.email && p.email !== p.who ? `${p.email} · ` : ""}{p.lessons} lesson{p.lessons === 1 ? "" : "s"} in {p.classes} · {dm(p.first)}{p.last !== p.first ? ` – ${dm(p.last)}` : ""}</span></div>
+        {p.roster.length > 0 && <select name="student" className="mini" aria-label="Who was it?">{p.roster.map((s) => <option key={s.id + s.cls} value={s.id}>{s.name}{p.classes.includes(",") ? ` (${s.cls})` : ""}{s.absent ? ` · marked absent ${s.absent}×` : ""}</option>)}</select>}
+        {p.roster.length > 0 && <button className="abtn sm pri" type="submit">This is them</button>}<button className="abtn sm" type="submit" name="ignore" value="1">Not a student</button></form>)}</section></>}
 
     {tab === "google" && <section className="card"><h2>Google Meet</h2>
       {g.connected ? <>
@@ -108,9 +108,10 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
               <td style={{ fontSize: 14 }}>{cls ? cls.times ?? <span className="muted">No times</span> : "—"}</td>
               <td style={{ fontSize: 14 }}><b>{real || u.when.join(", ")}</b><br /><span className="muted">{dm(u.first.slice(0, 10))} – {dm(u.last.slice(0, 10))}</span></td>
               <td className="n">{u.joins}</td>
-              <td>{cls ? (differs ? <form action={timesFromMeetAction}><input type="hidden" name="code" value={u.code} /><button className="abtn sm" type="submit">Use the Meet times</button></form> : <span className="muted" style={{ fontSize: 13 }}>Press Re-read</span>)
+              <td>{cls ? (differs ? <form action={timesFromMeetAction}><input type="hidden" name="code" value={u.code} /><button className="abtn sm" type="submit">Use the Meet times</button></form> : <span className="muted" style={{ fontSize: 13 }}>{real ? "Press Re-read" : "One-off, not a weekly time: nothing to change"}</span>)
                 : u.code ? <form action={assignMeetCodeAction} style={{ display: "flex", gap: 4 }}><input type="hidden" name="code" value={u.code} />
-                <select name="group" className="mini" defaultValue=""><option value="" disabled>Choose a class</option>{d.allClasses.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.name.replace(/ \(.*\)$/, "")}{c.meet ? " · has a Meet link" : ""}</option>)}</select><button className="abtn sm" type="submit">Link</button></form> : null}</td></tr>)}
+                <select name="group" className="mini" defaultValue=""><option value="" disabled>Choose a class</option>{d.allClasses.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.name.replace(/ \(.*\)$/, "")}{c.meet ? " · has a Meet link" : ""}</option>)}</select><button className="abtn sm" type="submit">Link</button></form> : null}
+                {u.code && <form action={notALessonAction} style={{ marginTop: 4 }}><input type="hidden" name="code" value={u.code} /><button className="lnk" type="submit" title="A staff meeting, parents’ call or one-off: hide it">Not a lesson</button></form>}</td></tr>)}
           </tbody></table></div></div>; })()}
         <p className="note" style={{ marginTop: 10 }}>Lessons are matched by each class’s Meet link (Classes → Meet link) or, if a class has none, by its teacher’s Google account and the timetabled time. Marks you correct on a lesson’s register are never overwritten.</p>
       </> : <>

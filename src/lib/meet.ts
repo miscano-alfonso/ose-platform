@@ -21,7 +21,7 @@ const REPORTS_URL = () => process.env.GOOGLE_REPORTS_URL || "https://admin.googl
 type Conn = { clientId?: string; clientSecret?: string; refreshToken?: string; by?: string; at?: string; pending?: { state: string; email: string; exp: number } };
 export type SyncInfo = { at?: string; from?: string; to?: string; joins?: number; lessons?: number; unmatched?: number; error?: string; by?: string; fetched?: number; placed?: number; lessonsInWindow?: number };
 /** Meet calls Google reported that didn't line up with any timetabled lesson, grouped by meeting code (so the office can say which class it is). */
-export type Unplaced = { code: string; organizer: string | null; joins: number; first: string; last: string; when: string[]; slots?: Record<string, number> };
+export type Unplaced = { code: string; organizer: string | null; joins: number; first: string; last: string; when: string[]; slots?: Record<string, number>; days?: Record<string, string[]> };
 export type AlertCfg = { on: boolean; pct: number; lastSent?: string };
 
 async function kvGet<T>(key: string, q?: Q): Promise<T | null> {
@@ -153,6 +153,7 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
     const L = lessons.map((l) => ({ ...l, s: Date.parse(l.starts), e: Date.parse(l.ends), code: codeOf(l.code_url) }));
     const students = new Map((await q<{ id: string; email: string }>(`select id, lower(email::text) as email from students where email is not null`)).map((s) => [s.email, s.id]));
     const aliases = (await kvGet<Record<string, string>>("aliases", q)) ?? {};
+    const notLessons = new Set((await kvGet<string[]>("not_lessons", q)) ?? []);
     let saved = 0, placed = 0; const touched = new Set<string>();
     const unplaced = new Map<string, Unplaced>();
     const DOW: Record<string, number> = { Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6, Sun: 7 };
@@ -168,10 +169,12 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
       let cand = j.code ? L.filter((l) => l.code === j.code && near(l)) : [];
       if (!cand.length && j.organizer) cand = L.filter((l) => l.teacher_email === j.organizer && near(l));
       if (!cand.length) {
+        if (j.code && notLessons.has(j.code)) continue;
         const key = j.code ?? `?${j.organizer ?? ""}`, u = unplaced.get(key) ?? { code: j.code ?? "", organizer: j.organizer, joins: 0, first: j.joined.toISOString(), last: j.joined.toISOString(), when: [] };
         u.joins++; if (j.joined.toISOString() < u.first) u.first = j.joined.toISOString(); if (j.joined.toISOString() > u.last) u.last = j.joined.toISOString();
         const w = whenOf(j.joined); if (u.when.length < 6 && !u.when.includes(w)) u.when.push(w);
         const sk = slotKey(j.joined); u.slots = u.slots ?? {}; u.slots[sk] = (u.slots[sk] ?? 0) + 1;
+        const dk = j.joined.toLocaleDateString("en-CA", { timeZone: "Europe/London" }); u.days = u.days ?? {}; const dl = (u.days[sk] = u.days[sk] ?? []); if (!dl.includes(dk) && dl.length < 30) dl.push(dk);
         unplaced.set(key, u); continue;
       }
       placed++;
@@ -183,19 +186,22 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
       if (r.length) { saved++; touched.add(lesson.id); }
     }
     // joins we couldn't tie to a student by email: try the name they joined with against the class list
+    for (const id of await matchByParent(q)) touched.add(id);
     for (const id of await matchByName(q, aliases)) touched.add(id);
     await kvSet("aliases", aliases, q);
     for (const id of touched) await recompute(q, id);
     const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_sessions ms where ms.student_id is null and not ms.ignored and ms.participant_email is distinct from ms.organizer_email
       and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
+      and split_part(lower(coalesce(ms.participant_email::text, '')), '@', 2) is distinct from split_part(lower(coalesce(ms.organizer_email::text, '-@-')), '@', 2)
       and not exists (select 1 from taster_requests tr where lower(tr.child_email::text) = lower(ms.participant_email::text))`);
     // remember calls that didn't fit a lesson (merged with earlier syncs) so the office can link them to a class
     const prevU = (await kvGet<Unplaced[]>("unplaced", q)) ?? [];
     const codes = new Set(L.map((l) => l.code).filter(Boolean));
     // a re-read from a chosen date starts the list again; a routine sync adds to it
-    const merged = new Map(fromDate ? [] : prevU.filter((u) => !codes.has(u.code)).map((u) => [u.code || `?${u.organizer ?? ""}`, u]));
+    const merged = new Map(fromDate ? [] : prevU.filter((u) => !codes.has(u.code) && !notLessons.has(u.code)).map((u) => [u.code || `?${u.organizer ?? ""}`, u]));
     for (const [k, u] of unplaced) { const m = merged.get(k); merged.set(k, m ? { ...m, joins: m.joins + u.joins, first: m.first < u.first ? m.first : u.first, last: m.last > u.last ? m.last : u.last, when: [...new Set([...m.when, ...u.when])].slice(0, 6),
-      slots: Object.fromEntries([...new Set([...Object.keys(m.slots ?? {}), ...Object.keys(u.slots ?? {})])].map((k) => [k, (m.slots?.[k] ?? 0) + (u.slots?.[k] ?? 0)])) } : u); }
+      slots: Object.fromEntries([...new Set([...Object.keys(m.slots ?? {}), ...Object.keys(u.slots ?? {})])].map((k) => [k, (m.slots?.[k] ?? 0) + (u.slots?.[k] ?? 0)])),
+      days: Object.fromEntries([...new Set([...Object.keys(m.days ?? {}), ...Object.keys(u.days ?? {})])].map((k) => [k, [...new Set([...(m.days?.[k] ?? []), ...(u.days?.[k] ?? [])])]])) } : u); }
     await kvSet("unplaced", [...merged.values()].sort((a, b) => b.joins - a.joins).slice(0, 60), q);
     const info: SyncInfo = { at: new Date().toISOString(), from: new Date(from).toISOString(), to: until.toISOString(), joins: saved, lessons: touched.size, unmatched: n, by, fetched: joins.length, placed, lessonsInWindow: L.length };
     await kvSet("sync", info, q);
@@ -231,6 +237,7 @@ export async function unmatchedJoins(): Promise<UnmatchedJoin[]> {
     join subjects sj on sj.id = g.subject_id join schools sc on sc.id = ms.school_id
     where ms.student_id is null and not ms.ignored and ms.participant_email is distinct from ms.organizer_email
       and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
+      and split_part(lower(coalesce(ms.participant_email::text, '')), '@', 2) is distinct from split_part(lower(coalesce(ms.organizer_email::text, '-@-')), '@', 2)
       and not exists (select 1 from taster_requests tr where lower(tr.child_email::text) = lower(ms.participant_email::text))
     order by e.lesson_date desc, ms.joined_at limit 100`));
 }
@@ -306,12 +313,23 @@ export async function assignCode(actorId: string, code: string, groupId: string)
   });
 }
 
+/** A Meet code that isn't a lesson (staff meeting, parents' call, one-off): hidden from the list and skipped from now on. */
+export async function notALesson(actorId: string, code: string): Promise<void> {
+  if (!/^[a-z]{10}$/.test(code)) return;
+  await withSchool(async (q) => {
+    const n = new Set((await kvGet<string[]>("not_lessons", q)) ?? []); n.add(code); await kvSet("not_lessons", [...n], q);
+    await kvSet("unplaced", ((await kvGet<Unplaced[]>("unplaced", q)) ?? []).filter((x) => x.code !== code), q);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'meet_not_lesson', 'meet', null, $2)`, [actorId, JSON.stringify({ code })]);
+  });
+}
+
 /** The weekly times a Meet code is really used: the quarter-hours that account for most joins (ignoring one-offs). */
 export function usualTimes(u: Unplaced): { weekday: number; time: string }[] {
   const e = Object.entries(u.slots ?? {}).filter(([k]) => !k.startsWith("0|")).sort((a, b) => b[1] - a[1]);
   const top = e[0]?.[1] ?? 0, out: { weekday: number; time: string }[] = [];
   for (const [k, n] of e) {
     if (n < Math.max(3, top * 0.25)) continue;
+    if (u.days && (u.days[k]?.length ?? 0) < 2) continue;
     const [wd, t] = k.split("|"), mins = +t.slice(0, 2) * 60 + +t.slice(3);
     if (out.some((o) => o.weekday === +wd && Math.abs(+o.time.slice(0, 2) * 60 + +o.time.slice(3) - mins) <= 30)) continue;   // same lesson, people joined either side of the quarter
     out.push({ weekday: +wd, time: t });
@@ -373,6 +391,7 @@ async function matchByName(q: Q, aliases: Record<string, string>): Promise<strin
     where (ms.student_id is null or (ms.matched_by is null and not exists (select 1 from enrolments x where x.group_id = e.group_id and x.student_id = ms.student_id)))
       and not ms.ignored and ms.display_name is not null and ms.participant_email is distinct from ms.organizer_email
       and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
+      and split_part(lower(coalesce(ms.participant_email::text, '')), '@', 2) is distinct from split_part(lower(coalesce(ms.organizer_email::text, '-@-')), '@', 2)
       and not exists (select 1 from taster_requests tr where lower(tr.child_email::text) = lower(ms.participant_email::text))`);
   const changed = new Set<string>();
   for (const r of rows) {
@@ -387,4 +406,62 @@ async function matchByName(q: Q, aliases: Record<string, string>): Promise<strin
     changed.add(r.ev);
   }
   return [...changed];
+}
+
+// ---------- unmatched joins grouped by person: match someone once and every lesson they joined is updated ----------
+const UNMATCHED = `ms.student_id is null and not ms.ignored and ms.participant_email is distinct from ms.organizer_email
+      and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
+      and split_part(lower(coalesce(ms.participant_email::text, '')), '@', 2) is distinct from split_part(lower(coalesce(ms.organizer_email::text, '-@-')), '@', 2)
+      and not exists (select 1 from taster_requests tr where lower(tr.child_email::text) = lower(ms.participant_email::text))`;
+const PKEY = `coalesce('e:' || lower(ms.participant_email::text), 'n:' || lower(ms.display_name), 's:' || ms.id::text)`;
+export type UnmatchedPerson = { key: string; who: string; email: string | null; joins: number; lessons: number; first: string; last: string; classes: string;
+  roster: { id: string; name: string; cls: string; absent: number }[] };
+export async function unmatchedPeople(): Promise<{ people: UnmatchedPerson[]; joins: number }> {
+  return withSchool(async (q) => {
+    const people = await q<UnmatchedPerson>(`with u as (select ms.*, ${PKEY} as k, e.group_id, e.lesson_date from meet_sessions ms join lesson_events e on e.id = ms.lesson_event_id where ${UNMATCHED})
+      select k as key, coalesce(mode() within group (order by display_name), max(participant_email::text), 'Someone signed out') as who, max(participant_email::text) as email,
+        count(*)::int as joins, count(distinct lesson_event_id)::int as lessons, min(lesson_date)::text as first, max(lesson_date)::text as last,
+        (select string_agg(distinct g.code, ', ') from course_groups g where g.id in (select group_id from u u2 where u2.k = u.k)) as classes,
+        coalesce((select json_agg(r order by r.absent desc, r.name) from (select st.id, st.first_name || ' ' || st.last_name as name, g.code as cls,
+            (select count(*)::int from attendance_marks m where m.student_id = st.id and m.mark = 'absent' and m.lesson_event_id in (select lesson_event_id from u u3 where u3.k = u.k)) as absent
+          from enrolments x join students st on st.id = x.student_id join course_groups g on g.id = x.group_id
+          where x.group_id in (select group_id from u u2 where u2.k = u.k) and x.status = 'active' and not x.is_taster) r), '[]') as roster
+      from u group by k order by count(distinct lesson_event_id) desc, k limit 300`);
+    const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_sessions ms where ${UNMATCHED}`);
+    return { people, joins: n };
+  });
+}
+/** Say who a person was (or that they weren't a student) for all their unmatched joins. Only lessons of that student's classes are matched. */
+export async function matchPerson(actorId: string, key: string, studentId: string | null): Promise<string | null> {
+  if (!/^[ens]:/.test(key) || key.length > 300) return "That person wasn’t found.";
+  return withSchool(async (q) => {
+    const rows = await q<{ id: string; ev: string; email: string | null; ok: boolean }>(`select ms.id, ms.lesson_event_id as ev, lower(ms.participant_email::text) as email,
+        exists (select 1 from enrolments x join lesson_events e on e.group_id = x.group_id where e.id = ms.lesson_event_id and x.student_id = $2) as ok
+      from meet_sessions ms where ${UNMATCHED} and ${PKEY} = $1`, [key, studentId]);
+    if (!rows.length) return "Nothing left to match for that person.";
+    if (!studentId) {
+      await q(`update meet_sessions set ignored = true, matched_by = $2 where id = any($1::uuid[])`, [rows.map((r) => r.id), actorId]);
+    } else {
+      const mine = rows.filter((r) => r.ok); if (!mine.length) return "That student isn’t in any of those classes.";
+      await q(`update meet_sessions set student_id = $2, matched_by = $3 where id = any($1::uuid[])`, [mine.map((r) => r.id), studentId, actorId]);
+      const em = rows.find((r) => r.email)?.email;
+      if (em) { const al = (await kvGet<Record<string, string>>("aliases", q)) ?? {}; al[em] = studentId; await kvSet("aliases", al, q); }
+      for (const ev of new Set(mine.map((r) => r.ev))) await recompute(q, ev);
+    }
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'match_person', 'meet_session', null, $2)`,
+      [actorId, JSON.stringify({ key: key.slice(0, 2) + "…", student: studentId, joins: rows.length })]);
+    const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_sessions ms where ${UNMATCHED}`);
+    const sync = (await kvGet<SyncInfo>("sync", q)) ?? {}; await kvSet("sync", { ...sync, unmatched: n }, q);
+    return null;
+  });
+}
+
+/** A parent joined with their own Google account: when exactly one of their children is in that lesson's class, it was that child. */
+async function matchByParent(q: Q): Promise<string[]> {
+  const rows = await q<{ id: string; ev: string; sid: string }>(`select ms.id, ms.lesson_event_id as ev, min(st.id::text) as sid
+    from meet_sessions ms join lesson_events e on e.id = ms.lesson_event_id join parents p on lower(p.email::text) = lower(ms.participant_email::text)
+    join students st on st.parent_id = p.id join enrolments x on x.student_id = st.id and x.group_id = e.group_id and not x.is_taster
+    where ms.student_id is null and not ms.ignored group by ms.id, ms.lesson_event_id having count(distinct st.id) = 1`);
+  for (const r of rows) await q(`update meet_sessions set student_id = $2 where id = $1`, [r.id, r.sid]);
+  return [...new Set(rows.map((r) => r.ev))];
 }

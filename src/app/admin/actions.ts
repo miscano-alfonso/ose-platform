@@ -1063,3 +1063,16 @@ export async function timesFromMeetAction(f: FormData): Promise<void> {
   const ok = r.done.length ? `Timetable set from Google Meet: ${r.done.join(" · ")}. Now press Re-read.` : null;
   attBack("google", ok, r.problems.length ? r.problems.join(" · ") : ok ? null : "Nothing to change.");
 }
+export async function matchPersonAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { matchPerson } = await import("@/lib/meet");
+  const ignore = !!f.get("ignore");
+  const err = await matchPerson(me.id, str(f, "key", 300), ignore ? null : str(f, "student", 40) || null);
+  attBack("joins", ignore ? "Marked as not a student." : "Matched. Every lesson they joined is updated, and their email is remembered.", err);
+}
+export async function notALessonAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { notALesson } = await import("@/lib/meet");
+  await notALesson(me.id, str(f, "code", 12));
+  attBack("google", "Hidden. Calls on that Meet code are ignored from now on.");
+}
