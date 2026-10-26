@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { after } from "next/server";
+import { socialBackground } from "@/lib/social";
 import { requireStaff } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
 import { signOutAction } from "../actions";
@@ -12,6 +14,7 @@ export const metadata: Metadata = { title: "Admin", robots: { index: false, foll
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
   const me = await requireStaff();
+  after(() => socialBackground()); // scheduled Instagram posts and the weekly moments report, after the page is sent
   const { logo } = await brandSrc();
   const [c] = await withSchool((q) => q<{ enq: number; jobs: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq, (select count(*)::int from job_applications where status = 'new') as jobs`));
   return <div className="adm"><DashStyles /><div className="app">

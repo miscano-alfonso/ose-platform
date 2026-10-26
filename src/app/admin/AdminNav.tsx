@@ -8,7 +8,7 @@ type Item = [string, string];
 const DAILY: Item[] = [
   ["Families", "/admin/families"], ["Attendance", "/admin/attendance"], ["Payments", "/admin/payments"], ["Messages", "/admin/messages"],
   ["Waiting list & enquiries", "/admin/enquiries"], ["Jobs", "/admin/jobs"], ["Tasters", "/admin/tasters"], ["Reports", "/admin/reports"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"],
-  ["Student chat", "/admin/student-chat"], ["Rewards", "/admin/rewards"], ["Payroll", "/admin/payroll"], ["Email", "/admin/email"], ["Marketing", "/admin/marketing"],
+  ["Student chat", "/admin/student-chat"], ["Rewards", "/admin/rewards"], ["Payroll", "/admin/payroll"], ["Email", "/admin/email"], ["Marketing", "/admin/marketing"], ["Social", "/admin/social"],
 ];
 const GROUPS: [string, Item[]][] = [
   ["Year setup", [["Term dates", "/admin/term-dates"], ["Prices & rules", "/admin/prices"], ["Classes", "/admin/classes"], ["Timetable", "/admin/timetable"]]],

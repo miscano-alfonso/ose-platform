@@ -68,3 +68,15 @@ export async function history(kind: string) {
     select c.id, c.created_at::text, c.audience_label, c.subject, c.recipients, c.sent, c.failed, c.error, u.name as by
     from email_campaigns c left join users u on u.id = c.sent_by where c.kind = $1 order by c.created_at desc limit 50`, [kind]));
 }
+
+/** Sends a ready-made HTML email (one per address). Used by Social's weekly report. */
+export async function sendHtml(subject: string, htmlContent: string, to: string[]): Promise<{ ok: boolean; error?: string }> {
+  if (!emailReady()) return { ok: false, error: "Brevo isn’t connected yet." };
+  if (!to.length) return { ok: false, error: "No one to send it to." };
+  const textContent = htmlContent.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim().slice(0, 5000);
+  const res = await fetch(process.env.BREVO_API_URL || "https://api.brevo.com/v3/smtp/email", {
+    method: "POST", headers: { "api-key": process.env.BREVO_API_KEY!, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ sender: SENDER(), subject, htmlContent, textContent, messageVersions: to.map((email) => ({ to: [{ email }] })), tags: ["social-report"] }),
+  }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
+  return res.ok ? { ok: true } : { ok: false, error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
+}
