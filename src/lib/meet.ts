@@ -13,13 +13,19 @@ type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>
 export class MeetError extends Error {}
 const fail = (m: string): never => { throw new MeetError(m); };
 
-const SCOPE = "https://www.googleapis.com/auth/admin.reports.audit.readonly";
+const G = "https://www.googleapis.com/auth/";
+// The school connection (a Workspace super admin): the Meet log, plus Google Classroom read-only (classes, rosters, work and marks).
+export const CLASSROOM_SCOPES = ["classroom.courses.readonly", "classroom.rosters.readonly", "classroom.coursework.students.readonly", "classroom.profile.emails"].map((x) => G + x);
+const SCOPE = [G + "admin.reports.audit.readonly", ...CLASSROOM_SCOPES].join(" ");
+// The school inbox (the mailbox families reply to): read-only, so replies from families show in Admin → Email → Inbox.
+const GMAIL_SCOPE = G + "gmail.readonly";
 const AUTH_URL = () => process.env.GOOGLE_AUTH_URL || "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = () => process.env.GOOGLE_TOKEN_URL || "https://oauth2.googleapis.com/token";
 const REPORTS_URL = () => process.env.GOOGLE_REPORTS_URL || "https://admin.googleapis.com/admin/reports/v1/activity/users/all/applications/meet";
 
-type Conn = { clientId?: string; clientSecret?: string; refreshToken?: string; by?: string; at?: string; pending?: { state: string; email: string; exp: number } };
-export type SyncInfo = { at?: string; from?: string; to?: string; joins?: number; lessons?: number; unmatched?: number; error?: string; by?: string; fetched?: number; placed?: number; lessonsInWindow?: number };
+type Conn = { clientId?: string; clientSecret?: string; refreshToken?: string; by?: string; at?: string; scopes?: string; pending?: { state: string; email: string; exp: number; kind?: "gmail" } };
+export type Mailbox = { refreshToken?: string; mailbox?: string; by?: string; at?: string };
+export type SyncInfo = { at?: string; from?: string; to?: string; joins?: number; lessons?: number; unmatched?: number; people?: number; error?: string; by?: string; fetched?: number; placed?: number; lessonsInWindow?: number };
 /** Meet calls Google reported that didn't line up with any timetabled lesson, grouped by meeting code (so the office can say which class it is). */
 export type Unplaced = { code: string; organizer: string | null; joins: number; first: string; last: string; when: string[]; slots?: Record<string, number>; days?: Record<string, string[]> };
 export type AlertCfg = { on: boolean; pct: number; lastSent?: string };
@@ -62,13 +68,13 @@ export async function disconnect(forget: boolean) {
   delete c.refreshToken; delete c.by; delete c.at; await kvSet("google", c);
 }
 
-export async function loginUrl(base: string, email: string): Promise<string> {
+export async function loginUrl(base: string, email: string, kind?: "gmail"): Promise<string> {
   const c = await conn();
   if (!c.clientId || !c.clientSecret) fail("Add the Google Client ID and secret first.");
   const state = randomBytes(16).toString("hex");
   const stored = (await kvGet<Conn>("google")) ?? {};
-  stored.pending = { state, email, exp: Date.now() + 15 * 60000 }; await kvSet("google", stored);
-  const q = new URLSearchParams({ client_id: c.clientId!, redirect_uri: redirectUri(base), response_type: "code", scope: SCOPE, access_type: "offline",
+  stored.pending = { state, email, exp: Date.now() + 15 * 60000, ...(kind ? { kind } : {}) }; await kvSet("google", stored);
+  const q = new URLSearchParams({ client_id: c.clientId!, redirect_uri: redirectUri(base), response_type: "code", scope: kind === "gmail" ? GMAIL_SCOPE : SCOPE, access_type: "offline",
     prompt: "consent select_account", include_granted_scopes: "true", state });
   return `${AUTH_URL()}?${q}`;
 }
@@ -89,16 +95,35 @@ export async function callback(base: string, sp: URLSearchParams): Promise<strin
   const c = await conn();
   const t = await token({ code: sp.get("code") || "", client_id: c.clientId!, client_secret: c.clientSecret!, redirect_uri: redirectUri(base), grant_type: "authorization_code" });
   if (!t.refresh_token) { await kvSet("google", stored); return "Google didn’t complete the sign-in" + (t.__error ? `: ${t.__error}` : "") + "."; }
+  if (pend.kind === "gmail") {
+    await kvSet("google", stored);
+    const pr = await fetch(`${GMAIL_URL()}/users/me/profile`, { headers: { authorization: `Bearer ${t.access_token}` }, signal: AbortSignal.timeout(20000) });
+    if (!pr.ok) return pr.status === 403 ? "Google wouldn’t let the site read that inbox. In Google Cloud Console turn on the Gmail API for the project, then try again." : `Gmail answered ${pr.status}. Try again.`;
+    const mailbox = String(((await pr.json()) as { emailAddress?: string }).emailAddress ?? "").toLowerCase();
+    await kvSet("gmail", { refreshToken: String(t.refresh_token), mailbox, by: pend.email, at: new Date().toISOString() } satisfies Mailbox);
+    return null;
+  }
   const test = await fetch(`${REPORTS_URL()}?eventName=call_ended&maxResults=1`, { headers: { authorization: `Bearer ${t.access_token}` }, signal: AbortSignal.timeout(20000) });
   if (!test.ok) {
     await kvSet("google", stored);
     return test.status === 403 || test.status === 401 ? "That Google account can’t read the Meet log. Sign in with a Google Workspace super admin for the school’s domain." : `Google’s Meet log answered ${test.status}. Try again.`;
   }
-  stored.refreshToken = String(t.refresh_token); stored.by = pend.email; stored.at = new Date().toISOString();
+  stored.refreshToken = String(t.refresh_token); stored.by = pend.email; stored.at = new Date().toISOString(); stored.scopes = String(t.scope ?? "");
   await kvSet("google", stored);
   return null;
 }
 
+export const GMAIL_URL = () => process.env.GMAIL_API_URL || "https://gmail.googleapis.com/gmail/v1";
+/** An access token for the school connection ("google") or the school inbox ("gmail"). */
+export async function googleAccess(kind: "google" | "gmail"): Promise<string> {
+  const c = await conn();
+  const rt = kind === "gmail" ? (await kvGet<Mailbox>("gmail"))?.refreshToken : c.refreshToken;
+  if (!rt) fail(kind === "gmail" ? "Connect the school inbox first." : "Connect Google first.");
+  return accessToken({ ...c, refreshToken: rt });
+}
+export async function googleKv<T>(key: string): Promise<T | null> { return kvGet<T>(key); }
+export async function googleKvSet(key: string, v: unknown) { await kvSet(key, v); }
+export async function classroomGranted(): Promise<boolean | null> { const c = await conn(); if (!c.refreshToken) return null; return CLASSROOM_SCOPES.every((x) => (c.scopes ?? "").includes(x)); }
 async function accessToken(c: Conn): Promise<string> {
   const t = await token({ client_id: c.clientId!, client_secret: c.clientSecret!, refresh_token: c.refreshToken!, grant_type: "refresh_token" });
   if (!t.access_token) fail(String(t.__error ?? "").includes("invalid_grant") ? "Google’s connection has expired. Press Connect Google again." : "Couldn’t reach Google: " + (t.__error ?? "no token"));
@@ -203,7 +228,8 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
       slots: Object.fromEntries([...new Set([...Object.keys(m.slots ?? {}), ...Object.keys(u.slots ?? {})])].map((k) => [k, (m.slots?.[k] ?? 0) + (u.slots?.[k] ?? 0)])),
       days: Object.fromEntries([...new Set([...Object.keys(m.days ?? {}), ...Object.keys(u.days ?? {})])].map((k) => [k, [...new Set([...(m.days?.[k] ?? []), ...(u.days?.[k] ?? [])])]])) } : u); }
     await kvSet("unplaced", [...merged.values()].sort((a, b) => b.joins - a.joins).slice(0, 60), q);
-    const info: SyncInfo = { at: new Date().toISOString(), from: new Date(from).toISOString(), to: until.toISOString(), joins: saved, lessons: touched.size, unmatched: n, by, fetched: joins.length, placed, lessonsInWindow: L.length };
+    const people = (await q<{ p: number }>(`select count(distinct ${PKEY})::int as p from meet_sessions ms where ${UNMATCHED}`))[0].p;
+    const info: SyncInfo = { at: new Date().toISOString(), from: new Date(from).toISOString(), to: until.toISOString(), joins: saved, lessons: touched.size, unmatched: n, people, by, fetched: joins.length, placed, lessonsInWindow: L.length };
     await kvSet("sync", info, q);
     return info;
   });
@@ -450,8 +476,8 @@ export async function matchPerson(actorId: string, key: string, studentId: strin
     }
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'match_person', 'meet_session', null, $2)`,
       [actorId, JSON.stringify({ key: key.slice(0, 2) + "…", student: studentId, joins: rows.length })]);
-    const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_sessions ms where ${UNMATCHED}`);
-    const sync = (await kvGet<SyncInfo>("sync", q)) ?? {}; await kvSet("sync", { ...sync, unmatched: n }, q);
+    const [{ n, p }] = await q<{ n: number; p: number }>(`select count(*)::int as n, count(distinct ${PKEY})::int as p from meet_sessions ms where ${UNMATCHED}`);
+    const sync = (await kvGet<SyncInfo>("sync", q)) ?? {}; await kvSet("sync", { ...sync, unmatched: n, people: p }, q);
     return null;
   });
 }

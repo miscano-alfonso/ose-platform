@@ -2,16 +2,22 @@ import Link from "next/link";
 import { audiences, recipients, emailReady, history } from "@/lib/email";
 import { automations } from "@/lib/automations";
 import { Composer, NotConnected } from "../../Composer";
+import { inboxStatus, inboxList } from "@/lib/inbox";
+import { syncInboxAction, markInboxAction, disconnectInboxAction } from "../../actions";
+
+const KIND: Record<string, [string, string]> = { family: ["good", "Family"], taster: ["info", "Taster"], waiting: ["warn", "Waiting list"], enquiry: ["mute", "Enquiry"] };
 
 const when = (s: string) => new Date(s).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 
-export default async function Email({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; audience?: string; subject?: string; body?: string; tab?: string }> }) {
+export default async function Email({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; audience?: string; subject?: string; body?: string; tab?: string; show?: string }> }) {
   const sp = await searchParams;
-  const tab = ["auto", "compose", "sent"].includes(sp.tab ?? "") ? sp.tab! : sp.audience || sp.ok || sp.err ? "compose" : "auto";
+  const tab = ["auto", "compose", "inbox", "sent"].includes(sp.tab ?? "") ? sp.tab! : sp.audience || sp.ok || sp.err ? "compose" : "auto";
   const ready = await emailReady();
-  const TABS: [string, string][] = [["auto", "Automatic emails"], ["compose", "Send an email"], ["sent", "Sent"]];
+  const box = await inboxStatus();
+  const unread = box.connected ? (await inboxList("new")).unread : 0;
+  const TABS: [string, string][] = [["auto", "Automatic emails"], ["compose", "Send an email"], ["inbox", `Inbox${unread ? ` (${unread})` : ""}`], ["sent", "Sent"]];
   const head = <>
-    <div className="top"><div><h1>Email</h1><div className="sub">Automatic emails, one-off messages to families, students or teachers, and everything sent.</div></div></div>
+    <div className="top"><div><h1>Email</h1><div className="sub">Automatic emails, one-off messages to families, students or teachers, replies from families, and everything sent.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {!ready && <NotConnected />}
     <div className="segl" role="tablist" style={{ marginBottom: 14 }}>{TABS.map(([k, l]) => <Link key={k} href={`/admin/email?tab=${k}`} aria-current={tab === k ? "true" : undefined}>{l}</Link>)}</div></>;
@@ -27,6 +33,33 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
     const auds = await audiences();
     const options = await Promise.all(auds.map(async (a) => ({ ...a, count: (await recipients(a.value)).length })));
     return <>{head}<Composer kind="message" options={options} ready={ready} draft={{ audience: sp.audience, subject: sp.subject, body: sp.body }} /></>;
+  }
+  if (tab === "inbox") {
+    if (!box.connected) return <>{head}<section className="card"><h2>Connect the school inbox</h2>
+      <p className="cs">Emails from families (replies to school emails, questions, absence notes) show here, linked to the family. The site reads the inbox read-only and keeps only emails from people you already know: families, enquiries, the waiting list and taster bookings. Everything else stays in Gmail only.</p>
+      <ol style={{ margin: "0 0 14px", paddingLeft: 20, lineHeight: 1.6 }}>
+        <li>In <a href="https://console.cloud.google.com/apis/library/gmail.googleapis.com" target="_blank" rel="noopener">Google Cloud Console</a> (the same project as Google Meet), turn on the <b>Gmail API</b>.</li>
+        <li>Press Connect and sign in as the mailbox families write to (the address school emails come from).</li></ol>
+      <a className="abtn pri" href="/admin/meet-api?action=login&what=gmail">Connect the school inbox</a>
+      <p className="note" style={{ marginTop: 10 }}>Google Meet has to be connected first (Attendance → Google Meet), because the inbox uses the same Google app.</p></section></>;
+    const show = sp.show === "all" ? "all" : "new";
+    const { rows } = await inboxList(show);
+    const gm = (t: string) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(box.mailbox)}#all/${t}`;
+    return <>{head}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+        <div className="segl" role="group" aria-label="Show"><Link href="/admin/email?tab=inbox" aria-current={show === "new" ? "true" : undefined}>New</Link><Link href="/admin/email?tab=inbox&show=all" aria-current={show === "all" ? "true" : undefined}>All</Link></div>
+        <span className="grow" />
+        {unread > 1 && <form action={markInboxAction}><input type="hidden" name="all" value="1" /><button className="abtn sm" type="submit">Mark all read</button></form>}
+        <form action={syncInboxAction}><button className="abtn sm" type="submit">Check now</button></form></div>
+      <section className="card">{rows.length === 0 ? <p className="empty">{show === "new" ? "Nothing new from families." : "No emails from families yet."}</p> : rows.map((m) => <div key={m.id} className="li" style={{ flexWrap: "wrap" }}>
+        <span className={`pill ${m.read ? "mute" : "info"}`}>{m.read ? "Read" : "New"}</span>
+        <div className="t"><b>{m.from_name || m.from_email} · {m.subject || "(no subject)"}</b><span>{m.snippet}</span>
+          <span style={{ display: "block", fontSize: 13.5 }}>{when(m.received_at)} · <span className={`pill ${KIND[m.kind]?.[0] ?? "mute"}`} style={{ fontSize: 12 }}>{KIND[m.kind]?.[1] ?? m.kind}</span>
+            {m.parent_id && <> · <Link href={`/admin/families/${m.parent_id}`}>{m.family}</Link></>}{m.from_name ? ` · ${m.from_email}` : ""}</span></div>
+        <a className="abtn sm" href={gm(m.thread_id)} target="_blank" rel="noopener">Open in Gmail</a>
+        <form action={markInboxAction}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="show" value={show} /><input type="hidden" name="read" value={m.read ? "0" : "1"} /><button className="abtn sm" type="submit">{m.read ? "Mark unread" : "Mark read"}</button></form></div>)}</section>
+      <p className="note">Reading <b>{box.mailbox}</b> (read-only), connected by {box.by}. Checked every 15 minutes while the admin is open{box.info.at ? `; last checked ${when(box.info.at)}` : ""}.{box.info.error ? ` Last check failed: ${box.info.error}` : ""} Reply in Gmail as usual.</p>
+      <form action={disconnectInboxAction}><button className="lnk" type="submit">Disconnect the inbox</button></form></>;
   }
   const past = await history("message");
   return <>{head}

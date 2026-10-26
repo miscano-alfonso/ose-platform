@@ -1076,3 +1076,31 @@ export async function notALessonAction(f: FormData): Promise<void> {
   await notALesson(me.id, str(f, "code", 12));
   attBack("google", "Hidden. Calls on that Meet code are ignored from now on.");
 }
+// ---------- Google Classroom and the school inbox ----------
+export async function syncClassroomAction(): Promise<void> {
+  const me = await requireStaff();
+  const { syncClassroom } = await import("@/lib/classroom");
+  const r = await syncClassroom(me.name);
+  attBack("google", r.error ? null : `Classroom read: ${r.classes ?? 0} class${r.classes === 1 ? "" : "es"}, ${r.work ?? 0} pieces of work, ${r.submissions ?? 0} hand-ins${r.joined ? `, ${r.joined} invitation${r.joined === 1 ? "" : "s"} now accepted` : ""}.${r.problems?.length ? ` ${r.problems.length} class${r.problems.length === 1 ? "" : "es"} couldn’t be read (see below).` : ""}`, r.error ?? null);
+}
+const mailBack = (ok?: string | null, err?: string | null, show?: string) => redirect(`/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
+export async function syncInboxAction(): Promise<void> {
+  await requireStaff();
+  const { syncInbox } = await import("@/lib/inbox");
+  const r = await syncInbox();
+  mailBack(r.error ? null : `Inbox read: ${r.added ?? 0} new email${r.added === 1 ? "" : "s"} from families.`, r.error ?? null);
+}
+export async function markInboxAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { markInbox } = await import("@/lib/inbox");
+  const all = f.get("all") === "1", id = str(f, "id", 40);
+  await markInbox(me.id, all ? "all" : [id], f.get("read") !== "0");
+  mailBack(null, null, str(f, "show", 5));
+}
+export async function disconnectInboxAction(): Promise<void> {
+  const me = await requireStaff();
+  if (me.role !== "school_admin") mailBack(null, "Only a school admin can disconnect the inbox.");
+  const { disconnectInbox } = await import("@/lib/inbox");
+  await disconnectInbox();
+  mailBack("The school inbox is disconnected. Emails already shown here stay until they’re a year old.");
+}

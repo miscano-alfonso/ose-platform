@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { attendanceOverview } from "@/lib/attendance";
 import { meetStatus, unmatchedPeople, unplacedCalls, usualTimes } from "@/lib/meet";
+import { classroomStatus } from "@/lib/classroom";
 import { siteBase } from "@/lib/social";
-import { saveGoogleAppAction, disconnectGoogleAction, syncMeetAction, saveAlertAction, matchPersonAction, notALessonAction, assignMeetCodeAction, timesFromMeetAction } from "../../actions";
+import { saveGoogleAppAction, disconnectGoogleAction, syncMeetAction, saveAlertAction, matchPersonAction, notALessonAction, syncClassroomAction, assignMeetCodeAction, timesFromMeetAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 const dm = (d: string) => new Date(d.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -16,6 +17,7 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
   const [d, g, joins, base, unplaced] = await Promise.all([attendanceOverview(sp.term ?? null, sp.cls ?? null), meetStatus(await siteBase()), unmatchedPeople(), siteBase(), unplacedCalls()]);
   const firstDay = d.terms[0]?.starts_on ?? "";
   const tab = ["students", "lessons", "absences", "joins", "google"].includes(sp.tab ?? "") ? sp.tab! : g.connected ? "students" : "google";
+  const gc = tab === "google" && g.connected ? await classroomStatus() : null;
   const pct = g.alert.pct, low = d.students.filter((s) => s.pct != null && s.pct < pct);
   const rows = sp.low ? low : d.students;
   const upcomingAbs = d.absences.filter((a) => a.upcoming).length;
@@ -113,6 +115,13 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
                 <select name="group" className="mini" defaultValue=""><option value="" disabled>Choose a class</option>{d.allClasses.map((c) => <option key={c.id} value={c.id}>{c.code} · {c.name.replace(/ \(.*\)$/, "")}{c.meet ? " · has a Meet link" : ""}</option>)}</select><button className="abtn sm" type="submit">Link</button></form> : null}
                 {u.code && <form action={notALessonAction} style={{ marginTop: 4 }}><input type="hidden" name="code" value={u.code} /><button className="lnk" type="submit" title="A staff meeting, parents’ call or one-off: hide it">Not a lesson</button></form>}</td></tr>)}
           </tbody></table></div></div>; })()}
+        {gc && <div style={{ marginTop: 18, borderTop: "1px solid var(--line)", paddingTop: 14 }}><h3 style={{ margin: "0 0 6px", font: "600 17px Jost, sans-serif" }}>Google Classroom</h3>
+          <p className="cs" style={{ margin: "0 0 10px" }}>Read-only, with the same Google connection: who has accepted their class invitation, the work set in each class, and each student’s hand-ins and marks. Parents see it under Assignments, and report percentages come from the marks on returned work. {gc.linked} class{gc.linked === 1 ? " is" : "es are"} linked to a Classroom (Classes → Edit).</p>
+          {gc.granted === false ? <><p className="note msg">To add Classroom: in Google Cloud Console turn on the <a href="https://console.cloud.google.com/apis/library/classroom.googleapis.com" target="_blank" rel="noopener"><b>Google Classroom API</b></a> for the same project, then press Connect Google again and sign in as before. Meet keeps working meanwhile.</p>
+            <a className="abtn pri" href="/admin/meet-api?action=login">Connect Google again</a></>
+          : <><p style={{ margin: "0 0 8px" }}>{gc.info.at ? <>Last read {ago(gc.info.at)}{gc.info.by && gc.info.by !== "auto" ? ` by ${gc.info.by}` : ""}: {gc.info.classes ?? 0} classes, {gc.info.work ?? 0} pieces of work, {gc.info.submissions ?? 0} hand-ins.{gc.info.error ? <span className="pill bad" style={{ marginLeft: 8 }}>{gc.info.error}</span> : null}</> : "Not read yet."} Reads again every 6 hours.</p>
+            <form action={syncClassroomAction}><button className="abtn" type="submit">Sync Classroom</button></form>
+            {!!gc.info.problems?.length && <ul className="note" style={{ margin: "10px 0 0", paddingLeft: 18 }}>{gc.info.problems.map((p) => <li key={p}>{p}</li>)}</ul>}</>}</div>}
         <p className="note" style={{ marginTop: 10 }}>Lessons are matched by each class’s Meet link (Classes → Meet link) or, if a class has none, by its teacher’s Google account and the timetabled time. Marks you correct on a lesson’s register are never overwritten.</p>
       </> : <>
         <p className="cs">Attendance comes straight from Google: no AttendList, nothing for teachers to do. A Google Workspace super admin for the school connects once; the access is read-only (the Meet log only).</p>

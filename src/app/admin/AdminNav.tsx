@@ -29,7 +29,7 @@ const DAILY: Item[] = [
   ["Messages", "/admin/messages"], ["Student chat", "/admin/student-chat"], ["Data protection", "/admin/privacy"], ["Rewards", "/admin/rewards"], ["Email", "/admin/email"], ["Automations", "/admin/automations"], ["Jobs", "/admin/jobs"],
 ];
 const GROUPS: [string, Item[]][] = [
-  ["Marketing", [["Newsletter", "/admin/newsletter"], ["Subscribers", "/admin/subscribers"], ["Email stats", "/admin/email-stats"], ["Social", "/admin/social"]]],
+  ["Marketing", [["Overview", "/admin/marketing"], ["Newsletter", "/admin/newsletter"], ["Subscribers", "/admin/subscribers"], ["Email stats", "/admin/email-stats"], ["Social", "/admin/social"]]],
   ["Website", [["Website", "/admin/website"], ["Home Ed hub", "/admin/home-ed"], ["Page styles", "/admin/styles"]]],
   ["Settings", [["School settings", "/admin/school"], ["Teachers", "/admin/teachers"], ["Staff & access", "/admin/staff"], ["Account", "/admin/account"]]],
 ];
