@@ -6,7 +6,7 @@ export default async function NewMessage({ searchParams }: { searchParams: Promi
   const [sp, me] = await Promise.all([searchParams, requireViewer()]);
   const students = await myStudents(me.id);
   return <>
-    <p><a href="/admin/teacher">← Back</a></p>
+    <p><a href="/admin/teacher/messages">← Back</a></p>
     <div className="top"><div><h1>Write to a family</h1><div className="sub">About a student in one of your classes. The office can see every conversation.</div></div></div>
     {sp.err && <p className="note msg bad">{sp.err}</p>}
     {students.length === 0 ? <p className="empty">You don’t have any students yet.</p> :

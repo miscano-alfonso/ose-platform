@@ -20,6 +20,8 @@ import { saveRules, applyRules, copyRules, saveBundles, ensureSubject, addClass,
 import { addYear, saveTerms, addHoliday, removeHoliday } from "@/lib/terms-admin";
 import { createCycle, createEntries, reviewEntry, approveAllSubmitted, publishCycle, saveWriteSheet, type WriteInput } from "@/lib/reports";
 import { addSlot, removeSlot, setClassTeacher, makeLessonDates, saveRegister, cancelLesson, bookTaster, setTasterStatus } from "@/lib/ops";
+import { markOneTaught, undoPoints, addMyHours, removeMyHours, teacherPost } from "@/lib/teacher-area";
+import { requireViewer } from "@/lib/auth";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite, VIEWAS_COOKIE } from "@/lib/auth";
 import { cookies } from "next/headers";
 import { SCHOOL_COOKIE, siteSchool, schoolsFor } from "@/lib/db";
@@ -825,4 +827,33 @@ export async function saveSchoolAction(f: FormData): Promise<void> {
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'update', 'school', $2)`, [me.id, JSON.stringify({ name })]);
   });
   revalidatePath("/admin", "layout"); redirect(`/admin/school?ok=${encodeURIComponent("Saved.")}`);
+}
+
+// ---------- the teacher's own area (also used by an admin viewing as that teacher; the audit records the admin) ----------
+const tback = (path: string, ok?: string | null, err?: string | null) => redirect(path + (err ? `?err=${encodeURIComponent(err)}` : ok ? `?ok=${encodeURIComponent(ok)}` : ""));
+export async function markOneTaughtAction(f: FormData): Promise<void> {
+  const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
+  const err = await markOneTaught(me.id, str(f, "id", 40), real.id);
+  tback("/admin/teacher/ones", "Marked as taught. It’s paid with your lessons.", err);
+}
+export async function addMyHoursAction(f: FormData): Promise<void> {
+  const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
+  const err = await addMyHours(me.id, Number(str(f, "weekday", 2)), str(f, "from", 5), str(f, "to", 5), real.id);
+  tback("/admin/teacher/ones", "1:1 hours updated.", err);
+}
+export async function removeMyHoursAction(f: FormData): Promise<void> {
+  const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
+  await removeMyHours(me.id, str(f, "id", 40), real.id);
+  tback("/admin/teacher/ones", "1:1 hours updated.");
+}
+export async function teacherPostAction(f: FormData): Promise<void> {
+  const me = await requireViewer();
+  const chat = str(f, "chat", 40), body = str(f, "body", 1000);
+  const err = me.viewing ? "While viewing as a teacher you can read their chats but not post as them." : body ? await teacherPost(me.id, chat, body) : "Write a message first.";
+  redirect(`/admin/teacher/chats?c=${chat}${err ? `&err=${encodeURIComponent(err)}` : ""}`);
+}
+export async function undoPointsAction(f: FormData): Promise<void> {
+  const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
+  const err = await undoPoints(me.id, str(f, "id", 40), real.id);
+  tback("/admin/points", "Points taken back.", err);
 }

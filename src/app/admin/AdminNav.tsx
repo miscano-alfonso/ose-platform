@@ -50,3 +50,21 @@ export function AdminNav({ counts }: { counts: Record<string, number> }) {
     </nav>
   </>;
 }
+
+// The teacher's own menu (as in the prototype's teacher view). Admins see it too while viewing as a teacher.
+const TEACHER: [string, string, string][] = [["My day", "/admin/teacher", "home"], ["1:1s and workshops", "/admin/teacher/ones", "fam"], ["Messages", "/admin/teacher/messages", "mail"],
+  ["Class chats", "/admin/teacher/chats", "chat"], ["Reward points", "/admin/points", "star"], ["Reports to write", "/admin/teacher/reports", "rep"],
+  ["My timetable", "/admin/teacher/timetable", "cal"], ["My pay", "/admin/teacher/pay", "gbp"]];
+export function TeacherNav({ counts }: { counts: Record<string, number> }) {
+  const path = usePathname();
+  const [open, setOpen] = useState(false);
+  const here = (href: string) => href === "/admin/teacher" ? path === href : path === href || path.startsWith(href + "/");
+  return <>
+    <button className="abtn side-btn menu-toggle" aria-expanded={open} aria-controls="t-nav" onClick={() => setOpen(!open)}>{open ? "Close menu" : "Menu"}</button>
+    <nav id="t-nav" className={`nav${open ? " open" : ""}`} aria-label="Teacher">
+      <div className="ngrp-list">{TEACHER.map(([label, href, ic]) => <Link key={href} href={href} aria-current={here(href) ? "page" : undefined} onClick={() => setOpen(false)}>
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={P[ic]} /></svg>
+        <span>{label}</span>{counts[href] ? <b className="cnt">{counts[href]}</b> : null}</Link>)}</div>
+    </nav>
+  </>;
+}

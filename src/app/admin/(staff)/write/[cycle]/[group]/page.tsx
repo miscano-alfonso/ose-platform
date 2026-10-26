@@ -14,7 +14,7 @@ export default async function Write({ params, searchParams }: { params: Promise<
   const { head: h, rows } = sheet;
   const locked = h.status === "published";
   return <>
-    <p><a href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher"}>← Back</a></p>
+    <p><a href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a></p>
     <div className="top"><div><h1>{h.name} <span className="muted" style={{ fontWeight: 400 }}>{h.code}</span></h1><div className="sub">{h.cycle} · comments due {day(h.comments_due)}</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters.</p>

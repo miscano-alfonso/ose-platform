@@ -12,7 +12,7 @@ export default async function ThreadPage({ params, searchParams }: { params: Pro
   const { th, msgs } = t;
   const isTeacher = th.teacher_user === me.id;
   return <>
-    <p><a href={me.role === "school_admin" ? "/admin/messages" : "/admin/teacher"}>← Back</a></p>
+    <p><a href={me.role === "school_admin" ? "/admin/messages" : "/admin/teacher/messages"}>← Back</a></p>
     <div className="top"><div><h1>{th.subject}</h1><div className="sub">{th.parent} ({th.parent_email}) · about {th.student} · teacher {th.teacher}</div></div>
       <span className="grow" />{th.status === "closed" ? <span className="pill mute">Closed</span> : <span className="pill good">Open</span>}</div>
     {sp.err && <p className="note msg bad">{sp.err}</p>}
