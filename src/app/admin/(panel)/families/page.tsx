@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LiveSearch from "../../LiveSearch";
 import { familyList, contactLog, type FamState } from "@/lib/families";
 import { stopContactAction } from "../../actions";
 import { money } from "@/lib/format";
@@ -22,11 +23,9 @@ export default async function Families({ searchParams }: { searchParams: Promise
       <span className="grow" /><Link className="abtn" href="/admin/import">Import families</Link></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
-      <form method="get" action="/admin/families" style={{ display: "flex", gap: 6 }}>{show !== "all" && <input type="hidden" name="show" value={show} />}
-        <input type="search" name="q" defaultValue={sp.q} placeholder="Search parent, child or email" aria-label="Search families" className="mini" style={{ width: 280 }} />
-        <button className="abtn sm" type="submit">Search</button></form>
+      <LiveSearch placeholder="Search parent, child or email" label="Search families" />
       <div className="segl" role="group" aria-label="Filter">{[["all", "All"], ["attention", "Needs attention"], ["paid", "Paid to date"]].map(([k, l]) =>
-        <Link key={k} href={href(k)} aria-current={show === k ? "true" : undefined}>{l}</Link>)}</div>
+        <Link key={k} scroll={false} href={href(k)} aria-current={show === k ? "true" : undefined}>{l}</Link>)}</div>
     </div>
     <div className="tw"><table><thead><tr><th>Parent</th><th>Children</th><th className="n">Courses</th><th>Payments</th><th className="n">Next payment</th></tr></thead><tbody>
       {list.length === 0 ? <tr><td colSpan={5} className="muted" style={{ padding: 24, textAlign: "center" }}>{all.length ? "No families match." : "No families yet. Use Import families to bring them across from TechSaga."}</td></tr>

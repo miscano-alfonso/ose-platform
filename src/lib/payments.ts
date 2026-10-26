@@ -50,7 +50,7 @@ export async function buildSchedules(actorId: string): Promise<ScheduleReport> {
 }
 
 export type TermTotal = { number: number; name: string; bills_on: string; due: number; paid: number; scheduled: number; failed: number; places: number };
-export type FamilyPay = { id: string; name: string; email: string; places: number; unscheduled: number; paid: number; total: number;
+export type FamilyPay = { id: string; name: string; email: string; kids: string | null; places: number; unscheduled: number; paid: number; total: number;
   next_on: string | null; next_due: number; overdue: number; techsaga_next: number | null;
   grid: { n: number; amount: number; status: string }[] };
 
@@ -71,6 +71,7 @@ export async function getPayments(): Promise<{ year: string | null; terms: TermT
                  join terms t on t.id = i.term_id where t.academic_year_id = $1),
            nxt as (select parent_id, min(due_on) filter (where status = 'scheduled' and due_on >= current_date) as d from x group by parent_id)
       select p.id, p.first_name || ' ' || p.last_name as name, p.email::text,
+        (select string_agg(s.first_name || ' ' || s.last_name, ' ') from students s where s.parent_id = p.id) as kids,
         (select count(*)::int from enrolments e join students s on s.id = e.student_id where s.parent_id = p.id and e.status = 'active' and not e.is_taster) as places,
         (select count(*)::int from enrolments e join students s on s.id = e.student_id where s.parent_id = p.id and e.status = 'active' and not e.is_taster
            and not exists (select 1 from instalments i where i.enrolment_id = e.id)) as unscheduled,

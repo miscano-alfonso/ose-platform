@@ -1,4 +1,5 @@
 import { withSchool } from "@/lib/db";
+import LiveSearch from "../../LiveSearch";
 import { viewAsFamilyAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -15,7 +16,7 @@ export default async function ViewAs({ searchParams }: { searchParams: Promise<{
   const list = rows.filter((r) => !q || `${r.name} ${r.detail}`.toLowerCase().includes(q)).slice(0, 60);
   return <>
     <div className="top"><div><h1>View as a {kind === "p" ? "parent" : "student"}</h1><div className="sub">See their dashboard exactly as they do. Nothing can be changed or sent while you’re viewing, and the view is recorded.</div></div></div>
-    <form method="get" style={{ display: "flex", gap: 6, marginBottom: 12 }}><input type="hidden" name="kind" value={kind} /><input type="search" name="q" defaultValue={sp.q} placeholder={kind === "p" ? "Parent, child or email" : "Student or email"} className="mini" style={{ width: 280 }} /><button className="abtn sm" type="submit">Search</button></form>
+    <div style={{ marginBottom: 12 }}><LiveSearch placeholder={kind === "p" ? "Parent, child or email" : "Student or email"} /></div>
     <section className="card">{list.length === 0 ? <p className="empty">{rows.length ? "Nobody matches." : kind === "p" ? "No families yet." : "No enrolled students yet."}</p> : list.map((r) => <form key={r.id} action={viewAsFamilyAction} className="li">
       <input type="hidden" name="kind" value={kind} /><input type="hidden" name="id" value={r.id} /><div className="t"><b>{r.name}</b><span>{r.detail}</span></div><button className="abtn sm" type="submit">View</button></form>)}</section>
   </>;

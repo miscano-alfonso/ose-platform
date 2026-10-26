@@ -1,4 +1,5 @@
 import Link from "next/link";
+import LiveSearch from "../../LiveSearch";
 import { getPayments, getPaymentLists } from "@/lib/payments";
 import { buildSchedulesAction, setFamilyTermAction } from "../../actions";
 import { money } from "@/lib/format";
@@ -13,7 +14,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
   const [bp, bi, bm] = (sp.built ?? "").split("-").map(Number);
   const q = (sp.q ?? "").toLowerCase().trim();
   const diff = (f: (typeof families)[number]) => f.techsaga_next != null && f.next_due > 0 && Math.abs(f.next_due - f.techsaga_next) > 2;
-  const list = families.filter((f) => (!q || `${f.name} ${f.email}`.toLowerCase().includes(q)) &&
+  const list = families.filter((f) => (!q || `${f.name} ${f.email} ${f.kids ?? ""}`.toLowerCase().includes(q)) &&
     (sp.show !== "attention" || f.overdue > 0 || diff(f) || f.unscheduled > 0));
   const yearTotal = terms.reduce((n, t) => n + t.due, 0), yearPaid = terms.reduce((n, t) => n + t.paid, 0);
   return <>
@@ -51,11 +52,11 @@ export default async function Payments({ searchParams }: { searchParams: Promise
       <p className="note">Registration fees (£25 per student per year) are collected at checkout and not shown here.</p></section>
 
     <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Families</h2>
-    <form className="eform" style={{ marginBottom: 14 }}>
-      <label className="fld">Search<input name="q" defaultValue={sp.q} placeholder="Parent or email" /></label>
-      <label className="fld">Show<select name="show" defaultValue={sp.show ?? ""}><option value="">All families</option><option value="attention">Needs attention</option></select></label>
-      <button className="abtn" type="submit">Filter</button>
-    </form>
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
+      <LiveSearch placeholder="Search parent, child or email" label="Search families" />
+      <div className="segl" role="group" aria-label="Show">{[["", "All families"], ["attention", "Needs attention"]].map(([k, l]) =>
+        <Link key={k} scroll={false} href={`/admin/payments?${new URLSearchParams({ ...(k ? { show: k } : {}), ...(sp.q ? { q: sp.q } : {}) })}`} aria-current={(sp.show ?? "") === k ? "true" : undefined}>{l}</Link>)}</div>
+    </div>
     {list.length === 0 ? <p className="empty">{families.length ? "No families match." : "No families yet. Import them under Families first."}</p> :
     <div className="tw"><table>
       <thead><tr><th>Family</th><th>Places</th><th>Paid this year</th><th>Year total</th><th>Next payment</th><th>Check</th></tr></thead>
