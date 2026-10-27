@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useState } from "react";
-import { PLANS, gbp } from "../plans";
+import { PLANS, gbp, EXTRA_STUDENT } from "../plans";
 
 export function Plans() {
   const [yearly, setYearly] = useState(false);
@@ -15,7 +15,7 @@ export function Plans() {
       <h3>{p.name}</h3><p className="for">{p.for}</p>
       <div className="edt-price"><b>{gbp(yearly ? Math.round(p.yearly / 12) : p.monthly)}</b><span>a month</span></div>
       <p className="edt-note" style={{ marginTop: -8 }}>{yearly ? `${gbp(p.yearly)} billed once a year` : "Billed monthly, cancel any time"}</p>
-      <div className="sizes"><span>{p.teachers}</span><span>{p.students}</span></div>
+      <div className="sizes"><span>{p.teachers}</span><span>{p.students}</span><span className="edt-note">then {gbp(EXTRA_STUDENT)} a month for each extra student</span></div>
       {p.adds && <p className="adds">{p.adds}</p>}
       <ul>{p.features.map((f) => <li key={f}>{f}</li>)}</ul>
       <Link href={`/osedtech/trial?plan=${p.id}`} className={`edt-btn${p.highlight ? " teal" : ""}`}>{p.cta}</Link>

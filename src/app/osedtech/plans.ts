@@ -2,9 +2,11 @@
 export type Plan = { id: "solo" | "growth" | "school"; name: string; for: string; monthly: number; yearly: number; teachers: string; students: string; cta: string; highlight?: boolean; adds?: string; features: string[] };
 
 export const TRIAL_DAYS = 30;
+/** Each plan includes a number of students; above that, each extra student costs this much a month. */
+export const EXTRA_STUDENT = 2;
 export const PLANS: Plan[] = [
   {
-    id: "solo", name: "Solo", for: "One teacher running their own classes", monthly: 100, yearly: 1000, teachers: "1 teacher", students: "Up to 60 students", cta: "Start a free trial",
+    id: "solo", name: "Solo", for: "One teacher running their own classes", monthly: 100, yearly: 1000, teachers: "1 teacher", students: "60 students included", cta: "Start a free trial",
     features: [
       "Your own website: course pages, timetable, term dates and prices",
       "Online booking and card payments, including instalments",
@@ -18,7 +20,7 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    id: "growth", name: "Growth", for: "A small team of teachers under one name", monthly: 200, yearly: 2000, teachers: "Up to 8 teachers", students: "Up to 250 students", cta: "Start a free trial", highlight: true, adds: "Everything in Solo, plus",
+    id: "growth", name: "Growth", for: "A small team of teachers under one name", monthly: 200, yearly: 2000, teachers: "Up to 8 teachers", students: "250 students included", cta: "Start a free trial", highlight: true, adds: "Everything in Solo, plus",
     features: [
       "A login for each teacher: their day, timetable, classes and messages",
       "Reports to families, with Google Classroom assessments checked",
@@ -30,7 +32,7 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    id: "school", name: "School", for: "An online school with staff, payroll and marketing", monthly: 600, yearly: 6000, teachers: "Unlimited teachers and staff", students: "Unlimited students", cta: "Start a free trial", adds: "Everything in Growth, plus",
+    id: "school", name: "School", for: "An online school with staff, payroll and marketing", monthly: 600, yearly: 6000, teachers: "Unlimited teachers and staff", students: "600 students included", cta: "Start a free trial", adds: "Everything in Growth, plus",
     features: [
       "Payroll for teachers, worked out from the lessons they taught",
       "Staff roles and access: office, teachers and admins",
@@ -73,7 +75,8 @@ export const COMPARE: [string, [string, boolean | string, boolean | string, bool
     ["Jobs page for hiring", false, false, true],
   ]],
   ["Running the business", [
-    ["Students", "Up to 60", "Up to 250", "Unlimited"],
+    ["Students included", "60", "250", "600"],
+    ["Each student over that", "£2 a month", "£2 a month", "£2 a month"],
     ["Staff roles and access", false, false, true],
     ["Data protection tools", "Basic", "Basic", "Full"],
     ["AI assistant in the dashboard", false, false, true],

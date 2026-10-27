@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plans } from "./Plans";
-import { COMPARE, PLANS, TRIAL_DAYS } from "../plans";
+import { COMPARE, PLANS, TRIAL_DAYS, EXTRA_STUDENT, gbp } from "../plans";
 
 export const metadata = { title: "Pricing", description: "OH-SO EdTech plans for one teacher, a small team or a whole online school. Try any plan free for 30 days." };
 
@@ -17,6 +17,7 @@ export default function Pricing() {
         <div><b>No commission on fees</b>Families pay into your own Stripe account. Stripe charges its usual card fees; we take nothing.</div>
         <div><b>No contract</b>Monthly or yearly. Change plan or cancel whenever you like.</div>
         <div><b>Your data stays yours</b>Export it any time. If you leave, we hand it over and then delete it.</div>
+        <div><b>Growing past your plan</b>Each plan includes a number of students. Above that it’s {gbp(EXTRA_STUDENT)} a month for each extra student, counted from your active students each month, or move up a plan when the extras add up.</div>
         <div><b>Bigger than School?</b><Link href="/osedtech/trial?plan=school">Tell us about it</Link> and we’ll work out a price together.</div>
       </div>
     </div></section>
