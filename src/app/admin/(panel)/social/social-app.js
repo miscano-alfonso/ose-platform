@@ -389,7 +389,7 @@ async function kitRender(b,size,tpl){
   const logo=yb=>{if(LH)kitLogo(ctx,logoL?M+LW:W-M,yb,LH,rgb,T.logo,tone.ink)};
   const pic=(x,y,w,h)=>img?(hang?kitCrop(ctx,img,x,y,w,h,T.shadow):kitCover(ctx,img,x,y,w,h,T.shadow,center?'center':rightT?'right':'lefttop')):{x,y,w,h};
   if(size==='landscape'){ // picture on one side, hanging from the top (or standing on the bottom); text beside it
-    const m=54,pw=Math.round(W*.44*cs),ph=hang?Math.round(H*.84):H-2*m,px=rightT?m:W-m-pw,py=hang?(bot?H-ph:0):m;
+    const m=54,pw=Math.round(W*.44*cs),ph=H-2*m,px=rightT?m:W-m-pw,py=m; // the same margin on the three sides facing the edges
     const c=pic(px,py,pw,ph),tx=rightT?c.x+c.w+50:m,tw=rightT?W-m-tx:c.x-50-m,st={title:58*ts,sub:26,small:21,eye:18};
     const logoTop=bot?m:H-m-LHH,ty=bot?m+LHH+34:m+6;
     const res=bot?kitText(ctx,b,{w:tw,h:H-m-ty},st,tone,T):kitFit(ctx,b,tw,logoTop-30-ty,logoL?0:tw-LW-30,H-m-ty,st,tone,T);
@@ -397,8 +397,8 @@ async function kitRender(b,size,tpl){
     if(LH)kitLogo(ctx,logoL?tx+LW:tx+tw,bot?m+LHH:H-m,LH,rgb,T.logo,tone.ink);
     return cv}
   // square, portrait and story: the picture hangs from the top with the text below, or stands on the bottom with the text above
-  const pw=Math.round((W-2*M)*(size==='story'?.82:1)*cs),ph=Math.round(H*(size==='story'?.46:size==='portrait'?.44:.4)*cs);
-  const px=center?Math.round((W-pw)/2):rightT?W-M-pw:M,py=bot?(hang?H-ph:H-M-ph):(hang?0:M);
+  const pw=W-2*M,ph=Math.round(H*(size==='story'?.5:size==='portrait'?.44:.4)*cs);
+  const px=M,py=bot?H-M-ph:M; // the same margin on the three sides facing the edges
   const c=pic(px,py,pw,ph);
   const k2=size==='story'?1.4:1.15,S2={title:S.title*k2,sub:S.sub*k2,small:S.small*k2,eye:S.eye*k2};
   const tX=center?W/2:rightT?W-M:M,tAl=center?true:rightT?'right':false;
@@ -424,7 +424,7 @@ function kitTplCard(){
     <div class="kit-tplgrid"><div class="kit-tplctl">
       <div class="field"><span class="em-lbl">Background</span>${seg('bg',[['book','Subject colour'],['custom','One colour']])}${T.bg==='custom'?`<div class="so-row so-bgs">${[['#F3F4FA','Mist'],['#FFFFFF','White'],['#0F1747','Navy'],['#E3CD4B','Mustard'],['#171B2B','Ink']].map(([v,l])=>`<button type="button" class="so-sw" data-kt-set="bgColor" data-v="${v}" title="${l}" aria-pressed="${T.bgColor.toLowerCase()===v.toLowerCase()}" style="background:${v}"></button>`).join('')}<input type="color" data-kt-col="bgColor" value="${esc(T.bgColor)}" aria-label="Other colour"></div>`:''}</div>
       <div class="field"><span class="em-lbl">Text colour</span>${seg('tone',[['auto','Automatic'],['dark','Dark'],['light','Light']])}</div>
-      <div class="field"><span class="em-lbl">Layout</span>${seg('pos',[['top','Picture at the top, text below'],['bottom','Text at the top, picture at the bottom']])}${seg('hang',[['true','Hanging from the edge'],['false','Whole picture, with a margin']])}${seg('side',[['left','Text on the left'],['right','Text on the right']])}${seg('logoSide',[['right','Logo on the right'],['left','Logo on the left']])}${seg('coverAlign',[['left','Picture lined up with the text'],['center','Everything centred']])}</div>
+      <div class="field"><span class="em-lbl">Layout</span>${seg('pos',[['top','Picture at the top, text below'],['bottom','Text at the top, picture at the bottom']])}${seg('hang',[['true','Fill the space (cropped)'],['false','Whole picture']])}${seg('side',[['left','Text on the left'],['right','Text on the right']])}${seg('logoSide',[['right','Logo on the right'],['left','Logo on the left']])}${seg('coverAlign',[['left','Picture lined up with the text'],['center','Everything centred']])}</div>
       <div class="field"><span class="em-lbl">Text beside the picture (square and landscape)</span>${seg('textAlign',[['top','Level with the top'],['middle','Middle']])}</div>
       ${rng('coverSize','Picture size',80,115)}${rng('titleSize','Title size',70,150)}
       <div class="field"><span class="em-lbl">Show</span><div class="kit-chks">${chk('eyebrow','Label (Space available, Starts September…)')}${chk('subtitle','Exam board or level')}${chk('partner','Teacher')}${chk('url','Web address')}${chk('shadow','Shadow under the picture')}</div>${T.url?`<input type="text" data-kt-txt="urlText" value="${esc(T.urlText)}" placeholder="${esc(kitBase().replace(/^https?:\/\//,'').replace(/\/$/,''))}" aria-label="Web address text" style="margin-top:6px">`:''}</div>
