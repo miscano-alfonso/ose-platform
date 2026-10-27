@@ -26,7 +26,7 @@ export default function EdTechLayout({ children }: { children: React.ReactNode }
     </div></header>
     <main id="main">{children}</main>
     <footer className="edt-foot"><div className="edt-wrap">
-      <div><Mark small /><p>The platform behind OH-SO ED, for teachers running their own online classes under their own name.</p></div>
+      <div><Mark small dark /><p>The platform behind OH-SO ED, for teachers running their own online classes under their own name.</p></div>
       <nav aria-label="Footer"><Link href="/osedtech/features">Features</Link><Link href="/osedtech/pricing">Pricing</Link><Link href="/osedtech/pricing#compare">How we compare</Link><Link href="/osedtech/demo">Demo</Link><Link href="/osedtech/trial">Free trial</Link><a href="/">OH-SO ED, the school</a></nav>
       <p className="edt-small">© {new Date().getFullYear()} OH-SO EdTech. Prices exclude VAT where it applies.</p>
     </div></footer>

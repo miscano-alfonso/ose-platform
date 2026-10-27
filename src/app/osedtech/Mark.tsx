@@ -1,4 +1,6 @@
-// The OH-SO ED TECH logotype (Alfonso's sketch, Oct 2026): "OH–SO ED" with "TECH" spaced out and centred underneath, a little bolder.
-export function Mark({ small }: { small?: boolean }) {
-  return <span className={`edt-mark${small ? " sm" : ""}`} aria-label="OH-SO ED Tech"><span className="t" aria-hidden="true">OH–SO ED</span><span className="s" aria-hidden="true">TECH</span></span>;
+// The OH-SO EdTech logotype (Alfonso's Canva file, Oct 2026): "OH–SO ED" in capitals with a large lowercase "tech" in blue.
+// White lettering on the charcoal site; pass dark={false} for the navy version on a light background.
+export function Mark({ small, dark }: { small?: boolean; dark?: boolean }) {
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img className={`edt-mark${small ? " sm" : ""}`} src={dark !== false ? "/osedtech/logo-white.svg" : "/osedtech/logo-navy.svg"} alt="OH-SO EdTech" width={888} height={132} />;
 }

@@ -10,9 +10,9 @@
 .edt :focus-visible{outline:3px solid var(--teal);outline-offset:2px}
 
 /* wordmark */
-.edt-mark{display:inline-grid;gap:.3em;line-height:1;font-weight:400;letter-spacing:.06em;font-size:24px;white-space:nowrap}
-.edt-mark .s{font-size:.66em;font-weight:500;letter-spacing:.5em;margin-right:-.5em;justify-self:center}
-.edt-mark.sm{font-size:21px}
+.edt-mark{display:block;height:30px;width:auto}
+.edt-mark.sm{height:26px;margin-bottom:14px}
+@media (max-width:560px){.edt-mark{height:24px}}
 
 /* header */
 .edt-head{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--paper) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
@@ -207,3 +207,23 @@
 .edt-need{margin-top:28px;background:#fff;border:1px solid var(--line);border-left:5px solid var(--teal);border-radius:14px;padding:22px 26px}
 .edt-need h3{font-size:22px;margin-bottom:10px}
 .edt-need ul{margin:0;padding-left:20px;display:grid;gap:8px}
+
+/* Dark charcoal theme (Alfonso chose option A, 27 Oct): text uses --ink (now light); dark bands use --deep; accent is the logo's blue. */
+.edt{--ink:#f1f2f4;--ink2:#34363c;--paper:#1e1f22;--card:#2a2c30;--line:#3a3d43;--muted:#a9acb4;--deep:#161719;
+  --teal:#0cc0df;--teal-d:#45d3ec;--teal-soft:#16363d;--sun-soft:#3a3420;color-scheme:dark}
+.edt .edt-btn{background:var(--teal);color:#08191e;border-color:var(--teal)}
+.edt .edt-btn:hover{background:#45d3ec;border-color:#45d3ec;color:#08191e}
+.edt .edt-btn.line{background:transparent;color:#fff;border-color:rgba(255,255,255,.75)}
+.edt .edt-btn.line:hover{background:#fff;color:#1e1f22}
+.edt-sec.ink,.edt-foot{background:var(--deep)}
+.edt-sec.ink .edt-card{background:var(--card);border-color:var(--line)}
+.edt-sec.white{background:#232427}
+.edt-bill,.edt-plan,.edt-fine div,.edt-tw,.edt-cmp thead th,.edt-faq details,.edt-form,.edt-rec .file,.edt-rec .post,.edt-need,.edt-named th:first-child,.edt-named td:first-child{background:var(--card)}
+.edt-bill button[aria-pressed=true]{background:var(--teal);color:#08191e}
+.edt-form input:not([type=radio]):not([type=checkbox]),.edt-form select,.edt-form textarea{background:#1a1b1e;border-color:var(--line);color:var(--ink)}
+.edt-shot{border-color:var(--line);box-shadow:0 30px 60px -30px rgba(0,0,0,.7)}
+.edt-shot .bar{background:#2f3136}.edt-shot .bar span{background:#1e1f22;color:var(--muted)}
+.edt-cmp tr.grp td{background:#232427}
+.edt #main{background:transparent}
+.edt-foot .edt-small{border-top-color:var(--line)}
+.edt-sec.ink .edt-ico{background:var(--teal-soft)}
