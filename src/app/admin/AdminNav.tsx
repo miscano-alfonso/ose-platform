@@ -6,7 +6,7 @@ import { useState } from "react";
 type Item = [string, string];
 // icons as in the prototype (20×20, drawn with a 1.6 stroke)
 const P: Record<string, string> = {
-  auto: "M11 2.5L4.5 11h5l-1 6.5L15.5 9h-5z",
+  auto: "M11 2.5L4.5 11h5l-1 6.5L15.5 9h-5z", rec: "M3.5 5.5h9a1.5 1.5 0 0 1 1.5 1.5v6a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 13V7a1.5 1.5 0 0 1 1.5-1.5z M14 9l4-2.5v7L14 11", pic: "M3 4h14v12H3z M3 13l4-4 3 3 2-2 5 5 M12.5 7.5a1 1 0 1 0 0 .1",
   home: "M3 9l7-6 7 6v8H3z M8 17v-5h4v5", fam: "M7 4a2.5 2.5 0 1 0 0 5a2.5 2.5 0 1 0 0-5 M2.5 16c.5-3 2.4-4.5 4.5-4.5s4 1.5 4.5 4.5 M14 6a2 2 0 1 0 0 4a2 2 0 1 0 0-4 M11.5 16c.3-2 1.3-3.3 2.5-3.3s2.6 1 3 3.3",
   att: "M5 3h10a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z M6.5 10l2.5 2.5 4.5-5", pay: "M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 14V6A1.5 1.5 0 0 1 4 4.5z M2.5 8h15 M5.5 12.5h3",
   mail: "M4 4.5h12a1.5 1.5 0 0 1 1.5 1.5v8a1.5 1.5 0 0 1-1.5 1.5H4A1.5 1.5 0 0 1 2.5 14V6A1.5 1.5 0 0 1 4 4.5z M3 5.5l7 5.5 7-5.5", wait: "M10 2.5a7.5 7.5 0 1 0 0 15a7.5 7.5 0 1 0 0-15 M10 5.5V10l3 2",
@@ -19,12 +19,12 @@ const P: Record<string, string> = {
 const ICON: Record<string, string> = { "/admin/families": "fam", "/admin/attendance": "att", "/admin/payments": "pay", "/admin/messages": "mail", "/admin/enquiries": "wait", "/admin/jobs": "job",
   "/admin/tasters": "att", "/admin/reports": "rep", "/admin/tutoring": "fam", "/admin/workshops": "cal", "/admin/student-chat": "chat", "/admin/rewards": "star", "/admin/payroll": "gbp",
   "/admin/email": "mail", "/admin/newsletter": "mail", "/admin/subscribers": "fam", "/admin/email-stats": "rep", "/admin/social": "mkt", "/admin/term-dates": "cal", "/admin/prices": "price",
-  "/admin/classes": "cls", "/admin/timetable": "cal", "/admin/teachers": "fam", "/admin/website": "web", "/admin/home-ed": "web", "/admin/styles": "set", "/admin/staff": "set", "/admin/account": "set", "/admin/school": "set", "/admin": "home", "/admin/privacy": "set", "/admin/automations": "auto" };
+  "/admin/classes": "cls", "/admin/timetable": "cal", "/admin/teachers": "fam", "/admin/website": "web", "/admin/home-ed": "web", "/admin/styles": "set", "/admin/staff": "set", "/admin/account": "set", "/admin/school": "set", "/admin": "home", "/admin/privacy": "set", "/admin/automations": "auto", "/admin/recordings": "rec", "/admin/designs": "pic", "/admin/marketing": "mkt" };
 const Icon = ({ href }: { href: string }) => <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={P[ICON[href] ?? "home"]} /></svg>;
 // The prototype's menu order; the newer sections (Jobs, Newsletter, Social…) sit after it, and website and school settings in groups.
 const DAILY: Item[] = [
   ["Dashboard", "/admin"], ["Classes", "/admin/classes"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"], ["Timetable", "/admin/timetable"],
-  ["Families", "/admin/families"], ["Attendance", "/admin/attendance"], ["Reports", "/admin/reports"], ["Payments", "/admin/payments"], ["Payroll", "/admin/payroll"],
+  ["Families", "/admin/families"], ["Attendance", "/admin/attendance"], ["Recordings", "/admin/recordings"], ["Reports", "/admin/reports"], ["Payments", "/admin/payments"], ["Payroll", "/admin/payroll"],
   ["Prices & discounts", "/admin/prices"], ["Term dates", "/admin/term-dates"], ["Tasters", "/admin/tasters"], ["Waiting list & enquiries", "/admin/enquiries"],
   ["Messages", "/admin/messages"], ["Student chat", "/admin/student-chat"], ["Data protection", "/admin/privacy"], ["Rewards", "/admin/rewards"], ["Email", "/admin/email"], ["Automations", "/admin/automations"], ["Jobs", "/admin/jobs"],
 ];

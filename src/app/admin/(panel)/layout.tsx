@@ -5,6 +5,7 @@ import { meetBackground } from "@/lib/meet";
 import { automationsBackground } from "@/lib/automations";
 import { classroomBackground } from "@/lib/classroom";
 import { inboxBackground, unreadInbox } from "@/lib/inbox";
+import { recordingsBackground } from "@/lib/recordings";
 import { requireStaff } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
 import { signOutAction } from "../actions";
@@ -25,7 +26,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   after(() => socialBackground());
   after(() => meetBackground());
   after(() => classroomBackground()); // class work and marks from Google Classroom, every 6 hours
-  after(() => inboxBackground()); // families' emails from the school inbox, every 15 minutes
+  after(() => inboxBackground());
+  after(() => recordingsBackground()); // lesson recordings: renamed, filed, posted to Classroom, title cards // families' emails from the school inbox, every 15 minutes
   after(() => automationsBackground()); // lesson reminders, taster emails, payment reminders… // reads new Google Meet joins every few hours, and sends Friday's attendance alert // scheduled Instagram posts and the weekly moments report, after the page is sent
   const { logo } = await brandSrc();
   const [x] = await withSchool((q) => q<{ rep: number; msg: number; joins: number }>(`select

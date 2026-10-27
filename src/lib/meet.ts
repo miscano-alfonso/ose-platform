@@ -19,11 +19,15 @@ export const CLASSROOM_SCOPES = ["classroom.courses.readonly", "classroom.roster
 const SCOPE = [G + "admin.reports.audit.readonly", ...CLASSROOM_SCOPES].join(" ");
 // The school inbox (the mailbox families reply to): read-only, so replies from families show in Admin → Email → Inbox.
 const GMAIL_SCOPE = G + "gmail.readonly";
+// The recordings account (ose@, which owns the Meet recordings and teaches every Classroom): Drive, and posting recordings to Classroom.
+const REC_SCOPE = ["drive", "classroom.courses.readonly", "classroom.coursework.students", "classroom.courseworkmaterials", "classroom.announcements.readonly",
+  "classroom.rosters.readonly", "classroom.profile.emails"].map((x) => G + x).join(" ");
+export type GKind = "gmail" | "rec";
 const AUTH_URL = () => process.env.GOOGLE_AUTH_URL || "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = () => process.env.GOOGLE_TOKEN_URL || "https://oauth2.googleapis.com/token";
 const REPORTS_URL = () => process.env.GOOGLE_REPORTS_URL || "https://admin.googleapis.com/admin/reports/v1/activity/users/all/applications/meet";
 
-type Conn = { clientId?: string; clientSecret?: string; refreshToken?: string; by?: string; at?: string; scopes?: string; pending?: { state: string; email: string; exp: number; kind?: "gmail" } };
+type Conn = { clientId?: string; clientSecret?: string; refreshToken?: string; by?: string; at?: string; scopes?: string; pending?: { state: string; email: string; exp: number; kind?: GKind } };
 export type Mailbox = { refreshToken?: string; mailbox?: string; by?: string; at?: string };
 export type SyncInfo = { at?: string; from?: string; to?: string; joins?: number; lessons?: number; unmatched?: number; people?: number; error?: string; by?: string; fetched?: number; placed?: number; lessonsInWindow?: number };
 /** Meet calls Google reported that didn't line up with any timetabled lesson, grouped by meeting code (so the office can say which class it is). */
@@ -68,13 +72,13 @@ export async function disconnect(forget: boolean) {
   delete c.refreshToken; delete c.by; delete c.at; await kvSet("google", c);
 }
 
-export async function loginUrl(base: string, email: string, kind?: "gmail"): Promise<string> {
+export async function loginUrl(base: string, email: string, kind?: GKind): Promise<string> {
   const c = await conn();
   if (!c.clientId || !c.clientSecret) fail("Add the Google Client ID and secret first.");
   const state = randomBytes(16).toString("hex");
   const stored = (await kvGet<Conn>("google")) ?? {};
   stored.pending = { state, email, exp: Date.now() + 15 * 60000, ...(kind ? { kind } : {}) }; await kvSet("google", stored);
-  const q = new URLSearchParams({ client_id: c.clientId!, redirect_uri: redirectUri(base), response_type: "code", scope: kind === "gmail" ? GMAIL_SCOPE : SCOPE, access_type: "offline",
+  const q = new URLSearchParams({ client_id: c.clientId!, redirect_uri: redirectUri(base), response_type: "code", scope: kind === "gmail" ? GMAIL_SCOPE : kind === "rec" ? REC_SCOPE : SCOPE, access_type: "offline",
     prompt: "consent select_account", include_granted_scopes: "true", state });
   return `${AUTH_URL()}?${q}`;
 }
@@ -95,6 +99,16 @@ export async function callback(base: string, sp: URLSearchParams): Promise<strin
   const c = await conn();
   const t = await token({ code: sp.get("code") || "", client_id: c.clientId!, client_secret: c.clientSecret!, redirect_uri: redirectUri(base), grant_type: "authorization_code" });
   if (!t.refresh_token) { await kvSet("google", stored); return "Google didn’t complete the sign-in" + (t.__error ? `: ${t.__error}` : "") + "."; }
+  if (pend.kind === "rec") {
+    await kvSet("google", stored);
+    const ab = await fetch(`${DRIVE_URL()}/about?fields=user`, { headers: { authorization: `Bearer ${t.access_token}` }, signal: AbortSignal.timeout(20000) });
+    if (!ab.ok) return ab.status === 403 ? "Google wouldn’t let the site use Drive: turn on the Google Drive API (and the Google Classroom API) for the project, then try again." : `Drive answered ${ab.status}. Try again.`;
+    const account = String(((await ab.json()) as { user?: { emailAddress?: string } }).user?.emailAddress ?? "").toLowerCase();
+    const sc = String(t.scope ?? "");
+    if (sc && !sc.includes("courseworkmaterials")) return "Google didn’t give permission to post to Classroom. Press Connect again and tick every box.";
+    await kvSet("rec_google", { refreshToken: String(t.refresh_token), mailbox: account, by: pend.email, at: new Date().toISOString() } satisfies Mailbox);
+    return null;
+  }
   if (pend.kind === "gmail") {
     await kvSet("google", stored);
     const pr = await fetch(`${GMAIL_URL()}/users/me/profile`, { headers: { authorization: `Bearer ${t.access_token}` }, signal: AbortSignal.timeout(20000) });
@@ -114,11 +128,12 @@ export async function callback(base: string, sp: URLSearchParams): Promise<strin
 }
 
 export const GMAIL_URL = () => process.env.GMAIL_API_URL || "https://gmail.googleapis.com/gmail/v1";
+export const DRIVE_URL = () => process.env.DRIVE_API_URL || "https://www.googleapis.com/drive/v3";
 /** An access token for the school connection ("google") or the school inbox ("gmail"). */
-export async function googleAccess(kind: "google" | "gmail"): Promise<string> {
+export async function googleAccess(kind: "google" | GKind): Promise<string> {
   const c = await conn();
-  const rt = kind === "gmail" ? (await kvGet<Mailbox>("gmail"))?.refreshToken : c.refreshToken;
-  if (!rt) fail(kind === "gmail" ? "Connect the school inbox first." : "Connect Google first.");
+  const rt = kind === "gmail" ? (await kvGet<Mailbox>("gmail"))?.refreshToken : kind === "rec" ? (await kvGet<Mailbox>("rec_google"))?.refreshToken : c.refreshToken;
+  if (!rt) fail(kind === "gmail" ? "Connect the school inbox first." : kind === "rec" ? "Connect the recordings account (ose@) first." : "Connect Google first.");
   return accessToken({ ...c, refreshToken: rt });
 }
 export async function googleKv<T>(key: string): Promise<T | null> { return kvGet<T>(key); }

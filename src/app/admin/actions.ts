@@ -1140,3 +1140,45 @@ export async function deleteDesignAssetAction(f: FormData): Promise<void> {
   await dsAdmin(); const D = await import("@/lib/designs");
   await D.deleteAsset(str(f, "id", 40)); dsBack("Picture removed from the library.");
 }
+// ---------- Recordings (the Meet recordings tracker) ----------
+const recBack = (tab: string, ok?: string | null, err?: string | null, extra = "") => redirect(`/admin/recordings?tab=${tab}${extra}` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
+async function recAdmin(tab: string) { const me = await requireStaff(); if (me.role !== "school_admin") recBack(tab, null, "Only a school admin can do that."); return me; }
+export async function runRecordingsAction(): Promise<void> {
+  const me = await recAdmin("week"); const R = await import("@/lib/recordings");
+  const r = await R.runRecordings(me.name);
+  recBack("week", r.error ? null : `Done: ${r.filed} recording${r.filed === 1 ? "" : "s"} filed, ${r.flagged} flagged as too short, ${r.posted} posted to Classroom, ${r.cards} title card${r.cards === 1 ? "" : "s"} started.${r.problems?.length ? ` ${r.problems.length} problem${r.problems.length === 1 ? "" : "s"}: see Needs a look.` : ""}`, r.error ?? null);
+}
+export async function recCfgAction(f: FormData): Promise<void> {
+  await recAdmin("settings"); const R = await import("@/lib/recordings");
+  const id = (k: string) => { const v = str(f, k, 300).replace(/^.*\/folders\//, "").replace(/[?#].*$/, ""); return /^[\w-]{10,80}$/.test(v) ? v : undefined; };
+  const url = str(f, "cardUrl", 300), secret = str(f, "cardSecret", 300);
+  if (url && !/^https:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/.test(url)) recBack("settings", null, "The title-card service URL should start with https://.");
+  await R.saveRecCfg({ meetFolder: id("meetFolder"), transcriptsFolder: id("transcriptsFolder"), flaggedFolder: id("flaggedFolder"), oneToOneFolder: id("oneToOneFolder"),
+    ...(url ? { cardUrl: url } : {}), ...(secret ? { cardSecret: secret } : {}), autoCards: f.get("autoCards") === "1",
+    minBytes: Math.max(256 * 1024, Math.round(Number(str(f, "minMb", 6) || 5) * 1024 * 1024)) });
+  recBack("settings", "Settings saved.");
+}
+export async function recLessonAction(f: FormData): Promise<void> {
+  await recAdmin("settings"); const R = await import("@/lib/recordings");
+  const err = await R.saveLesson({ id: str(f, "id", 40) || undefined, kind: str(f, "kind", 6), meet_code: str(f, "meet_code", 80), name: str(f, "name", 120), course_id: str(f, "course_id", 30),
+    folder_id: str(f, "folder_id", 300), per_week: str(f, "per_week", 2), year_suffix: str(f, "year_suffix", 3), active: f.get("active") !== "0" });
+  recBack("settings", err ? null : "Saved.", err);
+}
+export async function editCardAction(f: FormData): Promise<void> {
+  await recAdmin("cards"); const R = await import("@/lib/recordings");
+  await R.editCard(str(f, "id", 40), str(f, "title", 160), str(f, "teacher", 80));
+  recBack("cards", "Updated. Check the new preview.");
+}
+export async function approveCardsAction(f: FormData): Promise<void> {
+  await recAdmin("cards"); const R = await import("@/lib/recordings");
+  await R.approveCards(f.getAll("id").map(String).filter((x) => /^[0-9a-f-]{36}$/.test(x)));
+  recBack("cards", "Approved. The cards are added on the next run (or press Run now).");
+}
+export async function postAnywayAction(f: FormData): Promise<void> {
+  await recAdmin("look"); const R = await import("@/lib/recordings");
+  await R.postAnyway(str(f, "id", 40)); recBack("look", "It will be posted on the next run (or press Run now).");
+}
+export async function disconnectRecAction(): Promise<void> {
+  await recAdmin("settings"); const R = await import("@/lib/recordings");
+  await R.disconnectRec(); recBack("settings", "The recordings account is disconnected.");
+}
