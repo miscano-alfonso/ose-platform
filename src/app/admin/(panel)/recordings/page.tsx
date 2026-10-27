@@ -87,7 +87,7 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
           : r.over_expected ? <><span className="pill warn">More lessons than expected</span> the name ends “(check - exceeds expected weekly count)”.</>
           : <><span className={`pill ${CL[r.classroom]?.[0]}`}>{CL[r.classroom]?.[1]}</span> {r.classroom_note}</>}</td>
         <td><a href={drive(r.file_id)} target="_blank" rel="noopener">{r.name ?? "Open"}</a></td>
-        <td>{r.status === "filed" && ["waiting", "error", "gave_up"].includes(r.classroom) && <form action={postAnywayAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit" title="For a teacher post titled differently, e.g. “Week 4”">Post anyway</button></form>}</td></tr>)}
+        <td>{r.status === "filed" && ["waiting", "error", "gave_up"].includes(r.classroom) && <form action={postAnywayAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit" title="Posts “🎥 T· Lesson ·” in Classroom now, under the teacher’s topic if there is one. Never posts twice.">Post now</button></form>}</td></tr>)}
     </tbody></table></div>)}
 
     {tab === "settings" && <>

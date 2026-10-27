@@ -4,7 +4,7 @@ import { googleAccess, googleKv, googleKvSet, DRIVE_URL, MeetError, type Mailbox
 
 // Admin → Recordings: the "Weekly Meet Recordings Tracker" Apps Script (Code.gs + TitleCards.gs), moved into the dashboard.
 // Every rule is kept; the two changes are (1) every video still in a raw Meet folder is processed, oldest first, instead
-// of only files created today, and (2) the Classroom post is retried for 14 days, with a "Post anyway" button.
+// of only files created today, and (2) the Classroom post is retried for 14 days, with a "Post now" button that works in either mode.
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 export class RecError extends Error {}
 const fail = (m: string): never => { throw new RecError(m); };
@@ -282,7 +282,7 @@ async function checkClassroom(token: string, terms: Term[]) {
     const term = terms.find((t) => t.number === r.term_number && londonDay(r.recorded_at) >= t.starts && londonDay(r.recorded_at) <= t.ends);
     const title = `🎥 T${r.term_number} Lesson ${r.lesson_number}`, since = term ? new Date(term.starts + "T00:00:00Z").toISOString() : "";
     const there = byCourse.get(r.course_id)!.some((m) => m.title === title && m.creationTime >= since);
-    await withSchool((q) => q(`update recordings set classroom = $2, classroom_note = $3 where id = $1`, [r.id, there ? "already" : "waiting", there ? title : "Not in Classroom yet (the Apps Script posts it once the teacher has posted the lesson)"]));
+    await withSchool((q) => q(`update recordings set classroom = $2, classroom_note = $3 where id = $1`, [r.id, there ? "already" : "waiting", there ? title : "Not in Classroom. The Apps Script checks only once, when it files the recording, so if the teacher posted the lesson later it was skipped: press Post now."]));
   }
 }
 
@@ -447,6 +447,23 @@ export async function approveCards(ids: string[]) {
   await withSchool((q) => q(`update recordings set card_status = 'queued', card_note = null where id = any($1::uuid[]) and card_status in ('awaiting', 'edited', 'error') and card_key is not null`, [ids]));
 }
 export async function postAnyway(id: string) { await withSchool((q) => q(`update recordings set force_post = true, classroom = 'waiting' where id = $1 and status = 'filed'`, [id])); }
+/** "Post now": puts this one recording in Classroom straight away, in either mode. Uses the teacher's topic when there is a
+ *  "Lesson n" post, and never posts twice (it checks for an existing "🎥 T<n> Lesson <n>" first, whoever posted it). */
+export async function postNow(id: string): Promise<{ ok: boolean; note: string }> {
+  const [r] = await withSchool((q) => q<{ file_id: string; lesson_number: number | null; term_number: number | null; recorded_at: string; course_id: string | null; status: string }>(
+    `select r.file_id, r.lesson_number, r.term_number, r.recorded_at::text, l.course_id, r.status from recordings r join rec_lessons l on l.id = r.lesson_id where r.id = $1`, [id]));
+  if (!r || r.status !== "filed" || !r.lesson_number) return { ok: false, note: "That recording isn’t a filed lesson." };
+  let token: string;
+  try { token = await googleAccess("rec"); } catch (e) { return { ok: false, note: e instanceof MeetError ? e.message : "Couldn’t reach Google." }; }
+  const terms = await withSchool((q) => q<Term>(`select t.number, t.starts_on::text as starts, t.ends_on::text as ends, extract(year from y.starts_on)::text as year from terms t join academic_years y on y.id = t.academic_year_id where y.ends_on >= current_date - 400 order by t.starts_on`));
+  const term = termFor(terms, londonDay(r.recorded_at));
+  if (!term) return { ok: false, note: "Couldn’t work out which term this recording is in." };
+  const res = await postToClassroom(token, r.course_id, r.lesson_number, term, r.file_id, true);
+  await withSchool((q) => q(`update recordings set classroom = $2, classroom_note = $3, force_post = false where id = $1`, [id, res.state, res.note ?? null]));
+  if (res.state === "posted") return { ok: true, note: `Posted “${res.note}” in Classroom.` };
+  if (res.state === "already") return { ok: true, note: res.note ?? "It was already in Classroom." };
+  return { ok: false, note: res.note ?? "Classroom didn’t accept it." };
+}
 export async function getPreview(id: string): Promise<Buffer | null> {
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
   return (await withSchool((q) => q<{ p: Buffer | null }>(`select card_preview as p from recordings where id = $1`, [id])))[0]?.p ?? null;

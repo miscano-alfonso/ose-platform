@@ -1181,7 +1181,7 @@ export async function approveCardsAction(f: FormData): Promise<void> {
 }
 export async function postAnywayAction(f: FormData): Promise<void> {
   await recAdmin("look"); const R = await import("@/lib/recordings");
-  await R.postAnyway(str(f, "id", 40)); recBack("look", "It will be posted on the next run (or press Run now).");
+  const res = await R.postNow(str(f, "id", 40)); recBack("look", res.ok ? res.note : null, res.ok ? undefined : res.note);
 }
 export async function disconnectRecAction(): Promise<void> {
   await recAdmin("settings"); const R = await import("@/lib/recordings");
