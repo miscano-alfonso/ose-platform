@@ -98,14 +98,14 @@ function socPreviews(){
   const linkCard=!c.image&&c.link?`<div class="so-link"><span class="mono">${esc((c.link.match(/^https?:\/\/([^/]+)/)||[])[1]||'')}</span><b>${esc(c.bookId?(bookById(c.bookId)||{}).title||'':c.link)}</b></div>`:'';
   const fb=c.fb?`<div class="so-card so-fb"><div class="so-head">${page.picture?`<img src="${esc(page.picture)}" alt="">`:'<i></i>'}<div><b>${esc(page.name)}</b><span>${c.when==='later'&&c.at?esc(fmtStamp(c.at)):'Just now'} · 🌐</span></div></div>
     <div class="so-text">${esc(c.text).replace(/\n/g,'<br>')}${c.image&&c.link&&!c.text.includes(c.link)?`<br><br><span class="so-url">${esc(c.link)}</span>`:''}</div>${socPrevImg(c)}${linkCard}<div class="so-acts"><span>Like</span><span>Comment</span><span>Share</span></div></div>`:'';
-  const igc=c.ig&&cfg.ig!==null?`<div class="so-card so-ig"><div class="so-head">${ig.picture?`<img src="${esc(ig.picture)}" alt="">`:'<i></i>'}<div><b>${esc(ig.username)}</b></div></div>${c.image?socPrevImg(c,true):'<div class="so-noimg">Instagram needs a picture</div>'}<div class="so-acts ig"><span>♡</span><span>💬</span><span>➤</span></div><div class="so-text"><b>${esc(ig.username)}</b> ${esc(igT).replace(/\n/g,'<br>')}</div></div>`:'';
+  const igc=c.ig&&(cfg.ig||!cfg.connected)?`<div class="so-card so-ig"><div class="so-head">${ig.picture?`<img src="${esc(ig.picture)}" alt="">`:'<i></i>'}<div><b>${esc(ig.username)}</b></div></div>${c.image?socPrevImg(c,true):'<div class="so-noimg">Instagram needs a picture</div>'}<div class="so-acts ig"><span>♡</span><span>💬</span><span>➤</span></div><div class="so-text"><b>${esc(ig.username)}</b> ${esc(igT).replace(/\n/g,'<br>')}</div></div>`:'';
   return (fb||igc)?`<div class="so-cards">${fb}${igc}</div>`:'<p class="hint">Choose Facebook or Instagram to see a preview.</p>'}
 function socCounts(){const c=SOC.c,t=c.same?c.text:c.igText,n=t.length,h=socTags(t);return c.ig?`Instagram caption: <b class="${n>2200?'so-over':''}">${n.toLocaleString('en-GB')}</b> / 2,200 · hashtags <b class="${h>30?'so-over':''}">${h}</b> / 30`:''}
 function socComposer(){
-  const c=SOC.c,cfg=SOC.cfg,hasIg=!!cfg.ig,b=c.bookId?bookById(c.bookId):null;
+  const c=SOC.c,cfg=SOC.cfg,hasIg=!!cfg.ig||!cfg.connected,b=c.bookId?bookById(c.bookId):null;
   const books=[...state.books].sort((x,y)=>String(x.title).localeCompare(String(y.title)));
   const grp=(l,f)=>{const L=books.filter(f);return L.length?`<optgroup label="${l}">${L.map(x=>`<option value="${esc(x.id)}"${x.id===c.bookId?' selected':''}>${esc(x.title)}</option>`).join('')}</optgroup>`:''};
-  const warn=false?`<p class="so-warn">The website is still password-protected, so Facebook’s link preview will show the password page. Add a picture, or wait until the site is public.</p>`:'';
+  const warn=cfg.connected?'':`<p class="so-warn">Facebook isn’t connected yet, so you can write the post, change the picture and see the preview, but not post it. Connect to Social (top right) to post.</p>`;
   return `<form class="so-grid" id="soForm" novalidate><div class="em-card so-side">
     <div class="so-row"><label class="check"><input type="checkbox" id="soFb"${c.fb?' checked':''}> Facebook</label><label class="check"><input type="checkbox" id="soIg"${c.ig&&hasIg?' checked':''}${hasIg?'':' disabled'}> Instagram${hasIg?'':' (not linked)'}</label></div>
     <div class="field"><label for="soBook">Start from a course or workshop <span class="hint">(optional)</span></label><select id="soBook"><option value="">None</option>${grp('Space available',x=>x.status==='space')}${grp('Next year',x=>x.status==='next')}${grp('Workshops',x=>x.status==='workshop')}${grp('Other courses',x=>x.status==='full')}</select></div>
@@ -118,7 +118,7 @@ function socComposer(){
       ${c.frame!=='none'?`<div class="so-row so-bgs"><span class="hint">Background</span>${[...(b&&b.tileColor?[[b.tileColor,'Subject colour']]:[]),...SOC_BG].map(([v,l])=>`<button type="button" class="so-sw" data-so-bg="${esc(v)}" title="${esc(l)}" aria-pressed="${c.bg.toLowerCase()===v.toLowerCase()}" style="background:${esc(v)}"></button>`).join('')}<input type="color" id="soBg" value="${esc(c.bg)}" aria-label="Other colour"></div>`:'<p class="hint" style="margin:6px 0 0">Instagram only takes pictures between 4:5 (portrait) and 1.91:1 (landscape). Anything taller or wider gets a plain border added.</p>'}</div>`:''}
     <div class="em-when"><label class="check"><input type="radio" name="soWhen" value="now"${c.when==='now'?' checked':''}> Post now</label><label class="check"><input type="radio" name="soWhen" value="later"${c.when==='later'?' checked':''}> Schedule for</label><input type="datetime-local" id="soAt" value="${esc(c.at)}" aria-label="Post date and time"></div>
     ${warn}
-    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn solid small" type="submit"${SOC.busy?' disabled':''}>${SOC.busy?'Posting…':c.when==='later'?'Schedule':'Post now'}</button><button class="linkbtn" type="button" data-so="close">Cancel</button><span class="hint" id="soMsg" role="alert"></span></div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn solid small" type="submit"${SOC.busy||!cfg.connected?' disabled':''}>${SOC.busy?'Posting…':c.when==='later'?'Schedule':'Post now'}</button><button class="linkbtn" type="button" data-so="close">Cancel</button><span class="hint" id="soMsg" role="alert"></span></div>
   </div><div class="so-prevwrap"><div class="em-prevbar"><span>Preview</span><span>Roughly how it will look</span></div><div id="soPrev">${socPreviews()}</div></div></form>`}
 function socChan(p,ch){const x=p.channels&&p.channels[ch];if(!x)return '';const L=ch==='facebook'?'Facebook':'Instagram';
   const s=x.status;let h='';
@@ -133,7 +133,7 @@ function socChan(p,ch){const x=p.channels&&p.channels[ch];if(!x)return '';const 
 function socInner(){
   const cfg=SOC.cfg;
   const conn=cfg?(cfg.connected?`<button class="btn small so-connbtn on" type="button" data-so="modal" title="Facebook and Instagram settings"><i></i>${esc(cfg.page.name)}${cfg.ig?' + @'+esc(cfg.ig.username):''}</button>`:`<button class="btn solid small so-connbtn" type="button" data-so="modal">Connect to Social</button>`):'';
-  const head=`<div class="cms-bar"><h1>Social</h1>${cfg&&cfg.connected&&!SOC.c?'<button class="btn small" type="button" data-so="reload">Refresh numbers</button><button class="btn solid small" type="button" data-so="new">New post</button>':''}${cfg?kbMomBtn():''}${conn}</div>`+(SOC.drawer&&cfg?kbMoments():'')+(SOC.modal&&cfg?`<div class="so-modal" data-so-backdrop><div class="so-dialog" role="dialog" aria-modal="true" aria-label="Connect to Social"><button class="so-x" type="button" data-so="modalclose" aria-label="Close">×</button>${socConnCard()}${socAiCard()}</div></div>`:'');
+  const head=`<div class="cms-bar"><h1>Social</h1>${cfg&&!SOC.c?(cfg.connected?'<button class="btn small" type="button" data-so="reload">Refresh numbers</button>':'')+'<button class="btn solid small" type="button" data-so="new">New post</button>':''}${cfg?kbMomBtn():''}${conn}</div>`+(SOC.drawer&&cfg?kbMoments():'')+(SOC.modal&&cfg?`<div class="so-modal" data-so-backdrop><div class="so-dialog" role="dialog" aria-modal="true" aria-label="Connect to Social"><button class="so-x" type="button" data-so="modalclose" aria-label="Close">×</button>${socConnCard()}${socAiCard()}</div></div>`:'');
   if(SOC.err&&!cfg)return head+`<div class="empty"><b>Couldn’t load Social.</b>${esc(SOC.err)}</div>`;
   if(!cfg)return head+'<p class="hint"><span class="spin"></span>Loading…</p>';
   if(SOC.c)return head+socComposer();
@@ -177,7 +177,7 @@ app.addEventListener('click',async e=>{
   if(a==='forget'||a==='disconnect'){if(D.sure!=='1'){t.dataset.sure='1';t.textContent=a==='forget'?'Remove for good?':'Disconnect for good?';return}
     try{await api('metaconfig',a==='forget'?{forget:true}:{disconnect:true});SOC.cfg=await api('metaconfig');SOC.setup=false;toast(a==='forget'?'App removed':'Disconnected');socPaint()}catch(err){toast(err.message)}return}
   if(a==='reload'){t.disabled=true;t.textContent='Refreshing…';await socLoad(true);return}
-  if(a==='new'){SOC.c=socNew({ig:!!SOC.cfg.ig});socPaint();return}
+  if(a==='new'){SOC.c=socNew({ig:!!SOC.cfg.ig||!SOC.cfg.connected});socPaint();return}
   if(a==='close'){SOC.c=null;socPaint();return}
   if(a==='cover'){socSync();const b=bookById(SOC.c.bookId);if(b){SOC.c.image=b.cover;SOC.c.frame='4:5'}socPaint();return}
   if(a==='noimg'){socSync();SOC.c.image='';socPaint();return}
@@ -195,7 +195,7 @@ app.addEventListener('submit',async e=>{
   if(e.target.id!=='soForm')return;e.preventDefault();socSync();const c=SOC.c,m=document.getElementById('soMsg');
   const ig=c.ig&&!!SOC.cfg.ig;
   if(!c.fb&&!ig){m.textContent='Choose Facebook, Instagram or both.';return}
-  if(ig&&!c.image){m.textContent='Instagram needs a picture.';return}
+  if(!SOC.cfg||!SOC.cfg.connected){m.textContent='Connect to Social first.';return}if(ig&&!c.image){m.textContent='Instagram needs a picture.';return}
   let when='now';if(c.when==='later'){if(!c.at){m.textContent='Choose the date and time.';return}when=new Date(c.at).toISOString()}
   SOC.busy=true;const btn=e.target.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Preparing the picture…';m.textContent='';let image='',images;try{if(c.images&&c.images.length>1)images=c.images;else if(c.image)image=await socPrep(c.image,c.frame,c.bg)}catch(err){SOC.busy=false;m.textContent=err.message;btn.disabled=false;btn.textContent=when==='now'?'Post now':'Schedule';return}btn.textContent=when==='now'?'Posting…':'Scheduling…';m.textContent=ig&&when==='now'?'Instagram can take up to half a minute…':'';
   try{const r=await api('socialpost',{text:c.text,igText:c.same?c.text:c.igText,link:c.link,image,images,bookId:c.bookId,facebook:c.fb,instagram:ig,when});
