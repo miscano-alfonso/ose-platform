@@ -24,10 +24,10 @@ export default async function Designs({ searchParams }: { searchParams: Promise<
         <p className="cs">Bring illustrations in from your own Canva designs (read-only). Canva’s own stock library can’t be searched from outside Canva, so make or save each illustration as a design in Canva first, ideally all in one folder.</p>
         {!canva.hasApp ? <>
           <ol style={{ margin: "0 0 14px", paddingLeft: 20, lineHeight: 1.6 }}>
-            <li>Signed in to Canva, open <a href="https://www.canva.com/developers/integrations/connect-api" target="_blank" rel="noopener">Canva Developer Portal → Integrations</a> and create an integration (e.g. “OH-SO ED site”). Keep it private to your team.</li>
-            <li>Under <b>Scopes</b>, tick read for <b>design:meta</b>, <b>design:content</b> and <b>folder</b>.</li>
-            <li>Under <b>Authentication</b>, add this redirect URL:<br /><code style={{ userSelect: "all" }}>{canva.redirect}</code></li>
-            <li>Generate a client secret, then paste the Client ID and secret below yourself.</li></ol>
+            <li>Signed in to Canva, open the <a href="https://www.canva.com/developers/" target="_blank" rel="noopener">Canva Developer Portal</a> → <b>Your apps</b> → <b>Create an app</b>. Name it (e.g. “OH-SO ED site”), choose <b>Public</b> (Private needs a Canva Enterprise plan) and don’t submit it for review: it works for your own account as it is.</li>
+            <li>Go to <b>Outside Canva</b> → <b>Start integrating</b>. Under <b>Scopes</b>, tick read for <b>design:meta</b>, <b>design:content</b> and <b>folder</b>.</li>
+            <li>Under <b>Outside Canva → Redirect URLs</b>, add this as URL 1:<br /><code style={{ userSelect: "all" }}>{canva.redirect}</code></li>
+            <li>Under <b>Credentials</b>, copy the Client ID, press <b>Generate secret</b>, then paste both below yourself.</li></ol>
           <form action={canvaAppAction} className="eform"><label className="fld">Client ID<input name="client_id" type="text" required autoComplete="off" spellCheck={false} data-1p-ignore="" data-lpignore="true" style={{ width: 260 }} /></label>
             <label className="fld">Client secret<input name="client_secret" type="text" required autoComplete="off" spellCheck={false} data-1p-ignore="" data-lpignore="true" style={{ width: 260 }} /></label><button className="abtn" type="submit">Save</button></form></>
         : !canva.connected ? <><p>Client ID saved{canva.clientId ? ` (${canva.clientId.slice(0, 6)}…)` : ""}. Redirect URL: <code style={{ userSelect: "all" }}>{canva.redirect}</code></p>
