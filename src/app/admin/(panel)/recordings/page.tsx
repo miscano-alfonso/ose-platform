@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { recordingsView, recStatus, recLessons, type RecRow } from "@/lib/recordings";
-import { runRecordingsAction, recCfgAction, recLessonAction, editCardAction, approveCardsAction, postAnywayAction, disconnectRecAction } from "../../actions";
+import { runRecordingsAction, recCfgAction, recLessonAction, editCardAction, approveCardsAction, postAnywayAction, disconnectRecAction, importRecordingsAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -29,7 +29,7 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
   const cards = filed.filter((r) => r.card_status && (r.card_status !== "done" || r.day >= days[0]));
   const TABS: [string, string][] = [["week", "This week"], ["cards", `Title cards${toApprove.length ? ` (${toApprove.length})` : ""}`], ["look", `Needs a look${look.length ? ` (${look.length})` : ""}`], ["settings", "Settings"]];
   const cell = (r: RecRow) => <div key={r.id} style={{ marginBottom: 4 }}><a href={drive(r.file_id)} target="_blank" rel="noopener"><b>T{r.term_number} Lesson {r.lesson_number}</b></a>{r.over_expected ? " (check)" : ""}
-    <br /><span className={`pill ${CL[r.classroom]?.[0] ?? "mute"}`} style={{ fontSize: 11.5 }}>{r.classroom === "posted" || r.classroom === "already" ? "Classroom ✓" : r.classroom === "waiting" ? "Classroom: waiting" : CL[r.classroom]?.[1]}</span></div>;
+    {r.classroom !== "not_needed" && <><br /><span className={`pill ${CL[r.classroom]?.[0] ?? "mute"}`} style={{ fontSize: 11.5 }}>{r.classroom === "posted" || r.classroom === "already" ? "Classroom ✓" : r.classroom === "waiting" ? "Classroom: waiting" : CL[r.classroom]?.[1]}</span></>}</div>;
   return <>
     <div className="top"><div><h1>Recordings</h1><div className="sub">Lesson recordings from Google Meet: renamed, filed in their subject folder, posted to the class’s Classroom, with a title card added. Replaces the “_Recordings” sheet’s script.</div></div>
       <span className="grow" />{st.connected && <form action={runRecordingsAction}><button className="abtn pri" type="submit">Run now</button></form>}</div>
@@ -87,7 +87,9 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
     {tab === "settings" && <>
       <section className="card"><h2>Recordings account</h2>
         {st.connected ? <><p>Connected as <b>{st.account}</b> by {st.by}. This account renames and files the recordings and posts them in Classroom, so it must own the Meet recordings and be a teacher on every class (ose@ohsoed.co.uk).</p>
-          <form action={disconnectRecAction}><button className="lnk" type="submit">Disconnect</button></form></>
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><form action={importRecordingsAction}><button className="abtn" type="submit">Bring in earlier recordings</button></form>
+            <span className="note">Reads the subject and 1:1 folders for recordings the Apps Script already filed (done automatically the first time). Nothing is renamed or moved.</span></div>
+          <form action={disconnectRecAction} style={{ marginTop: 8 }}><button className="lnk" type="submit">Disconnect</button></form></>
         : <><p className="cs">Sign in as <b>ose@ohsoed.co.uk</b> (it owns the recordings and teaches every Classroom). It needs Drive and Classroom posting. In Google Cloud Console (the same project as Meet) turn on the <b>Google Drive API</b> and <b>Google Classroom API</b> first.</p>
           <a className="abtn pri" href="/admin/meet-api?action=login&what=rec">Connect ose@</a></>}
         <p className="note" style={{ marginTop: 10 }}><b>Before relying on this:</b> switch off the Apps Script’s daily trigger (_Recordings → Extensions → Apps Script → Triggers → delete “dailyUpdate” and “applyApprovedTitleCards”), so the two never run at once.</p></section>

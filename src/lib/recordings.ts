@@ -193,6 +193,9 @@ export async function runRecordings(by: string): Promise<RunInfo> {
       await q<Term>(`select t.number, t.starts_on::text as starts, t.ends_on::text as ends, extract(year from y.starts_on)::text as year from terms t join academic_years y on y.id = t.academic_year_id where y.ends_on >= current_date - 400 order by t.starts_on`),
     ] as const);
     const byCode = new Map(lessons.map((l) => [l.meet_code, l]));
+    // the first time: bring in what the Apps Script already filed, so earlier weeks and the lesson numbers show here
+    const [{ n: had }] = await withSchool((q) => q<{ n: number }>(`select count(*)::int as n from recordings`));
+    if (!had) { try { await importFiled(token, cfg, lessons, terms); } catch (e) { info.problems!.push(`Importing earlier recordings: ${e instanceof Error ? e.message : e}`); } }
     // 1) new recordings in the raw Meet folders
     const folders = await driveList(token, `'${esc(cfg.meetFolder)}' in parents and mimeType = '${FOLDER}' and trashed = false`, "id,name,createdTime");
     for (const folder of folders) {
@@ -220,6 +223,42 @@ export async function runRecordings(by: string): Promise<RunInfo> {
     await googleKvSet("rec_run", info).catch(() => {});
   }
   return info;
+}
+
+/** Recordings already filed by the Apps Script (or by hand), read from the subject folders and 1:1 folders by their names
+ *  ("2026 GCSE Geography Yr1 - T1 Lesson 12", "2026 Luke Withers - GCSE Chemistry T1 Lesson 3"). Nothing is renamed or moved. */
+export async function importFiled(token: string, cfg: RecCfg, lessons: Lesson[], terms: Term[]): Promise<number> {
+  const years = [...new Set(terms.map((t) => t.year))];
+  const byFolder = new Map<string, Lesson[]>();
+  for (const l of lessons) {
+    let folder = l.folder_id;
+    if (!folder && l.kind === "one" && cfg.oneToOneFolder) folder = (await driveList(token, `'${esc(cfg.oneToOneFolder)}' in parents and mimeType = '${FOLDER}' and trashed = false and name = '${esc("_" + l.name)}'`, "id,name"))[0]?.id ?? null;
+    if (folder) byFolder.set(folder, [...(byFolder.get(folder) ?? []), l]);
+  }
+  let added = 0;
+  for (const [folder, ls] of byFolder) {
+    const files = await driveList(token, `'${esc(folder)}' in parents and mimeType = 'video/mp4' and trashed = false`, "id,name,size,createdTime,appProperties");
+    for (const f of files) {
+      for (const l of ls) {
+        let m: RegExpMatchArray | null = null;
+        for (const y of years) {
+          const pre = l.kind === "class" ? `${y} ${l.name}${l.year_suffix ? " " + l.year_suffix : ""} - T` : `${y} ${l.name} T`;
+          if (f.name.indexOf(pre) === 0) { m = f.name.slice(pre.length).match(/^(\d+) Lesson (\d+)/); if (m) break; }
+        }
+        if (!m) continue;
+        const day = londonDay(f.createdTime), term = termFor(terms, day);
+        const done = f.appProperties?.titleCard === "done";
+        const r = await withSchool((q) => q(`insert into recordings (school_id, lesson_id, file_id, raw_name, name, recorded_at, size_bytes, term_number, lesson_number, status, over_expected, classroom, classroom_note,
+            card_label, card_term_lesson, card_date, card_status)
+          values (current_school(), $1, $2, $2, $3, $4, $5, $6, $7, 'filed', $8, 'not_needed', 'Filed before the dashboard took over', $9, $10, $11, $12) on conflict (school_id, file_id) do nothing returning id`,
+          [l.id, f.id, f.name, f.createdTime, Number(f.size ?? 0), Number(m[1]), Number(m[2]), /exceeds expected/.test(f.name),
+           l.kind === "one" ? `1:1 · ${l.name}` : l.name, `Term ${m[1]} · Lesson ${m[2]}`, longDate(day), done ? "done" : null]));
+        if (r.length) added++;
+        void term; break;
+      }
+    }
+  }
+  return added;
 }
 
 /** One lesson's raw Meet folder: populateTodayRecordings_ / processOneToOneRecordings_. */
@@ -412,6 +451,17 @@ export async function recStatus() {
   return { connected: !!acct?.refreshToken, account: acct?.mailbox ?? "", by: acct?.by ?? "", run: run ?? {}, cfg: { ...cfg, cardSecret: cfg.cardSecret ? "saved" : "" } };
 }
 export async function disconnectRec() { await googleKvSet("rec_google", null); }
+/** The Settings button: read the subject folders again (adds anything not already listed). */
+export async function importNow(): Promise<{ added?: number; error?: string }> {
+  try {
+    const token = await googleAccess("rec"); const cfg = await recCfg();
+    const [lessons, terms] = await withSchool(async (q) => [
+      await q<Lesson>(`select id, kind, meet_code, name, course_id, folder_id, per_week, year_suffix, group_id, active from rec_lessons where active`),
+      await q<Term>(`select t.number, t.starts_on::text as starts, t.ends_on::text as ends, extract(year from y.starts_on)::text as year from terms t join academic_years y on y.id = t.academic_year_id where y.ends_on >= current_date - 400 order by t.starts_on`),
+    ] as const);
+    return { added: await importFiled(token, cfg, lessons, terms) };
+  } catch (e) { return { error: e instanceof Error ? e.message : "Couldn’t read the folders." }; }
+}
 
 /** With the other background jobs: every 15 minutes while the admin is open, and from the daily cron. */
 export async function recordingsBackground() {

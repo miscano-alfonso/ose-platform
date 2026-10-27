@@ -1182,3 +1182,8 @@ export async function disconnectRecAction(): Promise<void> {
   await recAdmin("settings"); const R = await import("@/lib/recordings");
   await R.disconnectRec(); recBack("settings", "The recordings account is disconnected.");
 }
+export async function importRecordingsAction(): Promise<void> {
+  await recAdmin("settings"); const R = await import("@/lib/recordings");
+  const r = await R.importNow();
+  recBack("week", r.error ? null : `Read the subject folders: ${r.added} earlier recording${r.added === 1 ? "" : "s"} added.`, r.error ?? null);
+}
