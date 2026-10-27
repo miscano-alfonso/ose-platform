@@ -37,7 +37,7 @@ export function simplePage(base: string, title: string, text: string, btn: strin
 }
 
 // ---------- Brevo ----------
-type BrevoCfg = { key?: string; account?: string; senderName?: string; senderEmail?: string; listId?: number; listName?: string; lastSync?: string };
+type BrevoCfg = { key?: string; account?: string; senderName?: string; senderEmail?: string; replyTo?: string; listId?: number; listName?: string; lastSync?: string };
 const BREVO = () => (process.env.BREVO_API_BASE || "https://api.brevo.com/v3/").replace(/\/?$/, "/");
 export const brevoCfg = async (): Promise<BrevoCfg> => (await kvGet<BrevoCfg>("brevo").catch(() => null)) ?? {};
 const keyOf = (c: BrevoCfg) => c.key || process.env.BREVO_API_KEY || "";
@@ -65,7 +65,7 @@ async function brevoContact(m: { email: string; name: string; status: string }) 
 export async function brevoStatus() {
   const c = await brevoCfg(); const k = keyOf(c);
   return { connected: brevoOn(c), hasKey: !!k, keyHint: k ? "…" + k.slice(-4) : "", fromEnv: !c.key && !!process.env.BREVO_API_KEY, account: c.account ?? "", senderName: c.senderName ?? "OH-SO ED",
-    senderEmail: c.senderEmail ?? "", listId: c.listId ?? null, listName: c.listName ?? "", lastSync: c.lastSync ?? "", canEdit: true };
+    senderEmail: c.senderEmail ?? "", replyTo: c.replyTo ?? "", listId: c.listId ?? null, listName: c.listName ?? "", lastSync: c.lastSync ?? "", canEdit: true };
 }
 export async function brevoSave(b: Record<string, unknown>) {
   let c = await brevoCfg();
@@ -80,6 +80,7 @@ export async function brevoSave(b: Record<string, unknown>) {
   }
   const key = keyOf(c); if (!key) fail("Add your Brevo API key first.");
   if (b.senderEmail !== undefined) { const se = normEmail(b.senderEmail); if (se && !validEmail(se)) fail("Choose a sender email."); c.senderEmail = se; }
+  if (b.replyTo !== undefined) { const r = normEmail(b.replyTo); if (r && !validEmail(r)) fail("The reply-to address doesn’t look right."); c.replyTo = r || undefined; }
   if (b.senderName !== undefined) c.senderName = String(b.senderName).trim().slice(0, 60) || "OH-SO ED";
   if (!c.listId) { // our own list in Brevo, created once
     const name = "OH-SO ED website subscribers";
@@ -246,7 +247,7 @@ export async function sendEmail(b: Record<string, unknown>, by: string) {
   let at: string | null = null;
   if (when && when !== "now") { const ts = Date.parse(when); if (!ts || ts < Date.now() + 300000) fail("Pick a time at least 5 minutes from now."); at = new Date(ts).toISOString(); }
   const day = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-  const body: Record<string, unknown> = { name: ((doc.name || doc.subject) + " · " + day).slice(0, 150), subject: doc.subject, sender: { name: c.senderName || "OH-SO ED", email: c.senderEmail },
+  const body: Record<string, unknown> = { name: ((doc.name || doc.subject) + " · " + day).slice(0, 150), subject: doc.subject, sender: { name: c.senderName || "OH-SO ED", email: c.senderEmail }, ...(c.replyTo ? { replyTo: c.replyTo } : {}),
     htmlContent: html, recipients: { listIds: [Number(c.listId)] }, inlineImageActivation: false };
   if (doc.preheader) body.previewText = doc.preheader.slice(0, 200);
   if (at) body.scheduledAt = at;

@@ -3,12 +3,12 @@ import { isDemoSchool, withSchool } from "./db";
 
 // Sending email through Brevo (transactional API). The account is either set in the environment (BREVO_API_KEY and
 // BREVO_SENDER_EMAIL) or connected in Admin → Newsletter (key and verified sender kept in the database).
-type Creds = { key: string; email: string; name: string };
+type Creds = { key: string; email: string; name: string; replyTo?: string };
 async function creds(): Promise<Creds | null> {
   if (await isDemoSchool()) return null;   // the demo school never sends email
-  if (process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL) return { key: process.env.BREVO_API_KEY, email: process.env.BREVO_SENDER_EMAIL, name: process.env.BREVO_SENDER_NAME || "OH-SO ED" };
-  const c = await withSchool((q) => q<{ value: { key?: string; senderEmail?: string; senderName?: string } }>(`select value from newsletter_kv where key = 'brevo'`)).then((r) => r[0]?.value).catch(() => undefined);
-  return c?.key && c.senderEmail ? { key: c.key, email: c.senderEmail, name: c.senderName || "OH-SO ED" } : null;
+  if (process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL) return { key: process.env.BREVO_API_KEY, email: process.env.BREVO_SENDER_EMAIL, name: process.env.BREVO_SENDER_NAME || "OH-SO ED", replyTo: process.env.BREVO_REPLY_TO || undefined };
+  const c = await withSchool((q) => q<{ value: { key?: string; senderEmail?: string; senderName?: string; replyTo?: string } }>(`select value from newsletter_kv where key = 'brevo'`)).then((r) => r[0]?.value).catch(() => undefined);
+  return c?.key && c.senderEmail ? { key: c.key, email: c.senderEmail, name: c.senderName || "OH-SO ED", replyTo: c.replyTo || undefined } : null;
 }
 /** True when email can be sent (Brevo set up in the environment, or connected under Newsletter). */
 export const emailReady = async () => !!(await creds());
@@ -75,7 +75,7 @@ export async function sendBatch(subject: string, body: string, to: Recipient[], 
     const chunk = to.slice(i, i + 500);
     const res = await fetch(SMTP_URL(), {
       method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ sender: { email: c.email, name: c.name }, subject, htmlContent: html(body, marketing), textContent: body,
+      body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: html(body, marketing), textContent: body,
         messageVersions: chunk.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [marketing ? "marketing" : "admin-message"] }),
     }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
     if (res.ok) sent += chunk.length; else { failed += chunk.length; error = `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}`; }
@@ -102,7 +102,7 @@ export async function sendHtml(subject: string, htmlContent: string, to: string[
   const textContent = htmlContent.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim().slice(0, 5000);
   const res = await fetch(SMTP_URL(), {
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ sender: { email: c.email, name: c.name }, subject, htmlContent, textContent, messageVersions: to.map((email) => ({ to: [{ email }] })), tags: [tag || "social-report"] }),
+    body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent, textContent, messageVersions: to.map((email) => ({ to: [{ email }] })), tags: [tag || "social-report"] }),
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
   return res.ok ? { ok: true } : { ok: false, error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
 }
@@ -114,7 +114,7 @@ export async function sendOne(to: Recipient[], subject: string, body: string, op
   if (!to.length) return { ok: false, ids: [], error: "No one to send it to." };
   const res = await fetch(SMTP_URL(), {
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ sender: { email: c.email, name: c.name }, subject, htmlContent: html(body, false), textContent: body,
+    body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: html(body, false), textContent: body,
       messageVersions: to.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [opts.tag], ...(opts.scheduledAt ? { scheduledAt: opts.scheduledAt } : {}) }),
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e), json: async () => ({}) }) as Response);
   if (!res.ok) return { ok: false, ids: [], error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
