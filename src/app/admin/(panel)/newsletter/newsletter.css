@@ -18,7 +18,7 @@
 #nl .btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--ink);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 13px;font:600 15.5px "Jost",sans-serif;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background-color .15s,color .15s,border-color .15s}
 #nl .btn:hover:not(:disabled){background:var(--ink);color:var(--panel)}
 #nl .btn.small{padding:4px 11px;font-size:14.5px}
-#nl .btn.solid{background:var(--brand-accent);border-color:var(--brand-accent);color:#0f1747}
+#nl .btn.solid{background:var(--brand-accent);border-color:var(--brand-accent);color:var(--brand-accent-ink,#0f1747)}
 #nl .btn.solid:hover:not(:disabled){background:#0f1747;color:var(--brand-accent);border-color:var(--brand-accent)}
 #nl .btn:disabled{opacity:.5;cursor:default}
 #nl .linkbtn{background:none;border:0;padding:0;font:inherit;font-size:14.5px;color:var(--info);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
