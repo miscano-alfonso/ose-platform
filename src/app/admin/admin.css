@@ -3,8 +3,15 @@
   --accent:#0f1747;--good:#177a46;--good-bg:#e3f4ea;--warn:#9a5b00;--warn-bg:#fdf1d8;--bad:#b42323;--bad-bg:#fbe5e5;--info:#2c4fb8;--info-bg:#e6ecfb;
   --track:#e7e9f0;--bar:#3b5fc7;--brand:#0f1747;--brand-accent:#e3cd4b;
   background:var(--bg);color:var(--ink);font:16px/1.45 "Jost",system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
-@media (prefers-color-scheme:dark){.adm{--bg:#11131b;--panel:#1a1d28;--ink:#e7e9f1;--muted:#99a0b4;--line:#2c3040;--soft:#202432;--hover:#252a3a;
-  --accent:#e3cd4b;--good:#5bd393;--good-bg:#1d3a2b;--warn:#f0b454;--warn-bg:#3a2f1a;--bad:#ff8080;--bad-bg:#3d2224;--info:#8fb0ff;--info-bg:#1f2840;--track:#2a2f40;--bar:#7f9cf0}}
+@media (prefers-color-scheme:dark){.adm:not([data-theme=light]){--bg:#11131b;--panel:#1a1d28;--ink:#e7e9f1;--muted:#99a0b4;--line:#2c3040;--soft:#202432;--hover:#252a3a;
+  --accent:#e3cd4b;--good:#5bd393;--good-bg:#1d3a2b;--warn:#f0b454;--warn-bg:#3a2f1a;--bad:#ff8080;--bad-bg:#3d2224;--info:#8fb0ff;--info-bg:#1f2840;--track:#2a2f40;--bar:#7f9cf0;color-scheme:dark}}
+.adm[data-theme=dark]{--bg:#11131b;--panel:#1a1d28;--ink:#e7e9f1;--muted:#99a0b4;--line:#2c3040;--soft:#202432;--hover:#252a3a;
+  --accent:#e3cd4b;--good:#5bd393;--good-bg:#1d3a2b;--warn:#f0b454;--warn-bg:#3a2f1a;--bad:#ff8080;--bad-bg:#3d2224;--info:#8fb0ff;--info-bg:#1f2840;--track:#2a2f40;--bar:#7f9cf0;color-scheme:dark}
+.adm[data-theme=light]{color-scheme:light}
+.adm .theme-seg{display:flex;border:1px solid rgba(255,255,255,.35);border-radius:999px;overflow:hidden;margin-top:8px;width:max-content}
+.adm .theme-seg button{background:none;border:0;color:#fff;font:inherit;font-size:12px;padding:4px 10px;cursor:pointer}
+.adm .theme-seg button[aria-pressed=true]{background:rgba(255,255,255,.2);font-weight:600}
+
 .adm *{box-sizing:border-box}
 .adm .app{--side-w:240px;display:grid;grid-template-columns:var(--side-w) minmax(0,1fr);min-height:100vh}
 .adm .side{background:var(--brand);color:#fff;padding:18px 12px;display:flex;flex-direction:column;gap:14px;position:sticky;top:0;height:100vh;overflow:auto}

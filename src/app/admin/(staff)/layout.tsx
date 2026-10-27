@@ -9,6 +9,7 @@ import { brandSrc } from "@/lib/brand";
 import { TeacherNav } from "../AdminNav";
 import { Switchers } from "../Switchers";
 import { SideToggle } from "../SideToggle";
+import { ThemeToggle } from "../ThemeToggle";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Staff", robots: { index: false, follow: false } };
@@ -17,13 +18,14 @@ export const metadata: Metadata = { title: "Staff", robots: { index: false, foll
 // Admins reach these pages too: while "Viewing as" a teacher they see that teacher's menu; otherwise (opening a register
 // or a report sheet from the admin) they get a slim bar back to the admin.
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
+  const tv = (await cookies()).get("ose_theme")?.value, theme = tv === "light" || tv === "dark" ? tv : undefined;
   const me = await requireViewer();
   const { logo } = await brandSrc();
   const brand = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string } }>(`select brand from schools where id = current_school()`)))[0]?.brand ?? {};
   const hex = (v: unknown, d: string) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
   const style = { ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b") };
 
-  if (me.role === "school_admin") return <div className="adm" style={style}><DashStyles />
+  if (me.role === "school_admin") return <div className="adm" data-theme={theme} style={style}><DashStyles />
     <div className="staffbar">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <a href="/admin"><img src={logo} alt="OH-SO ED" width={773} height={224} /></a>
@@ -44,7 +46,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       { value: "p", label: "Parent…" }, { value: "s", label: "Student…" }];
     switchers = <Switchers schools={schools.map((x) => ({ value: x.slug, label: x.name }))} school={jar.get(SCHOOL_COOKIE)?.value || siteSchool()} views={views} view={`t:${me.id}`} />;
   }
-  return <div className="adm" style={style}><DashStyles />
+  return <div className="adm" data-theme={theme} style={style}><DashStyles />
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
     <div className="app">
@@ -54,7 +56,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         {switchers}
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports }} />
         <div className="who"><span>Signed in as<br /><b>{me.viewing ? me.realName : me.name}</b></span>
-          <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form>
+          <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form><ThemeToggle initial={theme ?? "auto"} />
           <a href="/" style={{ color: "#c9cde4", fontSize: 15.5 }}>View the website</a></div>
       </aside>
       <main className="main">{children}</main>

@@ -18,11 +18,13 @@ import { schoolsFor, siteSchool, SCHOOL_COOKIE } from "@/lib/db";
 import { Switchers } from "../Switchers";
 import { Assistant } from "../Assistant";
 import { SideToggle } from "../SideToggle";
+import { ThemeToggle } from "../ThemeToggle";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
 
 export default async function PanelLayout({ children }: { children: React.ReactNode }) {
+  const tv = (await cookies()).get("ose_theme")?.value, theme = tv === "light" || tv === "dark" ? tv : undefined;
   const me = await requireStaff();
   after(() => socialBackground());
   after(() => meetBackground());
@@ -50,7 +52,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const school = jar.get(SCHOOL_COOKIE)?.value || siteSchool();
   const views = [{ value: "admin", label: "Admin" }, ...teachers.map((t) => ({ value: `t:${t.id}`, label: `Teacher: ${t.name}` })),
     { value: "p", label: "Parent…" }, { value: "s", label: "Student…" }];
-  return <div className="adm" style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b") }}><DashStyles /><div className="app">
+  return <div className="adm" data-theme={theme} style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b") }}><DashStyles /><div className="app">
     <aside className="side"><SideToggle />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {demo ? <a className="logo" href="/admin" title="Dashboard" style={{ color: "#fff", font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
@@ -58,7 +60,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       <Switchers schools={schools.map((x) => ({ value: x.slug, label: x.name }))} school={school} views={views} view="admin" />
       <AdminNav counts={{ "/admin/enquiries": c.enq, "/admin/jobs": c.jobs, "/admin/payments": c.failed, "/admin/tasters": c.tasters, "/admin/reports": x.rep, "/admin/messages": x.msg, "/admin/attendance": x.joins, "/admin/email": inboxUnread }} />
       <div className="who"><span>Signed in as<br /><b>{me.name}</b></span>
-        <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form>
+        <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form><ThemeToggle initial={theme ?? "auto"} />
         <a href="/" style={{ color: "#c9cde4", fontSize: 15.5 }}>View the website</a></div>
     </aside>
     <main className="main">{demo && <p className="note msg" style={{ marginTop: 0 }}><b>Demo school.</b> Everything here is made up (families, children, payments and messages), so you can click anything safely. Nothing is ever emailed or charged. Switch back with the School menu.</p>}{children}</main>

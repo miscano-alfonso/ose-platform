@@ -1,7 +1,7 @@
 /* Admin → Social (port of the Giles CMS social section). Everything is scoped to #soc. */
 #soc{--rule:var(--line);--surface:var(--panel);--paper:var(--soft);--brand:#0f1747;--lime:var(--brand-accent);--teal:var(--info);
   --title:"Jost",sans-serif;--display:"Jost",sans-serif;--body:"Jost",sans-serif;--mono:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:16px}
-@media (prefers-color-scheme:dark){#soc{--brand:#e3cd4b}}
+@media (prefers-color-scheme:dark){.adm:not([data-theme=light]) #soc{--brand:#e3cd4b}}.adm[data-theme=dark] #soc{--brand:#e3cd4b}
 #soc .cms-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
 #soc .cms-bar h1{font:600 30px/1.2 "Jost",sans-serif;margin:0 auto 0 0}
 #soc .em-h{font:600 22px/1.3 "Jost",sans-serif;margin:26px 0 10px}

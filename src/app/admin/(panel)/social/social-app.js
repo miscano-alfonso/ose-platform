@@ -339,7 +339,7 @@ function kitHex(h){const m=/^#?([0-9a-f]{6})$/i.exec(h||'');return m?[0,2,4].map
 function kitLum([r,g,b]){const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(r)+.7152*f(g)+.0722*f(b)}
 function kitWrap(ctx,text,maxW){const words=String(text).split(/\s+/).filter(Boolean),lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(ctx.measureText(t).width<=maxW||!cur)cur=t;else{lines.push(cur);cur=w}}if(cur)lines.push(cur);return lines}
 // lay text blocks into a box, shrinking the title until everything fits; returns the drawing plan
-const KIT_TPL_DEF={bg:'book',bgColor:'#F3F4FA',tone:'auto',coverAlign:'left',textAlign:'top',coverSize:100,titleSize:120,shadow:true,eyebrow:true,subtitle:true,partner:true,url:false,urlText:'',logo:'auto',logoSize:150,v:2};
+const KIT_TPL_DEF={bg:'book',bgColor:'#F3F4FA',tone:'auto',coverAlign:'left',textAlign:'top',coverSize:100,titleSize:120,shadow:true,eyebrow:true,subtitle:true,partner:true,url:false,urlText:'',logo:'auto',logoSize:150,v:2,pos:'top',side:'left',logoSide:'right',hang:true};
 const kitMigrate=t=>!t||t.v>=2?t:Object.assign({},t,{url:false,logoSize:Math.max(150,Number(t.logoSize)||100),titleSize:Math.max(120,Number(t.titleSize)||100),v:2});
 const kitT=()=>Object.assign({},KIT_TPL_DEF,KIT.tpl||{},KIT.tplDraft||{});
 const kitSaved=()=>Object.assign({},KIT_TPL_DEF,KIT.tpl||{});
@@ -354,8 +354,15 @@ function kitText(ctx,b,box,S,tone,T){
     const byl=b.byline!=null?b.byline:b.partner?'Taught by '+b.partner:'';if(T.partner&&byl){y+=S.small*.9;ctx.font=`400 ${S.small}px Jost, Arial, sans-serif`;kitWrap(ctx,byl,box.w).slice(0,3).forEach(l=>{plan.push({t:l,f:ctx.font,y:y+S.small,c:tone.muted});y+=S.small*1.35})}
     last={plan,h:y};if(y<=box.h)return last}
   return last} // never lose the title: the smallest try if nothing fits
-function kitDrawText(ctx,res,x,y,center){ctx.textAlign=center?'center':'left';res.plan.forEach(p=>{ctx.font=p.f;ctx.fillStyle=p.c;if(p.ls&&'letterSpacing' in ctx)ctx.letterSpacing=(p.ls*parseFloat(p.f.match(/(\d+(\.\d+)?)px/)[1]))+'px';ctx.fillText(p.t,x,y+p.y);if('letterSpacing' in ctx)ctx.letterSpacing='0px'});ctx.textAlign='left'}
-function kitCover(ctx,img,x,y,w,h,shadow,align){const s=Math.min(w/img.naturalWidth,h/img.naturalHeight),cw=Math.round(img.naturalWidth*s),ch=Math.round(img.naturalHeight*s),cx=Math.round(align==='left'||align==='lefttop'?x:x+(w-cw)/2),cy=Math.round(align==='lefttop'?y:y+(h-ch)/2);
+const kitTfs=res=>Math.max(0,...(res?res.plan:[]).filter(p=>/^600 /.test(p.f)&&!p.ls).map(p=>parseFloat(p.f.slice(4))));
+const kitLogoW=h=>!kitLogoI||!h?0:h*.55*((kitLogoI.naturalWidth||773)/(kitLogoI.naturalHeight||224));
+/** The text either sits above the logo at full width, or runs down beside the logo in a narrower column: whichever lets the title be bigger. */
+function kitFit(ctx,b,w,hAbove,wBeside,hBottom,S,tone,T){const a=kitText(ctx,b,{w,h:hAbove},S,tone,T);if(!(wBeside>0&&hBottom>hAbove))return a;const c=kitText(ctx,b,{w:wBeside,h:hBottom},S,tone,T);return kitTfs(c)>kitTfs(a)*1.04?c:a}
+function kitCrop(ctx,img,x,y,w,h,shadow){const s=Math.max(w/img.naturalWidth,h/img.naturalHeight),sw=w/s,sh=h/s,sx=(img.naturalWidth-sw)/2,sy=Math.max(0,(img.naturalHeight-sh)*.3);
+  if(shadow){ctx.save();ctx.shadowColor='rgba(0,0,0,.28)';ctx.shadowBlur=Math.round(w*.08);ctx.shadowOffsetY=Math.round(w*.035);ctx.fillStyle='#fff';ctx.fillRect(x,y,w,h);ctx.restore()}
+  ctx.drawImage(img,sx,sy,sw,sh,x,y,w,h);return {x,y,w,h}}
+function kitDrawText(ctx,res,x,y,center){ctx.textAlign=center==='right'?'right':center?'center':'left';res.plan.forEach(p=>{ctx.font=p.f;ctx.fillStyle=p.c;if(p.ls&&'letterSpacing' in ctx)ctx.letterSpacing=(p.ls*parseFloat(p.f.match(/(\d+(\.\d+)?)px/)[1]))+'px';ctx.fillText(p.t,x,y+p.y);if('letterSpacing' in ctx)ctx.letterSpacing='0px'});ctx.textAlign='left'}
+function kitCover(ctx,img,x,y,w,h,shadow,align){const s=Math.min(w/img.naturalWidth,h/img.naturalHeight),cw=Math.round(img.naturalWidth*s),ch=Math.round(img.naturalHeight*s),cx=Math.round(align==='left'||align==='lefttop'?x:align==='right'?x+w-cw:x+(w-cw)/2),cy=Math.round(align==='lefttop'?y:y+(h-ch)/2);
   if(shadow){ctx.save();ctx.shadowColor='rgba(0,0,0,.28)';ctx.shadowBlur=Math.round(cw*.08);ctx.shadowOffsetY=Math.round(cw*.035);ctx.fillStyle='#fff';ctx.fillRect(cx,cy,cw,ch);ctx.restore()}ctx.drawImage(img,cx,cy,cw,ch);return {x:cx,y:cy,w:cw,h:ch}}
 let kitLogoI=null;
 function kitTint(img,col){const c=document.createElement('canvas');c.width=img.naturalWidth||773;c.height=img.naturalHeight||224;const x=c.getContext('2d');x.drawImage(img,0,0,c.width,c.height);if(col){x.globalCompositeOperation='source-in';x.fillStyle=col;x.fillRect(0,0,c.width,c.height)}return c}
@@ -378,26 +385,30 @@ async function kitRender(b,size,tpl){
   const urlTxt=(T.urlText||'').trim()||kitBase().replace(/^https?:\/\//,'').replace(/\/$/,'');
   const bz=size==='story'?1.4:1;const brand=(x,yb,small,center)=>{if(!T.url)return;ctx.font=`500 ${(small?17:21)*u*bz}px Jost, Arial, sans-serif`;ctx.fillStyle=tone.muted;ctx.textAlign=center?'center':'left';ctx.fillText(urlTxt,x,yb);ctx.textAlign='left'};
   const LH=T.logo==='none'?0:Math.round((size==='story'?150:size==='landscape'?92:120)*u*T.logoSize/100);
-  const M=Math.round(84*u);
-  if(size==='landscape'||(size==='square'&&r<1.05)){ // cover on the left, text on the right
-    const sq=size==='square',m=sq?M:54,foot=sq?(LH||(T.url?30*u:0))+44*u:0; // square: the address and logo sit in a row along the bottom, like portrait
-    const ch=(H-2*m-foot)*Math.min(1,cs),cvW=Math.min(W*.46*cs,ch*r),top=m+((H-2*m-foot)-ch)/2;
-    const c=img?kitCover(ctx,img,m,sq?top:m,cvW,ch,T.shadow,sq?'left':'lefttop'):{x:m,y:top,w:cvW,h:ch};
-    const tx=c.x+c.w+(sq?70*u:54),tw=W-tx-m;
-    const st=sq?S:{title:58*ts,sub:26,small:21,eye:18};
-    const room=sq?c.h:H-m-(LH||(T.url?30*u:0))-40*u-c.y,res=kitText(ctx,b,{w:tw,h:room},st,tone,T);
-    if(res)kitDrawText(ctx,res,tx,T.textAlign==='middle'?c.y+Math.max(0,(room-res.h)/2):c.y-Math.round(st.eye*.2));
-    if(sq){const lb=H-M+8*u;brand(M,lb);kitLogo(ctx,W-M,lb,LH,rgb,T.logo,tone.ink)}
-    else{brand(tx,H-m-4,true);kitLogo(ctx,W-m,H-m,LH,rgb,T.logo,tone.ink)}
-  }else{ // cover on top, text below
-    const center=T.coverAlign==='center';
-    const top=size==='story'?Math.round(300*u):M,bottom=M,avail=H-top-(size==='story'?Math.round(380*u):M);
-    const coverH=(size==='story'?avail*.58:size==='portrait'?avail*.54:avail*.44)*cs,coverW=Math.min(W-2*M,coverH*r);
-    const cH=Math.min(coverH,(W-2*M)/r),c=img?kitCover(ctx,img,M,top,W-2*M,cH,T.shadow,center?'center':'left'):{x:M,y:top,w:coverW,h:coverH};
-    const k2=size==='story'?1.4:1.15,S2={title:S.title*k2,sub:S.sub*k2,small:S.small*k2,eye:S.eye*k2};
-    const ty=c.y+c.h+64*u,res=kitText(ctx,b,{w:W-2*M-(center?0:0),h:H-bottom-ty-(LH||(T.url?30*u:0))-40*u},S2,tone,T);
-    if(res)kitDrawText(ctx,res,center?W/2:M,ty,center);
-    const lb=H-M+8*u;brand(M,lb);kitLogo(ctx,W-M,lb,LH,rgb,T.logo,tone.ink); // always the bottom-right corner, story included
+  const M=Math.round(84*u),LW=kitLogoW(LH),LHH=LH*.55,hang=String(T.hang)!=='false',bot=T.pos==='bottom',rightT=T.side==='right',logoL=T.logoSide==='left',center=T.coverAlign==='center';
+  const logo=yb=>{if(LH)kitLogo(ctx,logoL?M+LW:W-M,yb,LH,rgb,T.logo,tone.ink)};
+  const pic=(x,y,w,h)=>img?(hang?kitCrop(ctx,img,x,y,w,h,T.shadow):kitCover(ctx,img,x,y,w,h,T.shadow,center?'center':rightT?'right':'lefttop')):{x,y,w,h};
+  if(size==='landscape'){ // picture on one side, hanging from the top (or standing on the bottom); text beside it
+    const m=54,pw=Math.round(W*.44*cs),ph=hang?Math.round(H*.84):H-2*m,px=rightT?m:W-m-pw,py=hang?(bot?H-ph:0):m;
+    const c=pic(px,py,pw,ph),tx=rightT?c.x+c.w+50:m,tw=rightT?W-m-tx:c.x-50-m,st={title:58*ts,sub:26,small:21,eye:18};
+    const logoTop=bot?m:H-m-LHH,ty=bot?m+LHH+34:m+6;
+    const res=bot?kitText(ctx,b,{w:tw,h:H-m-ty},st,tone,T):kitFit(ctx,b,tw,logoTop-30-ty,logoL?0:tw-LW-30,H-m-ty,st,tone,T);
+    if(res)kitDrawText(ctx,res,rightT?tx:tx,ty,false);
+    if(LH)kitLogo(ctx,logoL?tx+LW:tx+tw,bot?m+LHH:H-m,LH,rgb,T.logo,tone.ink);
+    return cv}
+  // square, portrait and story: the picture hangs from the top with the text below, or stands on the bottom with the text above
+  const pw=Math.round((W-2*M)*(size==='story'?.82:1)*cs),ph=Math.round(H*(size==='story'?.46:size==='portrait'?.44:.4)*cs);
+  const px=center?Math.round((W-pw)/2):rightT?W-M-pw:M,py=bot?(hang?H-ph:H-M-ph):(hang?0:M);
+  const c=pic(px,py,pw,ph);
+  const k2=size==='story'?1.4:1.15,S2={title:S.title*k2,sub:S.sub*k2,small:S.small*k2,eye:S.eye*k2};
+  const tX=center?W/2:rightT?W-M:M,tAl=center?true:rightT?'right':false;
+  if(!bot){
+    const ty=c.y+c.h+64*u,lb=H-M+8*u,above=lb-LHH-40*u-ty;
+    const res=center?kitText(ctx,b,{w:W-2*M,h:above},S2,tone,T):kitFit(ctx,b,W-2*M,above,rightT!==logoL?0:W-2*M-LW-40*u,H-M-ty,S2,tone,T);
+    if(res)kitDrawText(ctx,res,tX,ty,tAl);logo(lb);
+  }else{
+    const lb=M+LHH;logo(lb);const ty=lb+56*u,res=kitText(ctx,b,{w:W-2*M,h:c.y-50*u-ty},S2,tone,T);
+    if(res)kitDrawText(ctx,res,tX,ty,tAl);
   }
   return cv}
 /* ---- the shared picture template (one for the whole team) ---- */
@@ -413,7 +424,7 @@ function kitTplCard(){
     <div class="kit-tplgrid"><div class="kit-tplctl">
       <div class="field"><span class="em-lbl">Background</span>${seg('bg',[['book','Subject colour'],['custom','One colour']])}${T.bg==='custom'?`<div class="so-row so-bgs">${[['#F3F4FA','Mist'],['#FFFFFF','White'],['#0F1747','Navy'],['#E3CD4B','Mustard'],['#171B2B','Ink']].map(([v,l])=>`<button type="button" class="so-sw" data-kt-set="bgColor" data-v="${v}" title="${l}" aria-pressed="${T.bgColor.toLowerCase()===v.toLowerCase()}" style="background:${v}"></button>`).join('')}<input type="color" data-kt-col="bgColor" value="${esc(T.bgColor)}" aria-label="Other colour"></div>`:''}</div>
       <div class="field"><span class="em-lbl">Text colour</span>${seg('tone',[['auto','Automatic'],['dark','Dark'],['light','Light']])}</div>
-      <div class="field"><span class="em-lbl">Picture (portrait and story)</span>${seg('coverAlign',[['left','Left, in line with the text'],['center','Centred']])}</div>
+      <div class="field"><span class="em-lbl">Layout</span>${seg('pos',[['top','Picture at the top, text below'],['bottom','Text at the top, picture at the bottom']])}${seg('hang',[['true','Hanging from the edge'],['false','Whole picture, with a margin']])}${seg('side',[['left','Text on the left'],['right','Text on the right']])}${seg('logoSide',[['right','Logo on the right'],['left','Logo on the left']])}${seg('coverAlign',[['left','Picture lined up with the text'],['center','Everything centred']])}</div>
       <div class="field"><span class="em-lbl">Text beside the picture (square and landscape)</span>${seg('textAlign',[['top','Level with the top'],['middle','Middle']])}</div>
       ${rng('coverSize','Picture size',80,115)}${rng('titleSize','Title size',70,150)}
       <div class="field"><span class="em-lbl">Show</span><div class="kit-chks">${chk('eyebrow','Label (Space available, Starts September…)')}${chk('subtitle','Exam board or level')}${chk('partner','Teacher')}${chk('url','Web address')}${chk('shadow','Shadow under the picture')}</div>${T.url?`<input type="text" data-kt-txt="urlText" value="${esc(T.urlText)}" placeholder="${esc(kitBase().replace(/^https?:\/\//,'').replace(/\/$/,''))}" aria-label="Web address text" style="margin-top:6px">`:''}</div>
