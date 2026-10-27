@@ -11,11 +11,11 @@ export default async function TermDates() {
   const years = [...new Set(terms.map((t) => t.year_label))];
   const next = terms.find((t) => t.starts_on > today);
   return (<>
-    <section className="s-phead"><div className="wrap"><h1>Term Dates</h1><p>Six terms a year, with a break after each one. There are no lessons or payments in the breaks.</p></div></section>
+    <section className="s-phead"><div className="wrap"><h1>Term Dates</h1><p>Six terms each school year, with a break after each one. There are no lessons or payments in the breaks.</p></div></section>
     <section className="s-sec"><div className="wrap">
       {years.map((y) => { const ts = terms.filter((t) => t.year_label === y);
         return <div className="tyear" key={y}>
-          {years.length > 1 && <h2 className="tyh">{yearLabel(y)}{ts[0].is_next && <span className="tynew">Starts {monthYear(ts[0].year_start)} · now booking</span>}</h2>}
+          <h2 className="tyh">{yearLabel(y)}{ts[0].is_next ? <span className="tynew">Starts {monthYear(ts[0].year_start)} · now booking</span> : ts.some((t) => t.starts_on <= today) && ts.some((t) => t.ends_on >= today) ? <span className="tynow">This school year</span> : null}</h2>
           <div className="terms">{ts.map((t) => { const now = t.starts_on <= today && t.ends_on >= today;
             return <div className={`term${now ? " now" : ""}`} key={y + t.number}>
               <div className="tn"><b>{t.name}</b><span>{weeks(t.starts_on, t.ends_on)} weeks{now ? " · this term" : t === next ? " · next" : ""}</span></div>
