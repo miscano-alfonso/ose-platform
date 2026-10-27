@@ -1,4 +1,5 @@
 import Link from "next/link";
+import "./recordings.css";
 import { recordingsView, recStatus, recLessons, type RecRow } from "@/lib/recordings";
 import { runRecordingsAction, recCfgAction, recLessonAction, editCardAction, approveCardsAction, postAnywayAction, disconnectRecAction, importRecordingsAction } from "../../actions";
 
@@ -28,8 +29,10 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
   const look = rows.filter((r) => ["short", "duplicate", "outside_term", "unfiled"].includes(r.status) || r.over_expected || (r.status === "filed" && ["waiting", "error", "gave_up"].includes(r.classroom)));
   const cards = filed.filter((r) => r.card_status && (r.card_status !== "done" || r.day >= days[0]));
   const TABS: [string, string][] = [["week", "This week"], ["cards", `Title cards${toApprove.length ? ` (${toApprove.length})` : ""}`], ["look", `Needs a look${look.length ? ` (${look.length})` : ""}`], ["settings", "Settings"]];
-  const cell = (r: RecRow) => <div key={r.id} style={{ marginBottom: 4 }}><a href={drive(r.file_id)} target="_blank" rel="noopener"><b>T{r.term_number} Lesson {r.lesson_number}</b></a>{r.over_expected ? " (check)" : ""}
-    {r.classroom !== "not_needed" && <><br /><span className={`pill ${CL[r.classroom]?.[0] ?? "mute"}`} style={{ fontSize: 11.5 }}>{r.classroom === "posted" || r.classroom === "already" ? "Classroom ✓" : r.classroom === "waiting" ? "Classroom: waiting" : CL[r.classroom]?.[1]}</span></>}</div>;
+  // one link per recording, coloured by its Classroom post: green = in Classroom, orange = waiting, red = a problem, plain = filed earlier
+  const tone = (r: RecRow) => r.classroom === "posted" || r.classroom === "already" ? "var(--good)" : r.classroom === "waiting" ? "var(--warn)" : ["error", "gave_up", "no_course"].includes(r.classroom) ? "var(--bad)" : "inherit";
+  const cell = (r: RecRow) => <div key={r.id} style={{ lineHeight: 1.25 }}><a href={drive(r.file_id)} target="_blank" rel="noopener" title={`${CL[r.classroom]?.[1] ?? ""}${r.classroom_note ? " · " + r.classroom_note : ""}`}
+    style={{ color: tone(r), fontWeight: 600, textDecoration: "none" }}>T{r.term_number} Lesson {r.lesson_number}</a>{r.over_expected ? " (check)" : ""}</div>;
   return <>
     <div className="top"><div><h1>Recordings</h1><div className="sub">Lesson recordings from Google Meet: renamed, filed in their subject folder, posted to the class’s Classroom, with a title card added. Replaces the “_Recordings” sheet’s script.</div></div>
       <span className="grow" />{st.connected && <form action={runRecordingsAction}><button className="abtn pri" type="submit">Run now</button></form>}</div>
@@ -47,12 +50,12 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
     {tab === "week" && <>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10 }}><Link className="abtn sm" href={`/admin/recordings?w=${iso(prev)}`}>← Previous week</Link>
         <b>{dm(days[0])} – {dm(days[4])}</b><Link className="abtn sm" href={`/admin/recordings?w=${iso(next)}`}>Next week →</Link>{sp.w && <Link className="lnk" href="/admin/recordings">This week</Link>}</div>
-      <div className="tw"><table><thead><tr><th>Lesson</th>{days.map((d) => <th key={d}>{dm(d)}</th>)}<th>Meet code</th></tr></thead><tbody>
+      <div className="tw rec-grid"><table><thead><tr><th>Lesson</th>{days.map((d) => <th key={d}>{dm(d)}</th>)}<th>Meet code</th></tr></thead><tbody>
         {lessons.map((l) => <tr key={l.id}><td><b>{l.name}</b>{l.kind === "one" && <span className="muted"> · 1:1</span>}</td>
-          {days.map((d) => <td key={d} style={{ fontSize: 14 }}>{filed.filter((r) => r.lesson_id === l.id && r.day === d).sort((a, b) => (a.lesson_number ?? 0) - (b.lesson_number ?? 0)).map(cell)}</td>)}
-          <td className="mono" style={{ fontSize: 13 }}>{l.meet_code}</td></tr>)}
+          {days.map((d) => <td key={d}>{filed.filter((r) => r.lesson_id === l.id && r.day === d).sort((a, b) => (a.lesson_number ?? 0) - (b.lesson_number ?? 0)).map(cell)}</td>)}
+          <td className="mono muted" style={{ fontSize: 12.5 }}>{l.meet_code}</td></tr>)}
       </tbody></table></div>
-      <p className="note">Each link opens the recording in Drive. {st.run.at ? <>Last run {when(st.run.at)}{st.run.by && st.run.by !== "auto" ? ` by ${st.run.by}` : ""}{st.run.error ? <span className="pill bad" style={{ marginLeft: 6 }}>{st.run.error}</span> : null}.</> : "Not run yet."} Runs every 15 minutes while the admin is open, and every morning.</p>
+      <p className="note"><span style={{ color: "var(--good)", fontWeight: 600 }}>Green</span>: in Classroom · <span style={{ color: "var(--warn)", fontWeight: 600 }}>Orange</span>: waiting for the teacher’s lesson post · <span style={{ color: "var(--bad)", fontWeight: 600 }}>Red</span>: not posted (see Needs a look). Each opens the recording in Drive; hover for details. {st.run.at ? <>Last run {when(st.run.at)}{st.run.by && st.run.by !== "auto" ? ` by ${st.run.by}` : ""}{st.run.error ? <span className="pill bad" style={{ marginLeft: 6 }}>{st.run.error}</span> : null}.</> : "Not run yet."} Runs every 15 minutes while the admin is open, and every morning.</p>
     </>}
 
     {tab === "cards" && <>
