@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const me = await currentStaff();
   const base = await siteBase(origin(req));
   if (!me) return out({ error: "Sign in again." }, 401);
-  const sp = req.nextUrl.searchParams, action = sp.get("action");
+  const sp = req.nextUrl.searchParams, action = sp.get("action") || (sp.has("state") && (sp.has("code") || sp.has("error")) ? "canvacallback" : null); // Canva drops our ?action= when it sends people back
   try {
     if (action === "asset") return img(await D.getAsset(sp.get("id") || ""));
     if (action === "photo") return img(await D.teacherPhoto(sp.get("id") || ""));
