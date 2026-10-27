@@ -967,6 +967,20 @@ export async function remindInviteAction(f: FormData): Promise<void> {
   const err = await remindInvite(me.id, str(f, "id", 40));
   redirect(`/admin/classes?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Reminder sent to the student and parent.")}`);
 }
+export async function runInvitesAction(): Promise<void> {
+  const me = await requireStaff();
+  const { runInvites } = await import("@/lib/classroom-invites");
+  const r = await runInvites(me.name);
+  const ok = `Classroom: ${r.invited ?? 0} invitation${r.invited === 1 ? "" : "s"} sent, ${r.removed ?? 0} taken out.${r.problems?.length ? ` ${r.problems.length} couldn’t be done (see below).` : ""}`;
+  redirect(`/admin/classes?${r.error ? "err=" + encodeURIComponent(r.error) : "ok=" + encodeURIComponent(ok)}`);
+}
+export async function saveInviteCfgAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { saveInviteCfg } = await import("@/lib/classroom-invites");
+  const auto = f.get("auto") === "on";
+  await saveInviteCfg(auto);
+  redirect(`/admin/classes?ok=${encodeURIComponent(auto ? "Classroom invitations now go out automatically, about every hour." : "Automatic Classroom invitations are off. Use Send now when you’re ready.")}`);
+}
 export async function saveBandAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const { saveBand } = await import("@/lib/reports");

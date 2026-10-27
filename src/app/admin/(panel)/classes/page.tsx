@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { getGroups, pendingInvites } from "@/lib/admin-data";
 import { classFormOptions } from "@/lib/rules";
-import { updateGroupAction, addClassAction, remindInviteAction } from "../../actions";
+import { updateGroupAction, addClassAction, remindInviteAction, runInvitesAction, saveInviteCfgAction } from "../../actions";
+import { invitePlan, inviteStatus } from "@/lib/classroom-invites";
 import { yearLabel } from "@/lib/format";
 
 const MODE: Record<string, string> = { auto: "Close when full", keep_open: "Keep open past capacity", full: "Mark as full now" };
@@ -14,7 +15,7 @@ const statusPill = (s: string, full: boolean) => full && (s === "open" || s === 
 
 export default async function Classes({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; level?: string }> }) {
   const sp = await searchParams;
-  const [all, opts, pend] = await Promise.all([getGroups(), classFormOptions(), pendingInvites()]);
+  const [all, opts, pend, plan, inv] = await Promise.all([getGroups(), classFormOptions(), pendingInvites(), invitePlan(), inviteStatus()]);
   const levels = [...new Set(all.map((g) => g.level))];
   const level = levels.includes(sp.level ?? "") ? sp.level! : "All";
   const groups = all.filter((g) => level === "All" || g.level === level);
@@ -22,6 +23,23 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
   return <>
     <div className="top"><div><h1>Classes</h1><div className="sub">{groups.length} classes. Edit a row to change its capacity, override, website label, status or whether it shows under Space Available on the homepage.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+    <section className="card"><h2>Google Classroom invitations</h2>
+      <p className="cs">When a place is confirmed, the student is invited to the class’s Google Classroom at the Google account the parent gave for them, and Google emails them the invitation. When a place is cancelled, moved to another class, or a taster doesn’t go on to book, they’re taken out of the Classroom. Students who finish a course keep their work. Invitations come from ose@.</p>
+      {inv.ready !== "ok" && <p className="note msg bad">{inv.ready === "none" ? "Connect the recordings account (ose@) first" : "Connect ose@ again so the site may send Classroom invitations (Google will ask for one more permission)"}: <Link href="/admin/recordings?tab=settings">Recordings → Settings</Link>.</p>}
+      <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "6px 0 10px" }}>
+        <form action={runInvitesAction}><button className="abtn pri" type="submit" disabled={inv.ready !== "ok" || (plan.invite.length + plan.remove.length === 0)}>Send now{plan.invite.length + plan.remove.length ? ` (${plan.invite.length} to invite, ${plan.remove.length} to take out)` : ""}</button></form>
+        <form action={saveInviteCfgAction} style={{ display: "flex", gap: 8, alignItems: "center" }}><label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="auto" defaultChecked={inv.cfg.auto} /> Do this automatically, about every hour</label><button className="abtn sm" type="submit">Save</button></form>
+      </div>
+      {inv.last.at && <p className="muted" style={{ fontSize: 14, margin: "0 0 8px" }}>Last run {new Date(inv.last.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" })}{inv.last.by && inv.last.by !== "auto" ? ` by ${inv.last.by}` : " (automatic)"}: {inv.last.error ?? `${inv.last.invited ?? 0} invited, ${inv.last.removed ?? 0} taken out.`}</p>}
+      {!!inv.last.problems?.length && <ul className="note" style={{ margin: "0 0 10px", paddingLeft: 18 }}>{inv.last.problems.map((p) => <li key={p}>{p}</li>)}</ul>}
+      {(plan.invite.length > 0 || plan.remove.length > 0) && <div className="tw" style={{ border: 0, marginBottom: 0 }}><table><thead><tr><th>Student</th><th>Class</th><th>What happens</th></tr></thead><tbody>
+        {plan.invite.map((x) => <tr key={"i" + x.student_id + x.group_id}><td><b>{x.student}</b><br /><span className="muted">{x.email}</span></td><td>{x.class}<div className="muted" style={{ fontSize: 13 }}>{x.code}</div></td><td><span className="pill good">Invite</span>{x.old_invite || x.membership_id ? <span className="muted" style={{ fontSize: 13 }}> {x.old_invite ? "new address" : "again"}</span> : null}</td></tr>)}
+        {plan.remove.map((x) => <tr key={"r" + x.membership_id}><td><b>{x.student}</b><br /><span className="muted">{x.email ?? "no Google account"}</span></td><td>{x.class}<div className="muted" style={{ fontSize: 13 }}>{x.code}</div></td><td><span className="pill warn">{x.state === "joined" ? "Take out" : "Withdraw invitation"}</span> <span className="muted" style={{ fontSize: 13 }}>{x.why}</span></td></tr>)}
+      </tbody></table></div>}
+      {plan.invite.length + plan.remove.length === 0 && <p className="muted" style={{ margin: 0 }}>Nothing to send: everyone with a confirmed place has been invited.</p>}
+      {plan.noEmail.length > 0 && <p className="note" style={{ marginTop: 10 }}><b>No Google account given yet ({plan.noEmail.length}):</b> {plan.noEmail.map((x) => `${x.student} (${x.class}, parent ${x.parent})`).join("; ")}. Parents add it under Your details.</p>}
+      {plan.noClassroom.length > 0 && <p className="note" style={{ marginTop: 6 }}><b>Booked classes not linked to a Classroom:</b> {plan.noClassroom.join(", ")}. Add the Classroom link with Edit below.</p>}
+    </section>
     {pend.length > 0 && <section className="card"><h2>Google Classroom invitations not accepted ({pend.length})</h2>
       <p className="cs">Students join a class’s Google Classroom by accepting the invitation sent to their school account. Until they do, they can’t join the lesson’s Google Meet.</p>
       <div className="tw" style={{ border: 0, marginBottom: 0 }}><table><thead><tr><th>Student</th><th>Class</th><th>Invited</th><th>Next lesson</th><th /></tr></thead><tbody>

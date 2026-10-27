@@ -14,6 +14,7 @@ export const PLANS: Plan[] = [
       "Free taster lessons, waiting list and enquiries",
       "Parent accounts: bookings, payments and messages in one place",
       "Google Meet links, with attendance taken from Meet",
+      "Students invited to the right Google Classroom when they book",
       "Automatic emails: lesson reminders, receipts and follow-ups",
       "Lesson recordings named, filed and posted to Google Classroom, with a title card",
       "Your logo and colours on yourname.ohsoedtech.com",
@@ -58,6 +59,7 @@ export const COMPARE: [string, [string, boolean | string, boolean | string, bool
   ["Running lessons", [
     ["Group classes, 1:1 tutoring and workshops", true, true, true],
     ["Google Meet links and attendance from Meet", true, true, true],
+    ["Students invited to their Google Classroom when they book", true, true, true],
     ["Lesson reminders and automatic emails", true, true, true],
     ["Recordings filed and posted to Google Classroom", true, true, true],
     ["Title cards on recordings", true, true, true],
@@ -116,6 +118,7 @@ export const NAMED_ROWS: [string, ...string[]][] = [
   ["Instalments and payment plans", "yes", "no", "no", "Top plan", "yes", "yes", "no"],
   ["Weekly classes across terms and holidays", "yes", "partly", "partly", "partly", "no", "no", "partly"],
   ["Live video lessons", "Google Meet", "Zoom link", "Zoom or Meet links", "Own video, extra cost", "no", "partly", "Built-in video"],
+  ["Students invited to their Google Classroom on booking", "yes", "no", "no", "no", "no", "no", "no"],
   ["Attendance", "Automatic, from Meet", "yes", "partly", "partly", "no", "no", "yes"],
   ["Recordings filed and posted to Google Classroom, with title cards", "yes", "no", "no", "no", "no", "no", "no"],
   ["Parent accounts", "yes", "yes", "partly", "yes", "no", "no", "yes"],

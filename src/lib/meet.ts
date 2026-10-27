@@ -21,14 +21,14 @@ const SCOPE = [G + "admin.reports.audit.readonly", ...CLASSROOM_SCOPES].join(" "
 const GMAIL_SCOPE = G + "gmail.readonly";
 // The recordings account (ose@, which owns the Meet recordings and teaches every Classroom): Drive, and posting recordings to Classroom.
 const REC_SCOPE = ["drive", "classroom.courses.readonly", "classroom.coursework.students", "classroom.courseworkmaterials", "classroom.announcements.readonly",
-  "classroom.rosters.readonly", "classroom.profile.emails"].map((x) => G + x).join(" ");
+  "classroom.rosters.readonly", "classroom.rosters", "classroom.profile.emails"].map((x) => G + x).join(" ");
 export type GKind = "gmail" | "rec";
 const AUTH_URL = () => process.env.GOOGLE_AUTH_URL || "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = () => process.env.GOOGLE_TOKEN_URL || "https://oauth2.googleapis.com/token";
 const REPORTS_URL = () => process.env.GOOGLE_REPORTS_URL || "https://admin.googleapis.com/admin/reports/v1/activity/users/all/applications/meet";
 
 type Conn = { clientId?: string; clientSecret?: string; refreshToken?: string; by?: string; at?: string; scopes?: string; pending?: { state: string; email: string; exp: number; kind?: GKind } };
-export type Mailbox = { refreshToken?: string; mailbox?: string; by?: string; at?: string };
+export type Mailbox = { refreshToken?: string; mailbox?: string; by?: string; at?: string; scopes?: string };
 export type SyncInfo = { at?: string; from?: string; to?: string; joins?: number; lessons?: number; unmatched?: number; people?: number; error?: string; by?: string; fetched?: number; placed?: number; lessonsInWindow?: number };
 /** Meet calls Google reported that didn't line up with any timetabled lesson, grouped by meeting code (so the office can say which class it is). */
 export type Unplaced = { code: string; organizer: string | null; joins: number; first: string; last: string; when: string[]; slots?: Record<string, number>; days?: Record<string, string[]> };
@@ -106,7 +106,7 @@ export async function callback(base: string, sp: URLSearchParams): Promise<strin
     const account = String(((await ab.json()) as { user?: { emailAddress?: string } }).user?.emailAddress ?? "").toLowerCase();
     const sc = String(t.scope ?? "");
     if (sc && !sc.includes("courseworkmaterials")) return "Google didn’t give permission to post to Classroom. Press Connect again and tick every box.";
-    await kvSet("rec_google", { refreshToken: String(t.refresh_token), mailbox: account, by: pend.email, at: new Date().toISOString() } satisfies Mailbox);
+    await kvSet("rec_google", { refreshToken: String(t.refresh_token), mailbox: account, by: pend.email, at: new Date().toISOString(), scopes: sc } satisfies Mailbox);
     return null;
   }
   if (pend.kind === "gmail") {
@@ -135,6 +135,11 @@ export async function googleAccess(kind: "google" | GKind): Promise<string> {
   const rt = kind === "gmail" ? (await kvGet<Mailbox>("gmail"))?.refreshToken : kind === "rec" ? (await kvGet<Mailbox>("rec_google"))?.refreshToken : c.refreshToken;
   if (!rt) fail(kind === "gmail" ? "Connect the school inbox first." : kind === "rec" ? "Connect the recordings account (ose@) first." : "Connect Google first.");
   return accessToken({ ...c, refreshToken: rt });
+}
+/** Can the recordings account (ose@) send and withdraw Classroom invitations? "none": not connected; "reconnect": connected before that permission was asked for. */
+export async function recCanInvite(): Promise<"ok" | "reconnect" | "none"> {
+  const m = await kvGet<Mailbox>("rec_google"); if (!m?.refreshToken) return "none";
+  return (m.scopes ?? "").split(/\s+/).includes(G + "classroom.rosters") ? "ok" : "reconnect";
 }
 export async function googleKv<T>(key: string): Promise<T | null> { return kvGet<T>(key); }
 export async function googleKvSet(key: string, v: unknown) { await kvSet(key, v); }

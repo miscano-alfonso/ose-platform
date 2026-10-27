@@ -99,10 +99,10 @@ export default function EdTechHome() {
     <section className="edt-sec" id="google"><div className="edt-wrap">
       <p className="edt-eyebrow">Made for Google classrooms</p>
       <h2 className="edt-h2">If your lessons live in Google Meet and Classroom, you’re halfway there</h2>
-      <p className="edt-lead">OH-SO EdTech is built around the Google tools teachers already know. It does the joining-up: matching your Classroom class lists to your families, taking the register from Meet, and filing and posting every recording, so you can teach.</p>
+      <p className="edt-lead">OH-SO EdTech is built around the Google tools teachers already know. It does the joining-up: inviting each student to the right Google Classroom when their place is confirmed, taking the register from Meet, and filing and posting every recording, so you can teach.</p>
       <div className="edt-grid">
         <div className="edt-card"><h3>Google Meet</h3><p>Every class has its own Meet link, attendance comes from who actually joined, and lessons can be recorded.</p></div>
-        <div className="edt-card"><h3>Google Classroom</h3><p>Classes, assignments and recordings live in Classroom, and we check assessments are marked before reports go out.</p></div>
+        <div className="edt-card"><h3>Google Classroom</h3><p>Students get their class invitation as soon as they book. Classes, assignments and recordings live in Classroom, and we check assessments are marked before reports go out.</p></div>
         <div className="edt-card"><h3>Google Drive</h3><p>Recordings are renamed and filed by subject, with transcripts archived, all in your school’s own Drive.</p></div>
       </div>
       <div className="edt-need">

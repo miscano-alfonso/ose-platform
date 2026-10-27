@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { meetBackground } from "@/lib/meet";
 import { runAutomations } from "@/lib/automations";
 import { classroomBackground } from "@/lib/classroom";
+import { invitesBackground } from "@/lib/classroom-invites";
 import { inboxBackground } from "@/lib/inbox";
 import { recordingsBackground } from "@/lib/recordings";
 
@@ -14,6 +15,7 @@ export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret || req.headers.get("authorization") !== `Bearer ${secret}`) return NextResponse.json({ error: "Not allowed." }, { status: 401 });
   await meetBackground();
+  await invitesBackground();
   await classroomBackground();
   await inboxBackground();
   await recordingsBackground();

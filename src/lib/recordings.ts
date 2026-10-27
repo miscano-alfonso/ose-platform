@@ -490,7 +490,7 @@ export async function recordingsView(from: string, to: string) {
 }
 export async function recStatus() {
   const [acct, run, cfg] = await Promise.all([googleKv<Mailbox>("rec_google"), googleKv<RunInfo>("rec_run"), recCfg()]);
-  return { connected: !!acct?.refreshToken, account: acct?.mailbox ?? "", by: acct?.by ?? "", run: run ?? {}, cfg: { ...cfg, cardSecret: cfg.cardSecret ? "saved" : "" } };
+  return { connected: !!acct?.refreshToken, canInvite: (acct?.scopes ?? "").split(/\s+/).includes("https://www.googleapis.com/auth/classroom.rosters"), account: acct?.mailbox ?? "", by: acct?.by ?? "", run: run ?? {}, cfg: { ...cfg, cardSecret: cfg.cardSecret ? "saved" : "" } };
 }
 export async function disconnectRec() { await googleKvSet("rec_google", null); }
 /** The Settings button: read the subject folders again (adds anything not already listed). */

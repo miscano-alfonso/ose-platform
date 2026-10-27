@@ -92,11 +92,12 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
 
     {tab === "settings" && <>
       <section className="card"><h2>Recordings account</h2>
-        {st.connected ? <><p>Connected as <b>{st.account}</b> by {st.by}. This account renames and files the recordings and posts them in Classroom, so it must own the Meet recordings and be a teacher on every class (ose@ohsoed.co.uk).</p>
+        {st.connected ? <><p>Connected as <b>{st.account}</b> by {st.by}. This account renames and files the recordings and posts them in Classroom, so it must own the Meet recordings and be a teacher on every class (ose@ohsoed.co.uk). It also sends students their Classroom invitations (Classes).</p>
+          {!st.canInvite && <p className="note msg">To send Classroom invitations, ose@ needs one more permission: press <a href="/admin/meet-api?action=login&what=rec"><b>Connect ose@ again</b></a>, sign in as ose@ and tick every box. Recordings keep working meanwhile.</p>}
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><form action={importRecordingsAction}><button className="abtn" type="submit">Bring in earlier recordings</button></form>
             <span className="note">Reads the subject and 1:1 folders for recordings the Apps Script already filed (done automatically the first time). Nothing is renamed or moved.</span></div>
           <form action={disconnectRecAction} style={{ marginTop: 8 }}><button className="lnk" type="submit">Disconnect</button></form></>
-        : <><p className="cs">Sign in as <b>ose@ohsoed.co.uk</b> (it owns the recordings and teaches every Classroom). It needs Drive and Classroom posting. In Google Cloud Console (the same project as Meet) turn on the <b>Google Drive API</b> and <b>Google Classroom API</b> first.</p>
+        : <><p className="cs">Sign in as <b>ose@ohsoed.co.uk</b> (it owns the recordings and teaches every Classroom). It needs Drive, Classroom posting and Classroom invitations. In Google Cloud Console (the same project as Meet) turn on the <b>Google Drive API</b> and <b>Google Classroom API</b> first.</p>
           <a className="abtn pri" href="/admin/meet-api?action=login&what=rec">Connect ose@</a></>}
         <p className="note" style={{ marginTop: 10 }}><b>Before switching to “Do the work”:</b> switch off the Apps Script’s triggers (_Recordings → Extensions → Apps Script → Triggers → delete “dailyUpdate” and “applyApprovedTitleCards”), so the two never run at once.</p></section>
       <section className="card"><h2>Folders and title cards</h2>

@@ -15,7 +15,7 @@ const ROWS: Row[] = [
     shot: "/osedtech/shots/payments.png", alt: "Payments in Demo Academy’s dashboard", url: "admin.demoacademy.co.uk/payments" },
   { id: "lessons", eyebrow: "Classes, 1:1s and workshops", title: "Your whole timetable in one place", plan: "All plans",
     text: "Weekly classes run across your terms and skip the holidays. Private 1:1 lessons and one-off workshops sit alongside them, each with its own booking page.",
-    points: ["Terms and holidays set once for the year", "A Google Meet link for every lesson", "Class lists that update themselves as families book or leave", "Tasters that turn into bookings"],
+    points: ["Terms and holidays set once for the year", "A Google Meet link for every lesson", "Students invited to the right Google Classroom when they book, and taken out if they leave", "Class lists that update themselves as families book or leave", "Tasters that turn into bookings"],
     shot: "/osedtech/shots/timetable.png", alt: "Demo Academy’s weekly timetable", url: "admin.demoacademy.co.uk/timetable" },
   { id: "attendance", eyebrow: "Attendance", title: "Registers that take themselves", plan: "All plans",
     text: "Attendance comes from who actually joined each Google Meet, matched to the right student, even when they join from a parent’s account. You see who’s slipping before it becomes a problem.",
