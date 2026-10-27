@@ -54,11 +54,11 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       <aside className="side"><SideToggle />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>
-        {switchers}
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports }} />
+        <div className="side-foot">{switchers}
         <div className="who"><span>Signed in as<br /><b>{me.viewing ? me.realName : me.name}</b></span>
           <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form><ThemeToggle initial={theme ?? "auto"} />
-          <a href="/" style={{ color: "#c9cde4", fontSize: 15.5 }}>View the website</a></div>
+          <a href="/" style={{ color: "#c9cde4", fontSize: 15.5 }}>View the website</a></div></div>
       </aside>
       <main className="main">{children}</main>
     </div></div>;

@@ -23,7 +23,7 @@ const ICON: Record<string, string> = { "/admin/families": "fam", "/admin/attenda
 const Icon = ({ href }: { href: string }) => <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={P[ICON[href] ?? "home"]} /></svg>;
 // The prototype's menu order; the newer sections (Jobs, Newsletter, Social…) sit after it, and website and school settings in groups.
 const DAILY: Item[] = [
-  ["Dashboard", "/admin"], ["Classes", "/admin/classes"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"], ["Timetable", "/admin/timetable"],
+  ["Classes", "/admin/classes"], ["1:1 tutoring", "/admin/tutoring"], ["Workshops", "/admin/workshops"], ["Timetable", "/admin/timetable"],
   ["Families", "/admin/families"], ["Attendance", "/admin/attendance"], ["Recordings", "/admin/recordings"], ["Reports", "/admin/reports"], ["Payments", "/admin/payments"], ["Payroll", "/admin/payroll"],
   ["Prices & discounts", "/admin/prices"], ["Term dates", "/admin/term-dates"], ["Tasters", "/admin/tasters"], ["Waiting list & enquiries", "/admin/enquiries"],
   ["Messages", "/admin/messages"], ["Student chat", "/admin/student-chat"], ["Data protection", "/admin/privacy"], ["Rewards", "/admin/rewards"], ["Email", "/admin/email"], ["Automations", "/admin/automations"], ["Jobs", "/admin/jobs"],
@@ -41,15 +41,18 @@ export function AdminNav({ counts }: { counts: Record<string, number> }) {
   // One part of the menu open at a time: opening Year setup or Settings folds the main list away.
   const [section, setSection] = useState<string>(() => GROUPS.find(([, items]) => items.some(([, h]) => here(h)))?.[0] ?? "main");
   const link = ([label, href]: Item) => <Link key={label} href={href} aria-current={here(href) ? "page" : undefined} onClick={() => setOpen(false)}><Icon href={href} /><span>{label}</span>{counts[href] ? <b className="cnt">{counts[href]}</b> : null}</Link>;
+  // Marketing and Website sit above the main list; Settings below it. The logo is the way to the dashboard.
+  const group = ([name, items]: [string, Item[]]) => <div key={name} className="ngrp">
+    <button type="button" className="ngrp-h" aria-expanded={section === name} onClick={() => setSection(section === name ? "main" : name)}>{name}</button>
+    {section === name && <div className="ngrp-list">{items.map(link)}</div>}
+  </div>;
   return <>
     <button className="abtn side-btn menu-toggle" aria-expanded={open} aria-controls="adm-nav" onClick={() => setOpen(!open)}>{open ? "Close menu" : "Menu"}</button>
     <nav id="adm-nav" className={`nav${open ? " open" : ""}`} aria-label="Admin">
-      {section !== "main" && <button type="button" className="ngrp-h main-h" aria-expanded={false} onClick={() => setSection("main")}>Main menu</button>}
-      {section === "main" && <div className="ngrp-list">{DAILY.map(link)}</div>}
-      {GROUPS.map(([name, items]) => <div key={name} className="ngrp">
-        <button type="button" className="ngrp-h" aria-expanded={section === name} onClick={() => setSection(section === name ? "main" : name)}>{name}</button>
-        {section === name && <div className="ngrp-list">{items.map(link)}</div>}
-      </div>)}
+      {GROUPS.filter(([n]) => n !== "Settings").map(group)}
+      <div className="ngrp"><button type="button" className="ngrp-h" aria-expanded={section === "main"} onClick={() => setSection("main")}>Main menu</button>
+        {section === "main" && <div className="ngrp-list">{DAILY.map(link)}</div>}</div>
+      {GROUPS.filter(([n]) => n === "Settings").map(group)}
     </nav>
   </>;
 }

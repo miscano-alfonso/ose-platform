@@ -255,3 +255,4 @@
 .adm .app.side-closed .main{padding-left:clamp(56px,4vw,64px)}
 @media (max-width:820px){.adm .side-toggle{display:none}.adm .app.side-closed{grid-template-columns:1fr}.adm .app.side-closed .side{visibility:visible;padding:18px 12px}}
 .adm .side .who{padding-bottom:40px}
+.adm .side .side-foot{margin-top:auto;display:grid;gap:12px}.adm .side .side-foot .who{margin-top:0}
