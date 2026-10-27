@@ -34,6 +34,7 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
     <div className="top"><div><h1>Recordings</h1><div className="sub">Lesson recordings from Google Meet: renamed, filed in their subject folder, posted to the class’s Classroom, with a title card added. Replaces the “_Recordings” sheet’s script.</div></div>
       <span className="grow" />{st.connected && <form action={runRecordingsAction}><button className="abtn pri" type="submit">Run now</button></form>}</div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+    {st.connected && st.cfg.mode !== "live" && <p className="note msg"><b>Watch only.</b> This page reads your Drive and Classroom to show live recordings, but changes nothing: the Apps Script still renames, files and posts them. Switch to “Do the work” under Settings when the new site launches (and delete the Apps Script triggers then).</p>}
     {!st.connected && tab !== "settings" && <p className="note msg">Connect the recordings account (ose@) under <Link href="/admin/recordings?tab=settings">Settings</Link> to start.</p>}
     <div className="tiles">
       <div className="tile"><span className="k">Recorded this week</span><span className="v">{week.length}</span><span className="h">{dm(days[0])} – {dm(days[4])}</span></div>
@@ -92,7 +93,7 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
           <form action={disconnectRecAction} style={{ marginTop: 8 }}><button className="lnk" type="submit">Disconnect</button></form></>
         : <><p className="cs">Sign in as <b>ose@ohsoed.co.uk</b> (it owns the recordings and teaches every Classroom). It needs Drive and Classroom posting. In Google Cloud Console (the same project as Meet) turn on the <b>Google Drive API</b> and <b>Google Classroom API</b> first.</p>
           <a className="abtn pri" href="/admin/meet-api?action=login&what=rec">Connect ose@</a></>}
-        <p className="note" style={{ marginTop: 10 }}><b>Before relying on this:</b> switch off the Apps Script’s daily trigger (_Recordings → Extensions → Apps Script → Triggers → delete “dailyUpdate” and “applyApprovedTitleCards”), so the two never run at once.</p></section>
+        <p className="note" style={{ marginTop: 10 }}><b>Before switching to “Do the work”:</b> switch off the Apps Script’s triggers (_Recordings → Extensions → Apps Script → Triggers → delete “dailyUpdate” and “applyApprovedTitleCards”), so the two never run at once.</p></section>
       <section className="card"><h2>Folders and title cards</h2>
         <form action={recCfgAction} className="eform">
           <label className="fld">Google Meet folder<input name="meetFolder" defaultValue={st.cfg.meetFolder ?? ""} style={{ width: 300 }} /></label>
@@ -102,6 +103,7 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
           <label className="fld">Shorter than this is an accidental join (MB)<input name="minMb" type="number" min="0.25" step="0.25" defaultValue={((st.cfg.minBytes ?? 5242880) / 1048576).toString()} style={{ width: 100 }} /></label>
           <label className="fld">Title-card service URL (Cloud Run)<input name="cardUrl" defaultValue={st.cfg.cardUrl ?? ""} placeholder="https://…run.app" style={{ width: 320 }} autoComplete="off" /></label>
           <label className="fld">Title-card secret<input name="cardSecret" type="text" placeholder={st.cfg.cardSecret ? "Saved (leave blank to keep)" : "TITLE_CARD_SECRET"} style={{ width: 240 }} autoComplete="off" spellCheck={false} data-1p-ignore="" data-lpignore="true" /></label>
+          <label className="fld">Mode<select name="mode" defaultValue={st.cfg.mode === "live" ? "live" : "watch"}><option value="watch">Watch only (the Apps Script does the work)</option><option value="live">Do the work (after deleting the Apps Script triggers)</option></select></label>
           <label className="fld" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}><input type="checkbox" name="autoCards" value="1" defaultChecked={!!st.cfg.autoCards} style={{ width: "auto" }} />Add title cards automatically (no approval)</label>
           <button className="abtn" type="submit">Save</button></form>
         <p className="note">The URL and secret are the Script properties TITLE_CARD_URL and TITLE_CARD_SECRET in the Apps Script (Project Settings). Paste them yourself.</p></section>

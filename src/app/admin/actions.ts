@@ -1146,6 +1146,8 @@ async function recAdmin(tab: string) { const me = await requireStaff(); if (me.r
 export async function runRecordingsAction(): Promise<void> {
   const me = await recAdmin("week"); const R = await import("@/lib/recordings");
   const r = await R.runRecordings(me.name);
+  const { recCfg } = R; const live = (await recCfg()).mode === "live";
+  if (!live) recBack("week", r.error ? null : `Read Drive and Classroom: ${r.filed} new recording${r.filed === 1 ? "" : "s"} found. Watch only: nothing was changed.`, r.error ?? null);
   recBack("week", r.error ? null : `Done: ${r.filed} recording${r.filed === 1 ? "" : "s"} filed, ${r.flagged} flagged as too short, ${r.posted} posted to Classroom, ${r.cards} title card${r.cards === 1 ? "" : "s"} started.${r.problems?.length ? ` ${r.problems.length} problem${r.problems.length === 1 ? "" : "s"}: see Needs a look.` : ""}`, r.error ?? null);
 }
 export async function recCfgAction(f: FormData): Promise<void> {
@@ -1155,6 +1157,7 @@ export async function recCfgAction(f: FormData): Promise<void> {
   if (url && !/^https:\/\/[\w.-]+(:\d+)?(\/[\w./-]*)?$/.test(url)) recBack("settings", null, "The title-card service URL should start with https://.");
   await R.saveRecCfg({ meetFolder: id("meetFolder"), transcriptsFolder: id("transcriptsFolder"), flaggedFolder: id("flaggedFolder"), oneToOneFolder: id("oneToOneFolder"),
     ...(url ? { cardUrl: url } : {}), ...(secret ? { cardSecret: secret } : {}), autoCards: f.get("autoCards") === "1",
+    mode: f.get("mode") === "live" ? "live" : "watch",
     minBytes: Math.max(256 * 1024, Math.round(Number(str(f, "minMb", 6) || 5) * 1024 * 1024)) });
   recBack("settings", "Settings saved.");
 }

@@ -14,7 +14,9 @@ const FOLDER = "application/vnd.google-apps.folder";
 
 export type RecCfg = { meetFolder?: string; transcriptsFolder?: string; flaggedFolder?: string; oneToOneFolder?: string; minBytes?: number;
   cardUrl?: string; cardSecret?: string; cardSeconds?: number; cardParallel?: number; cardStuckMinutes?: number; autoCards?: boolean;
-  roundels?: [string, string][]; defaultLogo?: string };
+  roundels?: [string, string][]; defaultLogo?: string;
+  /** watch = only read Drive and Classroom (the Apps Script still does the work); live = the dashboard does it. Watch until launch. */
+  mode?: "watch" | "live" };
 export type RunInfo = { at?: string; by?: string; filed?: number; flagged?: number; posted?: number; cards?: number; problems?: string[]; error?: string };
 export type Lesson = { id: string; kind: "class" | "one"; meet_code: string; name: string; course_id: string | null; folder_id: string | null; per_week: number | null; year_suffix: string | null; group_id: string | null; active: boolean };
 type Term = { number: number; starts: string; ends: string; year: string };
@@ -195,6 +197,12 @@ export async function runRecordings(by: string): Promise<RunInfo> {
     const byCode = new Map(lessons.map((l) => [l.meet_code, l]));
     // the first time: bring in what the Apps Script already filed, so earlier weeks and the lesson numbers show here
     const [{ n: had }] = await withSchool((q) => q<{ n: number }>(`select count(*)::int as n from recordings`));
+    if (cfg.mode !== "live") {
+      // WATCH ONLY: read what the Apps Script has filed and posted; never rename, move, post or add cards
+      try { info.filed = await importFiled(token, cfg, lessons, terms); } catch (e) { info.problems!.push(`Reading the folders: ${e instanceof Error ? e.message : e}`); }
+      try { await checkClassroom(token, terms); } catch (e) { info.problems!.push(`Reading Classroom: ${e instanceof Error ? e.message : e}`); }
+      return info;
+    }
     if (!had) { try { await importFiled(token, cfg, lessons, terms); } catch (e) { info.problems!.push(`Importing earlier recordings: ${e instanceof Error ? e.message : e}`); } }
     // 1) new recordings in the raw Meet folders
     const folders = await driveList(token, `'${esc(cfg.meetFolder)}' in parents and mimeType = '${FOLDER}' and trashed = false`, "id,name,createdTime");
@@ -250,15 +258,32 @@ export async function importFiled(token: string, cfg: RecCfg, lessons: Lesson[],
         const done = f.appProperties?.titleCard === "done";
         const r = await withSchool((q) => q(`insert into recordings (school_id, lesson_id, file_id, raw_name, name, recorded_at, size_bytes, term_number, lesson_number, status, over_expected, classroom, classroom_note,
             card_label, card_term_lesson, card_date, card_status)
-          values (current_school(), $1, $2, $2, $3, $4, $5, $6, $7, 'filed', $8, 'not_needed', 'Filed before the dashboard took over', $9, $10, $11, $12) on conflict (school_id, file_id) do nothing returning id`,
+          values (current_school(), $1, $2, $2, $3, $4, $5, $6, $7, 'filed', $8, 'not_needed', 'Filed by the Apps Script', $9, $10, $11, $12)
+          on conflict (school_id, file_id) do update set name = excluded.name, card_status = case when excluded.card_status = 'done' then 'done' else recordings.card_status end
+          returning (xmax = 0) as added`,
           [l.id, f.id, f.name, f.createdTime, Number(f.size ?? 0), Number(m[1]), Number(m[2]), /exceeds expected/.test(f.name),
            l.kind === "one" ? `1:1 · ${l.name}` : l.name, `Term ${m[1]} · Lesson ${m[2]}`, longDate(day), done ? "done" : null]));
-        if (r.length) added++;
+        if ((r[0] as { added?: boolean } | undefined)?.added) added++;
         void term; break;
       }
     }
   }
   return added;
+}
+
+/** Watch only: is each recent recording's "🎥 T<n> Lesson <n>" post in Classroom yet? (read-only) */
+async function checkClassroom(token: string, terms: Term[]) {
+  const rows = await withSchool((q) => q<{ id: string; course_id: string | null; term_number: number; lesson_number: number; recorded_at: string }>(`select r.id, l.course_id, r.term_number, r.lesson_number, r.recorded_at::text
+    from recordings r join rec_lessons l on l.id = r.lesson_id where r.status = 'filed' and r.classroom in ('not_needed', 'waiting') and r.recorded_at > now() - interval '21 days'`));
+  const byCourse = new Map<string, Post[]>();
+  for (const r of rows) {
+    if (!r.course_id) continue;
+    if (!byCourse.has(r.course_id)) byCourse.set(r.course_id, ((await g<{ courseWorkMaterial?: Post[] }>(token, `${CLASSROOM()}/courses/${encodeURIComponent(r.course_id)}/courseWorkMaterials?orderBy=updateTime%20desc&pageSize=60&courseWorkMaterialStates=PUBLISHED`).catch(() => ({}))) as { courseWorkMaterial?: Post[] }).courseWorkMaterial ?? []);
+    const term = terms.find((t) => t.number === r.term_number && londonDay(r.recorded_at) >= t.starts && londonDay(r.recorded_at) <= t.ends);
+    const title = `🎥 T${r.term_number} Lesson ${r.lesson_number}`, since = term ? new Date(term.starts + "T00:00:00Z").toISOString() : "";
+    const there = byCourse.get(r.course_id)!.some((m) => m.title === title && m.creationTime >= since);
+    await withSchool((q) => q(`update recordings set classroom = $2, classroom_note = $3 where id = $1`, [r.id, there ? "already" : "waiting", there ? title : "Not in Classroom yet (the Apps Script posts it once the teacher has posted the lesson)"]));
+  }
 }
 
 /** One lesson's raw Meet folder: populateTodayRecordings_ / processOneToOneRecordings_. */
