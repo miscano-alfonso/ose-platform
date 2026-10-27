@@ -95,7 +95,8 @@ export async function publishCycle(actorId: string, cycleId: string): Promise<st
 
 // ---------- writing (teachers, or an admin for any class) ----------
 export type WriteRow = { id: string; student: string; avg_pct: string | null; marked: number | null; auto_progress: number | null; progress_override: number | null;
-  effort: number | null; working_grade: number | null; predicted_grade: number | null; comment: string | null; status: string; review_note: string | null };
+  effort: number | null; working_grade: number | null; predicted_grade: number | null; comment: string | null; status: string; review_note: string | null;
+  assess: string; assess_pct: number | null; assess_title: string | null; no_assessment: string | null };
 
 export async function getWriteSheet(cycleId: string, groupId: string) {
   return withSchool(async (q) => {
@@ -106,30 +107,37 @@ export async function getWriteSheet(cycleId: string, groupId: string) {
       where c.id = $1 and g.id = $2`, [cycleId, groupId]))[0];
     if (!head) return null;
     const rows = await q<WriteRow>(`select e.id, s.first_name || ' ' || s.last_name as student, rl.avg_pct::text, rl.marked,
-        progress_score(e.school_id, rl.avg_pct) as auto_progress, e.progress_override, e.effort, e.working_grade, e.predicted_grade, e.comment, e.status::text, e.review_note
-      from report_entries e join report_lines rl on rl.id = e.id join students s on s.id = e.student_id
+        progress_score(e.school_id, rl.avg_pct) as auto_progress, e.progress_override, e.effort, e.working_grade, e.predicted_grade, e.comment, e.status::text, e.review_note,
+        a.state as assess, a.pct::float as assess_pct, a.title as assess_title, e.no_assessment
+      from report_entries e join report_lines rl on rl.id = e.id join students s on s.id = e.student_id cross join lateral report_assessment(e.id) a
       where e.cycle_id = $1 and e.group_id = $2 order by s.first_name, s.last_name`, [cycleId, groupId]);
     return { head, rows };
   });
 }
 
-export type WriteInput = { id: string; progress: number | null; effort: number | null; working: number | null; predicted: number | null; comment: string };
+export type WriteInput = { id: string; progress: number | null; effort: number | null; working: number | null; predicted: number | null; comment: string; noAssessment?: string };
 export async function saveWriteSheet(actor: { id: string; role: string }, cycleId: string, groupId: string, rows: WriteInput[], submit: boolean): Promise<string | null> {
   return withSchool(async (q) => {
     const ok = (await q<{ ok: boolean }>(`select ($3 = 'school_admin' or exists (select 1 from course_groups g join teachers t on t.id = g.teacher_id where g.id = $1 and t.user_id = $2))
       and exists (select 1 from report_cycles c where c.id = $4 and c.status <> 'published') as ok`, [groupId, actor.id, actor.role, cycleId]))[0]?.ok;
     if (!ok) return "You can’t edit these reports.";
-    const problems: string[] = [];
+    const problems: string[] = []; let waiting = 0;
     for (const r of rows) {
-      const ready = r.effort != null && r.comment.trim().length >= 20;
+      // the round's assessment must be marked in Classroom first, unless Classroom isn't connected or the teacher says why there isn't one
+      const [a] = await q<{ state: string }>(`select state from report_assessment($1)`, [r.id]);
+      const assessOk = !a || a.state === "marked" || a.state === "unknown" || (r.noAssessment ?? "").trim().length >= 3;
+      if (submit && !assessOk) waiting++;
+      const ready = r.effort != null && r.comment.trim().length >= 20 && assessOk;
       const status = submit && ready ? "submitted" : (r.effort != null || r.comment.trim()) ? "draft" : "todo";
       if (submit && !ready && (r.effort != null || r.comment.trim())) problems.push("x");
       await q(`update report_entries set progress_override = $2::smallint, effort = $3::smallint, working_grade = $4::smallint, predicted_grade = $5::smallint, comment = nullif($6, ''),
           status = case when status = 'approved' then status else $7::text::report_entry_status end, submitted_at = case when $7 = 'submitted' then now() else submitted_at end
         where id = $1 and cycle_id = $8 and group_id = $9 and status <> 'approved'`,
         [r.id, r.progress, r.effort, r.working, r.predicted, r.comment.trim().slice(0, 2000), status, cycleId, groupId]);
+      if (r.noAssessment !== undefined) await q(`update report_entries set no_assessment = nullif($2, '') where id = $1 and cycle_id = $3`, [r.id, r.noAssessment.trim().slice(0, 200), cycleId]);
     }
-    return problems.length ? `${problems.length} report${problems.length === 1 ? " was" : "s were"} saved as a draft: each needs an Effort score and a comment of at least 20 characters.` : null;
+    if (!problems.length) return null;
+    return `${problems.length} report${problems.length === 1 ? " was" : "s were"} saved as a draft: each needs an Effort score, a comment of at least 20 characters${waiting ? `, and the assessment marked in Classroom (or a reason there isn’t one: ${waiting} waiting)` : ""}.`;
   });
 }
 

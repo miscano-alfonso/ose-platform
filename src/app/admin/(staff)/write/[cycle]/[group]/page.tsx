@@ -6,6 +6,8 @@ import { saveWriteSheetAction } from "../../../../actions";
 const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" });
 const PILL: Record<string, [string, string]> = { todo: ["To write", "mute"], draft: ["Draft", "warn"], submitted: ["Submitted", "info"], returned: ["Sent back", "bad"], approved: ["Approved", "good"] };
 const scale = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
+const AS: Record<string, [string, string]> = { marked: ["good", "Marked"], handed_in: ["info", "Handed in · waiting for your mark"], set: ["warn", "Not handed in yet"],
+  not_set: ["warn", "Not set in Classroom yet"], unknown: ["mute", "Assessment status comes from Google Classroom once it’s connected"] };
 
 export default async function Write({ params, searchParams }: { params: Promise<{ cycle: string; group: string }>; searchParams: Promise<{ ok?: string; err?: string }> }) {
   const [{ cycle, group }, sp, me] = await Promise.all([params, searchParams, requireViewer()]);
@@ -17,7 +19,7 @@ export default async function Write({ params, searchParams }: { params: Promise<
     <p><a href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a></p>
     <div className="top"><div><h1>{h.name} <span className="muted" style={{ fontWeight: 400 }}>{h.code}</span></h1><div className="sub">{h.cycle} · comments due {day(h.comments_due)}</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
-    <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters.</p>
+    <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters. A report can be submitted once the term’s assessment is marked in Classroom, or once you’ve said why there isn’t one.</p>
     {rows.length === 0 ? <p className="empty">No reports for this class yet.</p> :
     <form action={saveWriteSheetAction}>
       <input type="hidden" name="cycle" value={cycle} /><input type="hidden" name="group" value={group} />
@@ -25,6 +27,11 @@ export default async function Write({ params, searchParams }: { params: Promise<
         <input type="hidden" name="ids" value={r.id} />
         <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>{r.student}</h2><span className={`pill ${PILL[r.status][1]}`}>{PILL[r.status][0]}</span>
           {r.avg_pct && <span className="muted">Marks average {r.avg_pct}% ({r.marked} pieces)</span>}</div>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+          <span className="muted">{r.assess_title ?? "End-of-term assessment"}:</span>
+          <span className={`pill ${AS[r.assess]?.[0] ?? "mute"}`}>{AS[r.assess]?.[1] ?? r.assess}{r.assess === "marked" && r.assess_pct != null ? ` · ${r.assess_pct}%` : ""}</span>
+          {r.assess !== "marked" && r.assess !== "unknown" && <label className="fld" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>No assessment because
+            <input name={`noassess_${r.id}`} defaultValue={r.no_assessment ?? ""} placeholder="e.g. absent, joined late" maxLength={200} disabled={ro} className="mini" style={{ width: 220 }} /></label>}</div>
         {r.status === "returned" && r.review_note && <p className="note msg bad">Sent back: {r.review_note}</p>}
         <div className="eform" style={{ margin: "10px 0" }}>
           <label className="fld">Progress<select name={`progress_${r.id}`} defaultValue={r.progress_override ?? ""} disabled={ro}><option value="">{r.auto_progress ? `From marks (${r.auto_progress})` : "Choose"}</option>{scale(5).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>

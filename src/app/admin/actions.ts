@@ -357,7 +357,7 @@ export async function saveWriteSheetAction(f: FormData): Promise<void> {
   const cycle = str(f, "cycle", 40), group = str(f, "group", 40);
   const n = (k: string, max: number) => { const v = parseInt(str(f, k, 2), 10); return v >= 1 && v <= max ? v : null; };
   const rows: WriteInput[] = f.getAll("ids").map(String).slice(0, 200).map((id) => ({ id, progress: n(`progress_${id}`, 5), effort: n(`effort_${id}`, 5),
-    working: n(`working_${id}`, 9), predicted: n(`predicted_${id}`, 9), comment: str(f, `comment_${id}`, 2000) }));
+    working: n(`working_${id}`, 9), predicted: n(`predicted_${id}`, 9), comment: str(f, `comment_${id}`, 2000), noAssessment: f.has(`noassess_${id}`) ? str(f, `noassess_${id}`, 200) : undefined }));
   const submit = str(f, "submit", 1) === "1";
   const err = await saveWriteSheet(me, cycle, group, rows, submit);
   revalidatePath(`/admin/reports/${cycle}`);
