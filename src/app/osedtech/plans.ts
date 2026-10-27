@@ -1,10 +1,10 @@
-// OH-SO EdTech plans. Prices are suggestions (27 Oct 2026): change them here and every page follows.
+// OH-SO EdTech plans. Prices set by Alfonso (27 Oct 2026): change them here and every page follows.
 export type Plan = { id: "solo" | "growth" | "school"; name: string; for: string; monthly: number; yearly: number; teachers: string; students: string; cta: string; highlight?: boolean; adds?: string; features: string[] };
 
 export const TRIAL_DAYS = 30;
 export const PLANS: Plan[] = [
   {
-    id: "solo", name: "Solo", for: "One teacher running their own classes", monthly: 29, yearly: 290, teachers: "1 teacher", students: "Up to 60 students", cta: "Start a free trial",
+    id: "solo", name: "Solo", for: "One teacher running their own classes", monthly: 100, yearly: 1000, teachers: "1 teacher", students: "Up to 60 students", cta: "Start a free trial",
     features: [
       "Your own website: course pages, timetable, term dates and prices",
       "Online booking and card payments, including instalments",
@@ -18,7 +18,7 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    id: "growth", name: "Growth", for: "A small team of teachers under one name", monthly: 79, yearly: 790, teachers: "Up to 8 teachers", students: "Up to 250 students", cta: "Start a free trial", highlight: true, adds: "Everything in Solo, plus",
+    id: "growth", name: "Growth", for: "A small team of teachers under one name", monthly: 200, yearly: 2000, teachers: "Up to 8 teachers", students: "Up to 250 students", cta: "Start a free trial", highlight: true, adds: "Everything in Solo, plus",
     features: [
       "A login for each teacher: their day, timetable, classes and messages",
       "Reports to families, with Google Classroom assessments checked",
@@ -30,7 +30,7 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    id: "school", name: "School", for: "An online school with staff, payroll and marketing", monthly: 189, yearly: 1890, teachers: "Unlimited teachers and staff", students: "Unlimited students", cta: "Start a free trial", adds: "Everything in Growth, plus",
+    id: "school", name: "School", for: "An online school with staff, payroll and marketing", monthly: 600, yearly: 6000, teachers: "Unlimited teachers and staff", students: "Unlimited students", cta: "Start a free trial", adds: "Everything in Growth, plus",
     features: [
       "Payroll for teachers, worked out from the lessons they taught",
       "Staff roles and access: office, teachers and admins",
