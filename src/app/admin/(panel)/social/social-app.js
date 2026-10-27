@@ -58,6 +58,7 @@ function socPaint(){const el=document.getElementById('soc');if(el)el.innerHTML=s
 function socBoot(){const q=new URLSearchParams(location.search);if(!q.has('social'))return;const what=q.get('social'),mid=q.get('m');history.replaceState(null,'',location.pathname);SOC.posts=null;
 
   if(what==='moments'){SOC.drawer=!mid;KIT.pendingMoment=mid||null}
+  if(what==='compose'){const img=q.get('img')||'',t=(q.get('text')||'').slice(0,2200);SOC.c=socNew({image:/^\/social-img\/[0-9a-f-]{36}\.jpg$/.test(img)?img:'',text:t,igText:t,frame:'none'});setTimeout(()=>window.scrollTo(0,0),50)}
   if(what==='connected')setTimeout(()=>toast('Facebook connected'),400)}
 const socNew=(o)=>Object.assign({bookId:'',text:'',igText:'',same:true,link:'',image:'',images:null,frame:'4:5',bg:'#F3F4FA',fb:true,ig:true,when:'now',at:''},o||{});
 function socFromBook(b){const lines=[b.title+(b.subtitle?' ('+b.subtitle+')':''),b.summary||'',b.partner?`Taught by ${b.partner}.`:'',b.status==='next'&&b.pubDate?`Starts ${kitMonth(b.pubDate)}.`:b.status==='workshop'&&b.pubDate?`On ${fmtDate(b.pubDate,true)}.`:''].filter(Boolean);

@@ -125,6 +125,22 @@ export async function setUpFirstAdmin(key: string, name: string, email: string, 
   });
 }
 
+/** Forgotten password: a school admin sets a new one with the ADMIN_SETUP_KEY from Vercel (no email needed). Signs out every session. */
+export async function resetAdminWithKey(key: string, email: string, password: string): Promise<string | null> {
+  const want = process.env.ADMIN_SETUP_KEY || "";
+  if (want.length < 16) return "Password reset is switched off. Add an ADMIN_SETUP_KEY (16 characters or more) in Vercel → Settings → Environment Variables, redeploy, then try again.";
+  if (!timingSafeEqual(Buffer.from(sha256(key)), Buffer.from(sha256(want)))) return "That setup key isn’t right.";
+  if (password.length < MIN_PASSWORD) return `Use a password of at least ${MIN_PASSWORD} characters.`;
+  const hash = await hashPassword(password);
+  return withSchool(async (q) => {
+    const u = await q<{ id: string }>(`update users set password_hash = $2 where lower(email::text) = lower($1) and role = 'school_admin' and disabled_at is null returning id`, [email, hash]);
+    if (!u[0]) return "There’s no school admin with that email.";
+    await q(`delete from staff_sessions where user_id = $1`, [u[0].id]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'password_reset_with_key', 'user', $1)`, [u[0].id]);
+    return null;
+  });
+}
+
 /** Changing your own password signs out every other session. */
 export async function changePassword(userId: string, current: string, next: string): Promise<string | null> {
   if (next.length < MIN_PASSWORD) return `Use a password of at least ${MIN_PASSWORD} characters.`;

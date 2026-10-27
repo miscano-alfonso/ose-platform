@@ -49,6 +49,19 @@ export async function setupAction(_: unknown, f: FormData): Promise<{ error?: st
   redirect("/admin");
 }
 
+export async function resetPasswordAction(_: unknown, f: FormData): Promise<{ error?: string; email?: string }> {
+  const email = str(f, "email").toLowerCase();
+  const password = String(f.get("password") ?? "").slice(0, 200), confirm = String(f.get("confirm") ?? "").slice(0, 200);
+  if (!EMAIL.test(email)) return { error: "Enter your admin email address.", email };
+  if (password !== confirm) return { error: "The two passwords don’t match.", email };
+  const { resetAdminWithKey } = await import("@/lib/auth");
+  const err = await resetAdminWithKey(String(f.get("key") ?? "").slice(0, 200), email, password);
+  if (err) return { error: err, email };
+  const signErr = await signIn(email, password);
+  if (signErr) return { error: signErr, email };
+  redirect("/admin");
+}
+
 export async function signOutAction() {
   await signOut();
   redirect("/admin/login");
@@ -1103,4 +1116,27 @@ export async function disconnectInboxAction(): Promise<void> {
   const { disconnectInbox } = await import("@/lib/inbox");
   await disconnectInbox();
   mailBack("The school inbox is disconnected. Emails already shown here stay until they’re a year old.");
+}
+// ---------- Post designs: Canva connection and the picture library ----------
+const dsBack = (ok?: string | null, err?: string | null) => redirect(`/admin/designs?tab=library` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
+async function dsAdmin() { const me = await requireStaff(); if (me.role !== "school_admin") dsBack(null, "Only a school admin can change this."); return me; }
+export async function canvaAppAction(f: FormData): Promise<void> {
+  await dsAdmin(); const D = await import("@/lib/designs");
+  let err: string | null = null;
+  try { await D.canvaSaveApp(str(f, "client_id", 100), str(f, "client_secret", 300)); } catch (e) { err = e instanceof D.DesignError ? e.message : "Couldn’t save that."; }
+  dsBack(err ? null : "Saved. Now press Connect Canva.", err);
+}
+export async function canvaFolderAction(f: FormData): Promise<void> {
+  await dsAdmin(); const D = await import("@/lib/designs");
+  let err: string | null = null;
+  try { await D.canvaFolder(str(f, "folder", 300)); } catch (e) { err = e instanceof D.DesignError ? e.message : "Couldn’t save that."; }
+  dsBack(err ? null : "Folder saved. “From Canva” now opens that folder.", err);
+}
+export async function canvaDisconnectAction(f: FormData): Promise<void> {
+  await dsAdmin(); const D = await import("@/lib/designs");
+  await D.canvaDisconnect(f.get("forget") === "1"); dsBack("Canva is disconnected. Pictures already brought in stay in the library.");
+}
+export async function deleteDesignAssetAction(f: FormData): Promise<void> {
+  await dsAdmin(); const D = await import("@/lib/designs");
+  await D.deleteAsset(str(f, "id", 40)); dsBack("Picture removed from the library.");
 }

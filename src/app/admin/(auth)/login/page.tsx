@@ -14,6 +14,6 @@ export default async function AdminLogin() {
     <SchoolNote />
     <h1>Admin sign in</h1>
     <p>For OH-SO ED staff.</p>
-    {setup ? <p className="ok">No admin account has been set up yet. <Link href="/admin/setup">Set one up</Link>.</p> : <LoginForm />}
+    {setup ? <p className="ok">No admin account has been set up yet. <Link href="/admin/setup">Set one up</Link>.</p> : <><LoginForm /><p style={{ marginTop: 16 }}><Link href="/admin/reset">Forgotten your password?</Link></p></>}
   </>;
 }

@@ -1,6 +1,6 @@
 "use client";
 import { useActionState, useState } from "react";
-import { signInAction, setupAction, changePasswordAction, inviteAction, acceptInviteAction, importAction } from "./actions";
+import { signInAction, setupAction, changePasswordAction, inviteAction, acceptInviteAction, importAction, resetPasswordAction } from "./actions";
 
 export function LoginForm() {
   const [st, act, busy] = useActionState(signInAction, {});
@@ -22,6 +22,18 @@ export function SetupForm() {
     <label>New password (12+ characters)<input type="password" name="password" autoComplete="new-password" minLength={12} required /></label>
     <label>Confirm password<input type="password" name="confirm" autoComplete="new-password" minLength={12} required /></label>
     <button type="submit" disabled={busy}>{busy ? "Setting up…" : "Create admin account"}</button>
+  </form>;
+}
+
+export function ResetForm() {
+  const [st, act, busy] = useActionState(resetPasswordAction, {});
+  return <form action={act} style={{ display: "grid", gap: 14 }}>
+    {st.error && <p className="err" role="alert">{st.error}</p>}
+    <label>Setup key (ADMIN_SETUP_KEY in Vercel)<input type="password" name="key" autoComplete="off" required /></label>
+    <label>Your admin email<input type="email" name="email" autoComplete="username" required defaultValue={st.email} key={"e" + st.email} /></label>
+    <label>New password (12+ characters)<input type="password" name="password" autoComplete="new-password" minLength={12} required /></label>
+    <label>Confirm password<input type="password" name="confirm" autoComplete="new-password" minLength={12} required /></label>
+    <button type="submit" disabled={busy}>{busy ? "Saving…" : "Set new password and sign in"}</button>
   </form>;
 }
 
