@@ -8,6 +8,7 @@ import { DashStyles } from "../DashStyles";
 import { brandSrc } from "@/lib/brand";
 import { TeacherNav } from "../AdminNav";
 import { Switchers } from "../Switchers";
+import { SideToggle } from "../SideToggle";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Staff", robots: { index: false, follow: false } };
@@ -47,7 +48,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
     <div className="app">
-      <aside className="side">
+      <aside className="side"><SideToggle />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>
         {switchers}

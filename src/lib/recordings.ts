@@ -497,3 +497,20 @@ export async function recordingsBackground() {
     await runRecordings("auto");
   } catch (e) { console.error("recordings background", e); }
 }
+
+/** A recording's thumbnail from Drive (it shows the title card once that's been added), for the hover preview. Only for recordings listed here. */
+const thumbCache = new Map<string, { at: number; mime: string; data: Buffer }>();
+export async function getThumb(fileId: string): Promise<{ mime: string; data: Buffer } | null> {
+  if (!/^[\w-]{10,80}$/.test(fileId)) return null;
+  const hit = thumbCache.get(fileId); if (hit && Date.now() - hit.at < 6 * 3600e3) return hit;
+  const [known] = await withSchool((q) => q<{ id: string }>(`select id from recordings where file_id = $1`, [fileId]));
+  if (!known) return null;
+  const token = await googleAccess("rec");
+  const meta = await g<{ thumbnailLink?: string }>(token, `${DRIVE_URL()}/files/${encodeURIComponent(fileId)}?fields=thumbnailLink&supportsAllDrives=true`).catch(() => ({} as { thumbnailLink?: string }));
+  if (!meta.thumbnailLink) return null;
+  const r = await fetch(meta.thumbnailLink.replace(/=s\d+$/, "=s480"), { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) }).catch(() => null);
+  if (!r?.ok) return null;
+  const out = { at: Date.now(), mime: r.headers.get("content-type") || "image/jpeg", data: Buffer.from(await r.arrayBuffer()) };
+  if (thumbCache.size > 300) thumbCache.clear();
+  thumbCache.set(fileId, out); return out;
+}

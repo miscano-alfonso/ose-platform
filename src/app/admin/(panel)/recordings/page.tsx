@@ -31,8 +31,10 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
   const TABS: [string, string][] = [["week", "This week"], ["cards", `Title cards${toApprove.length ? ` (${toApprove.length})` : ""}`], ["look", `Needs a look${look.length ? ` (${look.length})` : ""}`], ["settings", "Settings"]];
   // one link per recording, coloured by its Classroom post: green = in Classroom, orange = waiting, red = a problem, plain = filed earlier
   const tone = (r: RecRow) => r.classroom === "posted" || r.classroom === "already" ? "var(--good)" : r.classroom === "waiting" ? "var(--warn)" : ["error", "gave_up", "no_course"].includes(r.classroom) ? "var(--bad)" : "inherit";
-  const cell = (r: RecRow) => <div key={r.id} style={{ lineHeight: 1.25 }}><a href={drive(r.file_id)} target="_blank" rel="noopener" title={`${CL[r.classroom]?.[1] ?? ""}${r.classroom_note ? " · " + r.classroom_note : ""}`}
-    style={{ color: tone(r), fontWeight: 600, textDecoration: "none" }}>T{r.term_number} Lesson {r.lesson_number}</a>{r.over_expected ? " (check)" : ""}</div>;
+  const cell = (r: RecRow) => <div key={r.id} className="rec-cell"><a href={drive(r.file_id)} target="_blank" rel="noopener"
+    style={{ color: tone(r), fontWeight: 600, textDecoration: "none" }}>T{r.term_number} Lesson {r.lesson_number}</a>{r.over_expected ? " (check)" : ""}
+    <span className="rec-pop" role="tooltip">{/* eslint-disable-next-line @next/next/no-img-element */}<img src={`/admin/recordings-api?thumb=${encodeURIComponent(r.file_id)}`} alt="" loading="lazy" width={320} height={180} />
+      <span><b>{r.name ?? `T${r.term_number} Lesson ${r.lesson_number}`}</b>{r.card_title ? <><br />{r.card_title}{r.card_teacher ? ` · ${r.card_teacher}` : ""}</> : null}<br /><span style={{ color: tone(r) }}>{CL[r.classroom]?.[1] ?? ""}</span>{r.classroom_note && r.classroom !== "not_needed" ? <span className="muted"> · {r.classroom_note}</span> : null}</span></span></div>;
   return <>
     <div className="top"><div><h1>Recordings</h1><div className="sub">Lesson recordings from Google Meet: renamed, filed in their subject folder, posted to the class’s Classroom, with a title card added. Replaces the “_Recordings” sheet’s script.</div></div>
       <span className="grow" />{st.connected && <form action={runRecordingsAction}><button className="abtn pri" type="submit">Run now</button></form>}</div>

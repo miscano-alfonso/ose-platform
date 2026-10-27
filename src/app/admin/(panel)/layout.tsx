@@ -17,6 +17,7 @@ import { cookies } from "next/headers";
 import { schoolsFor, siteSchool, SCHOOL_COOKIE } from "@/lib/db";
 import { Switchers } from "../Switchers";
 import { Assistant } from "../Assistant";
+import { SideToggle } from "../SideToggle";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
@@ -50,7 +51,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const views = [{ value: "admin", label: "Admin" }, ...teachers.map((t) => ({ value: `t:${t.id}`, label: `Teacher: ${t.name}` })),
     { value: "p", label: "Parent…" }, { value: "s", label: "Student…" }];
   return <div className="adm" style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b") }}><DashStyles /><div className="app">
-    <aside className="side">
+    <aside className="side"><SideToggle />
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {demo ? <a className="logo" href="/admin" title="Dashboard" style={{ color: "#fff", font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
       : <a className="logo" href="/admin" title="Dashboard"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></a>}
