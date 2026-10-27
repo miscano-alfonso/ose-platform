@@ -24,7 +24,7 @@ const ROWS: Row[] = [
   { id: "families", eyebrow: "Families and students", title: "Everything about a family on one page", plan: "All plans; student accounts from Growth",
     text: "Parents have their own account for bookings, payments and messages. From Growth, students get theirs too, with class chats and reward points.",
     points: ["Parents, children, courses and payments together", "Messages with families, kept in one place", "Data protection tools for exports and deletions"],
-    shot: "/osedtech/shots/families.png", alt: "The families list at Demo Academy", url: "admin.demoacademy.co.uk/families" },
+    shot: "/osedtech/shots/parent.png", alt: "A parent’s home page at Demo Academy", url: "demoacademy.co.uk/parent" },
   { id: "reports", eyebrow: "Teachers and reports", title: "A login for every teacher", plan: "Growth and School",
     text: "Each teacher sees their own day, timetable, classes and messages. Reports are written in the dashboard and sent to families, with a check that the term’s assessment has been marked in Google Classroom.",
     points: ["My day, my timetable, my classes", "Reports to families, written once and sent", "Reward points that students can see"],

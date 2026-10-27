@@ -65,6 +65,23 @@ export default function EdTechHome() {
       <TrialCta />
     </div></section>
 
+    <section className="edt-sec white" id="families"><div className="edt-wrap">
+      <p className="edt-eyebrow">What families see</p>
+      <h2 className="edt-h2">A proper account for every parent and student</h2>
+      <p className="edt-lead">This is where you look like an established school. Parents and students sign in to your school, not a generic app, and find everything in one place instead of in your inbox.</p>
+      <div className="edt-row" style={{ marginTop: 40 }}>
+        <div><h3>For parents</h3><p>Each child’s classes, lesson times and teachers, with their attendance and assignments.</p>
+          <ul><li>Payments: what’s been paid, what’s next, and a saved card</li><li>Reports from teachers, the day they’re published</li><li>Messages with the school, kept together</li><li>Book 1:1 lessons and workshops, and update their details</li></ul></div>
+        <Shot src="/osedtech/shots/parent.png" alt="A parent’s home page at Demo Academy: their child’s classes and attendance, assignments, next payment and reports" url="demoacademy.co.uk/parent" />
+      </div>
+      <div className="edt-row flip">
+        <div><h3>For students</h3><p>Their own login, with their classes, the next lesson and a button straight into it.</p>
+          <ul><li>A page for each class</li><li>Class chats, which parents switch on</li><li>Reward points from teachers, with a school leaderboard</li></ul></div>
+        <Shot src="/osedtech/shots/student-rewards.png" alt="A student’s rewards page at Demo Academy: their points and the school leaderboard" url="demoacademy.co.uk/student/rewards" />
+      </div>
+      <p className="edt-note" style={{ marginTop: 22 }}>Parent accounts come with every plan; student accounts, chats and rewards from Growth. <Link href="/osedtech/demo" style={{ color: "var(--teal-d)" }}>See them in the demo</Link> using “Viewing as”.</p>
+    </div></section>
+
     <section className="edt-sec ink"><div className="edt-wrap">
       <p className="edt-eyebrow">Built for a real school</p>
       <h2 className="edt-h2">Not a guess at what teachers need</h2>
@@ -100,6 +117,7 @@ export default function EdTechHome() {
           <p style={{ marginTop: 14 }}><Link href={`/osedtech/pricing#${p.id}`} style={{ color: "var(--teal-d)", fontWeight: 500 }}>Everything in {p.name} →</Link></p>
         </div>)}
       </div>
+      <p style={{ marginTop: 22 }}><Link href="/osedtech/pricing#compare" style={{ color: "var(--teal-d)", fontWeight: 500 }}>How we compare with other tools →</Link></p>
     </div></section>
 
     <section className="edt-sec" id="faq"><div className="edt-wrap edt-center">

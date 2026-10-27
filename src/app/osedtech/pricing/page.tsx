@@ -1,10 +1,15 @@
 import Link from "next/link";
 import { Plans } from "./Plans";
-import { COMPARE, PLANS, TRIAL_DAYS, EXTRA_STUDENT, gbp } from "../plans";
+import { COMPARE, PLANS, TRIAL_DAYS, EXTRA_STUDENT, gbp, RIVALS, VERSUS } from "../plans";
 
 export const metadata = { title: "Pricing", description: "OH-SO EdTech plans for one teacher, a small team or a whole online school. Try any plan free for 30 days." };
 
+const vs = (v: string) => v === "yes" ? <span className="edt-yes" aria-label="Yes" /> : v === "no" ? <span className="edt-no" aria-label="No">–</span> : v === "some" ? <span className="edt-some">Some</span> : <span>{v}</span>;
 const cell = (v: boolean | string) => v === true ? <span className="edt-yes" aria-label="Included" /> : v === false ? <span className="edt-no" aria-label="Not included">–</span> : <span>{v}</span>;
+
+function TrialCtaInline() {
+  return <div className="edt-btns"><Link href="/osedtech/trial" className="edt-btn">Start a free trial</Link><Link href="/osedtech/demo" className="edt-btn line">Look round the demo</Link></div>;
+}
 
 export default function Pricing() {
   return <>
@@ -31,6 +36,23 @@ export default function Pricing() {
         ])}</tbody>
       </table></div>
       <div className="edt-btns"><Link href="/osedtech/trial" className="edt-btn">Start a free trial</Link><Link href="/osedtech/features" className="edt-btn line">See how it works</Link></div>
+    </div></section>
+    <section className="edt-sec" id="compare" style={{ scrollMarginTop: 70 }}><div className="edt-wrap">
+      <p className="edt-eyebrow">How we compare</p>
+      <h2 className="edt-h2">One system instead of four or five</h2>
+      <p className="edt-lead">Most teachers running classes online pay for a booking or tutoring app, a website builder, a newsletter tool and something for payroll, then copy things between them. Here’s what each kind of tool usually covers on its own.</p>
+      <div className="edt-tw"><table className="edt-cmp edt-vs">
+        <thead><tr><th scope="col"></th>{RIVALS.map((r, i) => <th key={r} scope="col" className={i === 0 ? "us" : undefined}>{r}</th>)}</tr></thead>
+        <tbody>{VERSUS.map(([label, ...vals]) => <tr key={label} className={label === "Typical cost" ? "cost" : undefined}><td>{label}</td>{vals.map((v, i) => <td key={i} className={i === 0 ? "us" : undefined}>{vs(v)}</td>)}</tr>)}</tbody>
+      </table></div>
+      <p className="edt-note" style={{ marginTop: 12 }}>Based on what typical products of each kind include as standard; individual products vary. “Some” means some products offer it, or offer part of it. Prices are typical starting prices, October 2026.</p>
+      <div className="edt-grid">
+        <div className="edt-card"><h3>Built for a school</h3><p>Terms and holidays, families with more than one child, instalments, tasters that turn into bookings, and teachers paid by the lesson.</p></div>
+        <div className="edt-card"><h3>Google Meet and Classroom, done for you</h3><p>Attendance from who actually joined each lesson, and recordings named, filed and posted to the right Classroom.</p></div>
+        <div className="edt-card"><h3>No cut of your fees</h3><p>Families pay into your own Stripe account. We never take a percentage, however much you grow.</p></div>
+        <div className="edt-card"><h3>A real school runs on it</h3><p>We built it for OH-SO ED, so it’s been shaped by a working online school, not a guess at what teachers need.</p></div>
+      </div>
+      <TrialCtaInline />
     </div></section>
   </>;
 }

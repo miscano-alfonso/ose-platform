@@ -6,7 +6,7 @@ export const TRIAL_DAYS = 30;
 export const EXTRA_STUDENT = 2;
 export const PLANS: Plan[] = [
   {
-    id: "solo", name: "Solo", for: "One teacher running their own classes", monthly: 100, yearly: 1000, teachers: "1 teacher", students: "30 students included", cta: "Start a free trial",
+    id: "solo", name: "Solo", for: "One teacher running their own classes", monthly: 49, yearly: 490, teachers: "1 teacher", students: "30 students included", cta: "Start a free trial",
     features: [
       "Your own website: course pages, timetable, term dates and prices",
       "Online booking and card payments, including instalments",
@@ -86,3 +86,21 @@ export const COMPARE: [string, [string, boolean | string, boolean | string, bool
 ];
 
 export const gbp = (n: number) => `£${n.toLocaleString("en-GB")}`;
+
+/** "How we compare" on the pricing page: by kind of product, not by brand. "yes" / "some" / "no" or a short note. */
+export const RIVALS = ["OH-SO EdTech", "Tutoring admin apps", "Online course platforms", "School management systems", "Spreadsheets and payment links"] as const;
+export const VERSUS: [string, ...string[]][] = [
+  ["Your own website, with live timetable and prices", "yes", "some", "yes", "no", "no"],
+  ["Online booking and card payments", "yes", "yes", "yes", "some", "some"],
+  ["Instalments and failed-payment follow-ups", "yes", "some", "some", "some", "no"],
+  ["Weekly classes across terms and holidays", "yes", "some", "no", "yes", "no"],
+  ["Attendance taken from Google Meet", "yes", "no", "no", "no", "no"],
+  ["Recordings posted to Google Classroom", "yes", "no", "no", "no", "no"],
+  ["Parent and student accounts", "yes", "yes", "some", "yes", "no"],
+  ["Reports to families", "yes", "some", "no", "yes", "no"],
+  ["Teacher payroll from lessons taught", "School plan", "some", "no", "some", "no"],
+  ["Newsletters and social posts, drafted with Claude", "Growth and School", "some", "some", "no", "no"],
+  ["Your brand on your own web address", "Growth and School", "often extra", "yes", "no", "no"],
+  ["No cut of your fees", "yes", "some take a %", "some take a %", "yes", "yes"],
+  ["Typical cost", "£49–£600 a month", "£15–£200 a month, often plus per-lesson or % fees", "£30–£200 a month", "often charged per student", "free, but costs you time"],
+];

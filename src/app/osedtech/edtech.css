@@ -175,3 +175,12 @@
 @media (max-width:720px){.edt-foot .edt-wrap{grid-template-columns:1fr}.edt-foot nav{justify-content:flex-start}}
 
 .edt-foot .edt-small{max-width:none}
+
+.edt-vs{min-width:900px}
+.edt-vs th,.edt-vs td{width:auto!important;font-size:14.5px}
+.edt-vs th:first-child,.edt-vs td:first-child{width:26%!important;font-size:15px}
+.edt-vs .us{background:var(--teal-soft);font-weight:500}
+.edt-vs thead th.us{background:var(--teal);color:#06231d}
+.edt-vs tr.cost td{font-size:13.5px;color:var(--muted);vertical-align:top}
+.edt-vs tr.cost td.us{color:var(--ink)}
+.edt-some{font-size:13px;color:var(--muted);background:var(--sun-soft);border-radius:999px;padding:2px 9px}
