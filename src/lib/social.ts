@@ -399,7 +399,7 @@ export async function saveTemplate(inp: Record<string, unknown>) {
   const en: Record<string, string[]> = { bg: ["book", "custom"], tone: ["auto", "dark", "light"], coverAlign: ["left", "center"], textAlign: ["top", "middle"], logo: ["auto", "white", "black", "brand", "none"] };
   for (const [k, ok] of Object.entries(en)) t[k] = ok.includes(String(inp[k])) ? inp[k] : ok[0];
   t.bgColor = /^#[0-9a-f]{6}$/i.test(String(inp.bgColor ?? "")) ? inp.bgColor : "#F3F4FA";
-  for (const [k, lo, hi] of [["coverSize", 80, 115], ["titleSize", 70, 130], ["logoSize", 70, 140]] as const) t[k] = Math.max(lo, Math.min(hi, Math.round(Number(inp[k] ?? 100)) || 100));
+  for (const [k, lo, hi] of [["coverSize", 80, 115], ["titleSize", 70, 150], ["logoSize", 70, 180], ["v", 0, 9]] as const) t[k] = Math.max(lo, Math.min(hi, Math.round(Number(inp[k] ?? 100)) || 100));
   for (const k of ["shadow", "eyebrow", "subtitle", "partner", "url"]) t[k] = !!inp[k] && inp[k] !== "false";
   t.urlText = String(inp.urlText ?? "").replace(/[\x00-\x1F]/g, "").trim().slice(0, 60);
   await kvSet("template", t);

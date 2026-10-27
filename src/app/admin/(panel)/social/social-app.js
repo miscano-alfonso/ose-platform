@@ -52,7 +52,7 @@ app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closes
 /* ---------- Social: post to the Facebook Page and Instagram ---------- */
 const SOC={cfg:null,posts:null,err:'',setup:false,c:null,confirm:null,busy:false};
 const SOC_BG=[['#F3F4FA','Mist'],['#FFFFFF','White'],['#0F1747','Navy'],['#E3CD4B','Mustard']];
-async function socLoad(stats){SOC.err='';try{const [a,b,c]=await Promise.all([api('metaconfig'),api('socialposts'+(stats?'&stats=1':'')),api('socialplan').catch(()=>({plan:[]}))]);SOC.cfg=a;SOC.posts=b.posts||[];KIT.plan=c.plan||[];KIT.moments=c.moments||KIT.moments||null;if(KIT.pendingMoment){const s=((KIT.moments||{}).items||[]).find(x=>x.id===KIT.pendingMoment),bk=s&&bookById(s.bookId);KIT.pendingMoment=null;if(bk){KIT.book=bk.id;kbB(bk);kbUse(bk,s)}else{SOC.drawer=true;setTimeout(()=>toast('That moment is no longer on the list'),300)}}KIT.handles=c.handles||{};KIT.ai=!!c.ai;if(c.template&&JSON.stringify(c.template)!==JSON.stringify(KIT.tpl)){KIT.tpl=c.template;KIT.pics={}}}catch(e){SOC.err=e.message;SOC.posts=SOC.posts||[]}SOC.loading=false;socPaint()}
+async function socLoad(stats){SOC.err='';try{const [a,b,c]=await Promise.all([api('metaconfig'),api('socialposts'+(stats?'&stats=1':'')),api('socialplan').catch(()=>({plan:[]}))]);SOC.cfg=a;SOC.posts=b.posts||[];KIT.plan=c.plan||[];KIT.moments=c.moments||KIT.moments||null;if(KIT.pendingMoment){const s=((KIT.moments||{}).items||[]).find(x=>x.id===KIT.pendingMoment),bk=s&&bookById(s.bookId);KIT.pendingMoment=null;if(bk){KIT.book=bk.id;kbB(bk);kbUse(bk,s)}else{SOC.drawer=true;setTimeout(()=>toast('That moment is no longer on the list'),300)}}KIT.handles=c.handles||{};KIT.ai=!!c.ai;if(c.template&&JSON.stringify(kitMigrate(c.template))!==JSON.stringify(KIT.tpl)){KIT.tpl=kitMigrate(c.template);KIT.pics={}}}catch(e){SOC.err=e.message;SOC.posts=SOC.posts||[]}SOC.loading=false;socPaint()}
 function socView(){if(SOC.posts===null&&!SOC.loading){SOC.loading=true;setTimeout(()=>socLoad(true))}return `<div id="soc">${socInner()}</div>`}
 function socPaint(){const el=document.getElementById('soc');if(el)el.innerHTML=socInner()}
 function socBoot(){const q=new URLSearchParams(location.search);if(!q.has('social'))return;const what=q.get('social'),mid=q.get('m');history.replaceState(null,'',location.pathname);SOC.posts=null;
@@ -103,12 +103,66 @@ function socPreviews(){
   return (fb||igc)?`<div class="so-cards">${fb}${igc}</div>`:'<p class="hint">Choose Facebook or Instagram to see a preview.</p>'}
 function socCounts(){const c=SOC.c,t=c.same?c.text:c.igText,n=t.length,h=socTags(t);return c.ig?`Instagram caption: <b class="${n>2200?'so-over':''}">${n.toLocaleString('en-GB')}</b> / 2,200 · hashtags <b class="${h>30?'so-over':''}">${h}</b> / 30`:''}
 const SOC_PURPOSES=[['hiring','Hiring'],['holiday','Holiday / term dates'],['school','School announcement'],['subject','Subject announcement'],['reward','Rewards & celebrations'],['event','Event or key date'],['enrol','Tasters & enrolment'],['teacher','Meet the teacher'],['other','Something else']];
-function socPicker(){return `<div class="em-card so-pick"><h2 class="em-h" style="margin:0 0 4px">Build the post</h2><p class="hint" style="margin:0 0 12px">What’s the post for? For anything other than a course, Claude drafts the picture’s words and the Facebook and Instagram text in Post designs, and you post it from there.</p>
-  <div class="so-pickrow"><button class="btn solid small" type="button" data-so="newc">A course or workshop</button>${SOC_PURPOSES.map(([k,l])=>`<a class="btn small" href="/admin/designs?purpose=${k}">${esc(l)}</a>`).join('')}</div>
+function socPicker(){return `<div class="em-card so-pick"><h2 class="em-h" style="margin:0 0 4px">Build the post</h2><p class="hint" style="margin:0 0 12px">What’s the post for? Every post uses your picture template. For anything other than a course, Claude drafts the words on the picture and the Facebook and Instagram text, and the picture can come from Canva or an upload.</p>
+  <div class="so-pickrow"><button class="btn solid small" type="button" data-so="newc">A course or workshop</button>${SOC_PURPOSES.map(([k,l])=>`<button class="btn small" type="button" data-sb-start="${k}">${esc(l)}</button>`).join('')}</div>
   <p style="margin:12px 0 0"><button class="linkbtn" type="button" data-so="newblank">Just write a post with my own picture</button> · <button class="linkbtn" type="button" data-so="close">Cancel</button></p></div>`}
 const socCoursePics={};
 async function socCoursePic(b){if(socCoursePics[b.id])return socCoursePics[b.id];const cv=await kitRender(b,'portrait');const fd=new FormData();fd.append('file',await socBlob(cv,.9),'course.jpg');const p=(await api('upload',fd,true)).path;socCoursePics[b.id]=p;return p}
 async function socUseCoursePic(c,b){const m=document.getElementById('soMsg');if(m)m.textContent='Making the course picture…';try{const p=await socCoursePic(b);if(SOC.c===c&&c.bookId===b.id){c.image=p;c.frame='none';c.images=null;socPaint()}}catch(err){const m2=document.getElementById('soMsg');if(m2)m2.textContent=err.message||'Couldn’t make the picture.'}}
+/* ---- Build the post: any purpose, in the picture template's design ---- */
+const SB_LABEL={hiring:'We’re hiring',holiday:'Holidays',school:'News',subject:'New',reward:'Well done',event:'Save the date',enrol:'Now booking',teacher:'Meet the teacher',other:''};
+const SB_HINT={hiring:'The subject and level, hours, start date, and how and by when to apply.',holiday:'Which holiday or term, when you break up and come back, anything families need to do.',school:'What’s new, who it’s for, and when it starts.',subject:'The subject and level, what’s new, and any dates.',reward:'Who or what you’re celebrating. First names only, and only with permission.',event:'The day or event, the date, and how it links to your courses.',enrol:'Which courses, the dates, and any offer.',teacher:'Who they are, what they teach, and something about them.',other:'Say what the post is about.'};
+const SB_SIZES=['square','portrait','story'];
+function sbNew(k){return {purpose:k,notes:'',label:SB_LABEL[k]||'',title:'',line:'',by:'',image:'',colour:'#141a5c',size:'portrait',fb:'',ig:'',same:true,busy:'',msg:'',canva:null}}
+function sbColours(){const seen=new Set(['#141a5c']);const out=[['#141a5c','Navy']];for(const b of state.books){const c=String(b.tileColor||'').toLowerCase();if(/^#[0-9a-f]{6}$/.test(c)&&!seen.has(c)){seen.add(c);out.push([c,b.subject||b.title])}}return out.slice(0,12)}
+function sbBook(){const B=SOC.build;return {id:'post',title:B.title||'Your title',subtitle:B.line,byline:B.by,eyebrow:B.label,cover:B.image,tileColor:B.colour,status:'post'}}
+function sbView(){const B=SOC.build,name=(SOC_PURPOSES.find(x=>x[0]===B.purpose)||[])[1]||'Post';
+  const f=(k,l,ph,area)=>`<div class="field"><label for="sb_${k}">${l}</label>${area?`<textarea id="sb_${k}" data-sb-in="${k}" rows="${area}" placeholder="${esc(ph||'')}">${esc(B[k])}</textarea>`:`<input id="sb_${k}" data-sb-in="${k}" value="${esc(B[k])}" placeholder="${esc(ph||'')}">`}</div>`;
+  const canva=B.canva?`<div class="sb-canva">${B.canva.err?`<p class="hint">${esc(B.canva.err)}</p>`:!B.canva.items?'<p class="hint"><span class="spin"></span>Opening Canva…</p>':B.canva.items.length?`<div class="sb-cgrid">${B.canva.items.map(it=>`<button type="button" data-sb-canva="${esc(it.id)}" data-t="${esc(it.title)}" title="${esc(it.title)}">${it.thumb?`<img src="${esc(it.thumb)}" alt="">`:''}<span>${esc(it.title)}</span></button>`).join('')}</div>`:'<p class="hint">No designs found in Canva.</p>'}<button class="linkbtn" type="button" data-sb="canvaclose">Close Canva</button></div>`:'';
+  return `<div class="em-card so-build"><div class="sb-top"><h2 class="em-h" style="margin:0">Build the post</h2><div class="so-pickrow">${SOC_PURPOSES.map(([k,l])=>`<button type="button" class="btn small${k===B.purpose?' solid':''}" data-sb-start="${k}">${esc(l)}</button>`).join('')}</div></div>
+  <div class="sb-grid"><div class="sb-form">
+    <div class="field"><label for="sb_notes">The details <span class="hint">${esc(SB_HINT[B.purpose]||'')}</span></label><textarea id="sb_notes" data-sb-in="notes" rows="3" placeholder="Write it as notes. Claude only uses what you put here, and marks anything missing in [brackets].">${esc(B.notes)}</textarea></div>
+    <div class="so-row"><button class="btn solid small" type="button" data-sb="draft"${B.busy||!KIT.ai?' disabled':''}>${B.busy==='draft'?'Claude is writing…':B.fb?'Draft again':'Draft with Claude'}</button>${KIT.ai?'':'<span class="hint">Add the Anthropic API key (Connect to Social › AI searches) to turn this on. You can fill in the words yourself meanwhile.</span>'}</div>
+    <h3 class="sb-h">On the picture</h3>
+    ${f('label','Small label (capitals)','e.g. We’re hiring')}${f('title','Title','e.g. GCSE Computer Science teacher',2)}${f('line','Line under','e.g. Part-time, from January')}${f('by','Small line at the bottom','optional')}
+    <div class="field"><span class="em-lbl">Picture</span>${B.image?`<div class="so-pic"><img src="${esc(socImgSrc(B.image))}" alt=""><button class="linkbtn" type="button" data-sb="noimg">Remove</button></div>`:'<p class="hint" style="margin:0">None yet: the OH-SO ED icon is used.</p>'}
+      <div class="so-row"><button class="btn small" type="button" data-sb="canva">From Canva</button><label class="btn small so-up">Upload a picture<input type="file" id="sbFile" accept="image/jpeg,image/png,image/webp" hidden></label></div>${canva}</div>
+    <div class="field"><span class="em-lbl">Background</span><div class="so-row so-bgs">${sbColours().map(([v,l])=>`<button type="button" class="so-sw" data-sb-bg="${esc(v)}" title="${esc(l)}" aria-pressed="${B.colour===v}" style="background:${esc(v)}"></button>`).join('')}<input type="color" id="sbBg" value="${esc(B.colour)}" aria-label="Other colour"></div></div>
+    <h3 class="sb-h">The text</h3>
+    ${f('fb','Facebook text','',6)}
+    <label class="check so-small"><input type="checkbox" id="sbSame"${B.same?' checked':''}> Use the same text on Instagram</label>${B.same?'':f('ig','Instagram caption','',6)}
+    <div class="so-row" style="margin-top:12px"><button class="btn solid small" type="button" data-sb="use"${B.busy?' disabled':''}>${B.busy==='use'?'Preparing…':'Use this in a post'}</button><button class="btn small" type="button" data-sb="dl">Download picture</button><button class="linkbtn" type="button" data-sb="close">Cancel</button><span class="hint" id="sbMsg" role="alert">${esc(B.msg||'')}</span></div>
+  </div><div class="sb-prev"><div class="em-prevbar"><span>${esc(name)}</span><span>Pick the size to post</span></div><div class="sb-pics">${SB_SIZES.map(k=>`<button type="button" class="sb-pic" data-sb-size="${k}" aria-pressed="${B.size===k}"><img data-sb-pic="${k}" alt="${esc(KIT_SIZES[k].n)}"><span><b>${esc(KIT_SIZES[k].n)}</b> ${KIT_SIZES[k].w} × ${KIT_SIZES[k].h}</span></button>`).join('')}</div></div></div></div>`}
+let sbT=0;function sbPreview(){clearTimeout(sbT);sbT=setTimeout(async()=>{if(!SOC.build)return;const b=sbBook();for(const k of SB_SIZES){try{const cv=await kitRender(b,k);const el=document.querySelector(`[data-sb-pic="${k}"]`);if(el)el.src=cv.toDataURL('image/jpeg',.85)}catch(_){}}},150)}
+function sbMsg(t){if(SOC.build)SOC.build.msg=t;const m=document.getElementById('sbMsg');if(m)m.textContent=t}
+function sbPaint(){socPaint();sbPreview()}
+app.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sbIn;if(k&&SOC.build){SOC.build[k]=e.target.value;if(k==='fb'&&SOC.build.same)SOC.build.ig=e.target.value;if(['label','title','line','by'].includes(k))sbPreview();return}
+  if(e.target.id==='sbBg'&&SOC.build){SOC.build.colour=e.target.value;sbPreview()}});
+app.addEventListener('change',async e=>{if(!SOC.build)return;
+  if(e.target.id==='sbSame'){SOC.build.same=e.target.checked;if(!SOC.build.same&&!SOC.build.ig)SOC.build.ig=SOC.build.fb;sbPaint();return}
+  if(e.target.id==='sbFile'){const f=e.target.files[0];if(!f)return;sbMsg('Uploading…');try{const bl=await socFileJpeg(f);const fd=new FormData();fd.append('file',bl,'upload.jpg');const r=await api('upload',fd,true);SOC.build.image=r.path;SOC.build.msg='';sbPaint()}catch(err){sbMsg(err.message)}}});
+app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closest('[data-sb],[data-sb-start],[data-sb-bg],[data-sb-size],[data-sb-canva]');if(!t)return;const D=t.dataset;
+  if(D.sbStart){const old=SOC.build;SOC.pick=false;SOC.c=null;SOC.build=sbNew(D.sbStart);if(old){Object.assign(SOC.build,{notes:old.notes,image:old.image,colour:old.colour,size:old.size})}sbPaint();window.scrollTo(0,0);return}
+  const B=SOC.build;if(!B)return;
+  if(D.sbBg){B.colour=D.sbBg;document.querySelectorAll('[data-sb-bg]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.sbBg===B.colour)));const c=document.getElementById('sbBg');if(c)c.value=B.colour;sbPreview();return}
+  if(D.sbSize){B.size=D.sbSize;document.querySelectorAll('[data-sb-size]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.sbSize===B.size)));return}
+  if(D.sbCanva){sbMsg('Bringing it in from Canva…');try{const r=await fetch('/admin/design-api?action=canvaimport',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({id:D.sbCanva,title:D.t||'Canva design',kind:'illustration'})});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Couldn’t bring that in.');B.image='/admin/design-api?action=asset&id='+encodeURIComponent(j.id);B.canva=null;B.msg='';sbPaint()}catch(err){sbMsg(err.message)}return}
+  const a=D.sb;
+  if(a==='close'){SOC.build=null;socPaint();return}
+  if(a==='noimg'){B.image='';sbPaint();return}
+  if(a==='canvaclose'){B.canva=null;sbPaint();return}
+  if(a==='canva'){B.canva={items:null};sbPaint();try{const r=await fetch('/admin/design-api?action=canvalist',{credentials:'same-origin'});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Couldn’t open Canva.');if(SOC.build===B&&B.canva){B.canva={items:j.items||[]};sbPaint()}}catch(err){if(SOC.build===B&&B.canva){B.canva={err:/connect/i.test(err.message)?err.message:'Canva isn’t connected yet. Connect it under Post designs › Library & Canva, then try again. ('+err.message+')'};sbPaint()}}return}
+  if(a==='draft'){B.busy='draft';sbPaint();try{
+      const fields=[{k:'label',label:'Small label in capitals above the title (1-3 words)',def:SB_LABEL[B.purpose]||'News'},{k:'title',label:'Big title (2-6 words)',def:'GCSE Computer Science teacher'},{k:'line',label:'One line under the title',def:'Part-time, starting January'},{k:'by',label:'Small line at the bottom (a date, a deadline or a name; may be empty)',def:'Apply by 30 November'}];
+      const context=[`Next term: ${(BOOT.nextTerm||'')}`].filter(x=>!/: $/.test(x)).join('\n');
+      const j=await api('draftpost',{purpose:(SOC_PURPOSES.find(x=>x[0]===B.purpose)||[])[1]||'Post',template:'Picture with a small label, a big title, a line under it and a small bottom line',fields,notes:B.notes,context});
+      const F=j.fields||{};for(const k of ['label','title','line','by'])if(typeof F[k]==='string')B[k]=F[k].replace(/\*/g,'');B.fb=j.facebook||B.fb;B.ig=j.instagram||B.ig;B.same=!j.instagram||j.instagram===j.facebook;B.msg='Drafted by Claude. Check every word and fill in anything in [brackets] before posting.'}
+    catch(err){B.msg=err.message}finally{B.busy='';sbPaint()}return}
+  if(a==='dl'){try{const cv=await kitRender(sbBook(),B.size);const bl=await socBlob(cv,.92);const u=URL.createObjectURL(bl);const el=document.createElement('a');el.href=u;el.download=`ohsoed-${B.purpose}-${B.size}.jpg`;document.body.appendChild(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}catch(err){sbMsg(err.message||'Couldn’t make the picture.')}return}
+  if(a==='use'){if(!B.title.trim()){sbMsg('Add a title first.');return}if(/\[[^\]]+\]/.test(B.title+B.line+B.by+B.fb+(B.same?'':B.ig))){sbMsg('Fill in the parts in [brackets] first.');return}
+    B.busy='use';sbMsg('Preparing the picture…');try{const cv=await kitRender(sbBook(),B.size);const fd=new FormData();fd.append('file',await socBlob(cv,.9),'post.jpg');const p=(await api('upload',fd,true)).path;
+      const ig=B.same?B.fb:B.ig;SOC.c=socNew({image:p,text:B.fb,igText:ig,same:ig===B.fb,frame:'none',ig:!!SOC.cfg.ig||!SOC.cfg.connected});SOC.build=null;socPaint();window.scrollTo(0,0)}
+    catch(err){B.busy='';sbMsg(err.message)}return}});
 function socComposer(){
   const c=SOC.c,cfg=SOC.cfg,hasIg=!!cfg.ig||!cfg.connected,b=c.bookId?bookById(c.bookId):null;
   const books=[...state.books].sort((x,y)=>String(x.title).localeCompare(String(y.title)));
@@ -141,11 +195,12 @@ function socChan(p,ch){const x=p.channels&&p.channels[ch];if(!x)return '';const 
 function socInner(){
   const cfg=SOC.cfg;
   const conn=cfg?(cfg.connected?`<button class="btn small so-connbtn on" type="button" data-so="modal" title="Facebook and Instagram settings"><i></i>${esc(cfg.page.name)}${cfg.ig?' + @'+esc(cfg.ig.username):''}</button>`:`<button class="btn solid small so-connbtn" type="button" data-so="modal">Connect to Social</button>`):'';
-  const head=`<div class="cms-bar"><h1>Social</h1>${cfg&&!SOC.c&&!SOC.pick?(cfg.connected?'<button class="btn small" type="button" data-so="reload">Refresh numbers</button>':'')+'<button class="btn solid small" type="button" data-so="new">New post</button>':''}${cfg?kbMomBtn():''}${conn}</div>`+(SOC.drawer&&cfg?kbMoments():'')+(SOC.modal&&cfg?`<div class="so-modal" data-so-backdrop><div class="so-dialog" role="dialog" aria-modal="true" aria-label="Connect to Social"><button class="so-x" type="button" data-so="modalclose" aria-label="Close">×</button>${socConnCard()}${socAiCard()}</div></div>`:'');
+  const head=`<div class="cms-bar"><h1>Social</h1>${cfg&&!SOC.c&&!SOC.pick&&!SOC.build?(cfg.connected?'<button class="btn small" type="button" data-so="reload">Refresh numbers</button>':'')+'<button class="btn solid small" type="button" data-so="new">New post</button>':''}${cfg?kbMomBtn():''}${conn}</div>`+(SOC.drawer&&cfg?kbMoments():'')+(SOC.modal&&cfg?`<div class="so-modal" data-so-backdrop><div class="so-dialog" role="dialog" aria-modal="true" aria-label="Connect to Social"><button class="so-x" type="button" data-so="modalclose" aria-label="Close">×</button>${socConnCard()}${socAiCard()}</div></div>`:'');
   if(SOC.err&&!cfg)return head+`<div class="empty"><b>Couldn’t load Social.</b>${esc(SOC.err)}</div>`;
   if(!cfg)return head+'<p class="hint"><span class="spin"></span>Loading…</p>';
   if(SOC.c)return head+socComposer();
   if(SOC.pick)return head+socPicker();
+  if(SOC.build)return head+sbView();
   if(KIT.book)return kitBookView();
   const P=[...(SOC.posts||[])].sort((a,b)=>String(b.at||b.created).localeCompare(String(a.at||a.created)));
   const list=P.length?`<div class="tbl-wrap"><table class="tbl so-tbl"><thead><tr><th>Post</th><th>Where</th><th>When</th><th></th></tr></thead><tbody>${P.map(p=>{const sch=Object.values(p.channels||{}).some(x=>x.status==='scheduled'||x.status==='processing');const img=p.igImage||p.image;
@@ -251,22 +306,23 @@ function kitHex(h){const m=/^#?([0-9a-f]{6})$/i.exec(h||'');return m?[0,2,4].map
 function kitLum([r,g,b]){const f=v=>{v/=255;return v<=.03928?v/12.92:Math.pow((v+.055)/1.055,2.4)};return .2126*f(r)+.7152*f(g)+.0722*f(b)}
 function kitWrap(ctx,text,maxW){const words=String(text).split(/\s+/).filter(Boolean),lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(ctx.measureText(t).width<=maxW||!cur)cur=t;else{lines.push(cur);cur=w}}if(cur)lines.push(cur);return lines}
 // lay text blocks into a box, shrinking the title until everything fits; returns the drawing plan
-const KIT_TPL_DEF={bg:'book',bgColor:'#F3F4FA',tone:'auto',coverAlign:'left',textAlign:'top',coverSize:100,titleSize:100,shadow:true,eyebrow:true,subtitle:true,partner:true,url:true,urlText:'',logo:'auto',logoSize:100};
+const KIT_TPL_DEF={bg:'book',bgColor:'#F3F4FA',tone:'auto',coverAlign:'left',textAlign:'top',coverSize:100,titleSize:120,shadow:true,eyebrow:true,subtitle:true,partner:true,url:false,urlText:'',logo:'auto',logoSize:150,v:2};
+const kitMigrate=t=>!t||t.v>=2?t:Object.assign({},t,{url:false,logoSize:Math.max(150,Number(t.logoSize)||100),titleSize:Math.max(120,Number(t.titleSize)||100),v:2});
 const kitT=()=>Object.assign({},KIT_TPL_DEF,KIT.tpl||{},KIT.tplDraft||{});
 const kitSaved=()=>Object.assign({},KIT_TPL_DEF,KIT.tpl||{});
 function kitText(ctx,b,box,S,tone,T){
-  const eyebrow=(b.status==='next'?'Starts '+(b.pubDate?kitMonth(b.pubDate):'next year'):b.status==='space'?'Space available'+(b.places&&b.places<=3?' · '+b.places+(b.places===1?' place left':' places left'):''):b.status==='workshop'?'Workshop'+(b.pubDate?' · '+fmtDate(b.pubDate,false):''):(b.category||'OH-SO ED')).toUpperCase();
+  const eyebrow=(b.eyebrow!=null?b.eyebrow:b.status==='next'?'Starts '+(b.pubDate?kitMonth(b.pubDate):'next year'):b.status==='space'?'Space available'+(b.places&&b.places<=3?' · '+b.places+(b.places===1?' place left':' places left'):''):b.status==='workshop'?'Workshop'+(b.pubDate?' · '+fmtDate(b.pubDate,false):''):(b.category||'OH-SO ED')).toUpperCase();
   let last=null;
   for(let fs=S.title;fs>=S.title*.42;fs-=2){
     const plan=[];let y=0;
-    if(T.eyebrow){ctx.font=`600 ${S.eye}px Jost, Arial, sans-serif`;kitWrap(ctx,eyebrow,box.w).forEach(l=>{plan.push({t:l,f:ctx.font,y:y+S.eye,c:tone.muted,ls:.12});y+=S.eye*1.35});y+=S.eye*.9}
+    if(T.eyebrow&&eyebrow){ctx.font=`600 ${S.eye}px Jost, Arial, sans-serif`;kitWrap(ctx,eyebrow,box.w).forEach(l=>{plan.push({t:l,f:ctx.font,y:y+S.eye,c:tone.muted,ls:.12});y+=S.eye*1.35});y+=S.eye*.9}
     ctx.font=`600 ${fs}px Jost, Arial, sans-serif`;const tL=kitWrap(ctx,b.title,box.w);if(tL.some(l=>ctx.measureText(l).width>box.w))continue;tL.forEach(l=>{plan.push({t:l,f:ctx.font,y:y+fs*.9,c:tone.ink});y+=fs*1.04});
     if(T.subtitle&&b.subtitle){y+=fs*.22;const sf=Math.max(S.sub*.75,Math.min(S.sub,fs*.5));ctx.font=`500 ${sf}px Jost, Arial, sans-serif`;kitWrap(ctx,b.subtitle,box.w).forEach(l=>{plan.push({t:l,f:ctx.font,y:y+sf,c:tone.ink});y+=sf*1.25})}
-    if(T.partner&&b.partner){y+=S.small*.9;ctx.font=`400 ${S.small}px Jost, Arial, sans-serif`;kitWrap(ctx,'Taught by '+b.partner,box.w).slice(0,3).forEach(l=>{plan.push({t:l,f:ctx.font,y:y+S.small,c:tone.muted});y+=S.small*1.35})}
+    const byl=b.byline!=null?b.byline:b.partner?'Taught by '+b.partner:'';if(T.partner&&byl){y+=S.small*.9;ctx.font=`400 ${S.small}px Jost, Arial, sans-serif`;kitWrap(ctx,byl,box.w).slice(0,3).forEach(l=>{plan.push({t:l,f:ctx.font,y:y+S.small,c:tone.muted});y+=S.small*1.35})}
     last={plan,h:y};if(y<=box.h)return last}
   return last} // never lose the title: the smallest try if nothing fits
 function kitDrawText(ctx,res,x,y,center){ctx.textAlign=center?'center':'left';res.plan.forEach(p=>{ctx.font=p.f;ctx.fillStyle=p.c;if(p.ls&&'letterSpacing' in ctx)ctx.letterSpacing=(p.ls*parseFloat(p.f.match(/(\d+(\.\d+)?)px/)[1]))+'px';ctx.fillText(p.t,x,y+p.y);if('letterSpacing' in ctx)ctx.letterSpacing='0px'});ctx.textAlign='left'}
-function kitCover(ctx,img,x,y,w,h,shadow,align){const s=Math.min(w/img.naturalWidth,h/img.naturalHeight),cw=Math.round(img.naturalWidth*s),ch=Math.round(img.naturalHeight*s),cx=Math.round(align==='left'?x:x+(w-cw)/2),cy=Math.round(y+(h-ch)/2);
+function kitCover(ctx,img,x,y,w,h,shadow,align){const s=Math.min(w/img.naturalWidth,h/img.naturalHeight),cw=Math.round(img.naturalWidth*s),ch=Math.round(img.naturalHeight*s),cx=Math.round(align==='left'||align==='lefttop'?x:x+(w-cw)/2),cy=Math.round(align==='lefttop'?y:y+(h-ch)/2);
   if(shadow){ctx.save();ctx.shadowColor='rgba(0,0,0,.28)';ctx.shadowBlur=Math.round(cw*.08);ctx.shadowOffsetY=Math.round(cw*.035);ctx.fillStyle='#fff';ctx.fillRect(cx,cy,cw,ch);ctx.restore()}ctx.drawImage(img,cx,cy,cw,ch);return {x:cx,y:cy,w:cw,h:ch}}
 let kitLogoI=null;
 function kitTint(img,col){const c=document.createElement('canvas');c.width=img.naturalWidth||773;c.height=img.naturalHeight||224;const x=c.getContext('2d');x.drawImage(img,0,0,c.width,c.height);if(col){x.globalCompositeOperation='source-in';x.fillStyle=col;x.fillRect(0,0,c.width,c.height)}return c}
@@ -293,17 +349,17 @@ async function kitRender(b,size,tpl){
   if(size==='landscape'||(size==='square'&&r<1.05)){ // cover on the left, text on the right
     const sq=size==='square',m=sq?M:54,foot=sq?(LH||(T.url?30*u:0))+44*u:0; // square: the address and logo sit in a row along the bottom, like portrait
     const ch=(H-2*m-foot)*Math.min(1,cs),cvW=Math.min(W*.46*cs,ch*r),top=m+((H-2*m-foot)-ch)/2;
-    const c=img?kitCover(ctx,img,m,top,cvW,ch,T.shadow,'left'):{x:m,y:top,w:cvW,h:ch};
+    const c=img?kitCover(ctx,img,m,sq?top:m,cvW,ch,T.shadow,sq?'left':'lefttop'):{x:m,y:top,w:cvW,h:ch};
     const tx=c.x+c.w+(sq?70*u:54),tw=W-tx-m;
     const st=sq?S:{title:58*ts,sub:26,small:21,eye:18};
-    const room=sq?c.h:c.h-(LH||(T.url?30*u:0))-40*u,res=kitText(ctx,b,{w:tw,h:room},st,tone,T);
+    const room=sq?c.h:H-m-(LH||(T.url?30*u:0))-40*u-c.y,res=kitText(ctx,b,{w:tw,h:room},st,tone,T);
     if(res)kitDrawText(ctx,res,tx,T.textAlign==='middle'?c.y+Math.max(0,(room-res.h)/2):c.y-Math.round(st.eye*.2));
     if(sq){const lb=H-M+8*u;brand(M,lb);kitLogo(ctx,W-M,lb,LH,rgb,T.logo,tone.ink)}
     else{brand(tx,H-m-4,true);kitLogo(ctx,W-m,H-m,LH,rgb,T.logo,tone.ink)}
   }else{ // cover on top, text below
     const center=T.coverAlign==='center';
     const top=size==='story'?Math.round(300*u):M,bottom=M,avail=H-top-(size==='story'?Math.round(380*u):M);
-    const coverH=(size==='story'?avail*.58:size==='portrait'?avail*.54:avail*.5)*cs,coverW=Math.min(W-2*M,coverH*r);
+    const coverH=(size==='story'?avail*.58:size==='portrait'?avail*.54:avail*.44)*cs,coverW=Math.min(W-2*M,coverH*r);
     const cH=Math.min(coverH,(W-2*M)/r),c=img?kitCover(ctx,img,M,top,W-2*M,cH,T.shadow,center?'center':'left'):{x:M,y:top,w:coverW,h:coverH};
     const k2=size==='story'?1.4:1.15,S2={title:S.title*k2,sub:S.sub*k2,small:S.small*k2,eye:S.eye*k2};
     const ty=c.y+c.h+64*u,res=kitText(ctx,b,{w:W-2*M-(center?0:0),h:H-bottom-ty-(LH||(T.url?30*u:0))-40*u},S2,tone,T);
@@ -326,10 +382,10 @@ function kitTplCard(){
       <div class="field"><span class="em-lbl">Text colour</span>${seg('tone',[['auto','Automatic'],['dark','Dark'],['light','Light']])}</div>
       <div class="field"><span class="em-lbl">Picture (portrait and story)</span>${seg('coverAlign',[['left','Left, in line with the text'],['center','Centred']])}</div>
       <div class="field"><span class="em-lbl">Text beside the picture (square and landscape)</span>${seg('textAlign',[['top','Level with the top'],['middle','Middle']])}</div>
-      ${rng('coverSize','Picture size',80,115)}${rng('titleSize','Title size',70,130)}
+      ${rng('coverSize','Picture size',80,115)}${rng('titleSize','Title size',70,150)}
       <div class="field"><span class="em-lbl">Show</span><div class="kit-chks">${chk('eyebrow','Label (Space available, Starts September…)')}${chk('subtitle','Exam board or level')}${chk('partner','Teacher')}${chk('url','Web address')}${chk('shadow','Shadow under the picture')}</div>${T.url?`<input type="text" data-kt-txt="urlText" value="${esc(T.urlText)}" placeholder="${esc(kitBase().replace(/^https?:\/\//,'').replace(/\/$/,''))}" aria-label="Web address text" style="margin-top:6px">`:''}</div>
       <div class="field"><span class="em-lbl">Logo, bottom right</span>${seg('logo',[['auto','Same as the text'],['white','White'],['black','Black'],['brand','OH-SO ED colours'],['none','None']])}</div>
-      ${T.logo!=='none'?rng('logoSize','Logo size',70,140):''}
+      ${T.logo!=='none'?rng('logoSize','Logo size',70,180):''}
       <div class="so-row" style="margin-top:4px"><button class="btn solid small" type="button" data-kt="save"${dirty?'':' disabled'}>Save template</button><button class="linkbtn" type="button" data-kt="discard"${dirty?'':' disabled'}>Discard changes</button><button class="linkbtn" type="button" data-kt="default">Back to the original</button><button class="linkbtn" type="button" data-kt="close" style="margin-left:auto">Close</button></div>
     </div><div class="kit-tplprev">${Object.entries(KIT_SIZES).map(([k,z])=>`<figure class="kit-pic"><div class="kit-picbox" style="aspect-ratio:${z.w}/${z.h}"><img data-kt-pic="${k}" alt="${esc(z.n)} preview"></div><figcaption><b>${z.n}</b></figcaption></figure>`).join('')}</div></div></div>`}
 let ktTimer=0;

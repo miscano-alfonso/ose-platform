@@ -138,7 +138,7 @@ export default function Studio({ data, navy, canva, purpose: startPurpose = "", 
 
   const groups = [...new Set(TEMPLATES.map((t) => t.group))];
   const colours = [["", "Subject colour"], ["navy", "Navy"], ...data.subjects.map((s) => [s.colour, s.name])];
-  return <><section className="card ds-build"><h2 style={{ marginTop: 0 }}>Build the post</h2>
+  return <>{startPurpose && <section className="card ds-build"><h2 style={{ marginTop: 0 }}>Build the post</h2>
     <p className="cs">What’s the post for? Pick one, add the details, and Claude writes a first draft of the picture’s words and the Facebook and Instagram text.</p>
     <div className="ds-chips" role="group" aria-label="What the post is for">{PURPOSES.map((p) => <button key={p.id} type="button" className="ds-chip" aria-pressed={p.id === purpose}
       onClick={() => { setPurpose(p.id); if (p.tpls.length && !p.tpls.includes(tid)) setTid(p.tpls[0]); }}>{p.name}</button>)}
@@ -149,7 +149,7 @@ export default function Studio({ data, navy, canva, purpose: startPurpose = "", 
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
         <button type="button" className="abtn pri" onClick={draft} disabled={!!busy || !ai}>{busy === "draft" ? "Claude is writing…" : fb ? "Draft again" : "Draft with Claude"}</button>
         {!ai && <span className="muted">Add the Anthropic API key under Social › Connect to Social › AI searches to turn this on. You can still fill in the words yourself below.</span>}</div></>}
-  </section>
+  </section>}
   <div className="ds">
     <div className="ds-pick">{groups.map((g) => <div key={g}><div className="ds-g">{g}</div>
       {TEMPLATES.filter((t) => t.group === g).map((t) => <button key={t.id} type="button" className="ds-t" aria-pressed={t.id === tid} onClick={() => setTid(t.id)}>{t.name}</button>)}</div>)}</div>
