@@ -3,18 +3,33 @@ import { isDemoSchool, withSchool } from "./db";
 
 // Sending email through Brevo (transactional API). The account is either set in the environment (BREVO_API_KEY and
 // BREVO_SENDER_EMAIL) or connected in Admin → Newsletter (key and verified sender kept in the database).
-type Creds = { key: string; email: string; name: string; replyTo?: string };
+type Creds = { key: string; email: string; name: string; replyTo?: string; copyTo?: string };
 async function creds(): Promise<Creds | null> {
   if (await isDemoSchool()) return null;   // the demo school never sends email
-  if (process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL) return { key: process.env.BREVO_API_KEY, email: process.env.BREVO_SENDER_EMAIL, name: process.env.BREVO_SENDER_NAME || "OH-SO ED", replyTo: process.env.BREVO_REPLY_TO || undefined };
-  const c = await withSchool((q) => q<{ value: { key?: string; senderEmail?: string; senderName?: string; replyTo?: string } }>(`select value from newsletter_kv where key = 'brevo'`)).then((r) => r[0]?.value).catch(() => undefined);
-  return c?.key && c.senderEmail ? { key: c.key, email: c.senderEmail, name: c.senderName || "OH-SO ED", replyTo: c.replyTo || undefined } : null;
+  if (process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL) return { key: process.env.BREVO_API_KEY, email: process.env.BREVO_SENDER_EMAIL, name: process.env.BREVO_SENDER_NAME || "OH-SO ED", replyTo: process.env.BREVO_REPLY_TO || undefined, copyTo: process.env.BREVO_COPY_TO || undefined };
+  const c = await withSchool((q) => q<{ value: { key?: string; senderEmail?: string; senderName?: string; replyTo?: string; copyTo?: string } }>(`select value from newsletter_kv where key = 'brevo'`)).then((r) => r[0]?.value).catch(() => undefined);
+  return c?.key && c.senderEmail ? { key: c.key, email: c.senderEmail, name: c.senderName || "OH-SO ED", replyTo: c.replyTo || undefined, copyTo: c.copyTo || undefined } : null;
 }
 /** True when email can be sent (Brevo set up in the environment, or connected under Newsletter). */
 export const emailReady = async () => !!(await creds());
 const SMTP_URL = () => process.env.BREVO_API_URL || (process.env.BREVO_API_BASE ? process.env.BREVO_API_BASE.replace(/\/?$/, "/") + "smtp/email" : "https://api.brevo.com/v3/smtp/email");
 
 export type Recipient = { name: string; email: string };
+
+/** "Keep a copy": ONE copy of each send goes to the copy address (e.g. ose@), saying who it went to, however many people it was sent to.
+ *  Newsletters are not copied (they have their own stats). A failed copy never affects the real send. */
+async function keepCopy(c: Creds, subject: string, htmlContent: string, textContent: string, to: { email: string; name?: string }[], note?: string) {
+  if (!c.copyTo || !to.length) return;
+  const others = to.filter((r) => r.email.toLowerCase() !== c.copyTo!.toLowerCase()); if (!others.length) return;
+  const shown = others.slice(0, 40).map((r) => r.name ? `${r.name} <${r.email}>` : r.email);
+  const who = `Sent to ${others.length === 1 ? shown[0] : `${others.length} people: ${shown.join(", ")}${others.length > 40 ? ` and ${others.length - 40} more` : ""}`}${note ? ` · ${note}` : ""}`;
+  const banner = `<div style="font:13px/1.4 Arial,sans-serif;background:#fff6d6;border:1px solid #e3cd4b;color:#5a4a00;padding:10px 14px;margin:0 0 14px">Copy for your records. ${who.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]!))}</div>`;
+  await fetch(SMTP_URL(), {
+    method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
+    body: JSON.stringify({ sender: { email: c.email, name: c.name }, to: [{ email: c.copyTo }], subject: `[Sent] ${subject}`.slice(0, 250),
+      htmlContent: banner + htmlContent, textContent: `Copy for your records. ${who}\n\n${textContent}`, tags: ["copy"] }),
+  }).catch(() => undefined);
+}
 export type Audience = { value: string; label: string };
 
 export async function audiences(): Promise<Audience[]> {
@@ -80,6 +95,7 @@ export async function sendBatch(subject: string, body: string, to: Recipient[], 
     }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
     if (res.ok) sent += chunk.length; else { failed += chunk.length; error = `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}`; }
   }
+  if (sent) await keepCopy(c, subject, html(body, marketing), body, to, failed ? `${failed} failed` : undefined);
   return { sent, failed, error };
 }
 
@@ -104,6 +120,7 @@ export async function sendHtml(subject: string, htmlContent: string, to: string[
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent, textContent, messageVersions: to.map((email) => ({ to: [{ email }] })), tags: [tag || "social-report"] }),
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
+  if (res.ok) await keepCopy(c, subject, htmlContent, textContent, to.map((email) => ({ email })));
   return res.ok ? { ok: true } : { ok: false, error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
 }
 
@@ -119,6 +136,7 @@ export async function sendOne(to: Recipient[], subject: string, body: string, op
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e), json: async () => ({}) }) as Response);
   if (!res.ok) return { ok: false, ids: [], error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
   const j = await res.json().catch(() => ({})) as { messageId?: string; messageIds?: string[] };
+  await keepCopy(c, subject, html(body, false), body, to, opts.scheduledAt ? `scheduled for ${new Date(opts.scheduledAt).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" })}` : undefined);
   return { ok: true, ids: j.messageIds ?? (j.messageId ? [j.messageId] : []) };
 }
 /** Cancels an email scheduled with Brevo (e.g. the lesson was cancelled). */

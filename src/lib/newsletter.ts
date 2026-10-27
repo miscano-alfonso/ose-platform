@@ -37,7 +37,7 @@ export function simplePage(base: string, title: string, text: string, btn: strin
 }
 
 // ---------- Brevo ----------
-type BrevoCfg = { key?: string; account?: string; senderName?: string; senderEmail?: string; replyTo?: string; listId?: number; listName?: string; lastSync?: string };
+type BrevoCfg = { key?: string; account?: string; senderName?: string; senderEmail?: string; replyTo?: string; copyTo?: string; listId?: number; listName?: string; lastSync?: string };
 const BREVO = () => (process.env.BREVO_API_BASE || "https://api.brevo.com/v3/").replace(/\/?$/, "/");
 export const brevoCfg = async (): Promise<BrevoCfg> => (await kvGet<BrevoCfg>("brevo").catch(() => null)) ?? {};
 const keyOf = (c: BrevoCfg) => c.key || process.env.BREVO_API_KEY || "";
@@ -65,7 +65,7 @@ async function brevoContact(m: { email: string; name: string; status: string }) 
 export async function brevoStatus() {
   const c = await brevoCfg(); const k = keyOf(c);
   return { connected: brevoOn(c), hasKey: !!k, keyHint: k ? "…" + k.slice(-4) : "", fromEnv: !c.key && !!process.env.BREVO_API_KEY, account: c.account ?? "", senderName: c.senderName ?? "OH-SO ED",
-    senderEmail: c.senderEmail ?? "", replyTo: c.replyTo ?? "", listId: c.listId ?? null, listName: c.listName ?? "", lastSync: c.lastSync ?? "", canEdit: true };
+    senderEmail: c.senderEmail ?? "", replyTo: c.replyTo ?? "", copyTo: c.copyTo ?? "", listId: c.listId ?? null, listName: c.listName ?? "", lastSync: c.lastSync ?? "", canEdit: true };
 }
 export async function brevoSave(b: Record<string, unknown>) {
   let c = await brevoCfg();
@@ -81,6 +81,7 @@ export async function brevoSave(b: Record<string, unknown>) {
   const key = keyOf(c); if (!key) fail("Add your Brevo API key first.");
   if (b.senderEmail !== undefined) { const se = normEmail(b.senderEmail); if (se && !validEmail(se)) fail("Choose a sender email."); c.senderEmail = se; }
   if (b.replyTo !== undefined) { const r = normEmail(b.replyTo); if (r && !validEmail(r)) fail("The reply-to address doesn’t look right."); c.replyTo = r || undefined; }
+  if (b.copyTo !== undefined) { const r = normEmail(b.copyTo); if (r && !validEmail(r)) fail("The copy address doesn’t look right."); c.copyTo = r || undefined; }
   if (b.senderName !== undefined) c.senderName = String(b.senderName).trim().slice(0, 60) || "OH-SO ED";
   if (!c.listId) { // our own list in Brevo, created once
     const name = "OH-SO ED website subscribers";
