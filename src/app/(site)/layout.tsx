@@ -6,6 +6,7 @@ import { stylesCss, fontsHref } from "@/lib/styles";
 import { brandSrc } from "@/lib/brand";
 import { siteInfo } from "@/lib/db";
 import { NewsletterForm } from "./NewsletterForm";
+import { demoCss } from "./demo-theme";
 
 
 // every page depends on which school is shown (the demo website uses the same pages)
@@ -26,7 +27,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         <style id="ose-styles" dangerouslySetInnerHTML={{ __html: css }} />
         <StyleBridge />
         <a className="skip" href="#main">Skip to content</a>
-        {site.demo && <><style dangerouslySetInnerHTML={{ __html: `:root{--navy:${site.primary};--brand:${site.primary};--ink:${site.primary};--mustard:${site.accent};--accent:${site.accent}}html{background:${site.primary}}` }} />
+        {site.demo && <><style dangerouslySetInnerHTML={{ __html: demoCss(site.primary, site.accent) }} />
           <div className="demo-bar"><div className="wrap"><span><b>Demo website.</b> {site.name} is a made-up school on OH-SO EdTech: browse and try booking, nothing is charged.</span>
             <span className="demo-links"><a href="/osedtech/demo">Its dashboard</a><a href="/osedtech">OH-SO EdTech</a><a href="/osedtech/demo/leave">Leave the demo</a></span></div></div></>}
         <header className="s-nav"><div className="wrap">

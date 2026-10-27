@@ -29,7 +29,7 @@ export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }
         <div className="roundel" style={{ ["--c" as string]: c.colour }} aria-hidden="true">
           <span>{mark}<br />{c.subject.split(" ")[0]}</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={roundelSrc(c.subject)} alt="" width={86} height={86} />
+          {mark === "OH–SO" && <img src={roundelSrc(c.subject)} alt="" width={86} height={86} />}
         </div>
       </div>
       <ul className="facts">
