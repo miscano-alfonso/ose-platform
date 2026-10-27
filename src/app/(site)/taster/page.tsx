@@ -33,7 +33,7 @@ export default async function Taster({ searchParams }: { searchParams: Promise<{
           <span className="note">Lessons run in Google Classroom and Meet, so your child needs their own Google account (Gmail is fine). The Classroom invitation goes here.</span></label>
         <label>Additional message<textarea name="message" rows={4} maxLength={2000} /></label>
         <label className="hp" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-        <label className="agree"><input type="checkbox" name="agree" required /> I understand my child will be invited to each class’s Google Classroom and taken out {TASTER_ACCESS_DAYS} days after the taster lesson, unless we book the course.</label>
+        <label className="agree"><input type="checkbox" name="agree" required /> I understand my child will be invited to each class’s Google Classroom and can stay for {TASTER_ACCESS_DAYS} days after the taster lesson, to allow time for us to explore the Classroom together. After that, they’ll be taken out unless we book the course.</label>
         {site.demo && <p className="note">This is the demo school: nothing is emailed.</p>}
         <button className="btn btn-brand" type="submit">Send</button>
       </form>}
