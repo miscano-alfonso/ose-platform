@@ -113,27 +113,42 @@ async function socUseCoursePic(c,b){const m=document.getElementById('soMsg');if(
 const SB_LABEL={hiring:'We’re hiring',holiday:'Holidays',school:'News',subject:'New',reward:'Well done',event:'Save the date',enrol:'Now booking',teacher:'Meet the teacher',other:''};
 const SB_HINT={hiring:'The subject and level, hours, start date, and how and by when to apply.',holiday:'Which holiday or term, when you break up and come back, anything families need to do.',school:'What’s new, who it’s for, and when it starts.',subject:'The subject and level, what’s new, and any dates.',reward:'Who or what you’re celebrating. First names only, and only with permission.',event:'The day or event, the date, and how it links to your courses.',enrol:'Which courses, the dates, and any offer.',teacher:'Who they are, what they teach, and something about them.',other:'Say what the post is about.'};
 const SB_SIZES=['square','portrait','story'];
-function sbNew(k){return {purpose:k,notes:'',label:SB_LABEL[k]||'',title:'',line:'',by:'',image:'',colour:'#141a5c',size:'portrait',fb:'',ig:'',same:true,busy:'',msg:'',canva:null,draw:false,dprompt:'',dstyle:'line',dshape:'landscape',filter:'none',fcol:'#ffffff',filtered:''}}
+function sbNew(k){return {purpose:k,notes:'',label:SB_LABEL[k]||'',title:'',line:'',by:'',image:'',colour:'#141a5c',size:'portrait',fb:'',ig:'',same:true,busy:'',msg:'',canva:null,draw:false,dprompt:'',dstyle:'line',dshape:'landscape',filter:'none',fcol:'#ffffff',filtered:'',contrast:0,courses:[],autoPic:false,autoBy:false,colourSet:false}}
 const SB_FX=[['none','None'],['mono','Black & white'],['duo','Duotone'],['tint','Tint'],['contrast','High contrast']];
 const SB_FCOL=[['#ffffff','White'],['#f2df4c','Yellow'],['#e8338c','Pink'],['#63b3ea','Sky'],['#e9c46a','Gold']];
 const SB_DSTYLE=[['line','Line drawing'],['sketch','Sketch'],['flat','Flat illustration'],['icon','Icon']];
+function sbCourseField(){const B=SOC.build,L=[...state.books].sort((a,b)=>(a.kind===b.kind?0:a.kind==='workshop'?1:-1)||String(a.title).localeCompare(String(b.title)));
+  const sel=B.courses.map(id=>bookById(id)).filter(Boolean);
+  return `<div class="field"><span class="em-lbl">Courses <span class="hint">optional: pick the ones this post is about. The first sets the colour, teacher and photo; Claude uses their levels, teachers and lesson times.</span></span>
+  ${sel.length?`<div class="so-row sb-sel">${sel.map(b=>`<span class="sb-tag" style="--c:${esc(b.tileColor||'#888')}">${esc(b.title)}<button type="button" data-sb-uncourse="${esc(b.id)}" aria-label="Remove ${esc(b.title)}">×</button></span>`).join('')}</div>`:''}
+  <select id="sbCourse"><option value="">Add a course or workshop…</option>${L.filter(b=>!B.courses.includes(b.id)).map(b=>`<option value="${esc(b.id)}">${esc(b.title)}${b.kind==='workshop'?' (workshop)':''}${b.partner?' · '+esc(b.partner):''}</option>`).join('')}</select></div>`}
+function sbCoursesChanged(){const B=SOC.build,first=bookById(B.courses[0]);
+  if(!first){if(B.autoPic){B.image='';B.filtered='';B.autoPic=false}if(B.autoBy){B.by='';B.autoBy=false}sbPaint();return}
+  if(!B.colourSet)B.colour=String(first.tileColor||B.colour).toLowerCase();
+  const teachers=[...new Set(B.courses.map(id=>(bookById(id)||{}).partner).filter(Boolean))];
+  if(!B.by||B.autoBy){B.by=teachers.length===1?'Taught by '+teachers[0]:'';B.autoBy=!!B.by}
+  if((!B.image||B.autoPic)&&first.cover){B.image=first.cover;B.autoPic=true}
+  sbPaint();sbApplyFx()}
+function sbCourseContext(){return SOC.build.courses.map(id=>bookById(id)).filter(Boolean).map(b=>`- ${b.title}${b.kind==='workshop'?' (one-off workshop'+(b.pubDate?' on '+b.pubDate:'')+')':''}: level ${b.level||b.category||''}, subject ${b.subject||''}${b.partner?', teacher '+b.partner:''}${b.times?', lessons '+b.times:''}${b.specs?', '+b.specs:''}${b.status==='space'?', places available'+(b.places?' ('+b.places+' left)':''):b.status==='next'?', starts next school year'+(b.pubDate?' ('+b.pubDate+')':''):b.status==='full'?', full (waiting list)':''}${b.price?', '+b.price:''}`).join('\n')}
+function sbTermsContext(){const T=BOOT.terms||[];return T.length?'Term dates:\n'+T.map(t=>`- ${t.name}: ${t.starts} to ${t.ends}${t.breakStart?` (then a break ${t.breakStart} to ${t.breakEnd})`:''}`).join('\n'):''}
 function sbPhotos(){const seen=new Set(),out=[];for(const b of state.books){if(b.partner&&b.cover&&!seen.has(b.partner)&&!/^\/social-img\//.test(b.cover)){seen.add(b.partner);out.push([b.partner,b.cover])}}return out.sort((a,b)=>a[0].localeCompare(b[0]))}
 function sbDrawPanel(){const B=SOC.build;return `<div class="sb-draw"><div class="field"><label for="sb_dprompt">What should it show? <span class="hint">optional: Claude reads the post and picks something if you leave this empty</span></label><input id="sb_dprompt" data-sb-in="dprompt" value="${esc(B.dprompt)}" placeholder="e.g. a stack of books with a laptop"></div>
   <div class="em-seg">${SB_DSTYLE.map(([k,l])=>`<button type="button" data-sb-dstyle="${k}" aria-pressed="${B.dstyle===k}">${l}</button>`).join('')}</div>
   <div class="em-seg">${[['landscape','Landscape'],['square','Square']].map(([k,l])=>`<button type="button" data-sb-dshape="${k}" aria-pressed="${B.dshape===k}">${l}</button>`).join('')}</div>
   <div class="so-row"><button class="btn solid small" type="button" data-sb="drawgo"${B.busy||!KIT.ai?' disabled':''}>${B.busy==='draw'?'Claude is drawing… (up to a minute)':'Draw it'}</button>${KIT.ai?'':'<span class="hint">Needs the Anthropic API key.</span>'}</div></div>`}
+let sbCT=0;
 function sbHex(h){const n=parseInt(String(h).slice(1),16)||0;return [n>>16&255,n>>8&255,n&255]}
 async function sbApplyFx(){const B=SOC.build;if(!B)return;if(!B.image||B.filter==='none'){B.filtered='';sbPreview();return}
-  const src=B.image,fx=B.filter,fc=B.fcol,bg=B.colour;let im;try{im=await kitLoadImg(socImgSrc(src))}catch(_){sbMsg('That picture couldn’t be loaded for the effect.');return}
+  const src=B.image,fx=B.filter,fc=B.fcol,bg=B.colour,con=B.contrast,kc=1+con/50;let im;try{im=await kitLoadImg(socImgSrc(src))}catch(_){sbMsg('That picture couldn’t be loaded for the effect.');return}
   const sc=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)),cv=document.createElement('canvas');cv.width=Math.round(im.naturalWidth*sc);cv.height=Math.round(im.naturalHeight*sc);const x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,cv.width,cv.height);x.drawImage(im,0,0,cv.width,cv.height);
   const d=x.getImageData(0,0,cv.width,cv.height),p=d.data,dk=sbHex(bg).map(v=>v*.55),lt=sbHex(fc),tn=sbHex(fc);
-  for(let i=0;i<p.length;i+=4){let l=(.299*p[i]+.587*p[i+1]+.114*p[i+2])/255;
+  for(let i=0;i<p.length;i+=4){let l=(.299*p[i]+.587*p[i+1]+.114*p[i+2])/255;if(con&&fx!=='contrast')l=Math.min(1,Math.max(0,(l-.5)*kc+.5));
     if(fx==='mono'){p[i]=p[i+1]=p[i+2]=l*255}
     else if(fx==='contrast'){l=l<.5?2*l*l:1-2*(1-l)*(1-l);l=Math.min(1,Math.max(0,(l-.5)*1.6+.5));p[i]=p[i+1]=p[i+2]=l*255}
     else if(fx==='duo'){for(let k=0;k<3;k++)p[i+k]=dk[k]+(lt[k]-dk[k])*l}
     else if(fx==='tint'){for(let k=0;k<3;k++)p[i+k]=l*255*(.3+.7*tn[k]/255)}}
-  x.putImageData(d,0,0);if(SOC.build!==B||B.image!==src||B.filter!==fx)return;B.filtered=cv.toDataURL('image/jpeg',.9);sbPreview()}
-function sbPostText(){const B=SOC.build;return [B.label,B.title,B.line,B.by,B.notes,B.fb].filter(Boolean).join('\n')}
+  x.putImageData(d,0,0);if(SOC.build!==B||B.image!==src||B.filter!==fx||B.contrast!==con||B.fcol!==fc)return;B.filtered=cv.toDataURL('image/jpeg',.9);sbPreview()}
+function sbPostText(){const B=SOC.build;const cs=B.courses.map(id=>(bookById(id)||{}).title).filter(Boolean);return [B.label,B.title,B.line,B.by,cs.length?'Courses: '+cs.join(', '):'',B.notes,B.fb].filter(Boolean).join('\n')}
 function sbColours(){const seen=new Set(['#141a5c']);const out=[['#141a5c','Navy']];for(const b of state.books){const c=String(b.tileColor||'').toLowerCase();if(/^#[0-9a-f]{6}$/.test(c)&&!seen.has(c)){seen.add(c);out.push([c,b.subject||b.title])}}return out.slice(0,12)}
 function sbBook(){const B=SOC.build;return {id:'post',title:B.title||'Your title',subtitle:B.line,byline:B.by,eyebrow:B.label,cover:B.filtered||B.image,tileColor:B.colour,status:'post'}}
 function sbView(){const B=SOC.build,name=(SOC_PURPOSES.find(x=>x[0]===B.purpose)||[])[1]||'Post';
@@ -142,12 +157,13 @@ function sbView(){const B=SOC.build,name=(SOC_PURPOSES.find(x=>x[0]===B.purpose)
   return `<div class="em-card so-build"><div class="sb-top"><h2 class="em-h" style="margin:0">Build the post</h2><div class="so-pickrow">${SOC_PURPOSES.map(([k,l])=>`<button type="button" class="btn small${k===B.purpose?' solid':''}" data-sb-start="${k}">${esc(l)}</button>`).join('')}</div></div>
   <div class="sb-grid"><div class="sb-form">
     <div class="field"><label for="sb_notes">The details <span class="hint">${esc(SB_HINT[B.purpose]||'')}</span></label><textarea id="sb_notes" data-sb-in="notes" rows="3" placeholder="Write it as notes. Claude only uses what you put here, and marks anything missing in [brackets].">${esc(B.notes)}</textarea></div>
+    ${sbCourseField()}
     <div class="so-row"><button class="btn solid small" type="button" data-sb="draft"${B.busy||!KIT.ai?' disabled':''}>${B.busy==='draft'?'Claude is writing…':B.fb?'Draft again':'Draft with Claude'}</button>${KIT.ai?'':'<span class="hint">Add the Anthropic API key (Connect to Social › AI searches) to turn this on. You can fill in the words yourself meanwhile.</span>'}</div>
     <h3 class="sb-h">On the picture</h3>
     ${f('label','Small label (capitals)','e.g. We’re hiring')}${f('title','Title','e.g. GCSE Computer Science teacher',2)}${f('line','Line under','e.g. Part-time, from January')}${f('by','Small line at the bottom','optional')}
     <div class="field"><span class="em-lbl">Picture</span>${B.image?`<div class="so-pic"><img src="${esc(socImgSrc(B.image))}" alt=""><button class="linkbtn" type="button" data-sb="noimg">Remove</button></div>`:'<p class="hint" style="margin:0">None yet: the OH-SO ED icon is used.</p>'}
       <div class="so-row"><button class="btn small${B.draw?' solid':''}" type="button" data-sb="drawopen">Draw with Claude</button><button class="btn small" type="button" data-sb="canva">From Canva</button><label class="btn small so-up">Upload a picture<input type="file" id="sbFile" accept="image/jpeg,image/png,image/webp" hidden></label>${sbPhotos().length?`<select id="sbPhoto" aria-label="Teacher photo"><option value="">Teacher photo…</option>${sbPhotos().map(([n,u])=>`<option value="${esc(u)}">${esc(n)}</option>`).join('')}</select>`:''}</div>${canva}${B.draw?sbDrawPanel():''}
-      ${B.image?`<div class="sb-fx"><span class="hint">Effect</span><div class="em-seg">${SB_FX.map(([k,l])=>`<button type="button" data-sb-fx="${k}" aria-pressed="${B.filter===k}">${l}</button>`).join('')}</div>${B.filter==='duo'||B.filter==='tint'?`<div class="so-row so-bgs"><span class="hint">${B.filter==='duo'?'Light colour':'Tint'}</span>${SB_FCOL.map(([v,l])=>`<button type="button" class="so-sw" data-sb-fcol="${v}" title="${l}" aria-pressed="${B.fcol===v}" style="background:${v}"></button>`).join('')}</div>`:''}</div>`:''}</div>
+      ${B.image?`<div class="sb-fx"><span class="hint">Effect</span><div class="em-seg">${SB_FX.map(([k,l])=>`<button type="button" data-sb-fx="${k}" aria-pressed="${B.filter===k}">${l}</button>`).join('')}</div>${['mono','duo','tint'].includes(B.filter)?`<label class="sb-con"><span class="hint">Contrast</span><input type="range" id="sbCon" min="-40" max="100" step="5" value="${B.contrast}"><output>${B.contrast>0?'+':''}${B.contrast}</output></label>`:''}${B.filter==='duo'||B.filter==='tint'?`<div class="so-row so-bgs"><span class="hint">${B.filter==='duo'?'Light colour':'Tint'}</span>${SB_FCOL.map(([v,l])=>`<button type="button" class="so-sw" data-sb-fcol="${v}" title="${l}" aria-pressed="${B.fcol===v}" style="background:${v}"></button>`).join('')}</div>`:''}</div>`:''}</div>
     <div class="field"><span class="em-lbl">Background</span><div class="so-row so-bgs">${sbColours().map(([v,l])=>`<button type="button" class="so-sw" data-sb-bg="${esc(v)}" title="${esc(l)}" aria-pressed="${B.colour===v}" style="background:${esc(v)}"></button>`).join('')}<input type="color" id="sbBg" value="${esc(B.colour)}" aria-label="Other colour"></div></div>
     <h3 class="sb-h">The text</h3>
     ${f('fb','Facebook text','',6)}
@@ -157,37 +173,40 @@ function sbView(){const B=SOC.build,name=(SOC_PURPOSES.find(x=>x[0]===B.purpose)
 let sbT=0;function sbPreview(){clearTimeout(sbT);sbT=setTimeout(async()=>{if(!SOC.build)return;const b=sbBook();for(const k of SB_SIZES){try{const cv=await kitRender(b,k);const el=document.querySelector(`[data-sb-pic="${k}"]`);if(el)el.src=cv.toDataURL('image/jpeg',.85)}catch(_){}}},150)}
 function sbMsg(t){if(SOC.build)SOC.build.msg=t;const m=document.getElementById('sbMsg');if(m)m.textContent=t}
 function sbPaint(){socPaint();sbPreview()}
-app.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sbIn;if(k&&SOC.build){SOC.build[k]=e.target.value;if(k==='fb'&&SOC.build.same)SOC.build.ig=e.target.value;if(['label','title','line','by'].includes(k))sbPreview();return}
-  if(e.target.id==='sbBg'&&SOC.build){SOC.build.colour=e.target.value;sbPreview()}});
+app.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sbIn;if(k&&SOC.build){SOC.build[k]=e.target.value;if(k==='by')SOC.build.autoBy=false;if(k==='fb'&&SOC.build.same)SOC.build.ig=e.target.value;if(['label','title','line','by'].includes(k))sbPreview();return}
+  if(e.target.id==='sbCon'&&SOC.build){SOC.build.contrast=Number(e.target.value)||0;const o=e.target.nextElementSibling;if(o)o.textContent=(SOC.build.contrast>0?'+':'')+SOC.build.contrast;clearTimeout(sbCT);sbCT=setTimeout(sbApplyFx,120);return}
+  if(e.target.id==='sbBg'&&SOC.build){SOC.build.colour=e.target.value;SOC.build.colourSet=true;sbPreview()}});
 app.addEventListener('change',async e=>{if(!SOC.build)return;
   if(e.target.id==='sbSame'){SOC.build.same=e.target.checked;if(!SOC.build.same&&!SOC.build.ig)SOC.build.ig=SOC.build.fb;sbPaint();return}
-  if(e.target.id==='sbPhoto'&&e.target.value){SOC.build.image=e.target.value;SOC.build.msg='';sbPaint();sbApplyFx();return}
-  if(e.target.id==='sbFile'){const f=e.target.files[0];if(!f)return;sbMsg('Uploading…');try{const bl=await socFileJpeg(f);const fd=new FormData();fd.append('file',bl,'upload.jpg');const r=await api('upload',fd,true);SOC.build.image=r.path;SOC.build.msg='';sbPaint();sbApplyFx()}catch(err){sbMsg(err.message)}}});
-app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closest('[data-sb],[data-sb-start],[data-sb-bg],[data-sb-size],[data-sb-canva],[data-sb-fx],[data-sb-fcol],[data-sb-dstyle],[data-sb-dshape]');if(!t)return;const D=t.dataset;
-  if(D.sbStart){const old=SOC.build;SOC.pick=false;SOC.c=null;SOC.build=sbNew(D.sbStart);if(old){Object.assign(SOC.build,{notes:old.notes,image:old.image,colour:old.colour,size:old.size})}sbPaint();window.scrollTo(0,0);return}
+  if(e.target.id==='sbCourse'&&e.target.value){const B=SOC.build;if(!B.courses.includes(e.target.value))B.courses.push(e.target.value);sbCoursesChanged();return}
+  if(e.target.id==='sbPhoto'&&e.target.value){SOC.build.autoPic=false;SOC.build.image=e.target.value;SOC.build.msg='';sbPaint();sbApplyFx();return}
+  if(e.target.id==='sbFile'){const f=e.target.files[0];if(!f)return;sbMsg('Uploading…');try{const bl=await socFileJpeg(f);const fd=new FormData();fd.append('file',bl,'upload.jpg');const r=await api('upload',fd,true);SOC.build.image=r.path;SOC.build.autoPic=false;SOC.build.msg='';sbPaint();sbApplyFx()}catch(err){sbMsg(err.message)}}});
+app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closest('[data-sb-uncourse],[data-sb],[data-sb-start],[data-sb-bg],[data-sb-size],[data-sb-canva],[data-sb-fx],[data-sb-fcol],[data-sb-dstyle],[data-sb-dshape]');if(!t)return;const D=t.dataset;
+  if(D.sbStart){const old=SOC.build;SOC.pick=false;SOC.c=null;SOC.build=sbNew(D.sbStart);if(old){Object.assign(SOC.build,{notes:old.notes,image:old.image,colour:old.colour,size:old.size,courses:old.courses,autoPic:old.autoPic,filter:old.filter,fcol:old.fcol,contrast:old.contrast,colourSet:old.colourSet})}sbPaint();window.scrollTo(0,0);return}
   const B=SOC.build;if(!B)return;
-  if(D.sbBg){B.colour=D.sbBg;document.querySelectorAll('[data-sb-bg]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.sbBg===B.colour)));const c=document.getElementById('sbBg');if(c)c.value=B.colour;sbPreview();return}
+  if(D.sbBg){B.colour=D.sbBg;B.colourSet=true;document.querySelectorAll('[data-sb-bg]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.sbBg===B.colour)));const c=document.getElementById('sbBg');if(c)c.value=B.colour;sbPreview();return}
+  if(D.sbUncourse){B.courses=B.courses.filter(x=>x!==D.sbUncourse);sbCoursesChanged();return}
   if(D.sbFx){B.filter=D.sbFx;socPaint();sbApplyFx();return}
   if(D.sbFcol){B.fcol=D.sbFcol;socPaint();sbApplyFx();return}
   if(D.sbDstyle){B.dstyle=D.sbDstyle;sbPaint();return}
   if(D.sbDshape){B.dshape=D.sbDshape;sbPaint();return}
   if(D.sbSize){B.size=D.sbSize;document.querySelectorAll('[data-sb-size]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.sbSize===B.size)));return}
-  if(D.sbCanva){sbMsg('Bringing it in from Canva…');try{const r=await fetch('/admin/design-api?action=canvaimport',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({id:D.sbCanva,title:D.t||'Canva design',kind:'illustration'})});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Couldn’t bring that in.');B.image='/admin/design-api?action=asset&id='+encodeURIComponent(j.id);B.canva=null;B.msg='';sbPaint();sbApplyFx()}catch(err){sbMsg(err.message)}return}
+  if(D.sbCanva){sbMsg('Bringing it in from Canva…');try{const r=await fetch('/admin/design-api?action=canvaimport',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({id:D.sbCanva,title:D.t||'Canva design',kind:'illustration'})});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Couldn’t bring that in.');B.autoPic=false;B.image='/admin/design-api?action=asset&id='+encodeURIComponent(j.id);B.canva=null;B.msg='';sbPaint();sbApplyFx()}catch(err){sbMsg(err.message)}return}
   const a=D.sb;
   if(a==='close'){SOC.build=null;socPaint();return}
-  if(a==='noimg'){B.image='';B.filtered='';sbPaint();return}
+  if(a==='noimg'){B.image='';B.filtered='';B.autoPic=false;sbPaint();return}
   if(a==='drawopen'){B.draw=!B.draw;sbPaint();return}
   if(a==='drawgo'){B.busy='draw';B.msg='';sbPaint();try{
       const j=await api('drawpicture',{prompt:B.dprompt,post:sbPostText(),style:B.dstyle,shape:B.dshape,ink:B.colour});
       const u=URL.createObjectURL(new Blob([j.svg],{type:'image/svg+xml'}));let im;try{im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error('That drawing couldn’t be shown. Try again.'));i.src=u})}finally{setTimeout(()=>URL.revokeObjectURL(u),1000)}
       const sc=1600/j.w,cv=document.createElement('canvas');cv.width=1600;cv.height=Math.round(j.h*sc);const x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,cv.width,cv.height);x.drawImage(im,0,0,cv.width,cv.height);
-      const fd=new FormData();fd.append('file',await socBlob(cv,.92),'drawing.jpg');const r=await api('upload',fd,true);B.image=r.path;B.filtered='';B.draw=false;B.msg='Drawn by Claude. Draw again for another version, or add an effect.'}
+      const fd=new FormData();fd.append('file',await socBlob(cv,.92),'drawing.jpg');const r=await api('upload',fd,true);B.image=r.path;B.autoPic=false;B.filtered='';B.draw=false;B.msg='Drawn by Claude. Draw again for another version, or add an effect.'}
     catch(err){B.msg=err.message}finally{B.busy='';sbPaint();sbApplyFx()}return}
   if(a==='canvaclose'){B.canva=null;sbPaint();return}
   if(a==='canva'){B.canva={items:null};sbPaint();try{const r=await fetch('/admin/design-api?action=canvalist',{credentials:'same-origin'});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Couldn’t open Canva.');if(SOC.build===B&&B.canva){B.canva={items:j.items||[]};sbPaint()}}catch(err){if(SOC.build===B&&B.canva){B.canva={err:/connect/i.test(err.message)?err.message:'Canva isn’t connected yet. Connect it under Post designs › Library & Canva, then try again. ('+err.message+')'};sbPaint()}}return}
   if(a==='draft'){B.busy='draft';sbPaint();try{
       const fields=[{k:'label',label:'Small label in capitals above the title (1-3 words)',def:SB_LABEL[B.purpose]||'News'},{k:'title',label:'Big title (2-6 words)',def:'GCSE Computer Science teacher'},{k:'line',label:'One line under the title',def:'Part-time, starting January'},{k:'by',label:'Small line at the bottom (a date, a deadline or a name; may be empty)',def:'Apply by 30 November'}];
-      const context=[`Next term: ${(BOOT.nextTerm||'')}`].filter(x=>!/: $/.test(x)).join('\n');
+      const cc=sbCourseContext(),context=[cc?'The post is about these courses (from the school timetable):\n'+cc:'',sbTermsContext()].filter(Boolean).join('\n\n');
       const j=await api('draftpost',{purpose:(SOC_PURPOSES.find(x=>x[0]===B.purpose)||[])[1]||'Post',template:'Picture with a small label, a big title, a line under it and a small bottom line',fields,notes:B.notes,context});
       const F=j.fields||{};for(const k of ['label','title','line','by'])if(typeof F[k]==='string')B[k]=F[k].replace(/\*/g,'');B.fb=j.facebook||B.fb;B.ig=j.instagram||B.ig;B.same=!j.instagram||j.instagram===j.facebook;B.msg='Drafted by Claude. Check every word and fill in anything in [brackets] before posting.'}
     catch(err){B.msg=err.message}finally{B.busy='';sbPaint()}return}
@@ -387,7 +406,7 @@ async function kitRender(b,size,tpl){
   const LH=T.logo==='none'?0:Math.round((size==='story'?150:size==='landscape'?92:120)*u*T.logoSize/100);
   const M=Math.round(84*u),LW=kitLogoW(LH),LHH=LH*.55,hang=String(T.hang)!=='false',bot=T.pos==='bottom',rightT=T.side==='right',logoL=T.logoSide==='left',center=T.coverAlign==='center';
   const logo=yb=>{if(LH)kitLogo(ctx,logoL?M+LW:W-M,yb,LH,rgb,T.logo,tone.ink)};
-  const pic=(x,y,w,h)=>img?(hang?kitCrop(ctx,img,x,y,w,h,T.shadow):kitCover(ctx,img,x,y,w,h,T.shadow,center?'center':rightT?'right':'lefttop')):{x,y,w,h};
+  const pic=(x,y,w,h)=>img?(hang&&b.cover?kitCrop(ctx,img,x,y,w,h,T.shadow):kitCover(ctx,img,x,y,w,h,T.shadow,center?'center':rightT?'right':'lefttop')):{x,y,w,h};
   if(size==='landscape'){ // picture on one side, hanging from the top (or standing on the bottom); text beside it
     const m=54,pw=Math.round(W*.44*cs),ph=H-2*m,px=rightT?m:W-m-pw,py=m; // the same margin on the three sides facing the edges
     const c=pic(px,py,pw,ph),tx=rightT?c.x+c.w+50:m,tw=rightT?W-m-tx:c.x-50-m,st={title:58*ts,sub:26,small:21,eye:18};

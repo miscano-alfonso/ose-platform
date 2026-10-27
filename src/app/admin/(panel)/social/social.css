@@ -317,3 +317,7 @@
 .sb-draw{display:grid;gap:8px;margin-top:10px;padding:12px;border:1px dashed var(--line);border-radius:10px}
 .sb-fx{display:grid;gap:6px;margin-top:10px}
 #sbPhoto{max-width:200px}
+.sb-sel{gap:6px}.sb-tag{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:3px 4px 3px 10px;font-size:13px;background:color-mix(in srgb,var(--c) 22%,transparent);border:1px solid var(--c)}
+.sb-tag button{border:0;background:none;color:inherit;font-size:16px;line-height:1;cursor:pointer;padding:0 4px}
+#sbCourse{max-width:100%}
+.sb-con{display:flex;align-items:center;gap:8px}.sb-con input{flex:1;max-width:220px}

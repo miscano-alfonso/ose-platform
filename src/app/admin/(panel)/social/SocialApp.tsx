@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import type { SocialItem } from "@/lib/social";
 import { mountSocial } from "./social-app.js";
 
-export function SocialApp({ boot }: { boot: { items: SocialItem[]; base: string; logo: string; icon: string } }) {
+export function SocialApp({ boot }: { boot: { items: SocialItem[]; base: string; logo: string; icon: string; terms?: { name: string; starts: string; ends: string; breakStart: string | null; breakEnd: string | null }[] } }) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = document.createElement("div"); // a fresh element each time, so its listeners go with it

@@ -82,7 +82,7 @@ export const DASH_FONT_SCOPES: typeof FONT_SCOPES = [
 export const DASH_TOKENS: StyleToken[] = [
   { id: "d_h1", group: "Headings", label: "Page titles", hint: "e.g. Families, Payments", sel: ".adm .top h1", prop: "font-size", min: 18, max: 48, step: 1, unit: "px" },
   { id: "d_h2", group: "Headings", label: "Box headings", sel: ".adm .card h2, .adm .h2", prop: "font-size", min: 14, max: 34, step: 0.5, unit: "px" },
-  { id: "d_tile", group: "Headings", label: "Dashboard numbers", hint: "The big figures in the tiles", sel: ".adm .tile .v", prop: "font-size", min: 18, max: 56, step: 1, unit: "px" },
+  { id: "d_tile", group: "Headings", label: "Dashboard numbers", hint: "The big figures in the tiles", sel: ".adm .tile .v", prop: "--tv", min: 18, max: 56, step: 1, unit: "px" },
   { id: "d_body", group: "Text", label: "Main text", sel: ".adm", prop: "font-size", min: 12, max: 22, step: 0.5, unit: "px" },
   { id: "d_line", group: "Text", label: "Line spacing", sel: ".adm", prop: "line-height", min: 1.1, max: 2, step: 0.05, unit: "" },
   { id: "d_td", group: "Text", label: "Table text", sel: ".adm td", prop: "font-size", min: 11, max: 22, step: 0.5, unit: "px" },

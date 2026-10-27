@@ -16,7 +16,7 @@ const fail = (msg: string, status = 400): never => { throw new SocialError(msg, 
 // ---------- the items to post about ----------
 export type SocialItem = {
   id: string; kind: "course" | "workshop"; title: string; subtitle: string; summary: string; partner: string; cover: string; tileColor: string;
-  status: "space" | "next" | "full" | "workshop"; pubDate: string; category: string; subject: string; specs: string; topics: string[]; link: string; places: number | null; price: string;
+  status: "space" | "next" | "full" | "workshop"; pubDate: string; category: string; subject: string; specs: string; topics: string[]; link: string; places: number | null; price: string; level?: string; times?: string;
 };
 const plain = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/[*_#>`]/g, "").replace(/\s+/g, " ").trim();
 const list = (a: string[]) => a.length <= 1 ? a.join("") : a.slice(0, -1).join(", ") + " and " + a[a.length - 1];
@@ -50,6 +50,9 @@ export async function socialItems(): Promise<SocialItem[]> {
     const summary = (intro ? intro.split(/(?<=[.!?])\s+/).slice(0, 3).join(" ") : `Live online ${lead.level} ${lead.subject} lessons for home-educated students, in small classes with a qualified subject specialist.`)
       + (topics.length ? ` Topics include ${list(topics)}.` : "");
     const lessons = lead.lessons_per_week === 1 ? "1 lesson a week" : `${lead.lessons_per_week} lessons a week`;
+    const DAYS = ["", "Mondays", "Tuesdays", "Wednesdays", "Thursdays", "Fridays", "Saturdays", "Sundays"];
+    const tg = status === "space" ? space : status === "next" ? next : gs;
+    const times = list([...new Set(tg.flatMap((g) => (g.slots ?? []).map((x) => `${DAYS[x.d] ?? ""} ${String(x.t).slice(0, 5)}`.trim())))].slice(0, 6));
     const places = space.length ? Math.min(...space.map((g) => g.places_left ?? 99)) : null;
     out.push({
       id: slug.replace("/", "."), kind: "course", title: `${lead.level} ${lead.subject}`, subtitle: p?.exam_board ? `${p.exam_board}` : "", summary: summary.slice(0, 700),
@@ -57,6 +60,7 @@ export async function socialItems(): Promise<SocialItem[]> {
       pubDate: status === "next" ? next[0].year_start : "", category: lead.level, subject: lead.subject,
       specs: [lessons, `${lead.course_years}-year course`, p?.exam_board ?? ""].filter(Boolean).join(" · "), topics, link: `/courses/${slug}`, places: places === 99 ? null : places,
       price: lead.course_total_pence ? `£${(lead.course_total_pence / 100).toFixed(2).replace(/\.00$/, "")}${lead.course_years > 1 ? ` for ${lead.course_years} years` : " a year"}` : "",
+      level: lead.level, times,
     });
   }
   for (const w of workshops) {
@@ -464,7 +468,7 @@ export async function draftPost(b: Record<string, unknown>) {
   const task = `Today is ${today}.
 Purpose of the post: ${s(b.purpose, 60)}
 Picture design: ${s(b.template, 80)}
-${s(b.context, 600)}
+${s(b.context, 3000)}
 Brief from the team:
 ${s(b.notes, 2000) || "(none: write a sensible general post for this purpose)"}
 
