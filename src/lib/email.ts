@@ -20,13 +20,14 @@ export type Recipient = { name: string; email: string };
  *  Newsletters are not copied (they have their own stats). A failed copy never affects the real send. */
 async function keepCopy(c: Creds, subject: string, htmlContent: string, textContent: string, to: { email: string; name?: string }[], note?: string) {
   if (!c.copyTo || !to.length) return;
-  const others = to.filter((r) => r.email.toLowerCase() !== c.copyTo!.toLowerCase()); if (!others.length) return;
+  const copies = c.copyTo.split(/[,;\s]+/).map((x) => x.trim().toLowerCase()).filter(Boolean).slice(0, 5); if (!copies.length) return;
+  const others = to.filter((r) => !copies.includes(r.email.toLowerCase())); if (!others.length) return;
   const shown = others.slice(0, 40).map((r) => r.name ? `${r.name} <${r.email}>` : r.email);
   const who = `Sent to ${others.length === 1 ? shown[0] : `${others.length} people: ${shown.join(", ")}${others.length > 40 ? ` and ${others.length - 40} more` : ""}`}${note ? ` · ${note}` : ""}`;
   const banner = `<div style="font:13px/1.4 Arial,sans-serif;background:#fff6d6;border:1px solid #e3cd4b;color:#5a4a00;padding:10px 14px;margin:0 0 14px">Copy for your records. ${who.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]!))}</div>`;
   await fetch(SMTP_URL(), {
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ sender: { email: c.email, name: c.name }, to: [{ email: c.copyTo }], subject: `[Sent] ${subject}`.slice(0, 250),
+    body: JSON.stringify({ sender: { email: c.email, name: c.name }, messageVersions: copies.map((email) => ({ to: [{ email }] })), subject: `[Sent] ${subject}`.slice(0, 250),
       htmlContent: banner + htmlContent, textContent: `Copy for your records. ${who}\n\n${textContent}`, tags: ["copy"] }),
   }).catch(() => undefined);
 }

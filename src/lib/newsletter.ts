@@ -81,7 +81,7 @@ export async function brevoSave(b: Record<string, unknown>) {
   const key = keyOf(c); if (!key) fail("Add your Brevo API key first.");
   if (b.senderEmail !== undefined) { const se = normEmail(b.senderEmail); if (se && !validEmail(se)) fail("Choose a sender email."); c.senderEmail = se; }
   if (b.replyTo !== undefined) { const r = normEmail(b.replyTo); if (r && !validEmail(r)) fail("The reply-to address doesn’t look right."); c.replyTo = r || undefined; }
-  if (b.copyTo !== undefined) { const r = normEmail(b.copyTo); if (r && !validEmail(r)) fail("The copy address doesn’t look right."); c.copyTo = r || undefined; }
+  if (b.copyTo !== undefined) { const list = [...new Set(String(b.copyTo).split(/[,;\s]+/).map(normEmail).filter(Boolean))]; const bad = list.find((e) => !validEmail(e)); if (bad) fail(`“${bad}” doesn’t look like an email address.`); if (list.length > 5) fail("Up to 5 copy addresses."); c.copyTo = list.join(", ") || undefined; }
   if (b.senderName !== undefined) c.senderName = String(b.senderName).trim().slice(0, 60) || "OH-SO ED";
   if (!c.listId) { // our own list in Brevo, created once
     const name = "OH-SO ED website subscribers";
