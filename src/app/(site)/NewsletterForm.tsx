@@ -25,6 +25,6 @@ export function NewsletterForm() {
     <div className="nl-row"><input type="email" id="nlEmail" name="email" placeholder="Your email address" autoComplete="email" required /><button type="submit" disabled={busy}>Sign up</button></div>
     <input type="text" name="website" tabIndex={-1} autoComplete="off" aria-hidden="true" className="nl-hp" />
     <p className="nl-msg" role="status">{msg}</p>
-    <p className="nl-small">We’ll email you a link to confirm. Unsubscribe any time.</p>
+    <p className="nl-small">We’ll email you a link to confirm. Unsubscribe any time. <a href="/privacy" style={{ color: "inherit" }}>Privacy notice</a></p>
   </form>;
 }

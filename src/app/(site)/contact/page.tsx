@@ -24,7 +24,7 @@ export default async function Contact({ searchParams }: { searchParams: Promise<
         <label>How did you hear about us?<select name="heard" defaultValue=""><option value="">Choose one</option><option>Word of Mouth</option><option>Google Search</option><option>Facebook Group</option></select></label>
         <label>Message<textarea name="message" rows={6} maxLength={4000} defaultValue={PRESET[sp.about ?? ""] ?? ""} /></label>
         <label className="hp" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
-        <p className="note">We’ll only use your details to reply to you.</p>
+        <p className="note">We’ll only use your details to reply to you. See our <Link href="/privacy">privacy notice</Link>.</p>
         <button className="btn btn-brand" type="submit">Send a message</button>
       </form>}
     </div></section>
