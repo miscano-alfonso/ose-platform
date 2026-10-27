@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plans } from "./Plans";
-import { COMPARE, PLANS, TRIAL_DAYS, EXTRA_STUDENT, gbp, RIVALS, VERSUS } from "../plans";
+import { COMPARE, PLANS, TRIAL_DAYS, EXTRA_STUDENT, gbp, RIVALS, VERSUS, NAMED } from "../plans";
 
 export const metadata = { title: "Pricing", description: "OH-SO EdTech plans for one teacher, a small team or a whole online school. Try any plan free for 30 days." };
 
@@ -46,6 +46,12 @@ export default function Pricing() {
         <tbody>{VERSUS.map(([label, ...vals]) => <tr key={label} className={label === "Typical cost" ? "cost" : undefined}><td>{label}</td>{vals.map((v, i) => <td key={i} className={i === 0 ? "us" : undefined}>{vs(v)}</td>)}</tr>)}</tbody>
       </table></div>
       <p className="edt-note" style={{ marginTop: 12 }}>Based on what typical products of each kind include as standard; individual products vary. “Some” means some products offer it, or offer part of it. Prices are typical starting prices, October 2026.</p>
+      <h3 style={{ fontSize: 26, marginTop: 48 }}>Compared with tools people often use</h3>
+      <div className="edt-tw"><table className="edt-cmp edt-named">
+        <thead><tr><th scope="col">Product</th><th scope="col">Mainly for</th><th scope="col">Starts at</th><th scope="col">How the price grows</th><th scope="col">Cut of your fees</th></tr></thead>
+        <tbody>{NAMED.map((n) => <tr key={n.name} className={n.us ? "us" : undefined}><td><b>{n.name}</b></td><td>{n.for}</td><td style={{ whiteSpace: "nowrap" }}>{n.from}</td><td>{n.grows}</td><td>{n.cut}</td></tr>)}</tbody>
+      </table></div>
+      <p className="edt-note" style={{ marginTop: 12 }}>From each company’s published pricing, checked 27 October 2026; dollar prices are their US prices and all exclude tax. Prices and features change, so check their websites. Card processing fees (for example Stripe’s) apply on top for every product, including ours.</p>
       <div className="edt-grid">
         <div className="edt-card"><h3>Built for a school</h3><p>Terms and holidays, families with more than one child, instalments, tasters that turn into bookings, and teachers paid by the lesson.</p></div>
         <div className="edt-card"><h3>Google Meet and Classroom, done for you</h3><p>Attendance from who actually joined each lesson, and recordings named, filed and posted to the right Classroom.</p></div>

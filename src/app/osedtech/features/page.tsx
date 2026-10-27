@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { Shot, TrialCta } from "../bits";
+import { Shot, TrialCta, RecordingVisual } from "../bits";
 
 export const metadata = { title: "Features", description: "What OH-SO EdTech does: your website and bookings, card payments, classes and 1:1s, Google Meet attendance, recordings to Classroom, reports, teacher logins, payroll and marketing." };
 
-type Row = { id: string; eyebrow: string; title: string; text: string; points: string[]; shot: string; alt: string; url: string; plan: string };
+type Row = { id: string; eyebrow: string; title: string; text: string; points: string[]; shot: string; alt: string; url: string; plan: string; visual?: "recordings" };
 const ROWS: Row[] = [
   { id: "website", eyebrow: "Your website", title: "A proper school website, kept up to date for you", plan: "All plans",
     text: "Your courses, timetable, term dates and prices come straight from your dashboard, so the website is never out of date. Families can see what’s on, check prices for their child and book.",
@@ -19,8 +19,11 @@ const ROWS: Row[] = [
     shot: "/osedtech/shots/timetable.png", alt: "Demo Academy’s weekly timetable", url: "admin.demoacademy.co.uk/timetable" },
   { id: "attendance", eyebrow: "Attendance", title: "Registers that take themselves", plan: "All plans",
     text: "Attendance comes from who actually joined each Google Meet, matched to the right student, even when they join from a parent’s account. You see who’s slipping before it becomes a problem.",
-    points: ["Present, late and absent, per lesson and per term", "Students below 50% flagged on the dashboard", "Recordings named, filed and posted to Google Classroom"],
+    points: ["Present, late and absent, per lesson and per term", "Students below 50% flagged on the dashboard", "A weekly email listing who’s slipping"],
     shot: "/osedtech/shots/attendance.png", alt: "Attendance for a class at Demo Academy", url: "admin.demoacademy.co.uk/attendance" },
+  { id: "recordings", eyebrow: "Lesson recordings", title: "Recordings that file and post themselves", plan: "All plans", visual: "recordings", shot: "", alt: "", url: "",
+    text: "Record the lesson in Google Meet and that’s it. The recording is renamed, filed in the right subject folder and posted to the class’s Google Classroom under the same topic as the teacher’s lesson post, with a title card added to the start of the video.",
+    points: ["Named by class, term and lesson number, e.g. “GCSE Biology - T1 Lesson 12”", "A title card at the start: subject roundel, lesson title, teacher and date", "Posted to Google Classroom once the teacher has posted the lesson, never twice", "Accidental short recordings and duplicates set aside for you to check", "Chat transcripts archived; 1:1 lessons filed in their own folders"] },
   { id: "families", eyebrow: "Families and students", title: "Everything about a family on one page", plan: "All plans; student accounts from Growth",
     text: "Parents have their own account for bookings, payments and messages. From Growth, students get theirs too, with class chats and reward points.",
     points: ["Parents, children, courses and payments together", "Messages with families, kept in one place", "Data protection tools for exports and deletions"],
@@ -53,7 +56,7 @@ export default function Features() {
           <h3>{r.title}</h3><p>{r.text}</p>
           <ul>{r.points.map((x) => <li key={x}>{x}</li>)}</ul>
         </div>
-        <Shot src={r.shot} alt={r.alt} url={r.url} />
+        {r.visual === "recordings" ? <RecordingVisual /> : <Shot src={r.shot} alt={r.alt} url={r.url} />}
       </div>)}
     </div></section>
     <section className="edt-sec ink"><div className="edt-wrap edt-center">

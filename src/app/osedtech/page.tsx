@@ -25,7 +25,7 @@ export default function EdTechHome() {
         <p className="edt-lead">Your website, bookings and payments, Google Meet lessons, attendance, reports and marketing: the platform built for a real online school, ready for yours.</p>
         <ul className="edt-ticks">
           <li>Families book and pay on your own website</li>
-          <li>Reminders, attendance and recordings run themselves</li>
+          <li>Reminders, attendance and lesson recordings run themselves</li>
           <li>Start on your own, grow into a team, no switching systems</li>
         </ul>
         <div className="edt-btns"><Link href="/osedtech/trial" className="edt-btn">Start a free trial</Link><Link href="/osedtech/demo" className="edt-btn line">Look round the demo</Link></div>
@@ -58,7 +58,7 @@ export default function EdTechHome() {
         <div className="edt-card"><Ico n="cal" /><h3>Classes, 1:1s and workshops</h3><p>Weekly classes across your terms, private lessons and one-off workshops, with tasters and a waiting list.</p></div>
         <div className="edt-card"><Ico n="meet" /><h3>Google Meet attendance</h3><p>Every lesson gets its Meet link, and attendance is taken from who actually joined.</p></div>
         <div className="edt-card"><Ico n="mail" /><h3>Emails that send themselves</h3><p>Lesson reminders, receipts and follow-ups, sent at the right time, from your school’s address.</p></div>
-        <div className="edt-card"><Ico n="video" /><h3>Recordings to Classroom</h3><p>Lesson recordings named, filed and posted to the right Google Classroom, with a title card.</p></div>
+        <div className="edt-card"><Ico n="video" /><h3>Recordings that post themselves</h3><p>Every Meet recording renamed, filed and posted to the right Google Classroom, with a title card at the start. <a href="/osedtech/features#recordings" style={{ color: "var(--teal-d)" }}>See how</a></p></div>
         <div className="edt-card"><Ico n="report" /><h3>Reports and portals</h3><p>Reports to families, and accounts for parents and students with chats and reward points.</p></div>
         <div className="edt-card"><Ico n="spark" /><h3>Marketing with Claude</h3><p>Newsletters, and social posts in your style that Claude drafts and illustrates, posted to Facebook and Instagram.</p></div>
       </div>

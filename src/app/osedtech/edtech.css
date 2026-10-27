@@ -184,3 +184,23 @@
 .edt-vs tr.cost td{font-size:13.5px;color:var(--muted);vertical-align:top}
 .edt-vs tr.cost td.us{color:var(--ink)}
 .edt-some{font-size:13px;color:var(--muted);background:var(--sun-soft);border-radius:999px;padding:2px 9px}
+
+.edt-named{min-width:860px}
+.edt-named th,.edt-named td{text-align:left!important;vertical-align:top;font-size:14.5px;width:auto!important}
+.edt-named th:first-child,.edt-named td:first-child{width:16%!important}
+.edt-named tr.us td{background:var(--teal-soft)}
+.edt-rec{display:grid;gap:10px}
+.edt-rec .card{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#14532d,#0f3d22);color:#fff;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6%;padding:7% 8%;box-shadow:0 30px 60px -30px rgba(18,22,47,.45)}
+.edt-rec .roundel{width:clamp(70px,14vw,130px);height:clamp(70px,14vw,130px);align-self:center;border-radius:50%;border:4px solid #f59e0b;display:grid;place-items:center;text-align:center;font-weight:600;letter-spacing:.12em;font-size:clamp(10px,1.3vw,14px);line-height:1.3}
+.edt-rec .txt{display:grid;gap:6px}
+.edt-rec .txt small{font-size:clamp(11px,1.2vw,14px);letter-spacing:.12em;text-transform:uppercase;color:#f8d48a}
+.edt-rec .txt b{font-size:clamp(20px,2.8vw,34px);font-weight:500;line-height:1.1}
+.edt-rec .txt span{font-size:clamp(12px,1.3vw,15px);color:#cfe3d6}
+.edt-rec .play{position:absolute;left:50%;top:50%;width:54px;height:54px;margin:-27px 0 0 -27px;border-radius:50%;background:rgba(255,255,255,.18);backdrop-filter:blur(2px);opacity:.0}
+.edt-rec .logo{position:absolute;right:5%;bottom:7%;font-size:11px;letter-spacing:.24em;opacity:.85}
+.edt-rec .file{background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:14.5px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.edt-rec .file .ic{color:#d93025;font-size:12px}
+.edt-rec .file em{font-style:normal;color:var(--muted);margin-left:auto;font-size:13px}
+.edt-rec .post{background:#fff;border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;gap:12px;align-items:center;font-size:14.5px}
+.edt-rec .post .av{width:34px;height:34px;border-radius:50%;background:#1e8e3e;color:#fff;display:grid;place-items:center;font-weight:600;flex:none}
+.edt-rec .post div{display:grid}.edt-rec .post span{color:var(--muted);font-size:13px}

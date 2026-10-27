@@ -15,7 +15,7 @@ export const PLANS: Plan[] = [
       "Parent accounts: bookings, payments and messages in one place",
       "Google Meet links, with attendance taken from Meet",
       "Automatic emails: lesson reminders, receipts and follow-ups",
-      "Lesson recordings named, filed and posted to Google Classroom",
+      "Lesson recordings named, filed and posted to Google Classroom, with a title card",
       "Your logo and colours on yourname.ohsoedtech.com",
     ],
   },
@@ -60,6 +60,7 @@ export const COMPARE: [string, [string, boolean | string, boolean | string, bool
     ["Google Meet links and attendance from Meet", true, true, true],
     ["Lesson reminders and automatic emails", true, true, true],
     ["Recordings filed and posted to Google Classroom", true, true, true],
+    ["Title cards on recordings", true, true, true],
     ["Teacher logins", "1", "Up to 8", "Unlimited"],
     ["Reports to families", false, true, true],
     ["Student accounts, class chats and reward points", false, true, true],
@@ -95,7 +96,7 @@ export const VERSUS: [string, ...string[]][] = [
   ["Instalments and failed-payment follow-ups", "yes", "some", "some", "some", "no"],
   ["Weekly classes across terms and holidays", "yes", "some", "no", "yes", "no"],
   ["Attendance taken from Google Meet", "yes", "no", "no", "no", "no"],
-  ["Recordings posted to Google Classroom", "yes", "no", "no", "no", "no"],
+  ["Recordings posted to Google Classroom, with title cards", "yes", "no", "no", "no", "no"],
   ["Parent and student accounts", "yes", "yes", "some", "yes", "no"],
   ["Reports to families", "yes", "some", "no", "yes", "no"],
   ["Teacher payroll from lessons taught", "School plan", "some", "no", "some", "no"],
@@ -103,4 +104,15 @@ export const VERSUS: [string, ...string[]][] = [
   ["Your brand on your own web address", "Growth and School", "often extra", "yes", "no", "no"],
   ["No cut of your fees", "yes", "some take a %", "some take a %", "yes", "yes"],
   ["Typical cost", "£49–£600 a month", "£15–£200 a month, often plus per-lesson or % fees", "£30–£200 a month", "often charged per student", "free, but costs you time"],
+];
+
+/** Named competitors (from their own pricing pages, checked 27 Oct 2026; US prices in dollars). Keep this up to date or remove it. */
+export const NAMED: { name: string; for: string; from: string; grows: string; cut: string; us?: boolean }[] = [
+  { name: "OH-SO EdTech", for: "Running a live online school: website, bookings, lessons, families, payroll and marketing", from: "£49 a month", grows: "By plan; £2 a month for each student over the plan’s allowance", cut: "None", us: true },
+  { name: "TutorBird", for: "Scheduling and invoicing for tutors", from: "$16.95 a month", grows: "+$4.95 a month per extra tutor", cut: "None listed" },
+  { name: "Teachworks", for: "Admin for tutoring businesses", from: "$16.49 a month", grows: "Plus $0.07–$0.32 per student per lesson", cut: "None listed" },
+  { name: "TutorCruncher", for: "Admin for tutoring agencies", from: "$30 a month", grows: "$80 or $240 plans; custom domain +$100 a month", cut: "3.5–3.85% of card payments" },
+  { name: "Teachable", for: "Selling recorded online courses", from: "$39 a month", grows: "$79 plan removes the fee", cut: "5% on the starter plan" },
+  { name: "Kajabi", for: "Online courses, memberships and marketing", from: "$179 a month", grows: "$249 a month and up", cut: "None" },
+  { name: "Classe365", for: "School management system", from: "Priced per student", grows: "About $2 per student a month for large schools", cut: "None listed" },
 ];

@@ -33,3 +33,18 @@ export function TrialCta({ dark }: { dark?: boolean }) {
   return <div className="edt-btns"><Link href="/osedtech/trial" className={`edt-btn${dark ? " teal" : ""}`}>Start a free trial</Link>
     <Link href="/osedtech/demo" className="edt-btn line">Look round the demo</Link></div>;
 }
+
+/** An illustration of what the Recordings feature produces: the title card added to the start of the video,
+ *  the file name in Drive and the post in Google Classroom (made-up class and teacher). */
+export function RecordingVisual() {
+  return <figure className="edt-rec" style={{ margin: 0 }} aria-label="A lesson recording with its title card, its file name in Google Drive, and its post in Google Classroom">
+    <div className="card">
+      <div className="roundel"><span>DEMO<br />SCIENCE</span></div>
+      <div className="txt"><small>GCSE Biology · Term 1 · Lesson 12</small><b>Cells and organisation</b><span>Ruth Okafor · Thursday 15 October</span></div>
+      <span className="play" aria-hidden="true" />
+      <span className="logo">DEMO ACADEMY</span>
+    </div>
+    <div className="file"><span className="ic">▶</span> 2026 GCSE Biology - T1 Lesson 12 <em>filed in Biology</em></div>
+    <div className="post"><span className="av">D</span><div><b>Demo Academy posted a new material: 🎥 T1 Lesson 12</b><span>Under the same topic as the teacher’s Lesson 12 post · just now</span></div></div>
+  </figure>;
+}
