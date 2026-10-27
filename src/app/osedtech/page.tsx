@@ -12,7 +12,7 @@ const FAQ: [string, string][] = [
   ["Do I need Google Workspace?", "Lessons run on Google Meet, and recordings and class work can go through Google Classroom, so a Google Workspace account works best (including the free Workspace for Education if you qualify). Your website, bookings and payments work without it."],
   ["Can you move my existing families across?", "Yes. Send us your spreadsheet and we’ll import families, students and classes. On the School plan we do it for you as part of a guided set-up."],
   [`What happens after the ${TRIAL_DAYS}-day trial?`, "Nothing is charged unless you choose a plan. If you carry on, everything you set up during the trial stays as it is. If you don’t, your trial school is deleted."],
-  ["What if I have more students than my plan includes?", "Each plan includes a number of students: 60 on Solo, 250 on Growth and 600 on School. Above that it’s £2 a month for each extra student, so your bill grows with your school. When the extras add up, moving to the next plan is usually cheaper."],
+  ["What if I have more students than my plan includes?", "Each plan includes a number of students: 30 on Solo, 250 on Growth and 600 on School. Above that it’s £2 a month for each extra student, so your bill grows with your school. When the extras add up, moving to the next plan is usually cheaper."],
   ["Is there a contract?", "No. Plans are monthly, or yearly with two months free. You can change plan or cancel at any time."],
 ];
 

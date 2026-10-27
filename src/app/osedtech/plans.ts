@@ -6,7 +6,7 @@ export const TRIAL_DAYS = 30;
 export const EXTRA_STUDENT = 2;
 export const PLANS: Plan[] = [
   {
-    id: "solo", name: "Solo", for: "One teacher running their own classes", monthly: 100, yearly: 1000, teachers: "1 teacher", students: "60 students included", cta: "Start a free trial",
+    id: "solo", name: "Solo", for: "One teacher running their own classes", monthly: 100, yearly: 1000, teachers: "1 teacher", students: "30 students included", cta: "Start a free trial",
     features: [
       "Your own website: course pages, timetable, term dates and prices",
       "Online booking and card payments, including instalments",
@@ -75,7 +75,7 @@ export const COMPARE: [string, [string, boolean | string, boolean | string, bool
     ["Jobs page for hiring", false, false, true],
   ]],
   ["Running the business", [
-    ["Students included", "60", "250", "600"],
+    ["Students included", "30", "250", "600"],
     ["Each student over that", "£2 a month", "£2 a month", "£2 a month"],
     ["Staff roles and access", false, false, true],
     ["Data protection tools", "Basic", "Basic", "Full"],
