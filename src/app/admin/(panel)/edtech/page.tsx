@@ -22,7 +22,7 @@ export default async function EdTechTrials({ searchParams }: { searchParams: Pro
         <td>{r.business}{r.website && <><br /><a href={r.website} target="_blank" rel="noopener noreferrer">{r.website.replace(/^https?:\/\//, "")}</a></>}</td>
         <td>{[r.teachers && `${r.teachers} teachers`, r.students && `${r.students} students`].filter(Boolean).join(", ") || "—"}</td>
         <td>{PLAN[r.plan] ?? r.plan}</td>
-        <td style={{ maxWidth: 320 }}>{r.subjects && <div><span className="muted">Teaches:</span> {r.subjects}</div>}{r.tools && <div><span className="muted">Uses now:</span> {r.tools}</div>}{r.message && <div style={{ whiteSpace: "pre-wrap" }}>{r.message}</div>}</td>
+        <td style={{ maxWidth: 320 }}>{r.subjects && <div><span className="muted">Teaches:</span> {r.subjects}</div>}{r.tools && <div><span className="muted">Uses now:</span> {r.tools}</div>}{r.google && <div><span className="muted">Google:</span> {r.google}</div>}{r.message && <div style={{ whiteSpace: "pre-wrap" }}>{r.message}</div>}</td>
         <td><form action={edtechTrialAction} style={{ display: "grid", gap: 6, minWidth: 200 }}><input type="hidden" name="id" value={r.id} />
           <select name="status" defaultValue={r.status} className="mini">{STATUSES.map((s) => <option key={s} value={s}>{s[0].toUpperCase() + s.slice(1)}</option>)}</select>
           <textarea name="note" defaultValue={r.note} rows={2} className="mini" placeholder="Notes" />

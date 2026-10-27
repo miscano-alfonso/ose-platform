@@ -20,6 +20,7 @@ export default function Pricing() {
       <Plans />
       <div className="edt-fine" style={{ textAlign: "left" }}>
         <div><b>No commission on fees</b>Families pay into your own Stripe account. Stripe charges its usual card fees; we take nothing.</div>
+        <div><b>Works with Google</b>Your school needs Google Workspace for Meet, Classroom and Drive (Google’s subscription is separate). <Link href="/osedtech#google">What you’ll need</Link></div>
         <div><b>No contract</b>Monthly or yearly. Change plan or cancel whenever you like.</div>
         <div><b>Your data stays yours</b>Export it any time. If you leave, we hand it over and then delete it.</div>
         <div><b>Growing past your plan</b>Each plan includes a number of students. Above that it’s {gbp(EXTRA_STUDENT)} a month for each extra student, counted from your active students each month, or move up a plan when the extras add up.</div>

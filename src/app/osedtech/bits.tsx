@@ -48,3 +48,8 @@ export function RecordingVisual() {
     <div className="post"><span className="av">D</span><div><b>Demo Academy posted a new material: 🎥 T1 Lesson 12</b><span>Under the same topic as the teacher’s Lesson 12 post · just now</span></div></div>
   </figure>;
 }
+
+/** Four small dots in Google's colours, used beside "built for Google Meet and Classroom". */
+export function GoogleDots() {
+  return <span className="edt-gdots" aria-hidden="true"><i style={{ background: "#4285F4" }} /><i style={{ background: "#EA4335" }} /><i style={{ background: "#FBBC05" }} /><i style={{ background: "#34A853" }} /></span>;
+}

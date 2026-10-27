@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { startTrial } from "./actions";
 import { PLANS, TRIAL_DAYS, gbp } from "../plans";
-import { TEACHERS, STUDENTS } from "@/lib/edtech";
+import { TEACHERS, STUDENTS, GOOGLE } from "@/lib/edtech";
 
 export const metadata = { title: "Start a free trial", description: "Try OH-SO EdTech free for 30 days, with your own school name, logo and colours. No card needed." };
 
@@ -30,6 +30,8 @@ export default async function Trial({ searchParams }: { searchParams: Promise<{ 
           <div className="edt-choice">{TEACHERS.map((t) => <label key={t}><input type="radio" name="teachers" value={t} />{t}</label>)}</div></fieldset>
         <fieldset style={{ border: 0, padding: 0, margin: 0, display: "grid", gap: 8 }}><legend style={{ fontWeight: 500, fontSize: 15.5, marginBottom: 6 }}>Roughly how many students?</legend>
           <div className="edt-choice">{STUDENTS.map((t) => <label key={t}><input type="radio" name="students" value={t} />{t}</label>)}</div></fieldset>
+        <fieldset style={{ border: 0, padding: 0, margin: 0, display: "grid", gap: 8 }}><legend style={{ fontWeight: 500, fontSize: 15.5, marginBottom: 6 }}>Do you use Google Workspace? <small style={{ fontWeight: 400, color: "var(--muted)" }}>OH-SO EdTech works with Google Meet, Classroom and Drive. Not on it yet? We’ll help.</small></legend>
+          <div className="edt-choice">{GOOGLE.map((t) => <label key={t}><input type="radio" name="google" value={t} />{t}</label>)}</div></fieldset>
         <label>Which plan are you thinking of?<select name="plan" defaultValue={plan}><option value="">Not sure yet</option>{PLANS.map((p) => <option key={p.id} value={p.id}>{p.name} · {gbp(p.monthly)} a month · {p.teachers.toLowerCase()}</option>)}</select></label>
         <label>What do you teach? <small>optional</small><input name="subjects" placeholder="e.g. GCSE maths and physics" maxLength={300} /></label>
         <label>What do you use now? <small>optional</small><input name="tools" placeholder="e.g. spreadsheets, PayPal links, Google Classroom" maxLength={300} /></label>
@@ -41,6 +43,7 @@ export default async function Trial({ searchParams }: { searchParams: Promise<{ 
       <aside className="edt-side">
         <div className="edt-card"><h3>What happens next</h3><p>We email you within one working day, set up your school with your branding, and add your first courses with you. Your {TRIAL_DAYS} days start when it’s ready.</p></div>
         <div className="edt-card"><h3>Nothing to pay</h3><p>No card needed. At the end of the trial, choose a plan to carry on, or we delete your trial school.</p></div>
+        <div className="edt-card"><h3>Made for Google classrooms</h3><p>Lessons run in Google Meet and Classroom, so your school will need Google Workspace. If you’re not on it yet, we’ll help you set it up. <Link href="/osedtech#google" style={{ color: "var(--teal-d)" }}>What you’ll need</Link></p></div>
         <div className="edt-card"><h3>Every feature included</h3><p>Try everything in the School plan during your trial, then pick the plan that fits. <Link href="/osedtech/pricing" style={{ color: "var(--teal-d)" }}>Compare plans</Link></p></div>
       </aside>
     </div>

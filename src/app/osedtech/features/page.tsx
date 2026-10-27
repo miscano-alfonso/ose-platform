@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Shot, TrialCta, RecordingVisual } from "../bits";
+import { Shot, TrialCta, RecordingVisual, GoogleDots } from "../bits";
 
 export const metadata = { title: "Features", description: "What OH-SO EdTech does: your website and bookings, card payments, classes and 1:1s, Google Meet attendance, recordings to Classroom, reports, teacher logins, payroll and marketing." };
 
@@ -48,6 +48,7 @@ export default function Features() {
       <p className="edt-eyebrow">Features</p>
       <h1 className="edt-h1">How it works</h1>
       <p className="edt-lead">The admin side runs your school; the website side brings families in. They’re one system, so a booking on your website is instantly a place on a register, a payment plan and a reminder email.</p>
+      <p className="edt-google"><GoogleDots /> Built around Google Meet, Classroom and Drive. Your school will need Google Workspace: <Link href="/osedtech#google" style={{ color: "var(--teal-d)" }}>what you’ll need</Link>.</p>
       <p className="edt-note" style={{ marginTop: 14 }}>Pictures show Demo Academy, a made-up school we use for training, so no real families appear here.</p>
       <nav aria-label="On this page" className="edt-btns" style={{ marginTop: 22 }}>{ROWS.map((r) => <a key={r.id} href={`#${r.id}`} className="edt-btn line sm">{r.eyebrow}</a>)}</nav>
       {ROWS.map((r, i) => <div key={r.id} id={r.id} className={`edt-row${i % 2 ? " flip" : ""}`} style={{ scrollMarginTop: 90 }}>
