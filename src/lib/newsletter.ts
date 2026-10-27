@@ -1,6 +1,6 @@
 import "server-only";
 import { createHmac, randomBytes } from "node:crypto";
-import { withSchool } from "./db";
+import { isDemoSchool, withSchool } from "./db";
 import { sendHtml } from "./email";
 
 // The newsletter: footer sign-up with double opt-in, the subscribers list, saved emails built from blocks,
@@ -44,7 +44,7 @@ const keyOf = (c: BrevoCfg) => c.key || process.env.BREVO_API_KEY || "";
 export const brevoOn = (c: BrevoCfg) => !!(keyOf(c) && c.senderEmail && c.listId);
 type BrevoRes = Record<string, any> & { __error?: string; __code?: number }; // eslint-disable-line @typescript-eslint/no-explicit-any
 async function brevo(method: string, path: string, body: unknown = null, soft = false, key?: string): Promise<BrevoRes> {
-  const k = key ?? keyOf(await brevoCfg());
+  const k = (await isDemoSchool()) ? "" : key ?? keyOf(await brevoCfg());   // the demo school never talks to Brevo
   if (!k) { if (soft) return { __error: "Brevo isn’t connected." }; fail("Brevo isn’t connected yet. Add your API key under Newsletter › Sending.", 503); }
   let res: Response;
   try {

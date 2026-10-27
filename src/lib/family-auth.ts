@@ -55,6 +55,13 @@ export async function redeemSignInLink(token: string): Promise<"parent" | "stude
 
 /** An admin opening the parent or student dashboard as that family (read-only, 8 hours). */
 export async function viewAsFamily(adminId: string, kind: "p" | "s", id: string) {
+  // viewing a family in another school (the demo school): the family pages need to know which school, too
+  const { activeSchool, siteSchool, SCHOOL_COOKIE } = await import("./db");
+  const school = await activeSchool(), jar = await cookies();
+  for (const [k, path] of [["_p", "/parent"], ["_s", "/student"]]) {
+    if (school !== siteSchool()) jar.set(SCHOOL_COOKIE + k, school, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path, maxAge: 8 * 3600 });
+    else jar.delete({ name: SCHOOL_COOKIE + k, path });
+  }
   await startSession(kind === "p" ? id : null, kind === "s" ? id : null, adminId, 8);
 }
 
@@ -94,4 +101,6 @@ export async function familySignOut() {
   const jar = await cookies(), token = jar.get(FAMILY_COOKIE)?.value;
   if (token) await withSchool((q) => q(`delete from family_sessions where token_hash = $1`, [sha256(token)]));
   jar.delete({ name: FAMILY_COOKIE, path: "/" });
+  const { SCHOOL_COOKIE } = await import("./db");
+  jar.delete({ name: SCHOOL_COOKIE + "_p", path: "/parent" }); jar.delete({ name: SCHOOL_COOKIE + "_s", path: "/student" });
 }

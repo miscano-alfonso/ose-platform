@@ -3,11 +3,13 @@ import { randomBytes, scrypt as scryptCb, timingSafeEqual, createHash } from "no
 import { promisify } from "node:util";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
-import { withSchool } from "./db";
+import { withSchool, activeSchool, siteSchool } from "./db";
 
 const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number, opts: object) => Promise<Buffer>;
 
 export const SESSION_COOKIE = "ose_admin";
+/** Each school has its own staff sign-in, so switching to the demo school doesn't sign you out of your own. */
+export async function sessionCookie(): Promise<string> { const s = await activeSchool(); return s === siteSchool() ? SESSION_COOKIE : `${SESSION_COOKIE}_${s.replace(/[^a-z0-9]/g, "_")}`; }
 const SESSION_HOURS = 12;
 const MAX_FAILS_PER_EMAIL = 5;     // in 15 minutes
 const MAX_FAILS_PER_IP = 20;       // in 15 minutes
@@ -60,7 +62,7 @@ export async function signIn(email: string, password: string): Promise<string | 
   });
   if (result === "locked") return "Too many attempts. Please wait 15 minutes and try again.";
   if (result === "bad") return "That email and password don’t match.";
-  (await cookies()).set(SESSION_COOKIE, result.token, {
+  (await cookies()).set(await sessionCookie(), result.token, {
     httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: SESSION_HOURS * 3600,
   });
   return null;
@@ -68,7 +70,7 @@ export async function signIn(email: string, password: string): Promise<string | 
 
 /** The signed-in member of staff, or null. */
 export async function currentStaff(): Promise<Staff | null> {
-  const token = (await cookies()).get(SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(await sessionCookie())?.value;
   if (!token || token.length > 100) return null;
   const rows = await withSchool((q) => q<Staff>(`
     with s as (update staff_sessions set last_seen_at = now() where token_hash = $1 and expires_at > now() returning user_id)
@@ -93,9 +95,9 @@ export async function requireSignedIn(): Promise<Staff> {
 
 export async function signOut() {
   const jar = await cookies();
-  const token = jar.get(SESSION_COOKIE)?.value;
+  const token = jar.get(await sessionCookie())?.value;
   if (token) await withSchool((q) => q(`delete from staff_sessions where token_hash = $1`, [sha256(token)]));
-  jar.delete({ name: SESSION_COOKIE, path: "/admin" });
+  jar.delete({ name: await sessionCookie(), path: "/admin" });
 }
 
 /** True until the school's first admin password has been set. */
@@ -145,7 +147,7 @@ export async function resetAdminWithKey(key: string, email: string, password: st
 export async function changePassword(userId: string, current: string, next: string): Promise<string | null> {
   if (next.length < MIN_PASSWORD) return `Use a password of at least ${MIN_PASSWORD} characters.`;
   const hash = await hashPassword(next);
-  const token = (await cookies()).get(SESSION_COOKIE)?.value || "";
+  const token = (await cookies()).get(await sessionCookie())?.value || "";
   return withSchool(async (q) => {
     const u = await q<{ password_hash: string }>(`select password_hash from users where id = $1`, [userId]);
     if (!(await checkPassword(current, u[0]?.password_hash ?? null))) return "Your current password isn’t right.";
@@ -230,4 +232,21 @@ export async function requireViewer(): Promise<Viewer> {
   const t = (await withSchool((q) => q<Staff>(`select u.id, u.name, u.email::text, 'teacher' as role from users u join teachers t on t.user_id = u.id
     where u.id = $1 and u.disabled_at is null and t.archived_at is null`, [id])))[0];
   return t ? { ...t, viewing: true, realName: me.name, realEmail: me.email } : me;
+}
+
+/** The demo school: an admin of the real school goes straight in (a matching demo admin and session are made). Only for schools marked is_demo. */
+export async function enterDemo(me: Staff): Promise<boolean> {
+  const { ip, ua } = await clientInfo();
+  const token = randomBytes(32).toString("base64url");
+  const ok = await withSchool(async (q) => {
+    const [s] = await q<{ is_demo: boolean }>(`select is_demo from schools where id = current_school()`);
+    if (!s?.is_demo) return false;
+    const u = (await q<{ id: string }>(`select id from users where lower(email::text) = lower($1)`, [me.email]))[0]
+      ?? (await q<{ id: string }>(`insert into users (school_id, email, name, role) values (current_school(), $1, $2, 'school_admin') returning id`, [me.email, me.name]))[0];
+    await q(`update users set role = 'school_admin', disabled_at = null where id = $1`, [u.id]);
+    await q(`insert into staff_sessions (school_id, user_id, token_hash, expires_at, ip, user_agent) values (current_school(), $1, $2, now() + make_interval(hours => $3), $4, $5)`, [u.id, sha256(token), SESSION_HOURS, ip, ua]);
+    return true;
+  });
+  if (ok) (await cookies()).set(await sessionCookie(), token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: SESSION_HOURS * 3600 });
+  return ok;
 }

@@ -1,10 +1,11 @@
 import "server-only";
-import { withSchool } from "./db";
+import { isDemoSchool, withSchool } from "./db";
 
 // Sending email through Brevo (transactional API). The account is either set in the environment (BREVO_API_KEY and
 // BREVO_SENDER_EMAIL) or connected in Admin → Newsletter (key and verified sender kept in the database).
 type Creds = { key: string; email: string; name: string };
 async function creds(): Promise<Creds | null> {
+  if (await isDemoSchool()) return null;   // the demo school never sends email
   if (process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL) return { key: process.env.BREVO_API_KEY, email: process.env.BREVO_SENDER_EMAIL, name: process.env.BREVO_SENDER_NAME || "OH-SO ED" };
   const c = await withSchool((q) => q<{ value: { key?: string; senderEmail?: string; senderName?: string } }>(`select value from newsletter_kv where key = 'brevo'`)).then((r) => r[0]?.value).catch(() => undefined);
   return c?.key && c.senderEmail ? { key: c.key, email: c.senderEmail, name: c.senderName || "OH-SO ED" } : null;

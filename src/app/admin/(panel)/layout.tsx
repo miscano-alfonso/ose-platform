@@ -42,7 +42,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       (select count(*)::int from instalments where status = 'failed') as failed, 0 as tasters`)));
   const inboxUnread = await unreadInbox();
   const jar = await cookies();
-  const brand = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string } }>(`select brand from schools where id = current_school()`)))[0]?.brand ?? {};
+  const sch = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string }; is_demo: boolean; name: string }>(`select brand, is_demo, name from schools where id = current_school()`)))[0];
+  const brand = sch?.brand ?? {}, demo = !!sch?.is_demo;
   const hex = (v: unknown, d: string) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
   const [schools, teachers] = await Promise.all([schoolsFor(me.email), withSchool((q) => q<{ id: string; name: string }>(`select u.id, u.name from teachers t join users u on u.id = t.user_id where t.archived_at is null and u.disabled_at is null order by u.name`))]);
   const school = jar.get(SCHOOL_COOKIE)?.value || siteSchool();
@@ -51,14 +52,15 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   return <div className="adm" style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b") }}><DashStyles /><div className="app">
     <aside className="side">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <a className="logo" href="/admin" title="Dashboard"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></a>
+      {demo ? <a className="logo" href="/admin" title="Dashboard" style={{ color: "#fff", font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
+      : <a className="logo" href="/admin" title="Dashboard"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></a>}
       <Switchers schools={schools.map((x) => ({ value: x.slug, label: x.name }))} school={school} views={views} view="admin" />
       <AdminNav counts={{ "/admin/enquiries": c.enq, "/admin/jobs": c.jobs, "/admin/payments": c.failed, "/admin/tasters": c.tasters, "/admin/reports": x.rep, "/admin/messages": x.msg, "/admin/attendance": x.joins, "/admin/email": inboxUnread }} />
       <div className="who"><span>Signed in as<br /><b>{me.name}</b></span>
         <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form>
         <a href="/" style={{ color: "#c9cde4", fontSize: 15.5 }}>View the website</a></div>
     </aside>
-    <main className="main">{children}</main>
+    <main className="main">{demo && <p className="note msg" style={{ marginTop: 0 }}><b>Demo school.</b> Everything here is made up (families, children, payments and messages), so you can click anything safely. Nothing is ever emailed or charged. Switch back with the School menu.</p>}{children}</main>
     <Assistant />
   </div></div>;
 }

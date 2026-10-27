@@ -819,8 +819,10 @@ export async function setSchoolAction(f: FormData): Promise<void> {
   if (!(await schoolsFor(me.email)).some((x) => x.slug === slug)) redirect("/admin");
   const jar = await cookies();
   jar.delete({ name: VIEWAS_COOKIE, path: "/admin" });
-  if (slug === siteSchool()) jar.delete({ name: SCHOOL_COOKIE, path: "/admin" });
+  if (slug === siteSchool()) { jar.delete({ name: SCHOOL_COOKIE, path: "/admin" }); jar.delete({ name: SCHOOL_COOKIE + "_p", path: "/parent" }); jar.delete({ name: SCHOOL_COOKIE + "_s", path: "/student" }); }
   else jar.set(SCHOOL_COOKIE, slug, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: 30 * 86400 });
+  // the demo school needs no separate sign-in: an admin of this school goes straight in
+  if (slug !== siteSchool()) { const { enterDemo } = await import("@/lib/auth"); const { runAsSchool } = await import("@/lib/db"); await runAsSchool(slug, () => enterDemo(me)); }
   redirect("/admin"); // each school has its own staff accounts: sign in there if you aren't already
 }
 export async function setViewAsAction(f: FormData): Promise<void> {
@@ -1189,4 +1191,12 @@ export async function importRecordingsAction(): Promise<void> {
   await recAdmin("settings"); const R = await import("@/lib/recordings");
   const r = await R.importNow();
   recBack("week", r.error ? null : `Read the subject folders: ${r.added} earlier recording${r.added === 1 ? "" : "s"} added.`, r.error ?? null);
+}
+
+// ---------- Demo school ----------
+export async function resetDemoAction(): Promise<void> {
+  const me = await requireStaff();
+  const { resetDemo } = await import("@/lib/demo");
+  const err = await resetDemo(me);
+  redirect("/admin?" + (err ? `err=${encodeURIComponent(err)}` : `ok=${encodeURIComponent("The demo school has been made again with fresh example data. Pick “Demo Academy” in the School switcher.")}`));
 }
