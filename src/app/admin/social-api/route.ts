@@ -33,6 +33,8 @@ export async function GET(req: NextRequest) {
     if (err) return page("Not connected", err);
     return NextResponse.redirect(`${base}/admin/social?social=connected`, 302);
   }
+  // a Canva sign-in that was pointed here by mistake: pass it on to Post designs
+  if (!action && req.nextUrl.searchParams.has("code") && req.nextUrl.searchParams.has("state")) return NextResponse.redirect(`${base}/admin/design-api${req.nextUrl.search}`, 302);
   const { me, res } = await guard(req, false); if (!me) return res!;
   try {
     switch (action) {

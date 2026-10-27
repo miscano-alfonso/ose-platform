@@ -16,7 +16,10 @@ export async function GET(req: NextRequest) {
   const me = await currentStaff();
   const base = await siteBase(origin(req));
   if (!me) return out({ error: "Sign in again." }, 401);
-  const sp = req.nextUrl.searchParams, action = sp.get("action") || (sp.has("state") && (sp.has("code") || sp.has("error")) ? "canvacallback" : null); // Canva drops our ?action= when it sends people back
+  // Canva sends people back to the redirect URL with its own "?code=…&state=…" added, which can drop our ?action=
+  // or glue its "?" onto it ("action=canvacallback?code=…"): either way, a return from Canva is the callback.
+  const sp = new URLSearchParams(req.nextUrl.search.replace(/^\?/, "").replace(/\?/g, "&"));
+  const action = sp.has("code") || (sp.has("state") && sp.has("error")) ? "canvacallback" : sp.get("action");
   try {
     if (action === "asset") return img(await D.getAsset(sp.get("id") || ""));
     if (action === "photo") return img(await D.teacherPhoto(sp.get("id") || ""));
@@ -25,6 +28,7 @@ export async function GET(req: NextRequest) {
     if (action === "canvacallback") { const e = await D.canvaCallback(base, sp, me.email); return e ? back(base, "err", e) : back(base, "ok", "Canva is connected. Choose “From Canva” to bring in an illustration."); }
     if (action === "canvalist") return out(await D.canvaList(sp.get("q") || ""));
   } catch (e) { if (action === "canvalogin" || action === "canvacallback") return back(base, "err", e instanceof D.DesignError ? e.message : "Couldn’t connect to Canva."); return err(e); }
+  console.warn("design-api unknown action", JSON.stringify([...sp.keys()]), String(action).slice(0, 40));
   return out({ error: "Unknown action." }, 404);
 }
 
