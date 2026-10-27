@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { getCoursePage } from "@/lib/data";
 import { money, DAYS, monthYear } from "@/lib/format";
 import { roundelSrc } from "../../../CourseCard";
+import { siteInfo } from "@/lib/db";
 import { PrintButton } from "./PrintButton";
 
 export const dynamic = "force-dynamic";
@@ -24,7 +25,7 @@ function Text({ text }: { text: string }) {
 
 export default async function CoursePage({ params }: { params: Promise<{ level: string; subject: string }> }) {
   const { level, subject } = await params;
-  const p = await getCoursePage(`${level}/${subject}`);
+  const [p, site] = await Promise.all([getCoursePage(`${level}/${subject}`), siteInfo()]);
   if (!p) notFound();
   const g = p.groups[0];
   return (<>
@@ -33,7 +34,7 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
         <h1>{p.subject}</h1><p>{p.level}{g ? ` · ${g.course_years} year course` : ""}</p></div>
       <div className="roundel cd-roundel" style={{ ["--c" as string]: p.colour }} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={roundelSrc(p.subject)} alt="" width={140} height={140} /></div>
+        <img src={roundelSrc(p.subject, site.demo)} alt="" width={140} height={140} /></div>
     </div></section>
     <section className="s-sec"><div className="wrap cd-grid">
       <div>

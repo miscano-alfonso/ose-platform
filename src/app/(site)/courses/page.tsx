@@ -3,13 +3,14 @@ import type { Metadata } from "next";
 import { getCourses } from "@/lib/data";
 import { yearLabel, monthYear } from "@/lib/format";
 import { CourseCard } from "../CourseCard";
+import { siteInfo } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Courses", description: "KS3, pre-GCSE and GCSE courses: days, times, prices and places." };
 
 export default async function Courses({ searchParams }: { searchParams: Promise<{ year?: string; level?: string }> }) {
   const sp = await searchParams;
-  const all = await getCourses();
+  const [all, site] = await Promise.all([getCourses(), siteInfo()]);
   const years = [...new Map(all.map((c) => [c.year_label, c])).values()];
   const yr = years.find((y) => y.year_label === sp.year) ?? years[years.length - 1];
   const inYear = all.filter((c) => c.year_label === yr?.year_label);
@@ -25,7 +26,7 @@ export default async function Courses({ searchParams }: { searchParams: Promise<
           <b>{yearLabel(y.year_label)}</b><span>{y.is_next ? `Starts ${monthYear(y.year_start)}` : "This year · join now"}</span></Link>)}</nav>}
       <nav className="tabs" aria-label="Level">{levels.map((l) =>
         <Link key={l} href={href(yr.year_label, l)} className={l === lv ? "on" : ""} aria-current={l === lv ? "page" : undefined}>{l}</Link>)}</nav>
-      <div className="cgrid">{list.map((c) => <CourseCard key={c.code} c={c} />)}</div>
+      <div className="cgrid">{list.map((c) => <CourseCard key={c.code} c={c} mark={site.demo ? "DEMO" : undefined} />)}</div>
       {!list.length && <p>No courses to show yet.</p>}
     </div></section>
   </>);

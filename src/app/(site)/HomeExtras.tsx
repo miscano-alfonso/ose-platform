@@ -2,14 +2,14 @@ import Link from "next/link";
 import { ReviewsWidget } from "./ReviewsWidget";
 
 // Bottom of the homepage, as on ohsoed.co.uk: Meet the Headteacher, Facebook reviews and Member Of.
-export function MeetHead({ title, text }: { title: string; text: string }) {
+export function MeetHead({ title, text, photo = true }: { title: string; text: string; photo?: boolean }) {
   return <section className="s-sec home-head"><div className="wrap">
     <div className="sec-head"><h2>{title}</h2></div>
     <div className="head-grid">
       <div className="head-text">{text.split("\n").filter((p) => p.trim()).map((p, i) => <p key={i}>{p}</p>)}
         <div className="btns"><Link className="btn btn-brand" href="/about">More about us</Link><Link className="btn btn-ghost hub-ghost" href="/teachers">Meet the team</Link></div></div>
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img className="head-photo" src="/teachers/leanne-iacurci.webp" alt="Leanne Iacurci, Principal and English Teacher" width={640} height={345} loading="lazy" />
+      {photo && <img className="head-photo" src="/teachers/leanne-iacurci.webp" alt="Leanne Iacurci, Principal and English Teacher" width={640} height={345} loading="lazy" />}
     </div>
   </div></section>;
 }

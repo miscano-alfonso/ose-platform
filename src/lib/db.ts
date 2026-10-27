@@ -48,7 +48,10 @@ export async function withSchool<T>(fn: (q: <R = Record<string, unknown>>(sql: s
 export const SCHOOL_COOKIE = "ose_school";
 async function adminSchool(): Promise<string | null> {
   try {
-    const { cookies } = await import("next/headers");
+    const { cookies, headers } = await import("next/headers");
+    // the demo school's public website (set by middleware only, from a signed demo cookie; never trusted from the browser)
+    const site = (await headers()).get("x-ose-site");
+    if (site && /^[a-z0-9-]{2,40}$/.test(site)) return site;
     const jar = await cookies();
     // ose_school is sent on /admin; the family pages get their own while an admin views a demo-school family
     const v = jar.get(SCHOOL_COOKIE)?.value || jar.get(SCHOOL_COOKIE + "_p")?.value || jar.get(SCHOOL_COOKIE + "_s")?.value;
@@ -72,6 +75,13 @@ export async function schoolsFor(email: string): Promise<{ slug: string; name: s
       or (s.is_demo and exists (select 1 from users u join schools h on h.id = u.school_id where h.slug = $2 and lower(u.email::text) = lower($1) and u.role in ('school_admin','platform_admin') and u.disabled_at is null))
       order by s.is_demo, s.name`, [email, siteSchool()])).rows;
   } finally { client.release(); }
+}
+
+/** The school whose public website this request shows: its name, and whether it's the made-up demo school. */
+export async function siteInfo(): Promise<{ name: string; demo: boolean; primary: string; accent: string }> {
+  const d = { name: "OH-SO ED", demo: false, primary: "#0f1747", accent: "#e3cd4b" };
+  return withSchool((q) => q<{ name: string; demo: boolean; primary: string | null; accent: string | null }>(`select name, is_demo as demo, brand->>'primary' as primary, brand->>'accent' as accent from schools where id = current_school()`))
+    .then((r) => r[0] ? { name: r[0].name, demo: r[0].demo, primary: /^#[0-9a-f]{6}$/i.test(r[0].primary ?? "") ? r[0].primary! : d.primary, accent: /^#[0-9a-f]{6}$/i.test(r[0].accent ?? "") ? r[0].accent! : d.accent } : d).catch(() => d);
 }
 
 /** True in the demo school: nothing is ever emailed, charged or posted from it. */

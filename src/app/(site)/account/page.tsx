@@ -24,7 +24,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
         {sp.err && <p className="note" role="alert">{sp.err}</p>}
         <label>Email<input type="email" name="email" autoComplete="email" required /></label>
         <button className="btn btn-brand" type="submit">Email me a sign-in link</button>
-        <p className="note">Parents: use the email you booked with. Students: use your own Google account. New to OH-SO ED? An account is created when you book your first course. Questions? <Link href="/contact">Contact us</Link>.</p>
+        <p className="note">Parents: use the email you booked with. Students: use your own Google account. New here? An account is created when you book your first course. Questions? <Link href="/contact">Contact us</Link>.</p>
       </form>}
     </div></section>
   </>);

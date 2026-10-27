@@ -501,3 +501,6 @@ html,body{overflow-x:clip}
 .s-foot .nl.done .nl-row{display:none}
 .nl-hp{position:absolute;left:-9999px;width:1px;height:1px;opacity:0}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.demo-bar{background:#fff7d6;color:#3b3000;font-size:14px;border-bottom:1px solid #eadb9a}
+.demo-bar .wrap{display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between;align-items:center;padding-block:8px}
+.demo-bar .demo-links{display:flex;gap:14px;flex-wrap:wrap}.demo-bar a{font-weight:600}

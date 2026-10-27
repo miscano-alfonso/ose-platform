@@ -20,10 +20,25 @@ export const DEFAULTS: Record<string, string> = {
   reviews_widget: "05669bd0-25f2-40a8-a78f-2dedcfc3dd82",
 };
 
+/** The made-up demo school's wording (OH-SO EdTech's demo): never OH-SO ED's own text or people. */
+export const DEMO_TEXT: Record<string, string> = {
+  home_eyebrow: "Online school · a made-up demo",
+  home_title: "Live online\nlessons, taught\nby specialists",
+  home_lead: "Demo Academy is a made-up online school, set up to show what a school on OH-SO EdTech looks like. Browse the courses, check prices and timetables, and try booking a place: nothing is ever charged.",
+  ticker: "This is a demo school\nNothing here is real, so click anything",
+  teachers_intro: "Our teachers are made up too: invented names for a demo school.",
+  head_title: "A word from the Head",
+  head_text: "Welcome to Demo Academy. Everything you see here, from the courses and prices to the teachers and timetable, comes straight from the school’s dashboard, so the website is never out of date.\nWhen a family books, they’re on the register, getting lesson reminders and in the right Google Classroom straight away.",
+  about_title: "About Demo Academy",
+  about_text: "Welcome to Demo Academy!\nWe’re a made-up online school, here to show how a real one runs on OH-SO EdTech.\nOur courses, teachers, prices and term dates are all set in the dashboard, and this website shows them as they are, every day.\nWant a website like this for your own school? Visit OH-SO EdTech to start a free trial.",
+  reviews_rating: "", reviews_count: "", reviews_url: "", reviews_widget: "",
+};
+
 export async function siteText(): Promise<Record<string, string>> {
   try {
     const rows = await withSchool((q) => q<{ key: string; value: string }>(`select key, value from site_content`));
-    return { ...DEFAULTS, ...Object.fromEntries(rows.map((r) => [r.key, r.value])) };
+    const [s] = await withSchool((q) => q<{ d: boolean }>(`select is_demo as d from schools where id = current_school()`));
+    return { ...DEFAULTS, ...(s?.d ? DEMO_TEXT : {}), ...Object.fromEntries(rows.map((r) => [r.key, r.value])) };
   } catch { return DEFAULTS; }
 }
 
@@ -31,7 +46,10 @@ export type Faq = { id: string; question: string; answer: string; sort_order: nu
 export async function getFaqs(all = false): Promise<Faq[]> {
   try {
     const rows = await withSchool((q) => q<Faq>(`select id, question, answer, sort_order, published from faqs where $1 or published order by sort_order, question`, [all]));
-    return rows.length || all ? rows : FAQS.map((f, i) => ({ id: String(i), question: f.q, answer: f.a, sort_order: i, published: true }));
+    if (rows.length || all) return rows;
+    const [sc] = await withSchool((q) => q<{ name: string; d: boolean }>(`select name, is_demo as d from schools where id = current_school()`));
+    const own = (t: string) => sc?.d ? t.replace(/OH[-–]SO ED/g, sc.name).replace(/Leanne( Iacurci)?/g, "the Head") : t;   // the demo school never shows OH-SO ED's name or people
+    return FAQS.map((f, i) => ({ id: String(i), question: own(f.q), answer: own(f.a), sort_order: i, published: true }));
   } catch { return FAQS.map((f, i) => ({ id: String(i), question: f.q, answer: f.a, sort_order: i, published: true })); }
 }
 

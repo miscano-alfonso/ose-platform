@@ -17,9 +17,9 @@ const ROUNDEL: [RegExp, string][] = [
   [/media/i, "OSE Media Roundel.png"],
   [/religio/i, "OSE Religion Roundel.png"],
 ];
-export const roundelSrc = (subject: string) => "/roundels/" + encodeURIComponent((ROUNDEL.find(([re]) => re.test(subject)) || [, "OSE Roundel.png"])[1]!);
+export const roundelSrc = (subject: string, demo = false) => demo ? "/osedtech/demo-roundel.svg" : "/roundels/" + encodeURIComponent((ROUNDEL.find(([re]) => re.test(subject)) || [, "OSE Roundel.png"])[1]!);
 
-export function CourseCard({ c }: { c: Course }) {
+export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }) {
   const lessons = `${c.lessons_per_week} lesson${c.lessons_per_week > 1 ? "s" : ""} per week`;
   return (
     <article className={`course${c.is_full ? " is-full" : ""}`}>
@@ -27,7 +27,7 @@ export function CourseCard({ c }: { c: Course }) {
       <div className="top">
         <div><div className="lvl">{c.level}</div><h3>{c.subject}</h3></div>
         <div className="roundel" style={{ ["--c" as string]: c.colour }} aria-hidden="true">
-          <span>OH–SO<br />{c.subject.split(" ")[0]}</span>
+          <span>{mark}<br />{c.subject.split(" ")[0]}</span>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src={roundelSrc(c.subject)} alt="" width={86} height={86} />
         </div>

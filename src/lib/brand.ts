@@ -12,9 +12,11 @@ export const brandSrc = cache(async (): Promise<Record<BrandKind, string> & { cu
   try {
     const rows = await withSchool((q) => q<{ kind: BrandKind; v: string }>(`select kind, extract(epoch from updated_at)::bigint::text as v from brand_assets`));
     const v = Object.fromEntries(rows.map((r) => [r.kind, r.v])) as Partial<Record<BrandKind, string>>;
+    // the made-up demo school has its own built-in logo, never OH-SO ED's
+    const demo = !v.logo && (await withSchool((q) => q<{ d: boolean }>(`select is_demo as d from schools where id = current_school()`)))[0]?.d;
     return {
-      logo: v.logo ? `/brand/logo?v=${v.logo}` : DEFAULT_SRC.logo,
-      icon: v.icon ? `/brand/icon?v=${v.icon}` : DEFAULT_SRC.icon,
+      logo: v.logo ? `/brand/logo?v=${v.logo}` : demo ? "/osedtech/demo-academy-logo.svg" : DEFAULT_SRC.logo,
+      icon: v.icon ? `/brand/icon?v=${v.icon}` : demo ? "/osedtech/demo-academy-icon.svg" : DEFAULT_SRC.icon,
       custom: { logo: !!v.logo, icon: !!v.icon },
     };
   } catch { return { ...DEFAULT_SRC, custom: { logo: false, icon: false } }; }

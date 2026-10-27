@@ -39,7 +39,30 @@ export async function startPublicDemo(): Promise<string | null> {
   if (!ok) return "The demo isn’t available just now.";
   const jar = await cookies(), secure = process.env.NODE_ENV === "production";
   jar.set(SCHOOL_COOKIE, DEMO, { httpOnly: true, secure, sameSite: "lax", path: "/admin", maxAge: 4 * 3600 });
-  // lets demo visitors past the private-preview password on the dashboard and family pages (checked in middleware)
-  if (process.env.SITE_PASSWORD) jar.set("ose_demo", createHmac("sha256", process.env.SITE_PASSWORD).update("ose-demo").digest("base64url"), { httpOnly: true, secure, sameSite: "lax", path: "/", maxAge: 4 * 3600 });
+  await setDemoCookie(createHmac);
   return null;
+}
+/** The signed cookie that lets demo visitors past the private-preview password (checked in middleware). */
+async function setDemoCookie(createHmac: typeof import("node:crypto").createHmac) {
+  const key = process.env.SITE_PASSWORD || process.env.ADMIN_SETUP_KEY || ""; if (!key) return;
+  const { cookies } = await import("next/headers");
+  (await cookies()).set("ose_demo", createHmac("sha256", key).update("ose-demo").digest("base64url"), { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 4 * 3600 });
+}
+/** /osedtech/demo/site: shows the demo school's public website (the course shop) to this browser for 4 hours. */
+export async function openDemoSite(): Promise<string | null> {
+  const { createHmac } = await import("node:crypto");
+  const { cookies } = await import("next/headers");
+  if (!(process.env.SITE_PASSWORD || process.env.ADMIN_SETUP_KEY)) return "The demo website isn’t set up on this server.";
+  const age = await runAsSchool(DEMO, () => withSchool((q) => q<{ h: number }>(`select extract(epoch from now() - (value->>'at')::timestamptz) / 3600 as h from meet_kv where school_id = current_school() and key = 'demo_reset'`)))
+    .then((r) => r[0]?.h ?? 999).catch(() => 999);
+  if (age > 24) { const e = await startPublicDemo(); if (e) return e; }
+  await setDemoCookie(createHmac);
+  (await cookies()).set("ose_site", DEMO, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 4 * 3600 });
+  return null;
+}
+/** Leaving the demo: this browser sees the real site again. */
+export async function leaveDemo() {
+  const { cookies } = await import("next/headers");
+  const jar = await cookies();
+  jar.delete({ name: "ose_site", path: "/" }); jar.delete({ name: "ose_demo", path: "/" });
 }

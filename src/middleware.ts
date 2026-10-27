@@ -2,23 +2,34 @@ import { NextResponse, type NextRequest } from "next/server";
 
 // While SITE_PASSWORD is set (the private test site), every page asks for it and
 // search engines are told not to index anything. Remove the variable at launch.
+// OH-SO EdTech (/osedtech) is public, and its demo visitors (a signed "ose_demo" cookie) can open the demo school's
+// dashboard, family pages and public website. The demo website is chosen here with the x-ose-site header, which is
+// always removed from what the browser sends, so it can only come from a valid demo cookie.
+const DEMO_SITE = "demo-academy";
+const demoKey = () => process.env.SITE_PASSWORD || process.env.ADMIN_SETUP_KEY || "";
+
 export async function middleware(req: NextRequest) {
-  const pass = process.env.SITE_PASSWORD;
-  if (!pass) return NextResponse.next();
+  const path = req.nextUrl.pathname;
+  const hdrs = new Headers(req.headers); hdrs.delete("x-ose-site");
+  const next = () => NextResponse.next({ request: { headers: hdrs } });
+  const key = demoKey(), pass = process.env.SITE_PASSWORD;
+  const demo = key ? await demoCookieOk(req.cookies.get("ose_demo")?.value, key) : false;
+  const familyOrAdmin = /^\/(admin|parent|student)(\/|$)/.test(path);
+  // the demo school's own website, for demo visitors who opened it
+  if (demo && !familyOrAdmin && !/^\/osedtech(\/|$)/.test(path) && req.cookies.get("ose_site")?.value === DEMO_SITE) {
+    hdrs.set("x-ose-site", DEMO_SITE);
+    return robots(next());
+  }
+  if (!pass) return next();
   // pictures and link previews that Facebook and Instagram fetch for Social posts stay reachable
-  if (/^\/api\/cron\/|^\/(social-img|s|newsletter|teacher-photo|brand)\/|^\/teachers\/[\w.-]+\.(webp|jpe?g|png)$/.test(req.nextUrl.pathname)) return NextResponse.next();
-  // OH-SO EdTech's own site is public; its demo visitors can open the dashboard and family pages of the demo school
-  if (/^\/osedtech(\/|$)/.test(req.nextUrl.pathname)) return robots(NextResponse.next());
-  if (/^\/(admin|parent|student)(\/|$)/.test(req.nextUrl.pathname) && await demoCookieOk(req.cookies.get("ose_demo")?.value, pass)) return robots(NextResponse.next());
+  if (/^\/api\/cron\/|^\/(social-img|s|newsletter|teacher-photo|brand)\/|^\/teachers\/[\w.-]+\.(webp|jpe?g|png)$/.test(path)) return next();
+  if (/^\/osedtech(\/|$)/.test(path)) return robots(next());
+  if (familyOrAdmin && demo) return robots(next());
   const auth = req.headers.get("authorization") || "";
   const [scheme, encoded] = auth.split(" ");
   if (scheme === "Basic" && encoded) {
     const given = atob(encoded).split(":").slice(1).join(":");
-    if (given.length === pass.length && timingSafeEqual(given, pass)) {
-      const res = NextResponse.next();
-      res.headers.set("X-Robots-Tag", "noindex, nofollow");
-      return res;
-    }
+    if (given.length === pass.length && timingSafeEqual(given, pass)) return robots(next());
   }
   return new NextResponse("Private preview", {
     status: 401,
@@ -27,11 +38,11 @@ export async function middleware(req: NextRequest) {
 }
 
 function robots(res: NextResponse) { res.headers.set("X-Robots-Tag", "noindex, nofollow"); return res; }
-/** The demo cookie is an HMAC of "ose-demo" keyed with the preview password, so it can't be made up. */
-async function demoCookieOk(v: string | undefined, pass: string): Promise<boolean> {
+/** The demo cookie is an HMAC of "ose-demo", keyed with the preview password (or the admin set-up key), so it can't be made up. */
+async function demoCookieOk(v: string | undefined, key: string): Promise<boolean> {
   if (!v) return false;
-  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(pass), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode("ose-demo")));
+  const k = await crypto.subtle.importKey("raw", new TextEncoder().encode(key), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", k, new TextEncoder().encode("ose-demo")));
   const want = btoa(String.fromCharCode(...sig)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
   return v.length === want.length && timingSafeEqual(v, want);
 }
