@@ -58,7 +58,8 @@ function socPaint(){const el=document.getElementById('soc');if(el)el.innerHTML=s
 function socBoot(){const q=new URLSearchParams(location.search);if(!q.has('social'))return;const what=q.get('social'),mid=q.get('m');history.replaceState(null,'',location.pathname);SOC.posts=null;
 
   if(what==='moments'){SOC.drawer=!mid;KIT.pendingMoment=mid||null}
-  if(what==='compose'){const img=q.get('img')||'',t=(q.get('text')||'').slice(0,2200);SOC.c=socNew({image:/^\/social-img\/[0-9a-f-]{36}\.jpg$/.test(img)?img:'',text:t,igText:t,frame:'none'});setTimeout(()=>window.scrollTo(0,0),50)}
+  if(what==='compose'){const img=q.get('img')||'',t=(q.get('text')||'').slice(0,3000),it=q.has('igtext')?(q.get('igtext')||'').slice(0,2200):t;SOC.c=socNew({image:/^\/social-img\/[0-9a-f-]{36}\.jpg$/.test(img)?img:'',text:t,igText:it,same:it===t,frame:'none'});setTimeout(()=>window.scrollTo(0,0),50)}
+  if(what==='newcourse'){SOC.c=socNew({ig:true});SOC.pickCourse=true}
   if(what==='connected')setTimeout(()=>toast('Facebook connected'),400)}
 const socNew=(o)=>Object.assign({bookId:'',text:'',igText:'',same:true,link:'',image:'',images:null,frame:'4:5',bg:'#F3F4FA',fb:true,ig:true,when:'now',at:''},o||{});
 function socFromBook(b){const lines=[b.title+(b.subtitle?' ('+b.subtitle+')':''),b.summary||'',b.partner?`Taught by ${b.partner}.`:'',b.status==='next'&&b.pubDate?`Starts ${kitMonth(b.pubDate)}.`:b.status==='workshop'&&b.pubDate?`On ${fmtDate(b.pubDate,true)}.`:''].filter(Boolean);
@@ -101,6 +102,13 @@ function socPreviews(){
   const igc=c.ig&&(cfg.ig||!cfg.connected)?`<div class="so-card so-ig"><div class="so-head">${ig.picture?`<img src="${esc(ig.picture)}" alt="">`:'<i></i>'}<div><b>${esc(ig.username)}</b></div></div>${c.image?socPrevImg(c,true):'<div class="so-noimg">Instagram needs a picture</div>'}<div class="so-acts ig"><span>♡</span><span>💬</span><span>➤</span></div><div class="so-text"><b>${esc(ig.username)}</b> ${esc(igT).replace(/\n/g,'<br>')}</div></div>`:'';
   return (fb||igc)?`<div class="so-cards">${fb}${igc}</div>`:'<p class="hint">Choose Facebook or Instagram to see a preview.</p>'}
 function socCounts(){const c=SOC.c,t=c.same?c.text:c.igText,n=t.length,h=socTags(t);return c.ig?`Instagram caption: <b class="${n>2200?'so-over':''}">${n.toLocaleString('en-GB')}</b> / 2,200 · hashtags <b class="${h>30?'so-over':''}">${h}</b> / 30`:''}
+const SOC_PURPOSES=[['hiring','Hiring'],['holiday','Holiday / term dates'],['school','School announcement'],['subject','Subject announcement'],['reward','Rewards & celebrations'],['event','Event or key date'],['enrol','Tasters & enrolment'],['teacher','Meet the teacher'],['other','Something else']];
+function socPicker(){return `<div class="em-card so-pick"><h2 class="em-h" style="margin:0 0 4px">Build the post</h2><p class="hint" style="margin:0 0 12px">What’s the post for? For anything other than a course, Claude drafts the picture’s words and the Facebook and Instagram text in Post designs, and you post it from there.</p>
+  <div class="so-pickrow"><button class="btn solid small" type="button" data-so="newc">A course or workshop</button>${SOC_PURPOSES.map(([k,l])=>`<a class="btn small" href="/admin/designs?purpose=${k}">${esc(l)}</a>`).join('')}</div>
+  <p style="margin:12px 0 0"><button class="linkbtn" type="button" data-so="newblank">Just write a post with my own picture</button> · <button class="linkbtn" type="button" data-so="close">Cancel</button></p></div>`}
+const socCoursePics={};
+async function socCoursePic(b){if(socCoursePics[b.id])return socCoursePics[b.id];const cv=await kitRender(b,'portrait');const fd=new FormData();fd.append('file',await socBlob(cv,.9),'course.jpg');const p=(await api('upload',fd,true)).path;socCoursePics[b.id]=p;return p}
+async function socUseCoursePic(c,b){const m=document.getElementById('soMsg');if(m)m.textContent='Making the course picture…';try{const p=await socCoursePic(b);if(SOC.c===c&&c.bookId===b.id){c.image=p;c.frame='none';c.images=null;socPaint()}}catch(err){const m2=document.getElementById('soMsg');if(m2)m2.textContent=err.message||'Couldn’t make the picture.'}}
 function socComposer(){
   const c=SOC.c,cfg=SOC.cfg,hasIg=!!cfg.ig||!cfg.connected,b=c.bookId?bookById(c.bookId):null;
   const books=[...state.books].sort((x,y)=>String(x.title).localeCompare(String(y.title)));
@@ -113,7 +121,7 @@ function socComposer(){
     ${c.ig&&hasIg?`<label class="check so-small"><input type="checkbox" id="soSame"${c.same?' checked':''}> Use the same text on Instagram</label>${c.same?'':`<div class="field"><label for="soIgText">Instagram caption</label><textarea id="soIgText" rows="6">${esc(c.igText)}</textarea></div>`}<p class="hint so-count" id="soCount">${socCounts()}</p>`:''}
     <div class="field"><label for="soLink">Link <span class="hint">(Facebook only: links in Instagram captions can’t be clicked)</span></label><input id="soLink" type="url" placeholder="https://" value="${esc(c.link)}"></div>
     ${c.images&&c.images.length>1?`<div class="field"><span class="em-lbl">Carousel: ${c.images.length} pictures</span><div class="so-pics">${c.images.map(p=>`<img src="${esc(socImgSrc(p))}" alt="">`).join('')}</div><button class="linkbtn" type="button" data-so="nocar" style="justify-self:start">Use the first picture only</button></div>`:`<div class="field"><span class="em-lbl">Picture</span>${c.image?`<div class="so-pic"><img src="${esc(socImgSrc(c.image))}" alt=""><button class="linkbtn" type="button" data-so="noimg">Remove</button></div>`:''}
-      <div class="so-row">${b&&b.cover&&c.image!==b.cover?'<button class="btn small" type="button" data-so="cover">Use the course picture</button>':''}<label class="btn small so-up">Upload a picture<input type="file" id="soFile" accept="image/jpeg,image/png,image/webp" hidden></label></div></div>`}
+      <div class="so-row">${b&&c.image!==socCoursePics[b.id]?'<button class="btn small" type="button" data-so="cover">Use the course picture</button>':''}<label class="btn small so-up">Upload a picture<input type="file" id="soFile" accept="image/jpeg,image/png,image/webp" hidden></label></div></div>`}
     ${c.image&&!(c.images&&c.images.length>1)?`<div class="field"><span class="em-lbl">Shape</span><div class="em-seg">${[['4:5','Card 4:5'],['1:1','Card square'],['none','Picture as it is']].map(([k,l])=>`<button type="button" data-so-frame="${k}" aria-pressed="${c.frame===k}">${l}</button>`).join('')}</div>
       ${c.frame!=='none'?`<div class="so-row so-bgs"><span class="hint">Background</span>${[...(b&&b.tileColor?[[b.tileColor,'Subject colour']]:[]),...SOC_BG].map(([v,l])=>`<button type="button" class="so-sw" data-so-bg="${esc(v)}" title="${esc(l)}" aria-pressed="${c.bg.toLowerCase()===v.toLowerCase()}" style="background:${esc(v)}"></button>`).join('')}<input type="color" id="soBg" value="${esc(c.bg)}" aria-label="Other colour"></div>`:'<p class="hint" style="margin:6px 0 0">Instagram only takes pictures between 4:5 (portrait) and 1.91:1 (landscape). Anything taller or wider gets a plain border added.</p>'}</div>`:''}
     <div class="em-when"><label class="check"><input type="radio" name="soWhen" value="now"${c.when==='now'?' checked':''}> Post now</label><label class="check"><input type="radio" name="soWhen" value="later"${c.when==='later'?' checked':''}> Schedule for</label><input type="datetime-local" id="soAt" value="${esc(c.at)}" aria-label="Post date and time"></div>
@@ -133,10 +141,11 @@ function socChan(p,ch){const x=p.channels&&p.channels[ch];if(!x)return '';const 
 function socInner(){
   const cfg=SOC.cfg;
   const conn=cfg?(cfg.connected?`<button class="btn small so-connbtn on" type="button" data-so="modal" title="Facebook and Instagram settings"><i></i>${esc(cfg.page.name)}${cfg.ig?' + @'+esc(cfg.ig.username):''}</button>`:`<button class="btn solid small so-connbtn" type="button" data-so="modal">Connect to Social</button>`):'';
-  const head=`<div class="cms-bar"><h1>Social</h1>${cfg&&!SOC.c?(cfg.connected?'<button class="btn small" type="button" data-so="reload">Refresh numbers</button>':'')+'<button class="btn solid small" type="button" data-so="new">New post</button>':''}${cfg?kbMomBtn():''}${conn}</div>`+(SOC.drawer&&cfg?kbMoments():'')+(SOC.modal&&cfg?`<div class="so-modal" data-so-backdrop><div class="so-dialog" role="dialog" aria-modal="true" aria-label="Connect to Social"><button class="so-x" type="button" data-so="modalclose" aria-label="Close">×</button>${socConnCard()}${socAiCard()}</div></div>`:'');
+  const head=`<div class="cms-bar"><h1>Social</h1>${cfg&&!SOC.c&&!SOC.pick?(cfg.connected?'<button class="btn small" type="button" data-so="reload">Refresh numbers</button>':'')+'<button class="btn solid small" type="button" data-so="new">New post</button>':''}${cfg?kbMomBtn():''}${conn}</div>`+(SOC.drawer&&cfg?kbMoments():'')+(SOC.modal&&cfg?`<div class="so-modal" data-so-backdrop><div class="so-dialog" role="dialog" aria-modal="true" aria-label="Connect to Social"><button class="so-x" type="button" data-so="modalclose" aria-label="Close">×</button>${socConnCard()}${socAiCard()}</div></div>`:'');
   if(SOC.err&&!cfg)return head+`<div class="empty"><b>Couldn’t load Social.</b>${esc(SOC.err)}</div>`;
   if(!cfg)return head+'<p class="hint"><span class="spin"></span>Loading…</p>';
   if(SOC.c)return head+socComposer();
+  if(SOC.pick)return head+socPicker();
   if(KIT.book)return kitBookView();
   const P=[...(SOC.posts||[])].sort((a,b)=>String(b.at||b.created).localeCompare(String(a.at||a.created)));
   const list=P.length?`<div class="tbl-wrap"><table class="tbl so-tbl"><thead><tr><th>Post</th><th>Where</th><th>When</th><th></th></tr></thead><tbody>${P.map(p=>{const sch=Object.values(p.channels||{}).some(x=>x.status==='scheduled'||x.status==='processing');const img=p.igImage||p.image;
@@ -160,7 +169,7 @@ app.addEventListener('change',async e=>{
   if(id==='soFb'){c.fb=e.target.checked;socRepaint();return}
   if(id==='soIg'){c.ig=e.target.checked;socRepaint();return}
   if(id==='soSame'){socSync();c.same=e.target.checked;if(!c.same&&!c.igText)c.igText=c.text;socPaint();return}
-  if(id==='soBook'){socSync();const b=bookById(e.target.value);if(b)Object.assign(c,socFromBook(b),{igText:''});else c.bookId='';socPaint();return}
+  if(id==='soBook'){socSync();const b=bookById(e.target.value);if(b){Object.assign(c,socFromBook(b),{igText:'',image:''});socPaint();socUseCoursePic(c,b)}else{c.bookId='';socPaint()}return}
   if(id==='soSpread'&&e.target.value){socSync();c.image=e.target.value;c.frame='none';socPaint();return}
   if(id==='soFile'){const f=e.target.files[0];if(!f)return;socSync();const m=document.getElementById('soMsg');if(m)m.textContent='Uploading…';
     try{const bl=await socFileJpeg(f);const fd=new FormData();fd.append('file',bl,'upload.jpg');const r=await api('upload',fd,true);c.image=r.path;socPaint()}catch(err){if(m)m.textContent=err.message}return}
@@ -177,9 +186,10 @@ app.addEventListener('click',async e=>{
   if(a==='forget'||a==='disconnect'){if(D.sure!=='1'){t.dataset.sure='1';t.textContent=a==='forget'?'Remove for good?':'Disconnect for good?';return}
     try{await api('metaconfig',a==='forget'?{forget:true}:{disconnect:true});SOC.cfg=await api('metaconfig');SOC.setup=false;toast(a==='forget'?'App removed':'Disconnected');socPaint()}catch(err){toast(err.message)}return}
   if(a==='reload'){t.disabled=true;t.textContent='Refreshing…';await socLoad(true);return}
-  if(a==='new'){SOC.c=socNew({ig:!!SOC.cfg.ig||!SOC.cfg.connected});socPaint();return}
-  if(a==='close'){SOC.c=null;socPaint();return}
-  if(a==='cover'){socSync();const b=bookById(SOC.c.bookId);if(b){SOC.c.image=b.cover;SOC.c.frame='4:5'}socPaint();return}
+  if(a==='new'){SOC.pick=true;socPaint();window.scrollTo(0,0);return}
+  if(a==='newc'||a==='newblank'){SOC.pick=false;SOC.c=socNew({ig:!!SOC.cfg.ig||!SOC.cfg.connected});socPaint();if(a==='newc')setTimeout(()=>{const el=document.getElementById('soBook');if(el)el.focus()},50);return}
+  if(a==='close'){SOC.c=null;SOC.pick=false;socPaint();return}
+  if(a==='cover'){socSync();const b=bookById(SOC.c.bookId);if(b)socUseCoursePic(SOC.c,b);return}
   if(a==='noimg'){socSync();SOC.c.image='';socPaint();return}
   if(a==='nocar'){socSync();SOC.c.images=null;socPaint();return}
   if(D.soFrame){socSync();SOC.c.frame=D.soFrame;socPaint();return}

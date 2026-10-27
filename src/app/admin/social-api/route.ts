@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
       case "socialremove": await S.removePost(String(b.id ?? "")); return out({ ok: true });
       case "socialtplsave": return out({ template: await S.saveTemplate((b.template ?? {}) as Record<string, unknown>) });
       case "socialfind": return out({ suggestions: await S.findForItem(String(b.bookId ?? ""), String(b.kind ?? "")) });
+      case "draftpost": return out(await S.draftPost(b));
       case "socialscan": return out(await S.scanNow(me.email));
       case "socialmomentsettings": return out(await S.momentSettings(b));
       case "socialmomenttest": await S.sendTestReport(me.email); return out({ ok: true, to: me.email });

@@ -14,3 +14,8 @@
 .adm .ds-dlg{width:min(860px,100%);max-height:86vh;overflow:auto;margin:0}
 @media (max-width:1100px){.adm .ds-main{grid-template-columns:minmax(0,1fr)}}
 @media (max-width:760px){.adm .ds{grid-template-columns:minmax(0,1fr)}.adm .ds-pick{position:static;grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}}
+.ds-build { margin-bottom: 14px; }
+.ds-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.ds-chip { border: 1px solid var(--line); background: transparent; color: inherit; border-radius: 999px; padding: 7px 14px; font: inherit; cursor: pointer; text-decoration: none; }
+.ds-chip.sm { padding: 4px 11px; font-size: 13px; }
+.ds-chip[aria-pressed="true"] { background: var(--info-bg); border-color: var(--info); color: var(--info); font-weight: 600; }

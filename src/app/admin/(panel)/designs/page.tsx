@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { headers } from "next/headers";
 import { studioData, canvaStatus } from "@/lib/designs";
-import { siteBase } from "@/lib/social";
+import { siteBase, aiReady } from "@/lib/social";
 import { withSchool } from "@/lib/db";
 import { canvaAppAction, canvaFolderAction, canvaDisconnectAction, deleteDesignAssetAction } from "../../actions";
 import Studio from "./Studio";
@@ -9,7 +9,7 @@ import "./designs.css";
 
 export const dynamic = "force-dynamic";
 
-export default async function Designs({ searchParams }: { searchParams: Promise<{ tab?: string; ok?: string; err?: string }> }) {
+export default async function Designs({ searchParams }: { searchParams: Promise<{ tab?: string; ok?: string; err?: string; purpose?: string }> }) {
   const sp = await searchParams; const tab = sp.tab === "library" ? "library" : "make";
   const h = await headers(); const base = await siteBase(`${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`);
   const [data, canva, brand] = await Promise.all([studioData(), canvaStatus(base),
@@ -19,7 +19,7 @@ export default async function Designs({ searchParams }: { searchParams: Promise<
     <div className="top"><div><h1>Post designs</h1><div className="sub">Social posts in the OH-SO ED style, filled in from your courses, teachers and term dates. Pick a design, change the words, then post it or download it.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <div className="segl" role="tablist" style={{ marginBottom: 14 }}><Link href="/admin/designs" aria-current={tab === "make" ? "true" : undefined}>Make a post</Link><Link href="/admin/designs?tab=library" aria-current={tab === "library" ? "true" : undefined}>Library &amp; Canva ({data.assets.length})</Link></div>
-    {tab === "make" ? <Studio data={data} navy={navy} canva={canva.connected} /> : <>
+    {tab === "make" ? <Studio data={data} navy={navy} canva={canva.connected} purpose={sp.purpose} ai={await aiReady().catch(() => false)} /> : <>
       <section className="card"><h2>Canva</h2>
         <p className="cs">Bring illustrations in from your own Canva designs (read-only). Canva’s own stock library can’t be searched from outside Canva, so make or save each illustration as a design in Canva first, ideally all in one folder.</p>
         {!canva.hasApp ? <>

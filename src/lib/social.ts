@@ -452,6 +452,35 @@ async function socialAi(task: string, searches = 8): Promise<Record<string, unkn
   const m = text.match(/\{[\s\S]*\}/); if (!m) fail("Claude didn’t return any suggestions. Try again.", 502);
   try { return JSON.parse(m![0]); } catch { return fail("Claude’s answer couldn’t be read. Try again.", 502); }
 }
+// ---------- Claude: first drafts for New post (Post designs → Build the post) ----------
+const DRAFT_SYS = "You write social media posts for OH-SO ED, a UK online school for home-educated secondary students (KS3, pre-GCSE, GCSE and A-Level courses taught live online by qualified subject specialists). Voice: warm, upbeat, encouraging, like a friendly teacher talking to parents and students. British spelling. Use only the facts in the brief: never invent dates, names, prices, pay, deadlines or contact details. Where a needed detail is missing, write a short placeholder in square brackets, e.g. [closing date]. Reply with ONLY a JSON object, no other text.";
+export async function draftPost(b: Record<string, unknown>) {
+  const c = await aiCfg(); if (!c.key) fail("Add the Anthropic API key first (Social › Connect to Social › AI searches).");
+  const s = (v: unknown, n: number) => String(v ?? "").replace(/[\x00-\x08\x0B-\x1F]/g, " ").trim().slice(0, n);
+  const fields = (Array.isArray(b.fields) ? b.fields : []).slice(0, 12).map((f) => f as Record<string, unknown>)
+    .map((f) => ({ k: s(f.k, 20), label: s(f.label, 60), example: s(f.def ?? f.hint, 160) })).filter((f) => /^[a-z0-9]+$/i.test(f.k));
+  const today = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" });
+  const task = `Today is ${today}.
+Purpose of the post: ${s(b.purpose, 60)}
+Picture design: ${s(b.template, 80)}
+${s(b.context, 600)}
+Brief from the team:
+${s(b.notes, 2000) || "(none: write a sensible general post for this purpose)"}
+
+1. Words for the picture. Fill these fields, keeping each about as short as its example (they are drawn large on a square graphic; a few words each). Words in *stars* are drawn in a highlight colour: star one or two key words where the example does.
+${fields.map((f) => `- "${f.k}" (${f.label})${f.example ? `, e.g. ${JSON.stringify(f.example)}` : ""}`).join("\n")}
+2. "facebook": the Facebook post, 2-4 short paragraphs, ending with a clear next step (e.g. book, apply, get in touch). At most 2 emoji. No hashtags.
+3. "instagram": the Instagram caption: the same message, a little shorter, then a blank line and 5-8 hashtags including #OHSOED #HomeEducation #HomeEd. Links can't be clicked on Instagram, so say "link in bio" instead of a URL.
+
+Reply as {"fields": {${fields.map((f) => `"${f.k}": "…"`).join(", ")}}, "facebook": "…", "instagram": "…"}`;
+  const res = await callClaude({ model: c.model || "claude-sonnet-5-5", max_tokens: 2000, system: DRAFT_SYS, messages: [{ role: "user", content: task }] }, c.key!);
+  let text = ""; for (const blk of res.content ?? []) if (blk.type === "text") text += blk.text;
+  const m = text.match(/\{[\s\S]*\}/); if (!m) fail("Claude didn’t return a draft. Try again.", 502);
+  let j: Record<string, unknown>; try { j = JSON.parse(m![0]); } catch { return fail("Claude’s draft couldn’t be read. Try again.", 502); }
+  const out: Record<string, string> = {}, fv = (j.fields ?? {}) as Record<string, unknown>;
+  for (const f of fields) if (typeof fv[f.k] === "string") out[f.k] = s(fv[f.k], 300).replace(/\\n/g, "\n");
+  return { fields: out, facebook: String(j.facebook ?? "").trim().slice(0, 3000), instagram: String(j.instagram ?? "").trim().slice(0, 2200) };
+}
 export type Moment = { id: string; kind: string; date: string; title: string; opener: string; person: string; venue: string; city: string; starts: string; ends: string; url: string; bookId: string; addedAt?: string };
 type Moments = { items: Moment[]; auto: boolean; emails: string[]; scannedAt?: string; lastAuto?: string; by?: string; dismissed?: string[] };
 const KINDS = ["fact", "birthday", "anniversary", "news", "exhibition", "event"];

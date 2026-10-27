@@ -12,8 +12,25 @@ function load(src: string): Promise<HTMLImageElement | null> {
 const assetUrl = (id: string) => `/admin/design-api?action=asset&id=${id}`;
 const and = (xs: string[]) => xs.length < 2 ? xs.join("") : xs.slice(0, -1).join(", ") + " and " + xs[xs.length - 1];
 
-export default function Studio({ data, navy, canva }: { data: StudioData; navy: string; canva: boolean }) {
-  const [tid, setTid] = useState(TEMPLATES[0].id);
+/** New post → what the post is for. Each purpose suggests designs; Claude drafts the picture's words and both captions. */
+export const PURPOSES: { id: string; name: string; tpls: string[]; hint: string }[] = [
+  { id: "hiring", name: "Hiring", tpls: ["hiring"], hint: "The subject and level, hours, start date, and how and by when to apply." },
+  { id: "holiday", name: "Holiday / term dates", tpls: ["welcome", "announce"], hint: "Which holiday or term, when you break up and come back, anything families need to do." },
+  { id: "school", name: "School announcement", tpls: ["announce", "person"], hint: "What’s new, who it’s for, and when it starts." },
+  { id: "subject", name: "Subject announcement", tpls: ["subject", "course", "workshop"], hint: "The subject and level, what’s new, and any dates." },
+  { id: "reward", name: "Rewards & celebrations", tpls: ["results", "thanks"], hint: "Who or what you’re celebrating. Use first names only, and only with permission." },
+  { id: "event", name: "Event or key date", tpls: ["keydate", "week", "workshop", "person"], hint: "The day or event, the date, and how it links to your courses." },
+  { id: "enrol", name: "Tasters & enrolment", tpls: ["taster", "tasterweek", "offer", "stilltime"], hint: "Which courses, the dates, and any offer." },
+  { id: "teacher", name: "Meet the teacher", tpls: ["hello"], hint: "Who they are, what they teach, and something about them." },
+  { id: "other", name: "Something else", tpls: [], hint: "Say what the post is about." },
+];
+
+export default function Studio({ data, navy, canva, purpose: startPurpose = "", ai = false }: { data: StudioData; navy: string; canva: boolean; purpose?: string; ai?: boolean }) {
+  const [purpose, setPurpose] = useState(PURPOSES.some((p) => p.id === startPurpose) ? startPurpose : "");
+  const [tid, setTid] = useState(PURPOSES.find((p) => p.id === startPurpose)?.tpls[0] ?? TEMPLATES[0].id);
+  const [notes, setNotes] = useState("");
+  const [fb, setFb] = useState<string | null>(null);
+  const [ig, setIg] = useState<string | null>(null);
   const [all, setAll] = useState<Record<string, Vals>>({});
   const [size, setSize] = useState<SizeKey>("square");
   const [assets, setAssets] = useState<Asset[]>(data.assets);
@@ -84,13 +101,29 @@ export default function Studio({ data, navy, canva }: { data: StudioData; navy: 
     const b = await blob("image/png"); const a = document.createElement("a"); a.href = URL.createObjectURL(b);
     a.download = `OH-SO ED – ${tpl.name} (${SIZES[size].name}).png`; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
   }
+  const P = PURPOSES.find((p) => p.id === purpose);
+  async function draft() {
+    setBusy("draft"); setMsg("");
+    try {
+      const co = data.courses.find((x) => x.id === v.course), te = data.teachers.find((x) => x.id === v.teacher);
+      const context = [`School: ${data.school}`, data.nextTerm ? `Next term: ${data.nextTerm.name}, starting ${data.nextTerm.starts}` : "",
+        co ? `Course: ${co.level} ${co.subject}${co.teacher ? `, taught by ${co.teacher}` : ""}${co.times ? `, ${co.times}` : ""}` : "", te ? `Person: ${te.name}${te.designation ? `, ${te.designation}` : ""}` : ""].filter(Boolean).join("\n");
+      const fields = tpl.fields.filter((f) => f.type === "text" || f.type === "area").map((f) => ({ k: f.k, label: f.label, def: f.def, hint: f.hint }));
+      const r = await fetch("/admin/social-api?action=draftpost", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ purpose: P?.name ?? "General post", template: tpl.name, fields, notes, context }) });
+      const j = await r.json(); if (!r.ok) throw new Error(j.error || "Couldn’t make a draft.");
+      set(j.fields ?? {}); setFb(j.facebook || null); setIg(j.instagram || null);
+      setMsg("Drafted by Claude. Check every word and fill in anything in [brackets] before posting.");
+    } catch (e) { setMsg((e as Error).message); } finally { setBusy(""); }
+  }
+  const fbText = fb ?? tpl.caption(v), igText = ig ?? fbText;
   async function post() {
     setBusy("post"); setMsg("");
     try {
       const f = new FormData(); f.append("file", await blob("image/jpeg"), "design.jpg");
       const r = await fetch("/admin/social-api?action=upload", { method: "POST", body: f }); const j = await r.json();
       if (!r.ok) throw new Error(j.error || "Couldn’t save the picture.");
-      location.href = `/admin/social?social=compose&img=${encodeURIComponent(j.path)}&text=${encodeURIComponent(tpl.caption(v))}`;
+      location.href = `/admin/social?social=compose&img=${encodeURIComponent(j.path)}&text=${encodeURIComponent(fbText)}${igText !== fbText ? `&igtext=${encodeURIComponent(igText)}` : ""}`;
     } catch (e) { setMsg((e as Error).message); setBusy(""); }
   }
   async function upload(file: File, field: string) {
@@ -105,7 +138,19 @@ export default function Studio({ data, navy, canva }: { data: StudioData; navy: 
 
   const groups = [...new Set(TEMPLATES.map((t) => t.group))];
   const colours = [["", "Subject colour"], ["navy", "Navy"], ...data.subjects.map((s) => [s.colour, s.name])];
-  return <div className="ds">
+  return <><section className="card ds-build"><h2 style={{ marginTop: 0 }}>Build the post</h2>
+    <p className="cs">What’s the post for? Pick one, add the details, and Claude writes a first draft of the picture’s words and the Facebook and Instagram text.</p>
+    <div className="ds-chips" role="group" aria-label="What the post is for">{PURPOSES.map((p) => <button key={p.id} type="button" className="ds-chip" aria-pressed={p.id === purpose}
+      onClick={() => { setPurpose(p.id); if (p.tpls.length && !p.tpls.includes(tid)) setTid(p.tpls[0]); }}>{p.name}</button>)}
+      <a className="ds-chip" href="/admin/social?social=newcourse">A course or workshop →</a></div>
+    {P && <>{P.tpls.length > 1 && <div className="ds-chips" style={{ marginTop: 10 }}><span className="muted">Designs for this:</span>{P.tpls.map((id) => { const t = TEMPLATES.find((x) => x.id === id); return t && <button key={id} type="button" className="ds-chip sm" aria-pressed={id === tid} onClick={() => setTid(id)}>{t.name}</button>; })}</div>}
+      <label className="fld" style={{ display: "grid", gap: 4, marginTop: 12 }}><span>The details <small className="muted">{P.hint}</small></span>
+        <textarea className="mini" rows={3} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Write it as notes. Claude only uses what you put here, and marks anything missing in [brackets]." /></label>
+      <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginTop: 10 }}>
+        <button type="button" className="abtn pri" onClick={draft} disabled={!!busy || !ai}>{busy === "draft" ? "Claude is writing…" : fb ? "Draft again" : "Draft with Claude"}</button>
+        {!ai && <span className="muted">Add the Anthropic API key under Social › Connect to Social › AI searches to turn this on. You can still fill in the words yourself below.</span>}</div></>}
+  </section>
+  <div className="ds">
     <div className="ds-pick">{groups.map((g) => <div key={g}><div className="ds-g">{g}</div>
       {TEMPLATES.filter((t) => t.group === g).map((t) => <button key={t.id} type="button" className="ds-t" aria-pressed={t.id === tid} onClick={() => setTid(t.id)}>{t.name}</button>)}</div>)}</div>
     <div className="ds-main">
@@ -130,17 +175,19 @@ export default function Studio({ data, navy, canva }: { data: StudioData; navy: 
           {f.hint && f.type !== "text" && f.type !== "area" && <small className="muted">{f.hint}</small>}
         </label>)}
         <p className="note">Text and logos are made here; pictures and illustrations come from your library or Canva. Words in *stars* are highlighted.</p>
-        <label className="fld" style={{ display: "grid", gap: 4 }}><span>Suggested caption</span><textarea className="mini" rows={3} readOnly value={tpl.caption(v)} /></label>
+        <label className="fld" style={{ display: "grid", gap: 4 }}><span>Facebook text</span><textarea className="mini" rows={6} value={fbText} onChange={(e) => setFb(e.target.value)} /></label>
+        <label className="fld" style={{ display: "grid", gap: 4, marginTop: 10 }}><span>Instagram caption</span><textarea className="mini" rows={6} value={igText} onChange={(e) => setIg(e.target.value)} /></label>
+        {(fb !== null || ig !== null) && <button type="button" className="lnk" onClick={() => { setFb(null); setIg(null); }}>Go back to the suggested caption</button>}
         <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}>
           <button type="button" className="abtn pri" onClick={post} disabled={!!busy}>{busy === "post" ? "Saving…" : "Post to Facebook / Instagram"}</button>
           <button type="button" className="abtn" onClick={download}>Download PNG</button>
-          <button type="button" className="abtn" onClick={() => navigator.clipboard?.writeText(tpl.caption(v)).then(() => setMsg("Caption copied."))}>Copy caption</button></div>
+          <button type="button" className="abtn" onClick={() => navigator.clipboard?.writeText(fbText).then(() => setMsg("Facebook text copied."))}>Copy text</button></div>
         {msg && <p className="note msg" style={{ marginTop: 10 }}>{msg}</p>}
       </div>
     </div>
     {picker && <Picker assets={assets} canva={canva} onClose={() => setPicker(null)} onPick={(id) => { set({ [picker]: id }); setPicker(null); }}
       onUpload={(f) => upload(f, picker)} onImported={(a) => { setAssets((x) => [a, ...x.filter((y) => y.id !== a.id)]); set({ [picker]: a.id }); setPicker(null); }} busy={busy === "upload"} />}
-  </div>;
+  </div></>;
 }
 
 function Picker({ assets, canva, onClose, onPick, onUpload, onImported, busy }: { assets: Asset[]; canva: boolean; onClose: () => void; onPick: (id: string) => void; onUpload: (f: File) => void; onImported: (a: Asset) => void; busy: boolean }) {
