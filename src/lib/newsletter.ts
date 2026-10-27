@@ -225,15 +225,21 @@ export async function saveEmail(inp: Record<string, unknown>, by: string) {
   return { ok: true, id, updated: r.updated };
 }
 export const deleteEmail = (id: string) => withSchool((q) => q(`delete from newsletter_emails where id = $1`, [id]));
-export async function testSend(userId: string, to: string, subject: string, html: string) {
-  if (!validEmail(normEmail(to))) fail("Your account has no email address.");
+export async function testSend(userId: string, myEmail: string, subject: string, html: string, me = true, extra: unknown = []): Promise<string[]> {
+  const others = [...new Set((Array.isArray(extra) ? extra : []).map(normEmail).filter(Boolean))];
+  const bad = others.find((e) => !validEmail(e)); if (bad) fail(`“${bad}” doesn’t look like an email address.`);
+  if (others.length > 5) fail("Up to 5 other addresses for a test.");
+  const to = [...new Set([...(me ? [normEmail(myEmail)] : []), ...others])];
+  if (me && !validEmail(normEmail(myEmail))) fail("Your account has no email address.");
+  if (!to.length) fail("Choose who gets the test.");
   if (!html || html.length > 600000) fail("Nothing to send.");
   const key = "tests:" + userId;
   const times = ((await kvGet<number[]>(key)) ?? []).filter((t) => t > Date.now() - 3600000);
   if (times.length >= 10) fail("That’s 10 tests this hour. Try again later.", 429);
   await kvSet(key, [...times, Date.now()]);
-  const r = await sendHtml("[Test] " + subject.replace(/[\r\n]+/g, " ").slice(0, 150), html, [to], "newsletter-test");
+  const r = await sendHtml("[Test] " + subject.replace(/[\r\n]+/g, " ").slice(0, 150), html, to, "newsletter-test");
   if (!r.ok) fail("The test couldn’t be sent: " + (r.error ?? "") + " Use Download and open the file to check it instead.", 500);
+  return to;
 }
 export async function sendEmail(b: Record<string, unknown>, by: string) {
   const c = await brevoCfg(); if (!brevoOn(c)) fail("Connect Brevo first.");

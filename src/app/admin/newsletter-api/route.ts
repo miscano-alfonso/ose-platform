@@ -32,7 +32,7 @@ async function handle(req: NextRequest, post: boolean) {
       case "emailget": return out({ email: await N.getEmail(String(b.id ?? "")) });
       case "emailsave": return out(await N.saveEmail((b.email ?? null) as Record<string, unknown>, me.email));
       case "emaildelete": await N.deleteEmail(String(b.id ?? "")); return out({ ok: true });
-      case "emailtest": await N.testSend(me.id, me.email, String(b.subject ?? "Email test"), String(b.html ?? "")); return out({ ok: true, to: me.email });
+      case "emailtest": return out({ ok: true, to: await N.testSend(me.id, me.email, String(b.subject ?? "Email test"), String(b.html ?? ""), b.me !== false, b.extra) });
       case "emailsend": return out(await N.sendEmail(b, me.email));
       case "emailcancel": await N.cancelEmail(String(b.id ?? "")); return out({ ok: true });
       case "emailstats": return out(await N.emailStats());

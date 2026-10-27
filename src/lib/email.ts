@@ -121,7 +121,7 @@ export async function sendHtml(subject: string, htmlContent: string, to: string[
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent, textContent, messageVersions: to.map((email) => ({ to: [{ email }] })), tags: [tag || "social-report"] }),
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
-  if (res.ok) await keepCopy(c, subject, htmlContent, textContent, to.map((email) => ({ email })));
+  if (res.ok && tag !== "newsletter-test") await keepCopy(c, subject, htmlContent, textContent, to.map((email) => ({ email })));   // tests aren’t copied
   return res.ok ? { ok: true } : { ok: false, error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
 }
 

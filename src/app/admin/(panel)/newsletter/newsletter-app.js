@@ -146,7 +146,7 @@ function emInner(){
   if(!EM.doc)return emListView();
   const d=EM.doc;
   return `<div class="cms-bar em-bar"><button class="btn small" type="button" data-em="back">← All emails</button><h1 style="font-size:30px">${emE(d.name||'Untitled')}</h1><span class="em-save mono">${EM.saving}</span>
-    <button class="btn small" type="button" data-em="copy">Copy HTML</button><button class="btn small" type="button" data-em="download">Download</button><button class="btn small" type="button" data-em="test">Send me a test</button>${EM.brevo&&EM.brevo.connected&&!emSent(d)?'<button class="btn solid small" type="button" data-em="sendopen">Send…</button>':''}</div>${emSendPanel(d)}
+    <button class="btn small" type="button" data-em="copy">Copy HTML</button><button class="btn small" type="button" data-em="download">Download</button><button class="btn small" type="button" data-em="testopen">Send a test</button>${EM.brevo&&EM.brevo.connected&&!emSent(d)?'<button class="btn solid small" type="button" data-em="sendopen">Send…</button>':''}</div>${emTestPanel()}${emSendPanel(d)}
   <div class="em-grid"><div class="em-side">
     <div class="em-card"><div class="field"><label for="emName">Name (only you see this)</label><input id="emName" data-emd="name" value="${emE(d.name)}"></div>
       <div class="field"><label for="emSubj">Subject line</label><input id="emSubj" data-emd="subject" value="${emE(d.subject)}" maxlength="150"></div>
@@ -305,6 +305,14 @@ function emSendingCard(){
       <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn solid small" type="submit">${b.hasKey?'Save':'Connect'}</button><button class="linkbtn" type="button" data-em="brevocancel">Cancel</button>${b.hasKey?'<button class="linkbtn" type="button" data-em="brevooff" style="margin-left:auto">Disconnect Brevo</button>':''}<span class="hint" id="bvMsg" role="alert"></span></div></form>`}
   if(b.connected)return `<div class="em-card em-brevo on" style="max-width:760px;margin-bottom:8px"><div><b>Sending with Brevo</b> <span class="pill sub-subscribed">Connected</span></div><p class="hint" style="margin:0">From <b>${emE(b.senderName)} &lt;${emE(b.senderEmail)}&gt;</b>${b.replyTo?`, replies to <b>${emE(b.replyTo)}</b>,`:''}${b.copyTo?` copies to <b>${emE(b.copyTo)}</b>,`:''} to the list “${emE(b.listName)}”${b.account?` · account ${emE(b.account)}`:''}.</p>${b.canEdit?'<button class="linkbtn" type="button" data-em="brevoedit" style="justify-self:start">Change account or sender</button>':''}</div>`;
   return `<div class="em-card em-brevo" style="max-width:760px;margin-bottom:8px"><b>Sending with Brevo</b><p class="hint" style="margin:0">${b.hasKey?'Almost there: choose the sender address.':'Connect your Brevo account to send emails to your subscribers straight from here.'}</p>${b.canEdit?`<button class="btn solid small" type="button" data-em="brevoedit" style="justify-self:start">${b.hasKey?'Choose sender':'Connect Brevo'}</button>`:'<p class="hint" style="margin:0">Ask an admin to connect it.</p>'}</div>`}
+function emTestExtra(){let v='';try{v=localStorage.getItem('ose-test-to')||''}catch(_){}return v}
+function emTestPanel(){if(!EM.testing)return '';const b=EM.brevo||{},known=[...new Set([b.replyTo,...String(b.copyTo||'').split(/[,;\s]+/)].map(x=>String(x||'').trim().toLowerCase()).filter(Boolean))];
+  const saved=emTestExtra().split(',').map(x=>x.trim().toLowerCase()).filter(Boolean),others=saved.filter(x=>!known.includes(x));
+  return `<form class="em-card em-sendp" id="emTestForm" novalidate><b>Send a test of “${emE(EM.doc.subject||EM.doc.name||'this email')}”</b>
+    <label class="check"><input type="checkbox" id="emTestMe" checked> Me</label>
+    ${known.map(x=>`<label class="check"><input type="checkbox" data-em-testto="${emE(x)}"${saved.includes(x)?' checked':''}> ${emE(x)}</label>`).join('')}
+    <div class="field"><label for="emTestOther">Other addresses <span class="hint">(optional, separated by commas)</span></label><input id="emTestOther" type="text" value="${emE(others.join(', '))}" placeholder="leanne@ohsoed.co.uk"></div>
+    <div style="display:flex;gap:10px;align-items:center"><button class="btn solid small" type="submit">Send the test</button><button class="linkbtn" type="button" data-em="testclose">Cancel</button><span class="hint" id="emTestMsg" role="alert"></span></div></form>`}
 function emSendPanel(d){
   const st=d.brevo;
   if(st&&st.status==='scheduled')return `<div class="em-sent"><b>Scheduled</b> to go to your subscribers on ${emE(fmtStamp(st.at))}. <button class="linkbtn" type="button" data-em="unschedule">Cancel the send</button></div>`;
@@ -324,12 +332,19 @@ app.addEventListener('click',async e=>{
   if(a==='brevooff'){if(t.dataset.sure!=='1'){t.dataset.sure='1';t.textContent='Disconnect for good?';return}try{await api('brevoconfig',{disconnect:true});EM.brevo=await api('brevoconfig');EM.brevoEdit=false;toast('Brevo disconnected');emPaint()}catch(err){toast(err.message)}return}
   if(a==='sendopen'){if(!EM.doc.subject){toast('Add a subject line first.');return}clearTimeout(EM.t);if(EM.dirty||!EM.doc.id)await emSave();EM.sending=true;EM.subCount=null;emPaint();try{const r=await api('subscribers');EM.subCount=(r.subscribers||[]).filter(x=>x.status==='subscribed').length}catch(_){}emPaint();return}
   if(a==='sendclose'){EM.sending=false;emPaint();return}
+  if(a==='testopen'){EM.testing=!EM.testing;EM.sending=false;emPaint();return}
+  if(a==='testclose'){EM.testing=false;emPaint();return}
   if(a==='unschedule'){try{await api('emailcancel',{id:EM.doc.id});EM.doc.brevo.status='cancelled';delete EM.doc.brevo;toast('Send cancelled. It’s a draft again.');emPaint()}catch(err){toast(err.message)}return}
 });
 app.addEventListener('submit',async e=>{
   if(e.target.id==='brevoForm'){e.preventDefault();const m=document.getElementById('bvMsg'),key=document.getElementById('bvKey').value.trim(),sel=document.getElementById('bvSender'),nm=document.getElementById('bvName');
     const body={};if(key)body.key=key;if(sel){body.senderEmail=sel.value;body.senderName=nm?nm.value:(sel.selectedOptions[0]||{}).dataset.name;const rp=document.getElementById('bvReply');if(rp)body.replyTo=rp.value.trim();const cp=document.getElementById('bvCopy');if(cp)body.copyTo=cp.value.trim()}
     m.textContent='Checking with Brevo…';try{await api('brevoconfig',body);EM.brevo=await api('brevoconfig');if(key){EM.senders=undefined;emPaint();emBrevoSenders();toast('Brevo connected. Now choose the sender.')}else{EM.brevoEdit=!EM.brevo.connected;toast('Saved');emPaint()}}catch(err){m.textContent=err.message}return}
+  if(e.target.id==='emTestForm'){e.preventDefault();const m=document.getElementById('emTestMsg'),btn=e.target.querySelector('button[type=submit]');
+    const extra=[...e.target.querySelectorAll('[data-em-testto]')].filter(x=>x.checked).map(x=>x.dataset.emTestto).concat(document.getElementById('emTestOther').value.split(/[,;\s]+/).map(x=>x.trim()).filter(Boolean));
+    const me=document.getElementById('emTestMe').checked;if(!me&&!extra.length){m.textContent='Choose who gets the test.';return}
+    try{localStorage.setItem('ose-test-to',extra.join(', '))}catch(_){}
+    btn.disabled=true;m.textContent='Sending…';try{const r=await api('emailtest',{subject:EM.doc.subject||EM.doc.name,html:emailHTML(EM.doc,false),me,extra});EM.testing=false;emPaint();toast('Test sent to '+r.to.join(', ')+'. It can take a minute to arrive.')}catch(err){m.textContent=err.message;btn.disabled=false}return}
   if(e.target.id==='emSendForm'){e.preventDefault();const m=document.getElementById('emSendMsg');
     if(!document.getElementById('emSure').checked){m.textContent='Please send yourself a test and check it first.';return}
     const later=e.target.querySelector('input[name=when]:checked').value==='later';let when='now';
