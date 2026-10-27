@@ -481,6 +481,42 @@ Reply as {"fields": {${fields.map((f) => `"${f.k}": "…"`).join(", ")}}, "faceb
   for (const f of fields) if (typeof fv[f.k] === "string") out[f.k] = s(fv[f.k], 300).replace(/\\n/g, "\n");
   return { fields: out, facebook: String(j.facebook ?? "").trim().slice(0, 3000), instagram: String(j.instagram ?? "").trim().slice(0, 2200) };
 }
+// ---------- Claude: drawings (SVG) for Build the post ----------
+const DRAW_STYLES: Record<string, string> = {
+  line: "a clean single-weight line drawing: strokes only (fill=\"none\"), stroke-width 5 to 7, round line caps and joins, no shading, no fills, generous white space, like a modern editorial line illustration",
+  sketch: "a hand-drawn pencil sketch: loose, slightly wobbly strokes drawn two or three times with small offsets, light hatching for shade, stroke widths 1.5 to 4, no solid fills, like a sketchbook drawing",
+  flat: "a flat vector illustration: simple shapes in 3 to 5 solid colours from the palette, no outlines, no gradients, no text, friendly and modern",
+  icon: "one bold, simple icon: thick rounded strokes (stroke-width 14 to 18) and at most two flat colours from the palette, centred, instantly recognisable at small sizes",
+};
+export async function drawPicture(b: Record<string, unknown>) {
+  const c = await aiCfg(); if (!c.key) fail("Add the Anthropic API key first (Social › Connect to Social › AI searches).");
+  const what = String(b.prompt ?? "").replace(/[\x00-\x1F]/g, " ").trim().slice(0, 400);
+  const post = String(b.post ?? "").replace(/[\x00-\x08\x0B-\x1F]/g, " ").trim().slice(0, 2500);
+  if (!what && !post) fail("Say what to draw, or write the post first so Claude can pick a picture for it.");
+  const style = DRAW_STYLES[String(b.style)] ? String(b.style) : "line";
+  const ink = /^#[0-9a-f]{6}$/i.test(String(b.ink ?? "")) ? String(b.ink) : "#141a5c";
+  const square = b.shape === "square", W = 1000, H = square ? 1000 : 750;
+  const task = `${post ? `This picture goes with a social media post for OH-SO ED. Read the post and make the picture fit its message and audience (home-educating families and their teenagers):
+"""
+${post}
+"""
+
+` : ""}${what ? `Draw: ${what}` : "Choose one clear, simple subject that illustrates this post best (an object, scene or symbol, not people’s faces), and draw it."}
+Style: ${DRAW_STYLES[style]}.
+Colours: main ink ${ink}; palette for any fills: ${ink}, #e8338c (pink), #f2df4c (yellow), #63b3ea (sky blue), #ffffff. Plain white background (no background rectangle needed).
+Canvas: an SVG with viewBox="0 0 ${W} ${H}", width="${W}" height="${H}". Keep everything inside the canvas with a margin of at least 60.
+Rules: no text, letters or numbers anywhere in the picture; no <image>, <script>, <foreignObject>, external links or CSS imports; paths, lines, circles, ellipses, rects, polygons, polylines and groups only (filters and gradients are allowed if the style needs them). Draw real recognisable shapes with care, with enough detail to look professional.
+Reply with ONLY the SVG, starting <svg and ending </svg>.`;
+  const res = await callClaude({ model: c.model || "claude-sonnet-5-5", max_tokens: 16000, system: "You are an illustrator who draws in SVG for OH-SO ED, a UK online school. You reply with SVG code only.", messages: [{ role: "user", content: task }] }, c.key!);
+  let text = ""; for (const blk of res.content ?? []) if (blk.type === "text") text += blk.text;
+  const m = text.match(/<svg[\s\S]*<\/svg>/i); if (!m) fail("Claude didn’t return a drawing. Try again, or describe it a little differently.", 502);
+  let svg = m![0];
+  if (/<\s*(script|foreignObject|image|iframe|audio|video|use\b[^>]*href\s*=\s*["']?https?)/i.test(svg) || /\bon[a-z]+\s*=/i.test(svg) || /(href|src)\s*=\s*["']?\s*(https?:|javascript:|data:)/i.test(svg) || /@import|url\(\s*["']?(https?:|data:)/i.test(svg))
+    fail("That drawing included something that isn’t allowed in a picture. Try again.", 502);
+  if (!/xmlns=/.test(svg)) svg = svg.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+  if (svg.length > 400000) fail("That drawing was too big. Try a simpler description.", 502);
+  return { svg, w: W, h: H };
+}
 export type Moment = { id: string; kind: string; date: string; title: string; opener: string; person: string; venue: string; city: string; starts: string; ends: string; url: string; bookId: string; addedAt?: string };
 type Moments = { items: Moment[]; auto: boolean; emails: string[]; scannedAt?: string; lastAuto?: string; by?: string; dismissed?: string[] };
 const KINDS = ["fact", "birthday", "anniversary", "news", "exhibition", "event"];

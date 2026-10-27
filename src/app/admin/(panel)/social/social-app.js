@@ -113,9 +113,29 @@ async function socUseCoursePic(c,b){const m=document.getElementById('soMsg');if(
 const SB_LABEL={hiring:'We’re hiring',holiday:'Holidays',school:'News',subject:'New',reward:'Well done',event:'Save the date',enrol:'Now booking',teacher:'Meet the teacher',other:''};
 const SB_HINT={hiring:'The subject and level, hours, start date, and how and by when to apply.',holiday:'Which holiday or term, when you break up and come back, anything families need to do.',school:'What’s new, who it’s for, and when it starts.',subject:'The subject and level, what’s new, and any dates.',reward:'Who or what you’re celebrating. First names only, and only with permission.',event:'The day or event, the date, and how it links to your courses.',enrol:'Which courses, the dates, and any offer.',teacher:'Who they are, what they teach, and something about them.',other:'Say what the post is about.'};
 const SB_SIZES=['square','portrait','story'];
-function sbNew(k){return {purpose:k,notes:'',label:SB_LABEL[k]||'',title:'',line:'',by:'',image:'',colour:'#141a5c',size:'portrait',fb:'',ig:'',same:true,busy:'',msg:'',canva:null}}
+function sbNew(k){return {purpose:k,notes:'',label:SB_LABEL[k]||'',title:'',line:'',by:'',image:'',colour:'#141a5c',size:'portrait',fb:'',ig:'',same:true,busy:'',msg:'',canva:null,draw:false,dprompt:'',dstyle:'line',dshape:'landscape',filter:'none',fcol:'#ffffff',filtered:''}}
+const SB_FX=[['none','None'],['mono','Black & white'],['duo','Duotone'],['tint','Tint'],['contrast','High contrast']];
+const SB_FCOL=[['#ffffff','White'],['#f2df4c','Yellow'],['#e8338c','Pink'],['#63b3ea','Sky'],['#e9c46a','Gold']];
+const SB_DSTYLE=[['line','Line drawing'],['sketch','Sketch'],['flat','Flat illustration'],['icon','Icon']];
+function sbPhotos(){const seen=new Set(),out=[];for(const b of state.books){if(b.partner&&b.cover&&!seen.has(b.partner)&&!/^\/social-img\//.test(b.cover)){seen.add(b.partner);out.push([b.partner,b.cover])}}return out.sort((a,b)=>a[0].localeCompare(b[0]))}
+function sbDrawPanel(){const B=SOC.build;return `<div class="sb-draw"><div class="field"><label for="sb_dprompt">What should it show? <span class="hint">optional: Claude reads the post and picks something if you leave this empty</span></label><input id="sb_dprompt" data-sb-in="dprompt" value="${esc(B.dprompt)}" placeholder="e.g. a stack of books with a laptop"></div>
+  <div class="em-seg">${SB_DSTYLE.map(([k,l])=>`<button type="button" data-sb-dstyle="${k}" aria-pressed="${B.dstyle===k}">${l}</button>`).join('')}</div>
+  <div class="em-seg">${[['landscape','Landscape'],['square','Square']].map(([k,l])=>`<button type="button" data-sb-dshape="${k}" aria-pressed="${B.dshape===k}">${l}</button>`).join('')}</div>
+  <div class="so-row"><button class="btn solid small" type="button" data-sb="drawgo"${B.busy||!KIT.ai?' disabled':''}>${B.busy==='draw'?'Claude is drawing… (up to a minute)':'Draw it'}</button>${KIT.ai?'':'<span class="hint">Needs the Anthropic API key.</span>'}</div></div>`}
+function sbHex(h){const n=parseInt(String(h).slice(1),16)||0;return [n>>16&255,n>>8&255,n&255]}
+async function sbApplyFx(){const B=SOC.build;if(!B)return;if(!B.image||B.filter==='none'){B.filtered='';sbPreview();return}
+  const src=B.image,fx=B.filter,fc=B.fcol,bg=B.colour;let im;try{im=await kitLoadImg(socImgSrc(src))}catch(_){sbMsg('That picture couldn’t be loaded for the effect.');return}
+  const sc=Math.min(1,1600/Math.max(im.naturalWidth,im.naturalHeight)),cv=document.createElement('canvas');cv.width=Math.round(im.naturalWidth*sc);cv.height=Math.round(im.naturalHeight*sc);const x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,cv.width,cv.height);x.drawImage(im,0,0,cv.width,cv.height);
+  const d=x.getImageData(0,0,cv.width,cv.height),p=d.data,dk=sbHex(bg).map(v=>v*.55),lt=sbHex(fc),tn=sbHex(fc);
+  for(let i=0;i<p.length;i+=4){let l=(.299*p[i]+.587*p[i+1]+.114*p[i+2])/255;
+    if(fx==='mono'){p[i]=p[i+1]=p[i+2]=l*255}
+    else if(fx==='contrast'){l=l<.5?2*l*l:1-2*(1-l)*(1-l);l=Math.min(1,Math.max(0,(l-.5)*1.6+.5));p[i]=p[i+1]=p[i+2]=l*255}
+    else if(fx==='duo'){for(let k=0;k<3;k++)p[i+k]=dk[k]+(lt[k]-dk[k])*l}
+    else if(fx==='tint'){for(let k=0;k<3;k++)p[i+k]=l*255*(.3+.7*tn[k]/255)}}
+  x.putImageData(d,0,0);if(SOC.build!==B||B.image!==src||B.filter!==fx)return;B.filtered=cv.toDataURL('image/jpeg',.9);sbPreview()}
+function sbPostText(){const B=SOC.build;return [B.label,B.title,B.line,B.by,B.notes,B.fb].filter(Boolean).join('\n')}
 function sbColours(){const seen=new Set(['#141a5c']);const out=[['#141a5c','Navy']];for(const b of state.books){const c=String(b.tileColor||'').toLowerCase();if(/^#[0-9a-f]{6}$/.test(c)&&!seen.has(c)){seen.add(c);out.push([c,b.subject||b.title])}}return out.slice(0,12)}
-function sbBook(){const B=SOC.build;return {id:'post',title:B.title||'Your title',subtitle:B.line,byline:B.by,eyebrow:B.label,cover:B.image,tileColor:B.colour,status:'post'}}
+function sbBook(){const B=SOC.build;return {id:'post',title:B.title||'Your title',subtitle:B.line,byline:B.by,eyebrow:B.label,cover:B.filtered||B.image,tileColor:B.colour,status:'post'}}
 function sbView(){const B=SOC.build,name=(SOC_PURPOSES.find(x=>x[0]===B.purpose)||[])[1]||'Post';
   const f=(k,l,ph,area)=>`<div class="field"><label for="sb_${k}">${l}</label>${area?`<textarea id="sb_${k}" data-sb-in="${k}" rows="${area}" placeholder="${esc(ph||'')}">${esc(B[k])}</textarea>`:`<input id="sb_${k}" data-sb-in="${k}" value="${esc(B[k])}" placeholder="${esc(ph||'')}">`}</div>`;
   const canva=B.canva?`<div class="sb-canva">${B.canva.err?`<p class="hint">${esc(B.canva.err)}</p>`:!B.canva.items?'<p class="hint"><span class="spin"></span>Opening Canva…</p>':B.canva.items.length?`<div class="sb-cgrid">${B.canva.items.map(it=>`<button type="button" data-sb-canva="${esc(it.id)}" data-t="${esc(it.title)}" title="${esc(it.title)}">${it.thumb?`<img src="${esc(it.thumb)}" alt="">`:''}<span>${esc(it.title)}</span></button>`).join('')}</div>`:'<p class="hint">No designs found in Canva.</p>'}<button class="linkbtn" type="button" data-sb="canvaclose">Close Canva</button></div>`:'';
@@ -126,7 +146,8 @@ function sbView(){const B=SOC.build,name=(SOC_PURPOSES.find(x=>x[0]===B.purpose)
     <h3 class="sb-h">On the picture</h3>
     ${f('label','Small label (capitals)','e.g. We’re hiring')}${f('title','Title','e.g. GCSE Computer Science teacher',2)}${f('line','Line under','e.g. Part-time, from January')}${f('by','Small line at the bottom','optional')}
     <div class="field"><span class="em-lbl">Picture</span>${B.image?`<div class="so-pic"><img src="${esc(socImgSrc(B.image))}" alt=""><button class="linkbtn" type="button" data-sb="noimg">Remove</button></div>`:'<p class="hint" style="margin:0">None yet: the OH-SO ED icon is used.</p>'}
-      <div class="so-row"><button class="btn small" type="button" data-sb="canva">From Canva</button><label class="btn small so-up">Upload a picture<input type="file" id="sbFile" accept="image/jpeg,image/png,image/webp" hidden></label></div>${canva}</div>
+      <div class="so-row"><button class="btn small${B.draw?' solid':''}" type="button" data-sb="drawopen">Draw with Claude</button><button class="btn small" type="button" data-sb="canva">From Canva</button><label class="btn small so-up">Upload a picture<input type="file" id="sbFile" accept="image/jpeg,image/png,image/webp" hidden></label>${sbPhotos().length?`<select id="sbPhoto" aria-label="Teacher photo"><option value="">Teacher photo…</option>${sbPhotos().map(([n,u])=>`<option value="${esc(u)}">${esc(n)}</option>`).join('')}</select>`:''}</div>${canva}${B.draw?sbDrawPanel():''}
+      ${B.image?`<div class="sb-fx"><span class="hint">Effect</span><div class="em-seg">${SB_FX.map(([k,l])=>`<button type="button" data-sb-fx="${k}" aria-pressed="${B.filter===k}">${l}</button>`).join('')}</div>${B.filter==='duo'||B.filter==='tint'?`<div class="so-row so-bgs"><span class="hint">${B.filter==='duo'?'Light colour':'Tint'}</span>${SB_FCOL.map(([v,l])=>`<button type="button" class="so-sw" data-sb-fcol="${v}" title="${l}" aria-pressed="${B.fcol===v}" style="background:${v}"></button>`).join('')}</div>`:''}</div>`:''}</div>
     <div class="field"><span class="em-lbl">Background</span><div class="so-row so-bgs">${sbColours().map(([v,l])=>`<button type="button" class="so-sw" data-sb-bg="${esc(v)}" title="${esc(l)}" aria-pressed="${B.colour===v}" style="background:${esc(v)}"></button>`).join('')}<input type="color" id="sbBg" value="${esc(B.colour)}" aria-label="Other colour"></div></div>
     <h3 class="sb-h">The text</h3>
     ${f('fb','Facebook text','',6)}
@@ -140,16 +161,28 @@ app.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.sbIn
   if(e.target.id==='sbBg'&&SOC.build){SOC.build.colour=e.target.value;sbPreview()}});
 app.addEventListener('change',async e=>{if(!SOC.build)return;
   if(e.target.id==='sbSame'){SOC.build.same=e.target.checked;if(!SOC.build.same&&!SOC.build.ig)SOC.build.ig=SOC.build.fb;sbPaint();return}
-  if(e.target.id==='sbFile'){const f=e.target.files[0];if(!f)return;sbMsg('Uploading…');try{const bl=await socFileJpeg(f);const fd=new FormData();fd.append('file',bl,'upload.jpg');const r=await api('upload',fd,true);SOC.build.image=r.path;SOC.build.msg='';sbPaint()}catch(err){sbMsg(err.message)}}});
-app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closest('[data-sb],[data-sb-start],[data-sb-bg],[data-sb-size],[data-sb-canva]');if(!t)return;const D=t.dataset;
+  if(e.target.id==='sbPhoto'&&e.target.value){SOC.build.image=e.target.value;SOC.build.msg='';sbPaint();sbApplyFx();return}
+  if(e.target.id==='sbFile'){const f=e.target.files[0];if(!f)return;sbMsg('Uploading…');try{const bl=await socFileJpeg(f);const fd=new FormData();fd.append('file',bl,'upload.jpg');const r=await api('upload',fd,true);SOC.build.image=r.path;SOC.build.msg='';sbPaint();sbApplyFx()}catch(err){sbMsg(err.message)}}});
+app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closest('[data-sb],[data-sb-start],[data-sb-bg],[data-sb-size],[data-sb-canva],[data-sb-fx],[data-sb-fcol],[data-sb-dstyle],[data-sb-dshape]');if(!t)return;const D=t.dataset;
   if(D.sbStart){const old=SOC.build;SOC.pick=false;SOC.c=null;SOC.build=sbNew(D.sbStart);if(old){Object.assign(SOC.build,{notes:old.notes,image:old.image,colour:old.colour,size:old.size})}sbPaint();window.scrollTo(0,0);return}
   const B=SOC.build;if(!B)return;
   if(D.sbBg){B.colour=D.sbBg;document.querySelectorAll('[data-sb-bg]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.sbBg===B.colour)));const c=document.getElementById('sbBg');if(c)c.value=B.colour;sbPreview();return}
+  if(D.sbFx){B.filter=D.sbFx;socPaint();sbApplyFx();return}
+  if(D.sbFcol){B.fcol=D.sbFcol;socPaint();sbApplyFx();return}
+  if(D.sbDstyle){B.dstyle=D.sbDstyle;sbPaint();return}
+  if(D.sbDshape){B.dshape=D.sbDshape;sbPaint();return}
   if(D.sbSize){B.size=D.sbSize;document.querySelectorAll('[data-sb-size]').forEach(x=>x.setAttribute('aria-pressed',String(x.dataset.sbSize===B.size)));return}
-  if(D.sbCanva){sbMsg('Bringing it in from Canva…');try{const r=await fetch('/admin/design-api?action=canvaimport',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({id:D.sbCanva,title:D.t||'Canva design',kind:'illustration'})});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Couldn’t bring that in.');B.image='/admin/design-api?action=asset&id='+encodeURIComponent(j.id);B.canva=null;B.msg='';sbPaint()}catch(err){sbMsg(err.message)}return}
+  if(D.sbCanva){sbMsg('Bringing it in from Canva…');try{const r=await fetch('/admin/design-api?action=canvaimport',{method:'POST',credentials:'same-origin',headers:{'content-type':'application/json'},body:JSON.stringify({id:D.sbCanva,title:D.t||'Canva design',kind:'illustration'})});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Couldn’t bring that in.');B.image='/admin/design-api?action=asset&id='+encodeURIComponent(j.id);B.canva=null;B.msg='';sbPaint();sbApplyFx()}catch(err){sbMsg(err.message)}return}
   const a=D.sb;
   if(a==='close'){SOC.build=null;socPaint();return}
-  if(a==='noimg'){B.image='';sbPaint();return}
+  if(a==='noimg'){B.image='';B.filtered='';sbPaint();return}
+  if(a==='drawopen'){B.draw=!B.draw;sbPaint();return}
+  if(a==='drawgo'){B.busy='draw';B.msg='';sbPaint();try{
+      const j=await api('drawpicture',{prompt:B.dprompt,post:sbPostText(),style:B.dstyle,shape:B.dshape,ink:B.colour});
+      const u=URL.createObjectURL(new Blob([j.svg],{type:'image/svg+xml'}));let im;try{im=await new Promise((ok,no)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=()=>no(new Error('That drawing couldn’t be shown. Try again.'));i.src=u})}finally{setTimeout(()=>URL.revokeObjectURL(u),1000)}
+      const sc=1600/j.w,cv=document.createElement('canvas');cv.width=1600;cv.height=Math.round(j.h*sc);const x=cv.getContext('2d');x.fillStyle='#fff';x.fillRect(0,0,cv.width,cv.height);x.drawImage(im,0,0,cv.width,cv.height);
+      const fd=new FormData();fd.append('file',await socBlob(cv,.92),'drawing.jpg');const r=await api('upload',fd,true);B.image=r.path;B.filtered='';B.draw=false;B.msg='Drawn by Claude. Draw again for another version, or add an effect.'}
+    catch(err){B.msg=err.message}finally{B.busy='';sbPaint();sbApplyFx()}return}
   if(a==='canvaclose'){B.canva=null;sbPaint();return}
   if(a==='canva'){B.canva={items:null};sbPaint();try{const r=await fetch('/admin/design-api?action=canvalist',{credentials:'same-origin'});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Couldn’t open Canva.');if(SOC.build===B&&B.canva){B.canva={items:j.items||[]};sbPaint()}}catch(err){if(SOC.build===B&&B.canva){B.canva={err:/connect/i.test(err.message)?err.message:'Canva isn’t connected yet. Connect it under Post designs › Library & Canva, then try again. ('+err.message+')'};sbPaint()}}return}
   if(a==='draft'){B.busy='draft';sbPaint();try{
@@ -159,7 +192,7 @@ app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closes
       const F=j.fields||{};for(const k of ['label','title','line','by'])if(typeof F[k]==='string')B[k]=F[k].replace(/\*/g,'');B.fb=j.facebook||B.fb;B.ig=j.instagram||B.ig;B.same=!j.instagram||j.instagram===j.facebook;B.msg='Drafted by Claude. Check every word and fill in anything in [brackets] before posting.'}
     catch(err){B.msg=err.message}finally{B.busy='';sbPaint()}return}
   if(a==='dl'){try{const cv=await kitRender(sbBook(),B.size);const bl=await socBlob(cv,.92);const u=URL.createObjectURL(bl);const el=document.createElement('a');el.href=u;el.download=`ohsoed-${B.purpose}-${B.size}.jpg`;document.body.appendChild(el);el.click();el.remove();setTimeout(()=>URL.revokeObjectURL(u),4000)}catch(err){sbMsg(err.message||'Couldn’t make the picture.')}return}
-  if(a==='use'){if(!B.title.trim()){sbMsg('Add a title first.');return}if(/\[[^\]]+\]/.test(B.title+B.line+B.by+B.fb+(B.same?'':B.ig))){sbMsg('Fill in the parts in [brackets] first.');return}
+  if(a==='use'){if(B.busy)return;if(!B.title.trim()){sbMsg('Add a title first.');return}if(/\[[^\]]+\]/.test(B.title+B.line+B.by+B.fb+(B.same?'':B.ig))){sbMsg('Fill in the parts in [brackets] first.');return}
     B.busy='use';sbMsg('Preparing the picture…');try{const cv=await kitRender(sbBook(),B.size);const fd=new FormData();fd.append('file',await socBlob(cv,.9),'post.jpg');const p=(await api('upload',fd,true)).path;
       const ig=B.same?B.fb:B.ig;SOC.c=socNew({image:p,text:B.fb,igText:ig,same:ig===B.fb,frame:'none',ig:!!SOC.cfg.ig||!SOC.cfg.connected});SOC.build=null;socPaint();window.scrollTo(0,0)}
     catch(err){B.busy='';sbMsg(err.message)}return}});
