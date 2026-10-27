@@ -2,7 +2,7 @@ import "server-only";
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { withSchool } from "./db";
 
-// Admin → Marketing → Post designs: data for the templates, the illustration library, and Canva (read-only: your own designs).
+// Admin → Social (Pictures & Canva, More designs): data for the templates, the illustration library, and Canva (read-only: your own designs).
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 export class DesignError extends Error {}
 const fail = (m: string): never => { throw new DesignError(m); };

@@ -1120,7 +1120,7 @@ export async function disconnectInboxAction(): Promise<void> {
   mailBack("The school inbox is disconnected. Emails already shown here stay until they’re a year old.");
 }
 // ---------- Post designs: Canva connection and the picture library ----------
-const dsBack = (ok?: string | null, err?: string | null) => redirect(`/admin/designs?tab=library` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
+const dsBack = (ok?: string | null, err?: string | null) => redirect(`/admin/social?view=pictures` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
 async function dsAdmin() { const me = await requireStaff(); if (me.role !== "school_admin") dsBack(null, "Only a school admin can change this."); return me; }
 export async function canvaAppAction(f: FormData): Promise<void> {
   await dsAdmin(); const D = await import("@/lib/designs");

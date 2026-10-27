@@ -3,13 +3,13 @@ import { currentStaff } from "@/lib/auth";
 import { siteBase } from "@/lib/social";
 import * as D from "@/lib/designs";
 
-// Admin → Marketing → Post designs: pictures for the canvas (served from this site so they can be tinted), uploads, and Canva.
+// Admin → Social (Pictures & Canva, More designs): pictures for the canvas (served from this site so they can be tinted), uploads, and Canva.
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 const origin = (req: NextRequest) => `${req.headers.get("x-forwarded-proto") || req.nextUrl.protocol.replace(":", "")}://${req.headers.get("x-forwarded-host") || req.headers.get("host")}`;
 const out = (b: unknown, status = 200) => NextResponse.json(b, { status, headers: { "cache-control": "no-store" } });
 const err = (e: unknown) => out({ error: e instanceof D.DesignError ? e.message : "Something went wrong. Try again." }, e instanceof D.DesignError ? 400 : 500);
-const back = (base: string, key: "ok" | "err", msg: string) => NextResponse.redirect(`${base}/admin/designs?tab=library&${key}=${encodeURIComponent(msg)}`, 302);
+const back = (base: string, key: "ok" | "err", msg: string) => NextResponse.redirect(`${base}/admin/social?view=pictures&${key}=${encodeURIComponent(msg)}`, 302);
 const img = (x: { mime: string; data: Buffer } | null) => x ? new Response(new Uint8Array(x.data), { headers: { "content-type": x.mime, "cache-control": "private, max-age=86400", "x-content-type-options": "nosniff" } }) : new Response("Not found", { status: 404 });
 
 export async function GET(req: NextRequest) {
