@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Plans } from "./Plans";
-import { COMPARE, PLANS, TRIAL_DAYS, EXTRA_STUDENT, gbp, RIVALS, VERSUS, NAMED } from "../plans";
+import { COMPARE, PLANS, TRIAL_DAYS, EXTRA_STUDENT, gbp, RIVALS, VERSUS, NAMED_COLS, NAMED_ROWS } from "../plans";
 
 export const metadata = { title: "Pricing", description: "OH-SO EdTech plans for one teacher, a small team or a whole online school. Try any plan free for 30 days." };
 
@@ -48,11 +48,11 @@ export default function Pricing() {
       </table></div>
       <p className="edt-note" style={{ marginTop: 12 }}>Based on what typical products of each kind include as standard; individual products vary. “Some” means some products offer it, or offer part of it. Prices are typical starting prices, October 2026.</p>
       <h3 style={{ fontSize: 26, marginTop: 48 }}>Compared with tools people often use</h3>
-      <div className="edt-tw"><table className="edt-cmp edt-named">
-        <thead><tr><th scope="col">Product</th><th scope="col">Mainly for</th><th scope="col">Starts at</th><th scope="col">How the price grows</th><th scope="col">Cut of your fees</th></tr></thead>
-        <tbody>{NAMED.map((n) => <tr key={n.name} className={n.us ? "us" : undefined}><td><b>{n.name}</b></td><td>{n.for}</td><td style={{ whiteSpace: "nowrap" }}>{n.from}</td><td>{n.grows}</td><td>{n.cut}</td></tr>)}</tbody>
+      <div className="edt-tw"><table className="edt-cmp edt-vs edt-named">
+        <thead><tr><th scope="col"></th>{NAMED_COLS.map((c, k) => <th key={c} scope="col" className={k === 0 ? "us" : undefined}>{c}</th>)}</tr></thead>
+        <tbody>{NAMED_ROWS.map(([label, ...vals]) => <tr key={label} className={label === "Starts at" || label === "Mainly for" ? "cost" : undefined}><td>{label}</td>{vals.map((v, k) => <td key={k} className={k === 0 ? "us" : undefined}>{vs(v === "partly" ? "some" : v)}</td>)}</tr>)}</tbody>
       </table></div>
-      <p className="edt-note" style={{ marginTop: 12 }}>From each company’s published pricing, checked 27 October 2026; dollar prices are their US prices and all exclude tax. Prices and features change, so check their websites. Card processing fees (for example Stripe’s) apply on top for every product, including ours.</p>
+      <p className="edt-note" style={{ marginTop: 12 }}>From each company’s published pricing and feature lists, and their listings on GetApp and Capterra, checked 27 October 2026. “Some” means offered in a limited form or through another tool; “–” means we couldn’t find it listed. Dollar prices are their US prices, excluding tax. Products change, so check their websites. Card processing fees (for example Stripe’s) apply on top for every product, including ours.</p>
       <div className="edt-grid">
         <div className="edt-card"><h3>Built for a school</h3><p>Terms and holidays, families with more than one child, instalments, tasters that turn into bookings, and teachers paid by the lesson.</p></div>
         <div className="edt-card"><h3>Google Meet and Classroom, done for you</h3><p>Attendance from who actually joined each lesson, and recordings named, filed and posted to the right Classroom.</p></div>

@@ -106,13 +106,25 @@ export const VERSUS: [string, ...string[]][] = [
   ["Typical cost", "£49–£600 a month", "£15–£200 a month, often plus per-lesson or % fees", "£30–£200 a month", "often charged per student", "free, but costs you time"],
 ];
 
-/** Named competitors (from their own pricing pages, checked 27 Oct 2026; US prices in dollars). Keep this up to date or remove it. */
-export const NAMED: { name: string; for: string; from: string; grows: string; cut: string; us?: boolean }[] = [
-  { name: "OH-SO EdTech", for: "Running a live online school: website, bookings, lessons, families, payroll and marketing", from: "£49 a month", grows: "By plan; £2 a month for each student over the plan’s allowance", cut: "None", us: true },
-  { name: "TutorBird", for: "Scheduling and invoicing for tutors", from: "$16.95 a month", grows: "+$4.95 a month per extra tutor", cut: "None listed" },
-  { name: "Teachworks", for: "Admin for tutoring businesses", from: "$16.49 a month", grows: "Plus $0.07–$0.32 per student per lesson", cut: "None listed" },
-  { name: "TutorCruncher", for: "Admin for tutoring agencies", from: "$30 a month", grows: "$80 or $240 plans; custom domain +$100 a month", cut: "3.5–3.85% of card payments" },
-  { name: "Teachable", for: "Selling recorded online courses", from: "$39 a month", grows: "$79 plan removes the fee", cut: "5% on the starter plan" },
-  { name: "Kajabi", for: "Online courses, memberships and marketing", from: "$179 a month", grows: "$249 a month and up", cut: "None" },
-  { name: "Classe365", for: "School management system", from: "Priced per student", grows: "About $2 per student a month for large schools", cut: "None listed" },
+/** Named competitors, feature by feature (their own pricing/feature pages and GetApp/Capterra listings, checked 27 Oct 2026; US prices).
+ *  "yes" / "no" (not listed) / "partly", or a short note. Keep this up to date or remove it. */
+export const NAMED_COLS = ["OH-SO EdTech", "TutorBird", "Teachworks", "TutorCruncher", "Teachable", "Kajabi", "Classe365"] as const;
+export const NAMED_ROWS: [string, ...string[]][] = [
+  ["Mainly for", "Running a live online school", "Scheduling and invoicing for tutors", "Tutoring business admin", "Tutoring agency admin", "Selling recorded courses", "Courses, memberships and marketing", "School management"],
+  ["Your own website with live timetable and prices", "yes", "partly", "partly", "partly", "partly", "partly", "no"],
+  ["Online booking and card payments", "yes", "yes", "yes", "yes", "yes", "yes", "yes"],
+  ["Instalments and payment plans", "yes", "no", "no", "Top plan", "yes", "yes", "no"],
+  ["Weekly classes across terms and holidays", "yes", "partly", "partly", "partly", "no", "no", "partly"],
+  ["Live video lessons", "Google Meet", "Zoom link", "Zoom or Meet links", "Own video, extra cost", "no", "partly", "Built-in video"],
+  ["Attendance", "Automatic, from Meet", "yes", "partly", "partly", "no", "no", "yes"],
+  ["Recordings filed and posted to Google Classroom, with title cards", "yes", "no", "no", "no", "no", "no", "no"],
+  ["Parent accounts", "yes", "yes", "partly", "yes", "no", "no", "yes"],
+  ["Student accounts, class chats and rewards", "Growth and School", "partly", "partly", "partly", "partly", "partly", "yes"],
+  ["Reports to families", "Growth and School", "yes", "no", "yes", "no", "no", "yes"],
+  ["Teacher payroll", "School", "partly", "yes", "yes", "no", "no", "no"],
+  ["Newsletters and email stats", "Growth and School", "no", "Via Mailchimp", "partly", "partly", "yes", "partly"],
+  ["Social posts drafted and illustrated with Claude", "Growth and School", "no", "no", "no", "no", "no", "no"],
+  ["Your brand on your own web address", "Growth and School", "partly", "partly", "+$100 a month", "yes", "yes", "no"],
+  ["No cut of your fees", "yes", "yes", "yes", "3.5–3.85% of card payments", "Up to 7.5% on lower plans", "yes", "yes"],
+  ["Starts at", "£49 a month", "$16.95 a month, +$4.95 per tutor", "$16.49 a month, plus per-lesson fees", "$30 a month, plus % fees", "$39 a month", "$179 a month", "Priced per student"],
 ];

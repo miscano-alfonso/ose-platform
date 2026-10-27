@@ -185,10 +185,10 @@
 .edt-vs tr.cost td.us{color:var(--ink)}
 .edt-some{font-size:13px;color:var(--muted);background:var(--sun-soft);border-radius:999px;padding:2px 9px}
 
-.edt-named{min-width:860px}
-.edt-named th,.edt-named td{text-align:left!important;vertical-align:top;font-size:14.5px;width:auto!important}
-.edt-named th:first-child,.edt-named td:first-child{width:16%!important}
-.edt-named tr.us td{background:var(--teal-soft)}
+.edt-named{min-width:1120px}
+.edt-named th:first-child,.edt-named td:first-child{width:20%!important;position:sticky;left:0;z-index:1;background:#fff;box-shadow:1px 0 0 var(--line)}
+.edt-named th:nth-child(2),.edt-named td:nth-child(2){width:132px}
+.edt-named tr.cost td{font-size:13px}
 .edt-rec{display:grid;gap:10px}
 .edt-rec .card{position:relative;aspect-ratio:16/9;border-radius:14px;overflow:hidden;background:linear-gradient(135deg,#14532d,#0f3d22);color:#fff;display:grid;grid-template-columns:auto 1fr;align-items:center;gap:6%;padding:7% 8%;box-shadow:0 30px 60px -30px rgba(18,22,47,.45)}
 .edt-rec .roundel{width:clamp(70px,14vw,130px);height:clamp(70px,14vw,130px);align-self:center;border-radius:50%;border:4px solid #f59e0b;display:grid;place-items:center;text-align:center;font-weight:600;letter-spacing:.12em;font-size:clamp(10px,1.3vw,14px);line-height:1.3}
