@@ -17,7 +17,7 @@ export default async function About() {
       {!site.demo && <img className="head-photo about-photo" src="/teachers/leanne-iacurci.webp" alt="Leanne Iacurci, Principal and English Teacher" width={640} height={345} />}
       <div className="about-text">
         {paras.map((p, i) => <p key={i} className={i === 0 ? "about-hello" : undefined}>{p}</p>)}
-        <div className="btns"><Link className="btn btn-accent" href="/contact">Book a taster!</Link><Link className="btn btn-brand" href="/teachers">Meet the team</Link><Link className="btn btn-ghost hub-ghost" href="/courses">Our courses</Link></div>
+        <div className="btns"><Link className="btn btn-accent" href="/taster">Book a taster!</Link><Link className="btn btn-brand" href="/teachers">Meet the team</Link><Link className="btn btn-ghost hub-ghost" href="/courses">Our courses</Link></div>
       </div>
     </div></section>
   </>);

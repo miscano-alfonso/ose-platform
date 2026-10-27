@@ -224,7 +224,7 @@ export async function getDashboardMore(lowPct = 50): Promise<DashMore> {
     const dayRow = (await q<{ d: string }>(`select min(lesson_date)::text as d from lesson_events where lesson_date >= $1::date and status <> 'cancelled'`, [nowL.d]))[0];
     const lessons = dayRow?.d ? await q<DashMore["day"]["lessons"][number]>(`select to_char(sl.starts_at,'HH24:MI') as starts, to_char(sl.ends_at,'HH24:MI') as ends,
         l.name || ' ' || sj.name as name, g.code, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, g.meet_url as meet, ev.status::text as status,
-        (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active')) as students
+        (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students
       from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       left join teachers t on t.id = coalesce(ev.teacher_id, sl.teacher_id) left join users u on u.id = t.user_id
       where ev.lesson_date = $1::date order by sl.starts_at, l.sort_order`, [dayRow.d]) : [];

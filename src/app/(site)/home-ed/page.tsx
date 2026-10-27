@@ -70,7 +70,7 @@ export default async function HomeEd() {
     <section className="s-sec"><div className="wrap hub-end">
       <h2>Questions about starting with us?</h2>
       <p>We teach KS3, pre-GCSE and GCSE courses online for home-educated students. Try a free taster lesson or ask us anything.</p>
-      <div className="btns"><Link className="btn btn-brand" href="/contact">Book a taster</Link><Link className="btn btn-ghost hub-ghost" href="/courses">See our courses</Link></div>
+      <div className="btns"><Link className="btn btn-brand" href="/taster">Book a taster</Link><Link className="btn btn-ghost hub-ghost" href="/courses">See our courses</Link></div>
       <p className="hub-note">These links go to other organisations’ websites, which we don’t control. Dates and rules change, so always check with the organisation, your exam centre or your council. This page is general information, not legal advice.</p>
     </div></section>
   </>;

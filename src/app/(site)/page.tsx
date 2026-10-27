@@ -19,7 +19,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
       <p className="eyebrow">{txt.home_eyebrow}</p>
       <h1>{txt.home_title}</h1>
       <p className="lead">{txt.home_lead}</p>
-      <div className="btns"><Link className="btn btn-accent" href="/contact">Book a taster!</Link><Link className="btn btn-ghost" href="/courses">Our courses</Link></div>
+      <div className="btns"><Link className="btn btn-accent" href="/taster">Book a taster!</Link><Link className="btn btn-ghost" href="/courses">Our courses</Link></div>
     </div>{heroMode === "lessons" ? <HeroLessons mode="alone" /> : <HeroArt>{heroMode === "both" && <HeroLessons mode="around" />}</HeroArt>}</div></section>
     <Ticker items={txt.ticker.split("\n").map((t) => t.trim()).filter(Boolean)} />
 

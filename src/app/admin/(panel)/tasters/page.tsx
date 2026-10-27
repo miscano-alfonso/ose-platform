@@ -17,7 +17,7 @@ export default async function Tasters({ searchParams }: { searchParams: Promise<
   const fams = new Set(rows.filter((r) => r.lesson_date >= termStart).map((r) => r.parent_email.toLowerCase()));
   const conv = new Set(rows.filter((r) => r.lesson_date >= termStart && r.status === "booked_course").map((r) => r.parent_email.toLowerCase()));
   return <>
-    <div className="top"><div><h1>Tasters</h1><div className="sub">Free taster lessons booked on the website’s taster page: each child joins a real lesson from the timetable</div></div></div>
+    <div className="top"><div><h1>Tasters</h1><div className="sub">Free taster lessons, booked by families on the website’s taster page (/taster) or by the office here. Each child joins a real lesson and has Classroom access until 3 days after it</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <div className="tiles">
       <div className="tile"><span className="k">Coming up</span><span className="v">{booked.length}</span><span className="h">{booked.filter((r) => r.lesson_date <= week).length} in the next 7 days</span></div>
@@ -69,7 +69,8 @@ function Row({ r, today }: { r: Awaited<ReturnType<typeof getTasters>>["rows"][n
     <td><b>{r.child_name}</b>{r.together > 1 && <> <span className="pill mute">{r.together} tasters booked together</span></>}
       <div className="muted" style={{ fontSize: 14.5 }}>{r.parent_name} · <a href={`mailto:${r.parent_email}`}>{r.parent_email}</a></div>{r.message && <div className="muted" style={{ fontSize: 14.5 }}>“{r.message}”</div>}</td>
     <td>{r.level} {r.subject}<div className="muted" style={{ fontSize: 14.5 }}>{r.teacher ?? "No teacher"}</div></td>
-    <td><span className={`pill ${STATUS[r.status][1]}`}>{STATUS[r.status][0]}</span></td>
+    <td><span className={`pill ${STATUS[r.status][1]}`}>{STATUS[r.status][0]}</span>{r.source === "website" && <> <span className="pill mute">Website</span></>}
+      <div className="muted" style={{ fontSize: 13.5, marginTop: 4 }}>{r.classroom === "invited" ? `In Classroom until ${day(new Date(Date.parse(r.lesson_date + "T12:00:00Z") + 3 * 864e5).toISOString().slice(0, 10))}` : r.classroom === "removed" ? "Taken out of Classroom" : r.status === "booked" ? "Classroom invitation not sent yet" : ""}</div></td>
     <td><div className="acts" style={{ whiteSpace: "nowrap" }}>
       {r.status === "booked" && r.lesson_date < today && <><Btn id={r.id} status="attended" label="Attended" /><Btn id={r.id} status="no_show" label="Didn’t come" /></>}
       {r.status === "booked" && r.lesson_date >= today && <Btn id={r.id} status="cancelled" label="Cancel" />}

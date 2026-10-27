@@ -1,6 +1,7 @@
 import "server-only";
 import { withSchool } from "./db";
 import { googleAccess, googleKv, googleKvSet, recCanInvite, MeetError } from "./meet";
+import { TASTER_ACCESS_DAYS } from "./tasters-public";
 
 // Google Classroom invitations, sent by the site from the recordings account (ose@, a teacher on every class):
 //  - a student whose place is confirmed (paid, or added by the office) is invited to that class's Classroom, at the
@@ -8,6 +9,8 @@ import { googleAccess, googleKv, googleKvSet, recCanInvite, MeetError } from "./
 //  - a student whose place ends (cancelled, swapped to another class, or a taster that didn't go on to book)
 //    is taken out of the Classroom, or their unanswered invitation is withdrawn.
 // Completed courses are left alone, so students keep their work. Students the site never enrolled are never touched.
+//  - tasters (taster_bookings) are invited when booked and taken out 3 days after the taster lesson (TASTER_ACCESS_DAYS),
+//    unless the child has since booked that course (then their place keeps them in).
 const API = () => process.env.CLASSROOM_API_URL || "https://classroom.googleapis.com/v1";
 
 export type InviteCfg = { auto: boolean };
@@ -15,7 +18,9 @@ export type InviteRun = { at?: string; by?: string; invited?: number; removed?: 
 export type ToInvite = { student_id: string; group_id: string; student: string; email: string; class: string; code: string; course: string; membership_id: string | null; old_invite: string | null };
 export type ToRemove = { membership_id: string; student: string; email: string | null; class: string; code: string; course: string; state: string; invite_id: string | null; why: string };
 export type NoEmail = { student: string; class: string; parent: string };
-export type InvitePlan = { invite: ToInvite[]; remove: ToRemove[]; noEmail: NoEmail[]; noClassroom: string[] };
+export type TasterInvite = { booking_id: string; child: string; email: string; class: string; code: string; course: string; lesson_date: string; until: string };
+export type TasterRemove = TasterInvite & { invite_id: string | null; why: string };
+export type InvitePlan = { invite: ToInvite[]; remove: ToRemove[]; noEmail: NoEmail[]; noClassroom: string[]; tasterInvite: TasterInvite[]; tasterRemove: TasterRemove[] };
 
 export async function inviteCfg(): Promise<InviteCfg> { return { auto: false, ...((await googleKv<InviteCfg>("classroom_invites")) ?? {}) }; }
 export async function saveInviteCfg(auto: boolean) { await googleKvSet("classroom_invites", { auto } satisfies InviteCfg); }
@@ -58,8 +63,50 @@ export async function invitePlan(): Promise<InvitePlan> {
       order by s.first_name`);
     const noClassroom = (await q<{ code: string }>(`with live as (${LIVE}) select distinct g.code from live join course_groups g on g.id = live.group_id
       where ${THIS_YEAR} and g.google_course_id is null and g.status <> 'closed' order by g.code`)).map((r) => r.code);
-    return { invite, remove, noEmail, noClassroom };
+    const t = await tasterPlan(q);
+    return { invite, remove, noEmail, noClassroom, ...t };
   });
+}
+
+type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
+// a child whose taster turned into a confirmed place in that class
+const BOOKED = `exists (select 1 from enrolments e join students s2 on s2.id = e.student_id left join orders o on o.id = e.order_id
+  where e.group_id = g.id and lower(s2.email::text) = lower(r.child_email::text) and not e.is_taster
+    and (e.status = 'active' or (e.status = 'pending' and (e.order_id is null or o.status = 'paid'))))`;
+const TCOLS = `b.id as booking_id, r.child_name as child, lower(r.child_email::text) as email, l.name || ' ' || sj.name as class, g.code, g.google_course_id as course,
+  ev.lesson_date::text as lesson_date, (ev.lesson_date + ${TASTER_ACCESS_DAYS})::text as until`;
+const TFROM = `from taster_bookings b join taster_requests r on r.id = b.request_id join lesson_events ev on ev.id = b.lesson_event_id
+  join course_groups g on g.id = ev.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id`;
+async function tasterPlan(q: Q, requestId?: string): Promise<{ tasterInvite: TasterInvite[]; tasterRemove: TasterRemove[] }> {
+  const only = requestId ? ` and b.request_id = '${requestId.replace(/[^0-9a-f-]/gi, "")}'` : "";
+  const tasterInvite = await q<TasterInvite>(`select ${TCOLS} ${TFROM}
+    where b.classroom_state is null and b.status in ('booked','attended') and g.google_course_id is not null
+      and ev.lesson_date + ${TASTER_ACCESS_DAYS} >= current_date and not ${BOOKED}${only} order by ev.lesson_date`);
+  const tasterRemove = requestId ? [] : await q<TasterRemove>(`select ${TCOLS}, b.google_invitation_id as invite_id,
+      case when b.status = 'cancelled' then 'Taster cancelled' else 'Taster access ended' end as why ${TFROM}
+    where b.classroom_state = 'invited' and g.google_course_id is not null
+      and (b.status = 'cancelled' or ev.lesson_date + ${TASTER_ACCESS_DAYS} < current_date) and not ${BOOKED} order by ev.lesson_date`);
+  return { tasterInvite, tasterRemove };
+}
+
+async function sendTasterInvites(token: string, list: TasterInvite[], run: InviteRun) {
+  for (const x of list) {
+    const r = await call(token, "POST", "/invitations", { courseId: x.course, userId: x.email, role: "STUDENT" });
+    if (r.status !== 200 && r.status !== 409) { run.problems!.push(`${x.child} (taster), ${x.code}: ${why(r.status, r.j, x.email)}`); continue; }
+    run.invited!++;
+    await withSchool((q) => q(`update taster_bookings set classroom_state = 'invited', invited_at = now(), google_invitation_id = $2 where id = $1`,
+      [x.booking_id, r.status === 200 ? String(r.j.id ?? "") || null : null]));
+  }
+}
+
+/** Straight after a website taster booking: invite the child to each class's Classroom (if ose@ may send invitations). */
+export async function inviteTasters(requestId: string): Promise<InviteRun> {
+  const run: InviteRun = { at: new Date().toISOString(), by: "taster booking", invited: 0, removed: 0, problems: [] };
+  if ((await recCanInvite()) !== "ok") return run;   // picked up by the next run once ose@ is connected
+  const token = await googleAccess("rec");
+  const { tasterInvite } = await withSchool((q) => tasterPlan(q, requestId));
+  await sendTasterInvites(token, tasterInvite, run);
+  return run;
 }
 
 type GErr = { error?: { message?: string; status?: string } };
@@ -116,6 +163,17 @@ export async function runInvites(by: string): Promise<InviteRun> {
     if (!ok) continue;
     run.removed!++;
     await withSchool((q) => q(`update classroom_memberships set state = 'removed', joined_at = null, removed_at = now() where id = $1`, [x.membership_id]));
+  }
+  await sendTasterInvites(token, plan.tasterInvite, run);
+  for (const x of plan.tasterRemove) {
+    const course = encodeURIComponent(x.course); let ok = true;
+    const ids = x.invite_id ? [x.invite_id] : (((await call(token, "GET", `/invitations?courseId=${course}&userId=${encodeURIComponent(x.email)}`)).j.invitations as { id: string }[] | undefined) ?? []).map((i) => i.id);
+    for (const id of ids) { const r = await call(token, "DELETE", `/invitations/${encodeURIComponent(id)}`); if (r.status !== 200 && r.status !== 404) ok = false; }
+    const r = await call(token, "DELETE", `/courses/${course}/students/${encodeURIComponent(x.email)}`);
+    if (r.status !== 200 && r.status !== 404) { ok = false; run.problems!.push(`${x.child} (taster), ${x.code}: couldn’t take them out of the Classroom (${r.status}).`); }
+    if (!ok) continue;
+    run.removed!++;
+    await withSchool((q) => q(`update taster_bookings set classroom_state = 'removed', removed_at = now() where id = $1`, [x.booking_id]));
   }
   await googleKvSet("classroom_invites_run", run);
   return run;

@@ -29,7 +29,7 @@ export default function EdTechHome() {
           <li>Start on your own, grow into a team, no switching systems</li>
         </ul>
         <div className="edt-btns"><Link href="/osedtech/trial" className="edt-btn">Start a free trial</Link><Link href="/osedtech/demo" className="edt-btn line">Look round the demo</Link></div>
-        <p className="edt-google"><GoogleDots /> Built for schools that teach with Google Meet and Classroom</p>
+        <p className="edt-google"><GoogleDots /> Built for online teachers and schools using Google Meet and Classroom</p>
         <p className="edt-note" style={{ marginTop: 12 }}>{TRIAL_DAYS} days free. No card needed. Or <Link href="/osedtech/features" style={{ color: "var(--teal-d)" }}>see how it works</Link>.</p>
       </div>
       <div className="edt-stack">

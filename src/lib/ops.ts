@@ -198,7 +198,7 @@ export async function cancelLesson(actorId: string, eventId: string, note: strin
 // ---------- tasters ----------
 export type TasterRow = { id: string; status: string; lesson_date: string; starts_at: string; level: string; subject: string; code: string; child_name: string; child_email: string;
   parent_name: string; parent_email: string; message: string | null; request_id: string; lesson_event_id: string;
-  teacher: string | null; together: number; followed_up_at: string | null };
+  teacher: string | null; together: number; followed_up_at: string | null; classroom: string | null; source: string };
 export type TasterLesson = { lesson_event_id: string; lesson_date: string; starts_at: string; places_left: number };
 export type OpenClass = { id: string; code: string; name: string };
 
@@ -206,7 +206,7 @@ export async function getTasters(groupId: string | null): Promise<{ rows: Taster
   classes: OpenClass[]; lessons: TasterLesson[] }> {
   return withSchool(async (q) => ({
     rows: await q<TasterRow>(`select tl.id, tl.status::text, tl.lesson_date::text, to_char(tl.starts_at,'HH24:MI') as starts_at, tl.level, tl.subject, tl.code, tl.child_name,
-        tl.child_email::text, tl.parent_name, tl.parent_email::text, tl.message, tl.request_id, b.lesson_event_id, u.name as teacher, tl.tasters_in_request as together, b.followed_up_at::text
+        tl.child_email::text, tl.parent_name, tl.parent_email::text, tl.message, tl.request_id, b.lesson_event_id, u.name as teacher, tl.tasters_in_request as together, b.followed_up_at::text, b.classroom_state as classroom, (select source from taster_requests where id = tl.request_id) as source
       from taster_list tl join taster_bookings b on b.id = tl.id join lesson_events ev on ev.id = b.lesson_event_id left join teachers t on t.id = ev.teacher_id left join users u on u.id = t.user_id where tl.lesson_date >= current_date - 120 order by tl.lesson_date desc, tl.starts_at`),
     requests: await q(`select id, name, email::text, levels, message, created_at::text from enquiries where kind = 'taster' and handled_at is null order by created_at desc`),
     classes: await q<OpenClass>(`select g.id, g.code, l.name || ' ' || sj.name as name from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
