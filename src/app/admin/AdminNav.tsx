@@ -31,7 +31,7 @@ const DAILY: Item[] = [
 const GROUPS: [string, Item[]][] = [
   ["Marketing", [["Overview", "/admin/marketing"], ["Newsletter", "/admin/newsletter"], ["Subscribers", "/admin/subscribers"], ["Email stats", "/admin/email-stats"], ["Social", "/admin/social"]]],
   ["Website", [["Website", "/admin/website"], ["Home Ed hub", "/admin/home-ed"], ["Page styles", "/admin/styles"]]],
-  ["Settings", [["School settings", "/admin/school"], ["Teachers", "/admin/teachers"], ["Staff & access", "/admin/staff"], ["Account", "/admin/account"]]],
+  ["Settings", [["School settings", "/admin/school"], ["Teachers", "/admin/teachers"], ["Staff & access", "/admin/staff"], ["Account", "/admin/account"], ["EdTech trials", "/admin/edtech"]]],
 ];
 
 export function AdminNav({ counts }: { counts: Record<string, number> }) {

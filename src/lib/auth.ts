@@ -250,3 +250,23 @@ export async function enterDemo(me: Staff): Promise<boolean> {
   if (ok) (await cookies()).set(await sessionCookie(), token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: SESSION_HOURS * 3600 });
   return ok;
 }
+
+/** OH-SO EdTech's public demo: anyone can look round the demo school as "Demo visitor", with no password.
+ *  Only ever for the demo school (checked here), which never emails, charges or posts. */
+export const DEMO_VISITOR = { email: "visitor@demo.ohsoedtech.com", name: "Demo visitor" };
+export const isDemoVisitor = (email: string | null | undefined) => (email ?? "").toLowerCase() === DEMO_VISITOR.email;
+export async function startVisitorSession(): Promise<boolean> {
+  const { ip, ua } = await clientInfo();
+  const token = randomBytes(32).toString("base64url");
+  const ok = await withSchool(async (q) => {
+    const [s] = await q<{ is_demo: boolean }>(`select is_demo from schools where id = current_school()`);
+    if (!s?.is_demo) return false;
+    const u = (await q<{ id: string }>(`select id from users where lower(email::text) = $1`, [DEMO_VISITOR.email]))[0]
+      ?? (await q<{ id: string }>(`insert into users (school_id, email, name, role) values (current_school(), $1, $2, 'school_admin') returning id`, [DEMO_VISITOR.email, DEMO_VISITOR.name]))[0];
+    await q(`update users set role = 'school_admin', disabled_at = null where id = $1`, [u.id]);
+    await q(`insert into staff_sessions (school_id, user_id, token_hash, expires_at, ip, user_agent) values (current_school(), $1, $2, now() + make_interval(hours => 4), $3, $4)`, [u.id, sha256(token), ip, ua]);
+    return true;
+  });
+  if (ok) (await cookies()).set(await sessionCookie(), token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: 4 * 3600 });
+  return ok;
+}

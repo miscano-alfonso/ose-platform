@@ -20,3 +20,26 @@ export async function resetDemo(me: Staff): Promise<string | null> {
     return null;
   } catch (e) { console.error("demo reset", e); return "Couldn’t make the demo school: " + (e instanceof Error ? e.message : String(e)).slice(0, 200); }
 }
+
+/** /osedtech/demo: opens the demo school for a visitor. The demo is made fresh when it's more than a day old (or missing). */
+export async function startPublicDemo(): Promise<string | null> {
+  const { DEMO_VISITOR, startVisitorSession } = await import("./auth");
+  const { createHmac } = await import("node:crypto");
+  const { cookies } = await import("next/headers");
+  const { SCHOOL_COOKIE } = await import("./db");
+  const age = await runAsSchool(DEMO, () => withSchool((q) => q<{ h: number }>(`select extract(epoch from now() - (value->>'at')::timestamptz) / 3600 as h from meet_kv where school_id = current_school() and key = 'demo_reset'`)))
+    .then((r) => r[0]?.h ?? 999).catch(() => 999);
+  if (age > 24) {
+    const err = await resetDemo({ email: DEMO_VISITOR.email, name: DEMO_VISITOR.name } as Staff);
+    if (err) return "The demo couldn’t be prepared just now. Please try again in a minute.";
+    await runAsSchool(DEMO, () => withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), 'demo_reset', jsonb_build_object('at', now()))
+      on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`))).catch(() => undefined);
+  }
+  const ok = await runAsSchool(DEMO, () => startVisitorSession());
+  if (!ok) return "The demo isn’t available just now.";
+  const jar = await cookies(), secure = process.env.NODE_ENV === "production";
+  jar.set(SCHOOL_COOKIE, DEMO, { httpOnly: true, secure, sameSite: "lax", path: "/admin", maxAge: 4 * 3600 });
+  // lets demo visitors past the private-preview password on the dashboard and family pages (checked in middleware)
+  if (process.env.SITE_PASSWORD) jar.set("ose_demo", createHmac("sha256", process.env.SITE_PASSWORD).update("ose-demo").digest("base64url"), { httpOnly: true, secure, sameSite: "lax", path: "/", maxAge: 4 * 3600 });
+  return null;
+}

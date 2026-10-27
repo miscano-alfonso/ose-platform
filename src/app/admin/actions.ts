@@ -1200,3 +1200,11 @@ export async function resetDemoAction(): Promise<void> {
   const err = await resetDemo(me);
   redirect("/admin?" + (err ? `err=${encodeURIComponent(err)}` : `ok=${encodeURIComponent("The demo school has been made again with fresh example data. Pick “Demo Academy” in the School switcher.")}`));
 }
+
+// ---------- OH-SO EdTech trial requests ----------
+export async function edtechTrialAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); if (me.role !== "school_admin") redirect("/admin/edtech");
+  const { updateTrial } = await import("@/lib/edtech");
+  await updateTrial(String(f.get("id") ?? "").slice(0, 40), String(f.get("status") ?? ""), String(f.get("note") ?? ""));
+  redirect("/admin/edtech?ok=" + encodeURIComponent("Saved."));
+}
