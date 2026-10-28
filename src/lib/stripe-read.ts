@@ -158,7 +158,8 @@ export async function suggestions(): Promise<Suggestion[]> {
         why: m?.why ?? (open.length ? "The amount and date don’t match a term: choose one, or set it aside" : "Nothing unpaid for this family this year"),
         options: open.map((t) => ({ term_id: t.term_id, number: t.number, name: t.name, total: t.total, due_on: t.due_on })) });
     }
-    return out;
+    // matched oldest first (so earlier payments claim earlier terms), shown newest first
+    return out.reverse();
   });
 }
 /** Record a Stripe payment against the chosen terms (in this site only; nothing is sent to Stripe or to families).
