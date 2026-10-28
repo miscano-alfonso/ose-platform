@@ -5,8 +5,8 @@ export type VideoId = "meet" | "zoom" | "teams" | "whereby" | "jitsi" | "other";
 export type VideoTool = { id: VideoId; name: string; host: RegExp | null; example: string; auto: string };
 
 export const VIDEO_TOOLS: VideoTool[] = [
-  { id: "meet", name: "Google Meet", host: /(^|\.)meet\.google\.com$/i, example: "https://meet.google.com/abc-defg-hij", auto: "from Google Meet’s own log (needs Google Workspace), plus check-ins" },
-  { id: "zoom", name: "Zoom", host: /(^|\.)zoom\.(us|com)$/i, example: "https://us02web.zoom.us/j/12345678901", auto: "from check-ins (Zoom’s own reports are coming next)" },
+  { id: "meet", name: "Google Meet", host: /(^|\.)meet\.google\.com$/i, example: "https://meet.google.com/abc-defg-hij", auto: "from Google Meet’s own log (needs Google Workspace), plus check-ins if they’re on" },
+  { id: "zoom", name: "Zoom", host: /(^|\.)zoom\.(us|com)$/i, example: "https://us02web.zoom.us/j/12345678901", auto: "from Zoom’s list of who joined once Zoom is connected (below), plus check-ins if they’re on" },
   { id: "teams", name: "Microsoft Teams", host: /(^|\.)teams\.(microsoft|live)\.com$/i, example: "https://teams.microsoft.com/l/meetup-join/…", auto: "from check-ins" },
   { id: "whereby", name: "Whereby", host: /(^|\.)whereby\.com$/i, example: "https://whereby.com/your-room", auto: "from check-ins" },
   { id: "jitsi", name: "Jitsi Meet", host: /(^|\.)(meet\.jit\.si|8x8\.vc)$/i, example: "https://meet.jit.si/YourRoom", auto: "from check-ins" },

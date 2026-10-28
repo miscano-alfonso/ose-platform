@@ -1253,3 +1253,23 @@ export async function saveVideoAction(f: FormData): Promise<void> {
   await saveVideoSettings({ tool: tool as never, checkins: f.get("checkins") === "on" });
   redirect("/admin/school?ok=" + encodeURIComponent("Live lesson settings saved.") + "#live");
 }
+// ---------- Zoom (School settings → Live lessons) ----------
+const zoomBack = (key: "ok" | "err", msg: string): never => redirect(`/admin/school?${key}=${encodeURIComponent(msg)}#zoom`);
+export async function saveZoomAppAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { saveZoomApp, ZoomError } = await import("@/lib/zoom");
+  try { await saveZoomApp(String(f.get("client_id") ?? ""), String(f.get("client_secret") ?? "")); }
+  catch (e) { zoomBack("err", e instanceof ZoomError ? e.message : "Couldn’t save."); }
+  zoomBack("ok", "Saved. Now press Connect Zoom.");
+}
+export async function zoomOptionsAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const z = await import("@/lib/zoom");
+  const what = String(f.get("what") ?? "");
+  if (what === "disconnect") { await z.disconnectZoom(); zoomBack("ok", "Zoom is disconnected. Marks already taken stay."); }
+  if (what === "recordings") { await z.setZoomRecordings(f.get("on") === "on"); zoomBack("ok", f.get("on") === "on" ? "New Zoom cloud recordings will be posted to each class’s Google Classroom." : "Zoom recordings won’t be posted."); }
+  if (what === "sync") {
+    const me = await requireStaff(); const r = await z.syncZoom(me.name, 14);
+    zoomBack(r.error ? "err" : "ok", r.error ?? `Zoom synced: ${r.joins} new join${r.joins === 1 ? "" : "s"} in ${r.lessons} lesson${r.lessons === 1 ? "" : "s"}${r.posted ? `, ${r.posted} recordings posted` : ""}.`);
+  }
+}

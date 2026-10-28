@@ -511,3 +511,19 @@ async function matchByParent(q: Q): Promise<string[]> {
   for (const r of rows) await q(`update meet_sessions set student_id = $2 where id = $1`, [r.id, r.sid]);
   return [...new Set(rows.map((r) => r.ev))];
 }
+
+/** After join records arrive from somewhere other than Google Meet (Zoom's reports): match them to students by family
+ *  email and by name, exactly as Meet joins are, then turn the touched lessons into marks. */
+export async function settleJoins(q: Q, touched: Set<string>) {
+  const aliases = (await kvGet<Record<string, string>>("aliases", q)) ?? {};
+  for (const id of await matchByParent(q)) touched.add(id);
+  for (const id of await matchByName(q, aliases)) touched.add(id);
+  await kvSet("aliases", aliases, q);
+  for (const id of touched) await recompute(q, id);
+}
+/** Student ids by email, including emails the office has matched before (a parent's account, a personal address). */
+export async function studentEmails(q: Q): Promise<Map<string, string>> {
+  const m = new Map((await q<{ id: string; email: string }>(`select id, lower(email::text) as email from students where email is not null`)).map((s) => [s.email, s.id]));
+  for (const [e, id] of Object.entries((await kvGet<Record<string, string>>("aliases", q)) ?? {})) if (!m.has(e)) m.set(e, id);
+  return m;
+}
