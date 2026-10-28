@@ -1,4 +1,5 @@
 import "server-only";
+import { isTestMode } from "./test-mode";
 import { withSchool } from "./db";
 import { googleAccess, googleKv, googleKvSet, recCanInvite, MeetError } from "./meet";
 import { TASTER_ACCESS_DAYS } from "./tasters-public";
@@ -102,6 +103,7 @@ async function sendTasterInvites(token: string, list: TasterInvite[], run: Invit
 /** Straight after a website taster booking: invite the child to each class's Classroom (if ose@ may send invitations). */
 export async function inviteTasters(requestId: string): Promise<InviteRun> {
   const run: InviteRun = { at: new Date().toISOString(), by: "taster booking", invited: 0, removed: 0, problems: [] };
+  if (await isTestMode()) { run.error = "Test mode is on: the taster’s Classroom invitation waits."; return run; }
   if ((await recCanInvite()) !== "ok") return run;   // picked up by the next run once ose@ is connected
   const token = await googleAccess("rec");
   const { tasterInvite } = await withSchool((q) => tasterPlan(q, requestId));
@@ -128,6 +130,7 @@ function why(status: number, j: GErr, email: string): string {
 /** Send the invitations and withdrawals in the plan. */
 export async function runInvites(by: string): Promise<InviteRun> {
   const run: InviteRun = { at: new Date().toISOString(), by, invited: 0, removed: 0, problems: [] };
+  if (await isTestMode()) { run.error = "Test mode is on: Classroom invitations and removals wait until the school goes live (Settings → Test mode)."; await googleKvSet("classroom_invites_run", run); return run; }
   const ready = await recCanInvite();
   if (ready !== "ok") { run.error = ready === "none" ? "Connect the recordings account (ose@) first, under Recordings → Settings." : "Connect ose@ again (Recordings → Settings) so the site may send Classroom invitations."; await googleKvSet("classroom_invites_run", run); return run; }
   let token: string;

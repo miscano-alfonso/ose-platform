@@ -1,4 +1,5 @@
 import "server-only";
+import { isTestMode } from "./test-mode";
 import { withSchool } from "./db";
 import { googleAccess, googleKv, googleKvSet, DRIVE_URL, MeetError, type Mailbox } from "./meet";
 
@@ -197,7 +198,7 @@ export async function runRecordings(by: string): Promise<RunInfo> {
     const byCode = new Map(lessons.map((l) => [l.meet_code, l]));
     // the first time: bring in what the Apps Script already filed, so earlier weeks and the lesson numbers show here
     const [{ n: had }] = await withSchool((q) => q<{ n: number }>(`select count(*)::int as n from recordings`));
-    if (cfg.mode !== "live") {
+    if (cfg.mode !== "live" || await isTestMode()) {   // test mode: watch only, whatever the setting
       // WATCH ONLY: read what the Apps Script has filed and posted; never rename, move, post or add cards
       try { info.filed = await importFiled(token, cfg, lessons, terms); } catch (e) { info.problems!.push(`Reading the folders: ${e instanceof Error ? e.message : e}`); }
       try { await checkClassroom(token, terms); } catch (e) { info.problems!.push(`Reading Classroom: ${e instanceof Error ? e.message : e}`); }
@@ -450,6 +451,7 @@ export async function postAnyway(id: string) { await withSchool((q) => q(`update
 /** "Post now": puts this one recording in Classroom straight away, in either mode. Uses the teacher's topic when there is a
  *  "Lesson n" post, and never posts twice (it checks for an existing "🎥 T<n> Lesson <n>" first, whoever posted it). */
 export async function postNow(id: string): Promise<{ ok: boolean; note: string }> {
+  if (await isTestMode()) return { ok: false, note: "Test mode is on, so nothing is posted to Classroom. Switch it off in Settings → Test mode." };
   const [r] = await withSchool((q) => q<{ file_id: string; lesson_number: number | null; term_number: number | null; recorded_at: string; course_id: string | null; status: string }>(
     `select r.file_id, r.lesson_number, r.term_number, r.recorded_at::text, l.course_id, r.status from recordings r join rec_lessons l on l.id = r.lesson_id where r.id = $1`, [id]));
   if (!r || r.status !== "filed" || !r.lesson_number) return { ok: false, note: "That recording isn’t a filed lesson." };

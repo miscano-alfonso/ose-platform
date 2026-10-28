@@ -1,4 +1,5 @@
 import "server-only";
+import { holdBooked } from "./test-mode";
 import { withSchool } from "./db";
 import { sendOne, cancelScheduled, emailReady, type Recipient } from "./email";
 import { joinPath, videoSettings } from "./checkins";
@@ -94,13 +95,15 @@ async function deliver(q: Q, key: string, cfg: Cfg, job: Job, budget: { n: numbe
     budget.n--;
     const vars = { ...job.vars, child: job.vars.child ?? "", parent: job.vars.parent ?? r.name };
     const res = await sendOne([r], fill(cfg.subject, vars), fill(cfg.body, vars), { tag: `auto-${key}`, scheduledAt: job.at?.toISOString() });
-    await q(`update automation_sends set status = $2, message_id = $3, error = $4 where id = $1`, [claim[0].id, res.ok ? (job.at ? "scheduled" : "sent") : "failed", res.ids[0] ?? null, res.error ?? null]);
+    // held by test mode: remembered as 'held' (booked again when the school goes live, if the time is still to come)
+    await q(`update automation_sends set status = $2, message_id = $3, error = $4 where id = $1`, [claim[0].id, res.held ? "held" : res.ok ? (job.at ? "scheduled" : "sent") : "failed", res.ids[0] ?? null, res.held ? "Test mode" : res.error ?? null]);
   }
 }
 
 /** Find everything due and send it (or book it with Brevo for the right minute). Safe to run as often as you like. */
 export async function runAutomations(limit = 150): Promise<{ sent: number }> {
   if (!(await emailReady())) return { sent: 0 };
+  await holdBooked().catch((e) => console.error("test mode", e));   // test mode: take back reminders booked for families before it was switched on
   const budget = { n: limit };
   await withSchool(async (q) => {
     const saved = await q<Cfg & { key: string }>(`select key, enabled, subject, body, minutes, to_parent, to_student from automations where enabled`);

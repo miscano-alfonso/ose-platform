@@ -605,3 +605,11 @@
 @media (max-width:900px){.adm .ibx{grid-template-columns:1fr}.adm .ibx-list{position:static;max-height:none}.adm .ibx.picked .ibp{order:-1}}
 .adm .ibp-orig{margin:6px 0 -4px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
 .adm .irp-sig .sig-c{margin-top:8px;line-height:1.45}
+/* top bar: menu toggle on the left, website / colours / sign out on the right (moved from the bottom of the side menu) */
+.adm .topbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:-6px 0 16px;min-height:34px}
+.adm .topbar .grow{flex:1}
+.adm .topbar .theme-seg{margin-top:0}
+.adm .topbar .tb-link{font-size:14.5px;color:var(--muted);text-decoration:none}.adm .topbar .tb-link:hover{color:var(--ink);text-decoration:underline}
+.adm .topbar .side-toggle,.adm .app.side-closed .topbar .side-toggle{position:static;visibility:visible;border-color:var(--line);background:var(--panel);color:var(--ink);box-shadow:none}
+.adm .topbar .side-toggle:hover{background:var(--hover)}
+.adm .app.side-closed .main{padding-left:clamp(16px,3vw,34px)}

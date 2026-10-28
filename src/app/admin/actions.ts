@@ -466,9 +466,10 @@ export async function sendEmailAction(f: FormData): Promise<void> {
   if (!label) redirect(`${page}?err=${encodeURIComponent("Choose who to send to.")}`);
   const to = await recipients(audience);
   const r = await sendBatch(subject, body, to, kind === "marketing");
-  await logCampaign(me.id, { kind, audience, label: label!, subject, body, recipients: to.length, ...r });
+  await logCampaign(me.id, { kind, audience, label: label!, subject, body, recipients: to.length, sent: r.sent, failed: r.failed, error: r.held ? `Test mode: ${r.held} held${r.error ? `. ${r.error}` : ""}` : r.error });
   revalidatePath(page);
-  redirect(`${page}?${r.failed ? "err=" + encodeURIComponent(`${r.sent} sent, ${r.failed} failed. ${r.error ?? ""}`) : "ok=" + encodeURIComponent(`Sent to ${r.sent} ${r.sent === 1 ? "person" : "people"}.`)}`);
+  const heldNote = r.held ? ` Test mode is on: ${r.held} ${r.held === 1 ? "email was" : "emails were"} held, not sent (Settings → Test mode).` : "";
+  redirect(`${page}?${r.failed ? "err=" + encodeURIComponent(`${r.sent} sent, ${r.failed} failed. ${r.error ?? ""}${heldNote}`) : "ok=" + encodeURIComponent(r.sent ? `Sent to ${r.sent} ${r.sent === 1 ? "person" : "people"}.${heldNote}` : `Nothing was sent.${heldNote}`)}`);
 }
 export async function sendTestEmailAction(f: FormData): Promise<void> {
   const me = await requireStaff();
@@ -1374,4 +1375,24 @@ export async function undoStripeMatchAction(f: FormData): Promise<void> {
   const ok = await undoMatch(String(f.get("id") ?? "").slice(0, 80), me.name);
   revalidatePath("/admin/families"); revalidatePath("/admin/payments");
   stBack(ok ? "ok" : "err", ok ? "Undone: that payment is back in the list to record, and the terms it marked paid are unpaid again." : "That payment wasn’t recorded.");
+}
+
+// ---------- Test mode (nothing goes to families, students or teachers) ----------
+export async function setTestModeAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { setTestMode } = await import("@/lib/test-mode");
+  const on = f.get("on") === "1";
+  const allow = String(f.get("allow") ?? "").split(/[\s,;]+/).filter(Boolean);
+  if (!on && f.get("confirm") !== "on") redirect("/admin/test-mode?err=" + encodeURIComponent("Tick the box to confirm before going live."));
+  const r = await setTestMode(me.email, on, allow);
+  revalidatePath("/admin", "layout");
+  redirect("/admin/test-mode?ok=" + encodeURIComponent(on
+    ? `Test mode is on.${r.held ? ` ${r.held} lesson reminder${r.held === 1 ? "" : "s"} already booked with Brevo ${r.held === 1 ? "was" : "were"} taken back.` : ""}`
+    : `The site is live: emails, Classroom invitations and posts go out again.${r.released ? ` ${r.released} held reminder${r.released === 1 ? "" : "s"} for lessons still to come will be booked again.` : ""}`));
+}
+export async function clearHeldAction(): Promise<void> {
+  await requireStaff();
+  const { clearHeld } = await import("@/lib/test-mode");
+  await clearHeld();
+  redirect("/admin/test-mode?ok=" + encodeURIComponent("The list of held messages is cleared."));
 }

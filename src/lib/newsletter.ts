@@ -1,4 +1,5 @@
 import "server-only";
+import { isTestMode } from "./test-mode";
 import { createHmac, randomBytes } from "node:crypto";
 import { isDemoSchool, withSchool } from "./db";
 import { sendHtml } from "./email";
@@ -243,6 +244,7 @@ export async function testSend(userId: string, myEmail: string, subject: string,
 }
 export async function sendEmail(b: Record<string, unknown>, by: string) {
   const c = await brevoCfg(); if (!brevoOn(c)) fail("Connect Brevo first.");
+  if (await isTestMode()) fail("Test mode is on, so newsletters aren’t sent. Send yourself a test instead, or switch test mode off in Settings → Test mode.");
   const id = String(b.id ?? ""), html = String(b.html ?? ""), when = String(b.when ?? "");
   if (!html || html.length > 900000) fail("Nothing to send.");
   if (!html.includes("{{ unsubscribe }}")) fail("The email needs a footer with the unsubscribe link before it can be sent.");

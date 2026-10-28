@@ -1,4 +1,5 @@
 import "server-only";
+import { gate } from "./test-mode";
 import { isDemoSchool, withSchool } from "./db";
 import { emailHtml, defaultFooter, type EmailDesign } from "./email-layout";
 import { siteBase } from "./social";
@@ -106,9 +107,11 @@ export async function saveEmailDesign(d: { logo: boolean; color: string; footer:
 const html = async (body: string, marketing: boolean) => emailHtml(body, marketing, await emailDesign());
 
 /** Sends one email per recipient (nobody sees anyone else's address), in batches. Returns how many were accepted by Brevo. */
-export async function sendBatch(subject: string, body: string, to: Recipient[], marketing: boolean): Promise<{ sent: number; failed: number; error?: string }> {
+export async function sendBatch(subject: string, body: string, to: Recipient[], marketing: boolean): Promise<{ sent: number; failed: number; error?: string; held?: number }> {
   const c = await creds();
   if (!c) return { sent: 0, failed: to.length, error: "Brevo isn’t connected yet." };
+  const g = await gate(to, { subject, body, tag: marketing ? "marketing" : "admin-message" });
+  to = g.send;
   let sent = 0, failed = 0, error: string | undefined;
   for (let i = 0; i < to.length; i += 500) {
     const chunk = to.slice(i, i + 500);
@@ -120,7 +123,7 @@ export async function sendBatch(subject: string, body: string, to: Recipient[], 
     if (res.ok) sent += chunk.length; else { failed += chunk.length; error = `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}`; }
   }
   if (sent) await keepCopy(c, subject, await html(body, marketing), body, to, failed ? `${failed} failed` : undefined);
-  return { sent, failed, error };
+  return { sent, failed, error, held: g.held.length };
 }
 
 export async function logCampaign(actorId: string, d: { kind: string; audience: string; label: string; subject: string; body: string; recipients: number; sent: number; failed: number; error?: string }) {
@@ -135,10 +138,14 @@ export async function history(kind: string) {
 }
 
 /** Sends a ready-made HTML email (one per address). Used by Social's weekly report. */
-export async function sendHtml(subject: string, htmlContent: string, to: string[], tag?: string): Promise<{ ok: boolean; error?: string }> {
+export async function sendHtml(subject: string, htmlContent: string, to: string[], tag?: string): Promise<{ ok: boolean; error?: string; held?: number }> {
   const c = await creds();
   if (!c) return { ok: false, error: "Brevo isn’t connected yet." };
   if (!to.length) return { ok: false, error: "No one to send it to." };
+  const textContent0 = htmlContent.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim();
+  const g = await gate(to.map((email) => ({ email })), { subject, body: textContent0, tag: tag || "social-report" });
+  to = g.send.map((r) => r.email);
+  if (!to.length) return { ok: true, held: g.held.length };
   const textContent = htmlContent.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim().slice(0, 5000);
   const res = await fetch(SMTP_URL(), {
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
@@ -149,10 +156,13 @@ export async function sendHtml(subject: string, htmlContent: string, to: string[
 }
 
 /** One email (to one or more people, each sent separately), optionally scheduled with Brevo up to 72 hours ahead. Returns Brevo's message id(s). */
-export async function sendOne(to: Recipient[], subject: string, body: string, opts: { tag: string; scheduledAt?: string } ): Promise<{ ok: boolean; ids: string[]; error?: string }> {
+export async function sendOne(to: Recipient[], subject: string, body: string, opts: { tag: string; scheduledAt?: string } ): Promise<{ ok: boolean; ids: string[]; error?: string; held?: number }> {
   const c = await creds();
   if (!c) return { ok: false, ids: [], error: "Brevo isn’t connected yet." };
   if (!to.length) return { ok: false, ids: [], error: "No one to send it to." };
+  const g = await gate(to, { subject, body, tag: opts.tag });
+  to = g.send;
+  if (!to.length) return { ok: true, ids: [], held: g.held.length };
   const res = await fetch(SMTP_URL(), {
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, false), textContent: body,

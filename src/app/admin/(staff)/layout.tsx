@@ -12,8 +12,7 @@ import { menuFor } from "@/lib/menu-config";
 import { after } from "next/server";
 import { checkinsBackground } from "@/lib/checkins";
 import { Switchers } from "../Switchers";
-import { SideToggle } from "../SideToggle";
-import { ThemeToggle } from "../ThemeToggle";
+import { TopBar } from "../TopBar";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Staff", robots: { index: false, follow: false } };
@@ -56,15 +55,12 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
     <LessonWindow /><div className="app">
-      <aside className="side"><SideToggle />
+      <aside className="side">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports }} groups={await menuFor("teacher")} />
-        <div className="side-foot">{switchers}
-        <div className="who"><span>Signed in as<br /><b>{me.viewing ? me.realName : me.name}</b></span>
-          <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form><ThemeToggle initial={theme ?? "auto"} />
-          <a href="/" style={{ color: "#c9cde4", fontSize: 15.5 }}>View the website</a></div></div>
+        {switchers && <div className="side-foot">{switchers}</div>}
       </aside>
-      <main className="main">{children}</main>
+      <main className="main"><TopBar theme={theme} signOut={signOutAction} />{children}</main>
     </div></div>;
 }

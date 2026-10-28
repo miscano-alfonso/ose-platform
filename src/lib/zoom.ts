@@ -1,4 +1,5 @@
 import "server-only";
+import { isTestMode } from "./test-mode";
 import { randomBytes, timingSafeEqual } from "node:crypto";
 import { withSchool } from "./db";
 import { googleAccess, settleJoins, studentEmails } from "./meet";
@@ -150,7 +151,7 @@ export async function syncZoom(by: string, days = 3): Promise<ZoomSync> {
       }
       await settleJoins(q, touched);
       c.done = [...done].slice(-800);
-      if (c.recordings) info.posted = await postRecordings(q, c, at, lessons, info);
+      if (c.recordings && !(await isTestMode())) info.posted = await postRecordings(q, c, at, lessons, info);   // test mode: no Classroom posts
     } catch (e) { info.error = e instanceof ZoomError ? e.message : "Couldn’t sync with Zoom. Try again."; if (!(e instanceof ZoomError)) console.error("zoom sync", e); }
     if (!info.notes!.length) delete info.notes;
     c.sync = info; await kvPut(c, q);
