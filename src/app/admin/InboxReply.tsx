@@ -42,8 +42,6 @@ export function InboxPanel({ m, sig, from, opened }: { m: PanelMail; sig: Sig; f
     {!mail && !err && <p className="muted">Loading the email…</p>}
     {err && <p className="note msg bad" style={{ margin: 0 }}>{err}</p>}
     {mail && <>
-      <div className="irp-mail">{mail.body || "(This email has no text.)"}</div>
-      {mail.replied && <div className="irp-sent"><b>You replied from {mail.replied.from}</b> · {new Date(mail.replied.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}<div>{mail.replied.body}</div></div>}
       <label className="fld">Reply from <b>{from}</b><textarea rows={8} value={text} onChange={(e) => setText(e.target.value)} maxLength={20000} className="mini" style={{ width: "100%" }} /></label>
       <SigPreview sig={sig} />
       <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
@@ -51,6 +49,9 @@ export function InboxPanel({ m, sig, from, opened }: { m: PanelMail; sig: Sig; f
         {msg && <span role="status" className={sent && msg.startsWith("Sent") ? "muted" : "bad"} style={{ fontSize: 15 }}>{msg}</span>}
       </div>
       <p className="muted" style={{ margin: 0, fontSize: 13.5 }}>Sent through {from}’s Gmail, so it’s in its Sent folder and the family’s reply comes back to that inbox.</p>
+      {mail.replied && <div className="irp-sent"><b>You replied from {mail.replied.from}</b> · {new Date(mail.replied.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}<div>{mail.replied.body}</div></div>}
+      <p className="ibp-orig">{m.name} wrote · {m.when}</p>
+      <div className="irp-mail">{mail.body || "(This email has no text.)"}</div>
     </>}
   </div>;
 }

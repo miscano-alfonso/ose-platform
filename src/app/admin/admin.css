@@ -601,5 +601,6 @@
 .adm .ibp-when{font-size:13.5px;color:var(--muted)}
 .adm .ibp-subj{margin:0;font:600 19px/1.3 Jost,sans-serif}
 .adm .ibp-acts{display:flex;gap:8px;flex-wrap:wrap}
-.adm .ibp .irp-mail{max-height:420px}
+.adm .ibp .irp-mail{max-height:none}
 @media (max-width:900px){.adm .ibx{grid-template-columns:1fr}.adm .ibx-list{position:static;max-height:none}.adm .ibx.picked .ibp{order:-1}}
+.adm .ibp-orig{margin:6px 0 -4px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
