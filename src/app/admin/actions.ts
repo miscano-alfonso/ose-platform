@@ -1306,6 +1306,11 @@ export async function resolveChatFlagAction(f: FormData): Promise<void> {
   redirect("/admin/student-chat?ok=" + encodeURIComponent(f.get("hide") === "1" ? "Message hidden and alert closed." : "Alert closed."));
 }
 // ---------- Inbox: read the whole email and reply from the admin ----------
+export async function markInboxReadAction(id: string, read: boolean): Promise<void> {
+  const me = await requireStaff();
+  const { markInbox } = await import("@/lib/inbox");
+  await markInbox(me.id, [String(id).slice(0, 40)], !!read);
+}
 export async function inboxMessageAction(id: string) {
   await requireStaff();
   const { inboxMessage } = await import("@/lib/inbox");

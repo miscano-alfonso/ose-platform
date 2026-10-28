@@ -6,14 +6,26 @@ import { automations } from "@/lib/automations";
 import { Composer, NotConnected } from "../../Composer";
 import { inboxStatus, inboxList } from "@/lib/inbox";
 import { syncInboxAction, markInboxAction, disconnectInboxAction, replyFromAction, signatureAction } from "../../actions";
-import { InboxReply, SigPreview } from "../../InboxReply";
+import { InboxPanel, SigPreview } from "../../InboxReply";
 import { requireStaff } from "@/lib/auth";
 
 const KIND: Record<string, [string, string]> = { family: ["good", "Family"], taster: ["info", "Taster"], waiting: ["warn", "Waiting list"], enquiry: ["mute", "Enquiry"] };
 
+const LDN = "Europe/London";
+const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: LDN });
+/** List dates the way mail apps show them: the time today, "Yesterday", the weekday this week, else the date. */
+function shortWhen(s: string) {
+  const d = new Date(s), now = new Date(), t = (x: Date) => x.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: LDN });
+  const days = Math.round((Date.parse(dayKey(now)) - Date.parse(dayKey(d))) / 864e5);
+  if (days <= 0) return t(d);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return d.toLocaleDateString("en-GB", { weekday: "short", timeZone: LDN });
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}), timeZone: LDN });
+}
+const fullWhen = (s: string) => new Date(s).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: LDN }).replace(" at ", ", ");
 const when = (s: string) => new Date(s).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 
-export default async function Email({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; audience?: string; subject?: string; body?: string; tab?: string; show?: string }> }) {
+export default async function Email({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; audience?: string; subject?: string; body?: string; tab?: string; show?: string; m?: string }> }) {
   const sp = await searchParams;
   const tab = ["auto", "compose", "inbox", "sent", "design"].includes(sp.tab ?? "") ? sp.tab! : sp.audience || sp.ok || sp.err ? "compose" : "auto";
   const ready = await emailReady();
@@ -60,25 +72,37 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
       <a className="abtn pri" href="/admin/meet-api?action=login&what=gmail">Connect the school inbox</a>
       <p className="note" style={{ marginTop: 10 }}>Google Meet has to be connected first (Attendance → Google Meet), because the inbox uses the same Google app.</p></section></>;
     const show = sp.show === "all" ? "all" : "new";
-    const [{ rows }, me] = await Promise.all([inboxList(show), requireStaff()]);
+    const [{ rows: allRows }, me] = await Promise.all([inboxList("all"), requireStaff()]);
+    // "New" keeps the email that's open, so it doesn't vanish from the list once opened (and so marked read)
+    const rows = show === "all" ? allRows : allRows.filter((m) => !m.read || m.id === sp.m);
     const { signatureFor } = await import("@/lib/inbox");
     const sig = await signatureFor(me);
     const gm = (t: string, mb?: string | null) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(mb || box.mailbox)}#all/${t}`;
     const many = box.mailboxes.length > 1;
+    const isAddr = (s: string | null) => !s || /@/.test(s);
+    // one name per sender: the family's name when we know them, else the name on the email, else the address
+    const who = (m: (typeof rows)[number]) => m.family || (isAddr(m.from_name) ? null : m.from_name) || m.from_email;
+    const sel = rows.find((m) => m.id === sp.m) ?? rows[0] ?? null;
+    const href = (id: string) => `/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}&m=${id}`;
+    const panel = sel && { id: sel.id, name: who(sel), email: sel.from_email, familyHref: sel.parent_id ? `/admin/families/${sel.parent_id}` : null, subject: sel.subject,
+      when: fullWhen(sel.received_at), kind: KIND[sel.kind] ?? null, mailbox: many ? sel.mailbox : null, gmail: gm(sel.thread_id, sel.mailbox), read: sel.read,
+      replied: !!sel.replied_at, first: (who(sel).includes("@") ? "" : who(sel).split(" ")[0]) || "there" };
     return <>{head}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
-        <div className="segl" role="group" aria-label="Show"><Link href="/admin/email?tab=inbox" aria-current={show === "new" ? "true" : undefined}>New</Link><Link href="/admin/email?tab=inbox&show=all" aria-current={show === "all" ? "true" : undefined}>All</Link></div>
+        <div className="segl" role="group" aria-label="Show"><Link href="/admin/email?tab=inbox" aria-current={show === "new" ? "true" : undefined}>New{unread ? ` (${unread})` : ""}</Link><Link href="/admin/email?tab=inbox&show=all" aria-current={show === "all" ? "true" : undefined}>All</Link></div>
         <span className="grow" />
         {unread > 1 && <form action={markInboxAction}><input type="hidden" name="all" value="1" /><button className="abtn sm" type="submit">Mark all read</button></form>}
         <form action={syncInboxAction}><button className="abtn sm" type="submit">Check now</button></form></div>
-      <section className="card">{rows.length === 0 ? <p className="empty">{show === "new" ? "Nothing new from families." : "No emails from families yet."}</p> : rows.map((m) => <div key={m.id} className="li" style={{ flexWrap: "wrap" }}>
-        <span className={`pill ${m.read ? "mute" : "info"}`}>{m.read ? "Read" : "New"}</span>
-        <div className="t"><b>{m.from_name || m.from_email} · {m.subject || "(no subject)"}</b><span>{m.snippet}</span>
-          <span style={{ display: "block", fontSize: 13.5 }}>{when(m.received_at)} · <span className={`pill ${KIND[m.kind]?.[0] ?? "mute"}`} style={{ fontSize: 12 }}>{KIND[m.kind]?.[1] ?? m.kind}</span>
-            {m.parent_id && <> · <Link href={`/admin/families/${m.parent_id}`}>{m.family}</Link></>}{m.from_name ? ` · ${m.from_email}` : ""}{many && m.mailbox ? ` · to ${m.mailbox}` : ""}</span></div>
-        <a className="abtn sm" href={gm(m.thread_id, m.mailbox)} target="_blank" rel="noopener">Open in Gmail</a>
-        <form action={markInboxAction}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="show" value={show} /><input type="hidden" name="read" value={m.read ? "0" : "1"} /><button className="abtn sm" type="submit">{m.read ? "Mark unread" : "Mark read"}</button></form>
-        <InboxReply id={m.id} first={(m.from_name || m.family || "").split(" ")[0] || "there"} sig={sig} from={box.replyFrom} replied={!!m.replied_at} /></div>)}</section>
+      {rows.length === 0 ? <section className="card"><p className="empty">{show === "new" ? "Nothing new from families." : "No emails from families yet."}</p></section> :
+      <div className={`ibx${sp.m ? " picked" : ""}`}>
+        <nav className="ibx-list" aria-label="Emails">{rows.map((m) => <Link key={m.id} href={href(m.id)} scroll={false} className={`ibx-row${m.read ? "" : " unread"}`} aria-current={m.id === sel?.id ? "true" : undefined}>
+          <span className="ibx-top"><b>{who(m)}</b><time dateTime={m.received_at}>{shortWhen(m.received_at)}</time></span>
+          <span className="ibx-subj">{m.subject || "(no subject)"}</span>
+          <span className="ibx-snip">{m.snippet}</span>
+          <span className="ibx-tags">{KIND[m.kind] && <span className={`pill ${KIND[m.kind][0]}`}>{KIND[m.kind][1]}</span>}{m.replied_at && <span className="pill good">Replied</span>}{many && m.mailbox && <span className="muted">to {m.mailbox}</span>}</span>
+        </Link>)}</nav>
+        {panel && <InboxPanel key={panel.id} m={panel} sig={sig} from={box.replyFrom} opened={!!sp.m} />}
+      </div>}
       <section className="card"><h2>Your signature</h2>
         <p className="cs">Added under every reply you send from here: your name, job title and the school logo. The logo is blue; email apps that switch to dark mode (Apple Mail, iPhone Mail, Outlook) show it in white instead. Gmail doesn’t tell emails it’s in dark mode, so Gmail readers see the blue one.</p>
         <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-end" }}>
