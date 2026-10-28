@@ -85,9 +85,15 @@ export async function syncStripe(): Promise<{ added: number; error?: string }> {
     await withSchool(async (q) => {
       const y = (await q<{ s: string }>(`select extract(epoch from (min(starts_on) - interval '120 days'))::bigint::text as s from academic_years where ends_on >= current_date`))[0]?.s;
       const since = c.sync?.at && !c.sync.error ? Math.floor(Date.parse(c.sync.at) / 1000) - 3 * 86400 : Number(y ?? Math.floor(Date.now() / 1000) - 400 * 86400);
-      let after = "";
+      let after = "", expand = "&expand[]=data.customer";
       for (let i = 0; i < 40; i++) {
-        const page = await sget<{ data: Charge[]; has_more: boolean }>(key, `/charges?limit=100&created[gte]=${since}&expand[]=data.customer${after ? `&starting_after=${after}` : ""}`);
+        let page: { data: Charge[]; has_more: boolean };
+        try { page = await sget(key, `/charges?limit=100&created[gte]=${since}${expand}${after ? `&starting_after=${after}` : ""}`); }
+        catch (e) {
+          // without Customers access, read the charges alone: the email on the payment itself is used instead
+          if (!expand || !/customer_read|Customers Read/i.test((e as Error).message)) throw e;
+          expand = ""; i--; continue;
+        }
         for (const ch of page.data) if (await saveCharge(q, ch)) added++;
         if (!page.has_more || !page.data.length) break;
         after = page.data[page.data.length - 1].id;
