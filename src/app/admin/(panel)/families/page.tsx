@@ -40,6 +40,7 @@ export default async function Families({ searchParams }: { searchParams: Promise
         <label className="muted" htmlFor="fsort" style={{ fontSize: 14 }}>Sort</label><select id="fsort" name="sort" defaultValue={sort} className="mini">{Object.entries(SORTS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
         <button className="abtn sm" type="submit">Sort</button></form>
     </div>
+    {all.some((f) => f.state === "overdue") && <p className="note" style={{ marginTop: 0 }}>“Not recorded as paid” means a term’s payment date has passed and this site hasn’t recorded the payment yet (payments made through TechSaga aren’t known here). <Link href="/admin/payments/stripe">Match payments from Stripe</Link></p>}
     <div className="tw"><table><thead><tr>{th("Parent", "name", "name_desc")}<th>Children</th>{th("Courses", "courses", undefined, "n")}{th("Latest booking", "recent", "oldest")}<th>Payments</th><th className="n">Next payment</th></tr></thead><tbody>
       {list.length === 0 ? <tr><td colSpan={6} className="muted" style={{ padding: 24, textAlign: "center" }}>{all.length ? "No families match." : "No families yet. Use Import families to bring them across from TechSaga."}</td></tr>
       : list.map((f) => <tr key={f.id} className="click">

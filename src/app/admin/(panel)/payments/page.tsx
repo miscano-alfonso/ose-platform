@@ -19,7 +19,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
   const yearTotal = terms.reduce((n, t) => n + t.due, 0), yearPaid = terms.reduce((n, t) => n + t.paid, 0);
   return <>
     <div className="top"><div><h1>Payments</h1><div className="sub">{year ? `${yearLabel(year)} · ${money(yearPaid)} paid of ${money(yearTotal)} for the year` : "No school year set up"}</div></div>
-      <span className="grow" />
+      <span className="grow" /><Link className="abtn" href="/admin/payments/stripe">Stripe payments</Link>
       {unscheduled > 0 && <form action={buildSchedulesAction}><button className="abtn pri" type="submit">Create payment schedules ({unscheduled} places)</button></form>}</div>
 
     {sp.built && <p className="note msg">Payment schedules created for {bp} course places: {bi} termly payments, {bm} of them already paid in TechSaga.</p>}

@@ -1326,3 +1326,33 @@ export async function refreshJoinsAction(f: FormData): Promise<void> {
   const r = await syncMeet(me.name).catch(() => null);
   redirect(`/admin/register/${id}?` + (r && !("error" in r && r.error) ? "ok=" + encodeURIComponent("Checked Google Meet for new joins.") : "err=" + encodeURIComponent((r as { error?: string } | null)?.error ?? "Couldn’t reach Google Meet.")));
 }
+// ---------- Stripe, read only (Payments → Stripe payments) ----------
+const stBack = (key: "ok" | "err", msg: string): never => redirect(`/admin/payments/stripe?${key}=${encodeURIComponent(msg)}`);
+async function stripeAdmin() { const me = await requireStaff(); if (me.role !== "school_admin") stBack("err", "Only a school admin can change this."); return me; }
+export async function connectStripeAction(f: FormData): Promise<void> {
+  const me = await stripeAdmin();
+  const { connectStripe, syncStripe } = await import("@/lib/stripe-read");
+  const err = await connectStripe(me.name, String(f.get("key") ?? ""), String(f.get("whsec") ?? ""));
+  if (err) stBack("err", err);
+  const r = String(f.get("key") ?? "").trim() ? await syncStripe() : null;
+  stBack(r?.error ? "err" : "ok", r ? (r.error ?? `Connected (read only). Copied ${r.added} payment${r.added === 1 ? "" : "s"} from Stripe; check the matches below.`) : "Saved.");
+}
+export async function stripeOptionsAction(f: FormData): Promise<void> {
+  await stripeAdmin();
+  const s = await import("@/lib/stripe-read"), what = String(f.get("what") ?? "");
+  if (what === "sync") { const r = await s.syncStripe(); stBack(r.error ? "err" : "ok", r.error ?? `Copied ${r.added} new payment${r.added === 1 ? "" : "s"} from Stripe.`); }
+  if (what === "auto") { await s.setStripeAuto(f.get("on") === "on"); stBack("ok", "Saved."); }
+  if (what === "disconnect") { await s.disconnectStripe(); stBack("ok", "Stripe disconnected. Payments already matched stay matched."); }
+}
+export async function confirmStripeAction(f: FormData): Promise<void> {
+  const me = await stripeAdmin();
+  const { confirmMatches } = await import("@/lib/stripe-read");
+  const picks: { charge: string; terms: string[] }[] = [], ignore: string[] = [];
+  for (const [k, v] of f.entries()) {
+    if (k.startsWith("use_") && v === "on") { const id = k.slice(4), terms = String(f.get(`terms_${id}`) ?? "").split(",").filter(Boolean); if (terms.length) picks.push({ charge: id, terms }); }
+    if (k.startsWith("ignore_") && v === "on") ignore.push(k.slice(7));
+  }
+  const r = await confirmMatches(me.name, picks.slice(0, 500), ignore.slice(0, 500));
+  revalidatePath("/admin/families"); revalidatePath("/admin/payments");
+  stBack("ok", `Recorded ${r.payments} payment${r.payments === 1 ? "" : "s"} against ${r.terms} course term${r.terms === 1 ? "" : "s"}${ignore.length ? `; ${ignore.length} set aside` : ""}. Nothing was sent to Stripe or to families.`);
+}
