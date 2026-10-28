@@ -256,7 +256,7 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
 }
 
 /** Marks for one lesson from its Meet joins; approved absences stay approved; a lesson anyone joined counts as taught. */
-async function recompute(q: Q, eventId: string) {
+export async function recompute(q: Q, eventId: string) {
   const ev = (await q<{ past: boolean }>(`select (e.lesson_date + s.ends_at) at time zone sc.timezone < now() as past from lesson_events e
     join lesson_slots s on s.id = e.slot_id join schools sc on sc.id = e.school_id where e.id = $1`, [eventId]))[0];
   if (!ev?.past) return;

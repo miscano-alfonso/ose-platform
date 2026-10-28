@@ -3,6 +3,8 @@ import { attendanceOverview } from "@/lib/attendance";
 import { meetStatus, unmatchedPeople, unplacedCalls, usualTimes } from "@/lib/meet";
 import { classroomStatus } from "@/lib/classroom";
 import { siteBase } from "@/lib/social";
+import { videoSettings } from "@/lib/checkins";
+import { toolById } from "@/lib/video";
 import { saveGoogleAppAction, disconnectGoogleAction, syncMeetAction, saveAlertAction, matchPersonAction, notALessonAction, syncClassroomAction, assignMeetCodeAction, timesFromMeetAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
@@ -14,7 +16,9 @@ const MARK: Record<string, [string, string]> = { present: ["✓", "Present"], la
 
 export default async function Attendance({ searchParams }: { searchParams: Promise<{ term?: string; tab?: string; cls?: string; low?: string; ok?: string; err?: string }> }) {
   const sp = await searchParams;
-  const [d, g, joins, base, unplaced] = await Promise.all([attendanceOverview(sp.term ?? null, sp.cls ?? null), meetStatus(await siteBase()), unmatchedPeople(), siteBase(), unplacedCalls()]);
+  const [d, g, joins, base, unplaced, vid] = await Promise.all([attendanceOverview(sp.term ?? null, sp.cls ?? null), meetStatus(await siteBase()), unmatchedPeople(), siteBase(), unplacedCalls(), videoSettings()]);
+  // where marks come from: Google Meet’s log, Join-button check-ins, or both
+  const isMeet = vid.tool === "meet", source = isMeet ? (vid.checkins ? "Google Meet and check-ins" : "Google Meet") : vid.checkins ? "Check-ins" : "Registers";
   const firstDay = d.terms[0]?.starts_on ?? "";
   const tab = ["students", "lessons", "absences", "joins", "google"].includes(sp.tab ?? "") ? sp.tab! : g.connected ? "students" : "google";
   const gc = tab === "google" && g.connected ? await classroomStatus() : null;
@@ -25,19 +29,19 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
   const TABS: [string, string][] = [["students", "Students"], ["lessons", "Lesson by lesson"], ["absences", `Reported absences${upcomingAbs ? ` (${upcomingAbs})` : ""}`],
     ["joins", `Check Meet joins${joins.people.length ? ` (${joins.people.length})` : ""}`], ["google", g.connected ? "Google Meet" : "Connect Google Meet"]];
   return <>
-    <div className="top"><div><h1>Attendance</h1><div className="sub">{d.term ? `${d.term.name} · ` : ""}taken automatically from Google Meet</div></div>
+    <div className="top"><div><h1>Attendance</h1><div className="sub">{d.term ? `${d.term.name} · ` : ""}{isMeet || vid.checkins ? `taken automatically from ${source === "Check-ins" ? `Join check-ins (${toolById(vid.tool).name})` : source}` : "taken in each lesson’s register"}</div></div>
       <span className="grow" />
       {g.connected && <form action={syncMeetAction}><input type="hidden" name="tab" value={tab} /><button className="abtn sm" type="submit">Sync now</button></form>}</div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
-    {!g.connected && tab !== "google" && <p className="note msg">Google Meet isn’t connected yet, so there are no marks to show. <Link href={q({ tab: "google" })}>Connect it</Link>.</p>}
+    {isMeet && !g.connected && tab !== "google" && <p className="note msg">Google Meet isn’t connected yet, so there are no marks to show. <Link href={q({ tab: "google" })}>Connect it</Link>.</p>}
 
     <nav className="tabs" style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 14 }}>{d.terms.map((t) => <Link key={t.id} href={q({ term: t.id })} className={`abtn sm${t.id === d.term?.id ? " pri" : ""}`}>Term {t.number}</Link>)}</nav>
 
     <div className="tiles">
       <div className="tile"><span className="k">Attendance this term</span><span className="v">{d.overall == null ? "—" : `${d.overall}%`}</span><span className="h">all students, all classes</span></div>
       <div className="tile"><span className="k">Lessons held this term</span><span className="v">{d.held}</span><span className="h">{d.firstHeld ? `since ${dm(d.firstHeld)}` : "none yet"}</span></div>
-      <div className="tile"><span className="k">Where it comes from</span><span className="v" style={{ fontSize: 20 }}>Google Meet</span>
-        <span className="h">{g.connected ? `${g.sync.at ? `synced ${ago(g.sync.at)}` : "not synced yet"} · late after 5 min` : "not connected"}</span></div>
+      <div className="tile"><span className="k">Where it comes from</span><span className="v" style={{ fontSize: 20 }}>{source}</span>
+        <span className="h">{!isMeet ? (vid.checkins ? "marked when each lesson ends" : <Link href="/admin/school#live">turn on check-ins</Link>) : g.connected ? `${g.sync.at ? `synced ${ago(g.sync.at)}` : "not synced yet"} · late after 5 min` : "not connected"}</span></div>
       <div className={`tile${low.length ? " alert" : ""}`}><span className="k">Below {pct}%</span><span className="v">{low.length}</span><span className="h">students</span></div>
       <form action={saveAlertAction} className="tile"><input type="hidden" name="tab" value={tab} /><span className="k">Weekly alert email</span><span className="v" style={{ fontSize: 20 }}>{g.alert.on ? "On" : "Off"}</span>
         <span className="h" style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}><label style={{ display: "inline-flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="on" defaultChecked={g.alert.on} /> Fridays 16:00 below</label>

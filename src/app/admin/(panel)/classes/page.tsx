@@ -4,6 +4,8 @@ import { classFormOptions } from "@/lib/rules";
 import { updateGroupAction, addClassAction, remindInviteAction, runInvitesAction, saveInviteCfgAction } from "../../actions";
 import { invitePlan, inviteStatus } from "@/lib/classroom-invites";
 import { yearLabel } from "@/lib/format";
+import { videoSettings } from "@/lib/checkins";
+import { toolById, toolOf } from "@/lib/video";
 
 const MODE: Record<string, string> = { auto: "Close when full", keep_open: "Keep open past capacity", full: "Mark as full now" };
 const LABEL: Record<string, string> = { auto: "Automatic", off: "No label", few_spaces: "Few spaces left", almost_full: "Almost full", new_group: "New Group!", launching_soon: "New Group Launching Soon!" };
@@ -15,7 +17,8 @@ const statusPill = (s: string, full: boolean) => full && (s === "open" || s === 
 
 export default async function Classes({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; level?: string }> }) {
   const sp = await searchParams;
-  const [all, opts, pend, plan, inv] = await Promise.all([getGroups(), classFormOptions(), pendingInvites(), invitePlan(), inviteStatus()]);
+  const [all, opts, pend, plan, inv, vid] = await Promise.all([getGroups(), classFormOptions(), pendingInvites(), invitePlan(), inviteStatus(), videoSettings()]);
+  const tool = toolById(vid.tool);
   const nIn = plan.invite.length + plan.tasterInvite.length, nOut = plan.remove.length + plan.tasterRemove.length;
   const levels = [...new Set(all.map((g) => g.level))];
   const level = levels.includes(sp.level ?? "") ? sp.level! : "All";
@@ -77,7 +80,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
               <td>{g.label ?? <span className="muted">None</span>}{g.sticky_label !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand</div>}</td>
               <td>{onHome(g) ? <span className="pill good">Space Available</span> : <span className="muted">Not shown</span>}
                 {g.homepage !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand{g.homepage_order ? ` · position ${g.homepage_order}` : ""}</div>}</td>
-              <td>{g.classroom ? <span className="pill good">Linked</span> : <span className="pill mute">Not linked</span>}{g.meet_url ? <div className="muted" style={{ fontSize: 13.5 }}>Meet link set</div> : <div className="muted" style={{ fontSize: 13.5 }}>No Meet link</div>}</td>
+              <td>{g.classroom ? <span className="pill good">Linked</span> : <span className="pill mute">Not linked</span>}{g.meet_url ? <div className="muted" style={{ fontSize: 13.5 }}>{toolOf(g.meet_url).id === "other" ? "Lesson link set" : `${toolOf(g.meet_url).name} link set`}</div> : <div className="muted" style={{ fontSize: 13.5 }}>No lesson link</div>}</td>
             </tr>
             <tr className="editrow"><td colSpan={8} style={{ paddingTop: 6, paddingBottom: 8 }}>
               <details className="edit"><summary className="abtn sm">Edit {g.code}</summary>
@@ -89,7 +92,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
                   <label className="fld">Status<select name="status" defaultValue={g.status}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
                   <label className="fld">Space Available on homepage<select name="homepage" defaultValue={g.homepage}>{Object.entries(HOME).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
                   <label className="fld">Position<input type="number" name="homepage_order" min={1} max={99} placeholder="Auto" defaultValue={g.homepage_order ?? ""} style={{ width: 80 }} /></label>
-                  <label className="fld">Google Meet link<input type="url" name="meet_url" placeholder="https://meet.google.com/abc-defg-hij" defaultValue={g.meet_url ?? ""} style={{ width: 300 }} /></label>
+                  <label className="fld">Lesson link ({tool.id === "other" ? "any video tool" : tool.name}, or any https link)<input type="url" name="meet_url" placeholder={tool.example} defaultValue={g.meet_url ?? ""} style={{ width: 340 }} /></label>
                   <button className="abtn pri" type="submit">Save</button>
                 </form></details></td></tr>
           </tbody>;

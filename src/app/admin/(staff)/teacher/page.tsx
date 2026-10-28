@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireViewer } from "@/lib/auth";
 import { myDay } from "@/lib/teacher-area";
 import { Ring, Ico, IC } from "../../DashBits";
+import { joinLabel } from "@/lib/video";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,7 @@ export default async function MyDay() {
         <p className="fx-live" style={isToday ? undefined : { color: "#c9cdea" }}>{isToday && <i />}{next ? (isToday ? `Today · ${next.time}` : `Next lesson · ${wd(next.d)} ${dm(next.d)} ${next.time}`) : d.term?.name ?? "My day"}</p>
         <h1 className="fx-hero-t"><span style={{ fontSize: ".55em", fontWeight: 500 }}>Hello {me.name.split(" ")[0]}</span>{next && <><br />{next.name}</>}</h1>
         <p className="fx-hero-s">{next ? <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>
-        <div className="fx-btns">{next?.meet_url && <a className="go" href={next.meet_url} target="_blank" rel="noopener">Join Google Meet</a>}
+        <div className="fx-btns">{next?.meet_url && <a className="go" href={next.meet_url} target="_blank" rel="noopener">{joinLabel(next.meet_url)}</a>}
           {next && <Link href={`/admin/register/${next.id}`}>Register</Link>}<Link href="/admin/teacher/timetable">My timetable</Link></div>
       </section>
       <Link href="/admin/teacher/reports" className="dx-pop c4"><span>{d.reportCycle ?? "Reports"}</span>

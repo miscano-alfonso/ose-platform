@@ -86,7 +86,8 @@ export async function updateGroupAction(f: FormData) {
   const mode = str(f, "capacity_mode"), label = str(f, "sticky_label"), status = str(f, "status"), homepage = str(f, "homepage") || "auto";
   const orderRaw = str(f, "homepage_order", 3), homepageOrder = orderRaw === "" ? null : Math.max(1, Math.min(99, parseInt(orderRaw, 10) || 1));
   if (!MODES.includes(mode) || !LABELS.includes(label) || !STATUSES.includes(status) || !HOMEPAGE.includes(homepage)) return;
-  const meetRaw = str(f, "meet_url", 200), meet = /^https:\/\/meet\.google\.com\/[a-z]{3}-?[a-z]{4}-?[a-z]{3}\b/i.test(meetRaw) ? meetRaw.split("?")[0] : meetRaw === "" ? null : undefined;
+  const { cleanLessonLink } = await import("@/lib/video");
+  const meet = cleanLessonLink(str(f, "meet_url", 500)); // Google Meet, Zoom, Teams, Whereby, Jitsi or any https link
   await withSchool(async (q) => {
     if (meet !== undefined) await q(`update course_groups set meet_url = $2 where id = $1`, [id, meet]);
     const before = await q(`select capacity, capacity_mode, sticky_label, status, homepage, homepage_order from course_groups where id = $1`, [id]);
@@ -1241,4 +1242,14 @@ export async function saveMenuAction(area: string, cfg: { groups: { title: strin
   await saveMenuConfig(area as never, cfg as never);
   revalidatePath("/", "layout");
   return { ok: true };
+}
+// ---------- live lessons: video tool and check-ins (School settings) ----------
+export async function saveVideoAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { VIDEO_TOOLS } = await import("@/lib/video");
+  const tool = String(f.get("tool") ?? "");
+  if (!VIDEO_TOOLS.some((t) => t.id === tool)) redirect("/admin/school?err=" + encodeURIComponent("Choose a video tool."));
+  const { saveVideoSettings } = await import("@/lib/checkins");
+  await saveVideoSettings({ tool: tool as never, checkins: f.get("checkins") === "on" });
+  redirect("/admin/school?ok=" + encodeURIComponent("Live lesson settings saved.") + "#live");
 }

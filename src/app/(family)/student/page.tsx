@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireStudent } from "@/lib/family-auth";
 import { studentHome } from "@/lib/family";
 import { dlong, hm } from "../fmt";
+import { joinLabel } from "@/lib/video";
 import { Ico, IC, ordinal, whenText } from "../../admin/DashBits";
 
 // The student's home, Bento style: the next lesson up top with Join, reward points in lime, a coloured tile per class.
@@ -21,7 +22,7 @@ export default async function StudentHome() {
           <h1 className="fx-hero-t"><span style={{ fontSize: ".55em", fontWeight: 500 }}>Hi {h.me.first} ✦</span><br />{next.subject}</h1>
           <p className="fx-hero-s">{hm(next.next!)}{next.teacher ? ` with ${next.teacher}` : ""} · {next.level}</p>
           {next.invited && <p className="fx-hero-s"><b>Accept the Google Classroom invitation in your email first.</b></p>}
-          <div className="fx-btns">{next.meet && <a className={soon ? "go" : undefined} href={next.meet} target="_blank" rel="noopener">Join Google Meet</a>}<Link href={`/student/class/${next.group_id}`}>Open class</Link></div>
+          <div className="fx-btns">{next.meet && <a className={soon ? "go" : undefined} href={`/join/${next.group_id}`} target="_blank" rel="noopener">{joinLabel(next.meet)}</a>}<Link href={`/student/class/${next.group_id}`}>Open class</Link></div>
         </> : <><h1 className="fx-hero-t">Hi {h.me.first} ✦</h1><p className="fx-hero-s">{h.classes.length ? "No lessons coming up just now: enjoy the break." : "You’re not in any classes yet."}</p></>}
       </section>
       <Link href="/student/rewards" className="dx-pop c4"><span>Reward points this term</span><b className="fx-big">{pts}</b>

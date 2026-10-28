@@ -8,6 +8,8 @@ import { DashStyles } from "../DashStyles";
 import { brandSrc } from "@/lib/brand";
 import { TeacherNav } from "../AdminNav";
 import { menuFor } from "@/lib/menu-config";
+import { after } from "next/server";
+import { checkinsBackground } from "@/lib/checkins";
 import { Switchers } from "../Switchers";
 import { SideToggle } from "../SideToggle";
 import { ThemeToggle } from "../ThemeToggle";
@@ -21,6 +23,7 @@ export const metadata: Metadata = { title: "Staff", robots: { index: false, foll
 export default async function StaffLayout({ children }: { children: React.ReactNode }) {
   const tv = (await cookies()).get("ose_theme")?.value, theme = tv === "light" || tv === "dark" ? tv : undefined;
   const me = await requireViewer();
+  after(() => checkinsBackground()); // a school without Meet may only ever have teachers signed in
   const { logo } = await brandSrc();
   const brand = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string } }>(`select brand from schools where id = current_school()`)))[0]?.brand ?? {};
   const inkOn = (h: string) => { const n = parseInt(h.slice(1), 16), l = (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255; return l < 0.6 ? "#ffffff" : "#0f1747"; };

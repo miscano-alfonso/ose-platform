@@ -7,6 +7,7 @@ import { classroomBackground } from "@/lib/classroom";
 import { invitesBackground } from "@/lib/classroom-invites";
 import { inboxBackground, unreadInbox } from "@/lib/inbox";
 import { recordingsBackground } from "@/lib/recordings";
+import { checkinsBackground } from "@/lib/checkins";
 import { requireStaff, isDemoVisitor } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
 import { signOutAction } from "../actions";
@@ -30,6 +31,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const me = await requireStaff();
   after(() => socialBackground());
   after(() => meetBackground());
+  after(() => checkinsBackground()); // Join-button check-ins become marks once each lesson ends
   after(() => invitesBackground());   // Classroom invitations for new places, removals for ended ones (if switched on)
   after(() => classroomBackground()); // class work and marks from Google Classroom, every 6 hours
   after(() => inboxBackground());
