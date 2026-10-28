@@ -1384,7 +1384,7 @@ export async function setTestModeAction(f: FormData): Promise<void> {
   const on = f.get("on") === "1";
   const allow = String(f.get("allow") ?? "").split(/[\s,;]+/).filter(Boolean);
   if (!on && f.get("confirm") !== "on") redirect("/admin/test-mode?err=" + encodeURIComponent("Tick the box to confirm before going live."));
-  const r = await setTestMode(me.email, on, allow);
+  const r = await setTestMode(me.email, on, allow, String(f.get("monitor") ?? "").trim());
   revalidatePath("/admin", "layout");
   redirect("/admin/test-mode?ok=" + encodeURIComponent(on
     ? `Test mode is on.${r.held ? ` ${r.held} lesson reminder${r.held === 1 ? "" : "s"} already booked with Brevo ${r.held === 1 ? "was" : "were"} taken back.` : ""}`

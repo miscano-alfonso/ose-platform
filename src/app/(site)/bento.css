@@ -147,3 +147,9 @@ a.bh-t{transition:transform .15s,box-shadow .15s}a.bh-t:hover{transform:translat
 .bt .hub-ghost{color:var(--b-ink);border-color:var(--b-ink)}
 @media (min-width:1081px){.bt .s-links{gap:0;padding:4px 6px}.bt .s-links a{padding:7px 9px;font-size:14px;white-space:nowrap}.bt .s-nav .wrap{max-width:1360px}}
 @media (min-width:1081px) and (max-width:1360px){.bt .s-links a{padding:7px 6px;font-size:13px}.bt .s-logo img{height:38px}}
+/* full-width layout: the menu bar, home modules, page headers and footer use the whole window (with a gutter) */
+.bt .s-nav .wrap,.bt .s-foot .wrap{max-width:none;padding-inline:clamp(16px,2.5vw,40px)}
+@media (min-width:1081px){.bt .s-nav .wrap{max-width:none;padding-block:22px}.bt .s-logo img{height:58px}}
+@media (min-width:1081px) and (max-width:1360px){.bt .s-logo img{height:50px}}
+.bh{max-width:none;padding-inline:clamp(16px,2.5vw,40px)}
+.bt .s-phead>.wrap,.bt .s-hero>.wrap{max-width:none;width:calc(100% - 2 * clamp(16px,2.5vw,40px))}

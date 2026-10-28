@@ -8,13 +8,15 @@ import { withSchool } from "./db";
 // A school with no setting is in test mode, so a new site never surprises anyone.
 
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
-export type TestCfg = { on: boolean; allow: string[]; at?: string; by?: string };
+export type TestCfg = { on: boolean; allow: string[]; monitor?: string; at?: string; by?: string };
+/** At most this many monitoring copies a day (Brevo plans have daily limits); the rest are only listed. */
+export const MONITOR_DAY_CAP = 200;
 const KEY = "test_mode";
 const norm = (e: string) => e.trim().toLowerCase();
 
 async function cfgQ(q: Q): Promise<TestCfg> {
   const v = (await q<{ value: Partial<TestCfg> }>(`select value from meet_kv where key = $1`, [KEY]))[0]?.value;
-  return { on: v?.on !== false, allow: Array.isArray(v?.allow) ? v!.allow.map(String) : [], at: v?.at, by: v?.by };
+  return { on: v?.on !== false, allow: Array.isArray(v?.allow) ? v!.allow.map(String) : [], monitor: typeof v?.monitor === "string" && v.monitor ? v.monitor : undefined, at: v?.at, by: v?.by };
 }
 /** The setting, with everyone allowed to receive email while it's on (admins + the extra addresses). */
 export async function testMode(): Promise<TestCfg & { admins: string[] }> {
@@ -29,27 +31,32 @@ export async function isTestMode(): Promise<boolean> {
 }
 
 /** Split recipients into those who may get the email now and those held by test mode (logged for the Test mode page). */
-export async function gate<T extends { email: string; name?: string }>(to: T[], m: { channel?: string; subject: string; body?: string; tag?: string }): Promise<{ send: T[]; held: T[] }> {
+export async function gate<T extends { email: string; name?: string }>(to: T[], m: { channel?: string; subject: string; body?: string; tag?: string }): Promise<{ send: T[]; held: T[]; monitor: string | null; copy: T[] }> {
   let t: Awaited<ReturnType<typeof testMode>>;
   try { t = await testMode(); } catch { t = { on: true, allow: [], admins: [] }; }
-  if (!t.on) return { send: to, held: [] };
+  if (!t.on) return { send: to, held: [], monitor: null, copy: [] };
   const ok = new Set([...t.admins, ...t.allow.map(norm)]);
   const send = to.filter((r) => ok.has(norm(r.email))), held = to.filter((r) => !ok.has(norm(r.email)));
-  if (held.length) await logHeld(held.map((r) => ({ to: r.email, name: r.name ?? null })), { channel: m.channel ?? "email", subject: m.subject, body: m.body, tag: m.tag }).catch(() => {});
-  return { send, held };
+  let copy: T[] = [];
+  if (held.length && t.monitor) {
+    const today = await withSchool((q) => q<{ n: number }>(`select count(*)::int as n from held_messages where copied and created_at >= date_trunc('day', now() at time zone 'Europe/London') at time zone 'Europe/London'`)).then((r) => r[0].n).catch(() => MONITOR_DAY_CAP);
+    copy = held.slice(0, Math.max(0, MONITOR_DAY_CAP - today));
+  }
+  if (held.length) await logHeld(held.map((r) => ({ to: r.email, name: r.name ?? null, copied: copy.includes(r) })), { channel: m.channel ?? "email", subject: m.subject, body: m.body, tag: m.tag }).catch(() => {});
+  return { send, held, monitor: copy.length ? t.monitor! : null, copy };
 }
 /** Note something test mode stopped (a Classroom invitation, a recording post, a newsletter). */
-export async function logHeld(to: { to: string | null; name: string | null }[], m: { channel: string; subject: string; body?: string; tag?: string }) {
+export async function logHeld(to: { to: string | null; name: string | null; copied?: boolean }[], m: { channel: string; subject: string; body?: string; tag?: string }) {
   if (!to.length) return;
-  await withSchool((q) => q(`insert into held_messages (school_id, channel, to_addr, to_name, subject, body, tag)
-      select current_school(), $1, x.to_addr, x.to_name, $2, $3, $4 from jsonb_to_recordset($5::jsonb) as x(to_addr text, to_name text)`,
-    [m.channel, m.subject.slice(0, 300), (m.body ?? "").slice(0, 4000), m.tag ?? null, JSON.stringify(to.map((r) => ({ to_addr: r.to, to_name: r.name })))]));
+  await withSchool((q) => q(`insert into held_messages (school_id, channel, to_addr, to_name, subject, body, tag, copied)
+      select current_school(), $1, x.to_addr, x.to_name, $2, $3, $4, coalesce(x.copied, false) from jsonb_to_recordset($5::jsonb) as x(to_addr text, to_name text, copied boolean)`,
+    [m.channel, m.subject.slice(0, 300), (m.body ?? "").slice(0, 4000), m.tag ?? null, JSON.stringify(to.map((r) => ({ to_addr: r.to, to_name: r.name, copied: !!r.copied })))]));
 }
 
-export type Held = { id: number; created_at: string; channel: string; to_addr: string | null; to_name: string | null; subject: string | null; body: string | null; tag: string | null };
+export type Held = { id: number; created_at: string; channel: string; to_addr: string | null; to_name: string | null; subject: string | null; body: string | null; tag: string | null; copied: boolean };
 export async function heldList(limit = 300): Promise<{ rows: Held[]; total: number; byTag: { tag: string; n: number }[] }> {
   return withSchool(async (q) => ({
-    rows: await q<Held>(`select id, created_at::text, channel, to_addr, to_name, subject, body, tag from held_messages order by created_at desc, id desc limit $1`, [limit]),
+    rows: await q<Held>(`select id, created_at::text, channel, to_addr, to_name, subject, body, tag, copied from held_messages order by created_at desc, id desc limit $1`, [limit]),
     total: (await q<{ n: number }>(`select count(*)::int as n from held_messages`))[0].n,
     byTag: await q<{ tag: string; n: number }>(`select coalesce(tag, channel) as tag, count(*)::int as n from held_messages group by 1 order by 2 desc`),
   }));
@@ -72,10 +79,11 @@ export async function holdBooked(): Promise<number> {
   return rows.length;
 }
 
-export async function setTestMode(by: string, on: boolean, allow: string[]): Promise<{ held?: number; released?: number }> {
-  const list = [...new Set(allow.map(norm).filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)))].slice(0, 50);
+export async function setTestMode(by: string, on: boolean, allow: string[], monitor = ""): Promise<{ held?: number; released?: number }> {
+  const isMail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  const list = [...new Set(allow.map(norm).filter(isMail))].slice(0, 50), mon = isMail(norm(monitor)) ? norm(monitor) : undefined;
   await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2)
-    on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [KEY, JSON.stringify({ on, allow: list, at: new Date().toISOString(), by } satisfies TestCfg)]));
+    on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [KEY, JSON.stringify({ on, allow: list, monitor: mon, at: new Date().toISOString(), by } satisfies TestCfg)]));
   if (on) return { held: await holdBooked() };
   // going live: reminders held for lessons still to come are booked again on the next run; ones whose time has passed stay held
   const released = await withSchool((q) => q(`delete from automation_sends where status = 'held' and scheduled_for > now() returning id`));

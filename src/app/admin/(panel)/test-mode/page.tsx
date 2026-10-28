@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { testMode, heldList } from "@/lib/test-mode";
+import { testMode, heldList, MONITOR_DAY_CAP } from "@/lib/test-mode";
 import { meetStatus, recCanInvite } from "@/lib/meet";
 import { classroomStatus } from "@/lib/classroom";
 import { inboxStatus } from "@/lib/inbox";
@@ -41,20 +41,23 @@ export default async function TestMode({ searchParams }: { searchParams: Promise
           <li>Google Classroom invitations and removals</li><li>Recording posts to Classroom, and renaming or moving recordings</li><li>Newsletters</li></ul></div>
       </div>
       <form action={setTestModeAction} className="eform" style={{ display: "grid", gap: 10, maxWidth: 720 }}>
-        <label className="fld">Emails still go to these addresses (one per line or separated by commas)
+        <label className="fld">Emails still really go to these addresses (one per line or separated by commas)
           <textarea name="allow" rows={3} defaultValue={t.allow.join("\n")} className="mini" placeholder="e.g. leanne@ohsoed.co.uk" /></label>
+        <label className="fld">Send a copy of every held email to (optional)
+          <input name="monitor" type="email" defaultValue={t.monitor ?? ""} placeholder="e.g. testing@ohsoed.co.uk" className="mini" style={{ maxWidth: 360 }} /></label>
+        <span className="muted" style={{ fontSize: 14 }}>Each held email arrives there as it would have gone (same timing for lesson reminders), with “[Test → name]” at the start of the subject and a note saying who it was for. Up to {MONITOR_DAY_CAP} copies a day; the rest are only listed below. Make it an alias of ose@ (Google Admin → Users → ose@ → Add alternate email) so you can filter it.</span>
         <span className="muted" style={{ fontSize: 14 }}>Always allowed: the admin accounts ({t.admins.join(", ") || "none"}). Add your own test addresses to try sign-in links and automatic emails yourself.</span>
         {t.on ? <><input type="hidden" name="on" value="1" />
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}><button className="abtn" type="submit">Save the list</button></div>
           </> : <><input type="hidden" name="on" value="0" /><div><button className="abtn" type="submit" name="confirm" value="on">Save the list</button></div></>}
       </form>
       <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
-        {t.on ? <form action={setTestModeAction} style={{ display: "grid", gap: 10, maxWidth: 720 }}><input type="hidden" name="on" value="0" />{t.allow.map((a) => <input key={a} type="hidden" name="allow" value={a} />)}
+        {t.on ? <form action={setTestModeAction} style={{ display: "grid", gap: 10, maxWidth: 720 }}><input type="hidden" name="on" value="0" />{t.allow.map((a) => <input key={a} type="hidden" name="allow" value={a} />)}<input type="hidden" name="monitor" value={t.monitor ?? ""} />
             <b>Go live (for Term 3)</b>
             <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}><input type="checkbox" name="confirm" style={{ marginTop: 4 }} /> I’ve checked the list below and want emails, Classroom invitations and posts to go to families, students and teachers from now on.</label>
             <div><button className="abtn pri" type="submit">Go live</button></div>
             <span className="muted" style={{ fontSize: 14 }}>Lesson reminders held for lessons still to come are booked again. Emails held for things already past are not sent.</span></form>
-          : <form action={setTestModeAction}><input type="hidden" name="on" value="1" />{t.allow.map((a) => <input key={a} type="hidden" name="allow" value={a} />)}<button className="abtn" type="submit">Switch test mode back on</button></form>}
+          : <form action={setTestModeAction}><input type="hidden" name="on" value="1" />{t.allow.map((a) => <input key={a} type="hidden" name="allow" value={a} />)}<input type="hidden" name="monitor" value={t.monitor ?? ""} /><button className="abtn" type="submit">Switch test mode back on</button></form>}
       </div>
     </section>
 
@@ -75,7 +78,7 @@ export default async function TestMode({ searchParams }: { searchParams: Promise
       <p className="cs">What would have gone out if the site were live. Open one to read it.{held.byTag.length > 0 && <> {held.byTag.map((b) => `${tagName(b.tag)}: ${b.n}`).join(" · ")}</>}</p>
       {held.rows.length === 0 ? <p className="empty">Nothing held yet.</p> : held.rows.map((h) => <details key={h.id} className="li" style={{ display: "block" }}>
         <summary style={{ cursor: "pointer", display: "flex", gap: 10, flexWrap: "wrap", alignItems: "baseline" }}><span className="muted" style={{ fontSize: 13.5, minWidth: 110 }}>{when(h.created_at)}</span>
-          <span className="pill mute" style={{ fontSize: 12 }}>{tagName(h.tag)}</span><b>{h.to_name ? `${h.to_name} · ` : ""}{h.to_addr}</b><span>{h.subject}</span></summary>
+          <span className="pill mute" style={{ fontSize: 12 }}>{tagName(h.tag)}</span>{h.copied && <span className="pill info" style={{ fontSize: 12 }}>Copy sent</span>}<b>{h.to_name ? `${h.to_name} · ` : ""}{h.to_addr}</b><span>{h.subject}</span></summary>
         {h.body && <div style={{ whiteSpace: "pre-wrap", fontSize: 14.5, background: "var(--soft)", borderRadius: 10, padding: "10px 12px", marginTop: 8 }}>{h.body}</div>}</details>)}
     </section>
   </>;

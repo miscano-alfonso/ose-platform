@@ -36,6 +36,21 @@ async function keepCopy(c: Creds, subject: string, htmlContent: string, textCont
       htmlContent: banner + htmlContent, textContent: `Copy for your records. ${who}\n\n${textContent}`, tags: ["copy"] }),
   }).catch(() => undefined);
 }
+
+/** Test mode: a copy of each held email goes to the monitoring address (e.g. testing@), marked with who it was for. */
+async function monitorCopies(c: Creds, mon: string | null, copy: { email: string; name?: string }[], subject: string, htmlContent: string, textContent: string, tag: string, scheduledAt?: string) {
+  if (!mon || !copy.length) return;
+  const e = (x: string) => x.replace(/[&<>"]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[ch]!));
+  for (const r of copy) {
+    const who = r.name ? `${r.name} <${r.email}>` : r.email;
+    const banner = `<div style="font:13px/1.45 Arial,sans-serif;background:#e8f0ff;border:1px solid #9db5f0;color:#14306e;padding:10px 14px;margin:0 0 14px"><b>Test mode: not sent.</b> This would have gone to ${e(who)} (${e(tag)}). Nobody else received it.</div>`;
+    await fetch(SMTP_URL(), {
+      method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
+      body: JSON.stringify({ sender: { email: c.email, name: c.name }, messageVersions: [{ to: [{ email: mon }] }], subject: `[Test → ${r.name || r.email}] ${subject}`.slice(0, 250),
+        htmlContent: banner + htmlContent, textContent: `Test mode: not sent. This would have gone to ${who} (${tag}).\n\n${textContent}`, tags: ["test-mode-copy", tag], ...(scheduledAt ? { scheduledAt } : {}) }),
+    }).catch(() => undefined);
+  }
+}
 export type Audience = { value: string; label: string; group?: string };
 
 export async function audiences(): Promise<Audience[]> {
@@ -112,6 +127,7 @@ export async function sendBatch(subject: string, body: string, to: Recipient[], 
   if (!c) return { sent: 0, failed: to.length, error: "Brevo isn’t connected yet." };
   const g = await gate(to, { subject, body, tag: marketing ? "marketing" : "admin-message" });
   to = g.send;
+  await monitorCopies(c, g.monitor, g.copy, subject, await html(body, marketing), body, marketing ? "marketing" : "admin-message");
   let sent = 0, failed = 0, error: string | undefined;
   for (let i = 0; i < to.length; i += 500) {
     const chunk = to.slice(i, i + 500);
@@ -145,6 +161,7 @@ export async function sendHtml(subject: string, htmlContent: string, to: string[
   const textContent0 = htmlContent.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim();
   const g = await gate(to.map((email) => ({ email })), { subject, body: textContent0, tag: tag || "social-report" });
   to = g.send.map((r) => r.email);
+  await monitorCopies(c, g.monitor, g.copy, subject, htmlContent, textContent0, tag || "social-report");
   if (!to.length) return { ok: true, held: g.held.length };
   const textContent = htmlContent.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim().slice(0, 5000);
   const res = await fetch(SMTP_URL(), {
@@ -162,6 +179,7 @@ export async function sendOne(to: Recipient[], subject: string, body: string, op
   if (!to.length) return { ok: false, ids: [], error: "No one to send it to." };
   const g = await gate(to, { subject, body, tag: opts.tag });
   to = g.send;
+  await monitorCopies(c, g.monitor, g.copy, subject, await html(body, false), body, opts.tag, opts.scheduledAt);
   if (!to.length) return { ok: true, ids: [], held: g.held.length };
   const res = await fetch(SMTP_URL(), {
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
