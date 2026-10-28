@@ -155,17 +155,24 @@ const hdr = (s: string) => /^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffer.fr
 /** Send a reply from the Reply-from inbox, threaded with the family's email (In-Reply-To / References). */
 
 // ---------- Each staff member's email signature: name, job title and the school logo (blue, for light-mode inboxes) ----------
-export type Signature = { name: string; title: string; logo: string; logoDark: string };
+export type Signature = { name: string; title: string; email: string; web: string; logo: string; logoDark: string };
 const sigEsc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
-export async function signatureFor(user: { id: string; name: string }): Promise<Signature> {
-  const [v, base] = await Promise.all([googleKv<{ title?: string }>(`sig_${user.id}`).catch(() => null), siteBase().catch(() => "")]);
+const webOf = (s: string) => s.trim().replace(/^https?:\/\//i, "").replace(/\/+$/, "");
+/** Name, job title, email address and website (the email's domain unless set), then the logo. */
+export async function signatureFor(user: { id: string; name: string; email?: string }): Promise<Signature> {
+  const [v, base] = await Promise.all([googleKv<{ title?: string; email?: string; web?: string }>(`sig_${user.id}`).catch(() => null), siteBase().catch(() => "")]);
   const site = (process.env.SITE_URL || base || "").replace(/\/$/, "");
   const at = (f: string) => site ? `${site}/${f}` : `/${f}`;
-  return { name: user.name, title: v?.title ?? "", logo: at("ose-logo-blue.png"), logoDark: at("ose-logo-white.png") };
+  const email = v?.email ?? user.email ?? "";
+  return { name: user.name, title: v?.title ?? "", email, web: v?.web ?? (email.split("@")[1] ?? ""), logo: at("ose-logo-blue.png"), logoDark: at("ose-logo-white.png") };
 }
-export async function saveSignature(userId: string, title: string) {
-  await googleKvSet(`sig_${userId}`, { title: title.replace(/\s+/g, " ").trim().slice(0, 80) });
+export async function saveSignature(userId: string, d: { title: string; email: string; web: string }) {
+  const email = d.email.trim().toLowerCase();
+  await googleKvSet(`sig_${userId}`, { title: d.title.replace(/\s+/g, " ").trim().slice(0, 80),
+    email: /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : "", web: /^[\w.-]+\.[a-z]{2,}(\/\S*)?$/i.test(webOf(d.web)) ? webOf(d.web).slice(0, 120) : "" });
 }
+/** The signature as plain text (for the text part of the email and the "You replied" note). */
+export const sigText = (sig: Pick<Signature, "name" | "title" | "email" | "web">) => [sig.name, sig.title, sig.email, sig.web].filter(Boolean).join("\n");
 /** The reply as an HTML email: the text as written, then the signature with the logo underneath.
  *  The logo is blue; email apps that tell the email they're in dark mode (Apple Mail, iPhone/iPad Mail, Outlook,
  *  some others) are given the white logo instead. Gmail doesn't say, so Gmail readers always see the blue one. */
@@ -177,11 +184,12 @@ export function replyHtml(body: string, sig: Signature): string {
     + `[data-ogsc] .ose-l,[data-ogsb] .ose-l{display:none!important}[data-ogsc] .ose-d,[data-ogsb] .ose-d{display:block!important;max-height:none!important}</style></head><body>`
     + `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5">${p}`
     + `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.4">`
-    + `<b>${sigEsc(sig.name)}</b>${sig.title ? `<br>${sigEsc(sig.title)}` : ""}</td></tr>`
+    + `<b>${sigEsc(sig.name)}</b>${sig.title ? `<br>${sigEsc(sig.title)}` : ""}`
+    + `${sig.email || sig.web ? `<div style="margin-top:8px">${sig.email ? `<a href="mailto:${sigEsc(sig.email)}" style="color:inherit;text-decoration:none">${sigEsc(sig.email)}</a>` : ""}${sig.email && sig.web ? "<br>" : ""}${sig.web ? `<a href="https://${sigEsc(sig.web)}" style="color:inherit;text-decoration:none">${sigEsc(sig.web)}</a>` : ""}</div>` : ""}</td></tr>`
     + `<tr><td style="padding-top:16px">${img(sig.logo, "ose-l", false)}${img(sig.logoDark, "ose-d", true)}</td></tr></table></div></body></html>`;
 }
 
-export async function replyInbox(actor: { id: string; name: string }, id: string, text: string): Promise<string | null> {
+export async function replyInbox(actor: { id: string; name: string; email?: string }, id: string, text: string): Promise<string | null> {
   const body = text.replace(/\r\n/g, "\n").trim();
   if (!body) return "Write a reply first.";
   const m = (await withSchool((q) => q<{ gmail_id: string; thread_id: string; mailbox: string | null; from_email: string; from_name: string | null; subject: string; message_id: string | null }>(
@@ -201,7 +209,7 @@ export async function replyInbox(actor: { id: string; name: string }, id: string
       }
     }
     // the reply goes as text and HTML, with the signature (name, job title, logo) under it
-    const sig = await signatureFor(actor), text = `${body}\n\n${sig.name}${sig.title ? `\n${sig.title}` : ""}`;
+    const sig = await signatureFor(actor), text = `${body}\n\n${sigText(sig)}`;
     const bnd = `ose-${crypto.randomUUID()}`;
     const part = (type: string, content: string) => [`--${bnd}`, `Content-Type: ${type}; charset=UTF-8`, "Content-Transfer-Encoding: base64", "", Buffer.from(content).toString("base64").replace(/(.{76})/g, "$1\r\n")];
     const subject = /^re:/i.test(m.subject) ? m.subject : `Re: ${m.subject}`;

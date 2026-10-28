@@ -104,9 +104,13 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
         {panel && <InboxPanel key={panel.id} m={panel} sig={sig} from={box.replyFrom} opened={!!sp.m} />}
       </div>}
       <section className="card"><h2>Your signature</h2>
-        <p className="cs">Added under every reply you send from here: your name, job title and the school logo. The logo is blue; email apps that switch to dark mode (Apple Mail, iPhone Mail, Outlook) show it in white instead. Gmail doesn’t tell emails it’s in dark mode, so Gmail readers see the blue one.</p>
+        <p className="cs">Added under every reply you send from here: your name, job title, email address, website and the school logo. Leave a box empty to leave it out. The logo is blue; email apps that switch to dark mode (Apple Mail, iPhone Mail, Outlook) show it in white instead. Gmail doesn’t tell emails it’s in dark mode, so Gmail readers see the blue one.</p>
         <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <form action={signatureAction} className="eform" style={{ margin: 0 }}><label className="fld">Your job title<input name="title" defaultValue={sig.title} maxLength={80} placeholder="e.g. Founder and Head of School" className="mini" style={{ width: 280 }} /></label><button className="abtn sm" type="submit">Save</button></form>
+          <form action={signatureAction} className="eform" style={{ margin: 0 }}>
+            <label className="fld">Your job title<input name="title" defaultValue={sig.title} maxLength={80} placeholder="e.g. Technical Support" className="mini" style={{ width: 240 }} /></label>
+            <label className="fld">Email address<input name="email" type="email" defaultValue={sig.email} maxLength={120} className="mini" style={{ width: 240 }} /></label>
+            <label className="fld">Website<input name="web" defaultValue={sig.web} maxLength={120} placeholder="ohsoed.co.uk" className="mini" style={{ width: 200 }} /></label>
+            <button className="abtn sm" type="submit">Save</button></form>
           <SigPreview sig={sig} />
         </div></section>
       <section className="card"><h2>Inboxes</h2>

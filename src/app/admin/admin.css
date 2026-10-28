@@ -17,7 +17,7 @@
 .adm .side{background:var(--brand);color:#fff;padding:18px 12px;display:flex;flex-direction:column;gap:14px;position:sticky;top:0;height:100vh;overflow:auto}
 .adm .logo img{height:40px;width:auto;display:block;margin:2px 8px 6px}
 .adm .nav{display:grid;gap:2px}
-.adm .nav a,.adm .nav span{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.9);text-decoration:none;padding:8px 10px;border-radius:8px;font-size:17px;border:0;transition:background-color .12s,color .12s}
+.adm .nav a,.adm .nav span{display:flex;align-items:center;gap:10px;color:rgba(255,255,255,.9);text-decoration:none;padding:8px 10px;border-radius:8px;font-size:17px;line-height:1.3;border:0;transition:background-color .12s,color .12s}
 .adm .nav a:hover{background:rgba(255,255,255,.09);color:#fff}
 .adm .nav a[aria-current=page]{background:rgba(255,255,255,.16);color:#fff;font-weight:600;box-shadow:inset 3px 0 0 var(--brand-accent)}
 .adm .nav a[aria-current=page]:hover{background:rgba(255,255,255,.2)}
@@ -604,3 +604,4 @@
 .adm .ibp .irp-mail{max-height:none}
 @media (max-width:900px){.adm .ibx{grid-template-columns:1fr}.adm .ibx-list{position:static;max-height:none}.adm .ibx.picked .ibp{order:-1}}
 .adm .ibp-orig{margin:6px 0 -4px;font-size:13.5px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px}
+.adm .irp-sig .sig-c{margin-top:8px;line-height:1.45}

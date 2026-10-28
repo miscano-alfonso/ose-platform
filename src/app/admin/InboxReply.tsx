@@ -4,7 +4,8 @@ import Link from "next/link";
 import { inboxMessageAction, replyInboxAction, markInboxReadAction } from "./actions";
 
 type Full = { body: string; to: string; replied: { at: string; from: string; body: string } | null };
-type Sig = { name: string; title: string; logo: string; logoDark: string };
+type Sig = { name: string; title: string; email: string; web: string; logo: string; logoDark: string };
+const sigText = (x: Sig) => [x.name, x.title, x.email, x.web].filter(Boolean).join("\n");
 export type PanelMail = { id: string; name: string; email: string; familyHref: string | null; subject: string; when: string; kind: [string, string] | null;
   mailbox: string | null; gmail: string; read: boolean; replied: boolean; first: string };
 
@@ -26,7 +27,7 @@ export function InboxPanel({ m, sig, from, opened }: { m: PanelMail; sig: Sig; f
   }, [m.id, m.read, opened]);
   const send = () => start(async () => {
     setMsg(null); const r = await replyInboxAction(m.id, text);
-    if (r.ok) { setSent(true); setMsg(`Sent from ${from}.`); setMail((x) => x && { ...x, replied: { at: new Date().toISOString(), from, body: `${text}\n\n${sig.name}${sig.title ? `\n${sig.title}` : ""}` } }); }
+    if (r.ok) { setSent(true); setMsg(`Sent from ${from}.`); setMail((x) => x && { ...x, replied: { at: new Date().toISOString(), from, body: `${text}\n\n${sigText(sig)}` } }); }
     else setMsg(r.error ?? "The reply wasn’t sent.");
   });
   const toggleRead = () => start(async () => { await markInboxReadAction(m.id, !read); setRead(!read); });
@@ -57,7 +58,8 @@ export function InboxPanel({ m, sig, from, opened }: { m: PanelMail; sig: Sig; f
 }
 
 /** The signature as it shows in the family's email: blue logo in light mode, white in dark mode (where the email app supports it). */
-export function SigPreview({ sig }: { sig: { name: string; title: string; logo: string; logoDark: string } }) {
+export function SigPreview({ sig }: { sig: Sig }) {
   return <div className="irp-sig" aria-label="Your signature, added under the reply"><b>{sig.name}</b>{sig.title && <span>{sig.title}</span>}
+    {(sig.email || sig.web) && <span className="sig-c">{sig.email}{sig.email && sig.web && <br />}{sig.web}</span>}
     <img className="sig-l" src={sig.logo} alt="OH-SO ED Online School" width={130} /><img className="sig-d" src={sig.logoDark} alt="" width={130} /></div>;
 }

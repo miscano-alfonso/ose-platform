@@ -1145,7 +1145,7 @@ export async function replyFromAction(f: FormData): Promise<void> {
 export async function signatureAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const { saveSignature } = await import("@/lib/inbox");
-  await saveSignature(me.id, String(f.get("title") ?? ""));
+  await saveSignature(me.id, { title: String(f.get("title") ?? ""), email: String(f.get("email") ?? ""), web: String(f.get("web") ?? "") });
   mailBack("Your signature is saved. It goes under every reply you send from here.");
 }
 // ---------- Post designs: Canva connection and the picture library ----------
@@ -1319,7 +1319,7 @@ export async function inboxMessageAction(id: string) {
 export async function replyInboxAction(id: string, text: string): Promise<{ ok: boolean; error?: string }> {
   const me = await requireStaff();
   const { replyInbox } = await import("@/lib/inbox");
-  const err = await replyInbox({ id: me.id, name: me.name }, String(id).slice(0, 40), String(text).slice(0, 20000));
+  const err = await replyInbox({ id: me.id, name: me.name, email: me.email }, String(id).slice(0, 40), String(text).slice(0, 20000));
   if (!err) revalidatePath("/admin/email");
   return err ? { ok: false, error: err } : { ok: true };
 }
