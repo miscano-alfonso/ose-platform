@@ -652,3 +652,15 @@
 .adm .trate .abtn{justify-self:start}
 .adm .payx-notes{margin-top:12px;display:grid;gap:4px;font-size:15px;color:var(--muted)}.adm .payx-notes p{margin:0}.adm .payx-notes b{color:var(--ink)}
 .adm .side .logo img{max-width:calc(100% - 16px);object-fit:contain;object-position:left center}
+/* page headings: breathing room between the title, the line under it, and what's above and below */
+.adm .top{margin-bottom:26px}
+.adm .top h1{line-height:1.15}
+.adm .top .sub{margin-top:10px;line-height:1.5}
+.adm .top h1 .h1-code{font-size:.55em;font-weight:500;color:var(--muted);margin-left:14px;letter-spacing:.02em;vertical-align:.18em;white-space:nowrap}
+.adm .backlink{margin:0 0 14px;font-size:15px}.adm .backlink a{text-decoration:none;color:var(--muted)}.adm .backlink a:hover{color:var(--ink);text-decoration:underline}
+.adm h1 + .sub{margin-top:10px;line-height:1.5}
+/* Page styles: the settings and the preview both fit on screen and scroll inside themselves */
+@media (min-width:1001px){
+  .adm .sb-side{max-height:calc(100dvh - 290px);min-height:380px;top:16px}
+  .adm .sb-view{height:calc(100dvh - 290px);min-height:380px;overflow:hidden}
+}

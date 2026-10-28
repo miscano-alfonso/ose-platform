@@ -1,6 +1,7 @@
 import "server-only";
 import { withSchool } from "./db";
 import { ensureLessonDates } from "./ops";
+import { termPayRows } from "./payroll";
 
 // What a teacher sees in their own area (as in the prototype's teacher view: My day, 1:1s and workshops,
 // Messages, Class chats, Reward points, Reports to write, My timetable, My pay). Every query is limited to
@@ -71,50 +72,38 @@ export async function myDay(userId: string): Promise<MyDay> {
 
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 /** Pay for one term: the pay run line once the office has built one, otherwise lessons taught so far plus 1:1s and workshops. */
-async function myTermPay(q: Q, userId: string, termId: string): Promise<number> {
-  const line = (await q<{ gross: number }>(`select l.gross_pence as gross from pay_run_lines l join pay_runs r on r.id = l.pay_run_id where r.term_id = $2 and l.teacher_id = ${ME}`, [userId, termId]))[0];
-  if (line) return line.gross;
-  const [r] = await q<{ pay: number }>(`select (coalesce((select sum(pay_pence) from teacher_term_pay where term_id = $2 and teacher_id = ${ME}), 0)
-    + coalesce((select sum(pay_pence) from teacher_term_extras where term_id = $2 and teacher_id = ${ME}), 0))::int as pay`, [userId, termId]).catch(() =>
-    q<{ pay: number }>(`select coalesce((select sum(pay_pence) from teacher_term_pay where term_id = $2 and teacher_id = ${ME}), 0)::int as pay`, [userId, termId]));
-  return r?.pay ?? 0;
+/** This teacher's pay for one term, worked out exactly as the Payroll page does. */
+async function myTermRow(q: Q, userId: string, termId: string) {
+  const [t] = await q<{ id: string; run_id: string | null; status: string | null; teacher_id: string | null }>(`select t.id, r.id as run_id, r.status::text, ${ME} as teacher_id
+    from terms t left join pay_runs r on r.term_id = t.id where t.id = $2`, [userId, termId]);
+  if (!t?.teacher_id) return null;
+  return (await termPayRows(q, t, t.teacher_id))[0] ?? null;
 }
+async function myTermPay(q: Q, userId: string, termId: string): Promise<number> { return (await myTermRow(q, userId, termId))?.gross ?? 0; }
 
-export type PayPart = { label: string; count: number; unit: string; pay: number };
-export type PayRow = { id: string; name: string; pay_date: string; starts_on: string; ends_on: string; lessons: number; gross: number; status: string; parts: PayPart[] };
+export type PayRow = { id: string; name: string; pay_date: string; starts_on: string; ends_on: string; status: string;
+  by_level: Record<string, number>; lessons: number; extras: number; extras_pay: number; adj: number; adj_note: string | null; gross: number };
 export async function myPay(userId: string) {
   return withSchool(async (q) => {
     const rates = await q<{ level: string; rate: number | null }>(`select l.name as level, coalesce(
         (select rate_pence from pay_rates r where r.level_id = l.id and r.teacher_id = ${ME} and r.valid_from <= current_date order by valid_from desc limit 1),
         (select rate_pence from pay_rates r where r.level_id = l.id and r.teacher_id is null and r.valid_from <= current_date order by valid_from desc limit 1)) as rate
       from levels l order by l.sort_order`, [userId]);
-    const terms = await q<{ id: string; name: string; pay_date: string; starts_on: string; ends_on: string; run: string | null; lessons_line: number | null; gross_line: number | null }>(`
-      select t.id, t.name, coalesce(r.pay_date, term_pay_date(t.id))::text as pay_date, t.starts_on::text, t.ends_on::text, r.status::text as run,
-        l.lessons + l.extras as lessons_line, l.gross_pence as gross_line
-      from terms t left join pay_runs r on r.term_id = t.id left join pay_run_lines l on l.pay_run_id = r.id and l.teacher_id = ${ME}
-      where t.academic_year_id = ${YEAR_NOW} order by t.number`, [userId]);
+    const levels = (await q<{ name: string }>(`select name from levels order by sort_order`)).map((l) => l.name);
+    const terms = await q<{ id: string; name: string; pay_date: string; starts_on: string; ends_on: string; run: string | null }>(`
+      select t.id, t.name, coalesce(r.pay_date, term_pay_date(t.id))::text as pay_date, t.starts_on::text, t.ends_on::text, r.status::text as run
+      from terms t left join pay_runs r on r.term_id = t.id where t.academic_year_id = ${YEAR_NOW} order by t.number`);
     const today = new Date().toISOString().slice(0, 10);
     const rows: PayRow[] = [];
     for (const t of terms) {
-      let lessons = t.lessons_line ?? 0, gross = t.gross_line ?? 0;
-      if (t.gross_line == null) {
-        lessons = (await q<{ n: number }>(`select coalesce(sum(lessons),0)::int as n from teacher_term_pay where term_id = $2 and teacher_id = ${ME}`, [userId, t.id]))[0].n;
-        gross = await myTermPay(q, userId, t.id);
-      }
+      const r = await myTermRow(q, userId, t.id);
       const status = t.run === "paid" ? "Paid" : t.run === "approved" ? "Approved" : t.ends_on < today ? "Being checked" : t.starts_on <= today ? "This term" : "Upcoming";
-      // the breakdown: lessons taught at each level, then 1:1s and workshops (paid with the term that ends next)
-      const parts: PayPart[] = [
-        ...(await q<{ level: string; n: number; pay: number }>(`select p.level, p.lessons as n, p.pay_pence as pay from teacher_term_pay p join levels l on l.name = p.level
-            where p.term_id = $2 and p.teacher_id = ${ME} order by l.sort_order, p.level`, [userId, t.id]).catch(() => []))
-          .map((x) => ({ label: `${x.level} lessons`, count: x.n, unit: x.n === 1 ? "lesson" : "lessons", pay: x.pay ?? 0 })),
-        ...(await q<{ kind: string; n: number; pay: number }>(`select kind, sessions as n, pay_pence as pay from teacher_term_extras where term_id = $2 and teacher_id = ${ME} order by kind`, [userId, t.id]).catch(() => []))
-          .map((x) => ({ label: x.kind === "1:1" ? "1:1s" : "Workshops", count: x.n, unit: x.kind === "1:1" ? (x.n === 1 ? "session" : "sessions") : (x.n === 1 ? "workshop" : "workshops"), pay: x.pay ?? 0 })),
-      ];
-      rows.push({ id: t.id, name: t.name, pay_date: t.pay_date, starts_on: t.starts_on, ends_on: t.ends_on, lessons, gross, status, parts });
+      rows.push({ id: t.id, name: t.name, pay_date: t.pay_date, starts_on: t.starts_on, ends_on: t.ends_on, status,
+        by_level: r?.by_level ?? {}, lessons: r?.lessons ?? 0, extras: r?.extras ?? 0, extras_pay: r?.extras_pay ?? 0, adj: r?.adj ?? 0, adj_note: r?.adj_note ?? null, gross: r?.gross ?? 0 });
     }
     const tut = await q<{ level: string; pay: number }>(`select distinct on (l.id) l.name as level, r.teacher_pay_pence as pay from tutoring_rates r join levels l on l.id = r.level_id
       where r.minutes = 45 and r.valid_from <= current_date order by l.id, r.valid_from desc`).catch(() => []);
-    return { rates, rows, tut };
+    return { rates, rows, tut, levels };
   });
 }
 

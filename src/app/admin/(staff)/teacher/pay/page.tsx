@@ -7,25 +7,19 @@ const PILL: Record<string, string> = { Paid: "good", Approved: "good", "Being ch
 
 export default async function MyPay() {
   const me = await requireViewer();
-  const { rates, rows, tut } = await myPay(me.id);
+  const { rates, rows, tut, levels } = await myPay(me.id);
   return <>
-    <div className="top"><div><h1>My pay</h1><div className="sub">Open a term to see the lessons, 1:1s and workshops in it.</div></div></div>
-    <div className="payx" role="table" aria-label="My pay by term">
-      <div className="payx-h" role="row"><span role="columnheader">Term</span><span role="columnheader">Pay day</span><span role="columnheader" className="n">Lessons</span><span role="columnheader" className="n">Gross pay</span><span role="columnheader">Status</span></div>
-      {rows.map((r) => <details key={r.id} className="payx-r">
-        <summary role="row"><span><i className="chev" aria-hidden="true" />{r.name}</span><span>{dm(r.pay_date)}</span><span className="n">{r.lessons}</span>
-          <span className="n">{r.gross || r.status !== "Upcoming" ? gbp(r.gross) : "—"}</span><span><span className={`pill ${PILL[r.status]}`}>{r.status}</span></span></summary>
-        <div className="payx-b">{r.parts.length === 0 ? <p className="muted" style={{ margin: 0 }}>{r.status === "Upcoming" ? "Nothing taught yet this term." : "No lessons, 1:1s or workshops recorded for this term."}</p> :
-          <table><tbody>{r.parts.map((p) => <tr key={p.label}><td>{p.label}</td><td className="n">{p.count} {p.unit}</td>
-            <td className="n muted">{p.count ? `${gbp(Math.round(p.pay / p.count))} each` : ""}</td><td className="n"><b>{gbp(p.pay)}</b></td></tr>)}
-            <tr className="tot"><td>Total</td><td className="n">{r.parts.reduce((n, p) => n + p.count, 0)}</td><td /><td className="n"><b>{gbp(r.parts.reduce((n, p) => n + p.pay, 0))}</b></td></tr></tbody></table>}
-          {r.parts.length > 0 && r.parts.reduce((n, p) => n + p.pay, 0) !== r.gross && r.gross > 0 && <p className="muted" style={{ margin: "8px 0 0", fontSize: 14 }}>The gross pay above is the figure the office approved for this term.</p>}
-        </div></details>)}
-    </div>
+    <div className="top"><div><h1>My pay</h1><div className="sub">Lessons at each level, 1:1s and workshops, and anything else added, for each term.</div></div></div>
+    <div className="tw"><table><thead><tr><th>Term</th><th>Pay day</th>{levels.map((l) => <th key={l} className="n">{l}</th>)}<th className="n">1:1s &amp; workshops</th><th className="n">Other</th><th className="n">Gross pay</th><th>Status</th></tr></thead>
+      <tbody>{rows.map((r) => { const none = r.status === "Upcoming" && !r.gross; return <tr key={r.id}><td>{r.name}</td><td>{dm(r.pay_date)}</td>
+        {levels.map((l) => <td key={l} className="n">{none ? "—" : r.by_level[l] ?? 0}</td>)}
+        <td className="n" title={r.extras ? gbp(r.extras_pay) : undefined}>{r.extras ? `${r.extras} · ${gbp(r.extras_pay)}` : "—"}</td>
+        <td className="n" title={r.adj_note ?? undefined}>{r.adj ? gbp(r.adj) : "—"}</td>
+        <td className="n"><b>{none ? "—" : gbp(r.gross)}</b></td><td><span className={`pill ${PILL[r.status]}`}>{r.status}</span></td></tr>; })}</tbody></table></div>
     <div className="payx-notes">
       <p><b>Per lesson:</b> {rates.filter((r) => r.rate != null).map((r) => `${r.level} ${gbp(r.rate!)}`).join(" · ") || "rates not set yet"}</p>
       {tut.length > 0 && <p><b>1:1s:</b> {tut.map((t) => `${t.level} ${gbp(t.pay)}`).join(" · ")} per 45 minutes, paid with your lessons.</p>}
-      <p>Gross pay. Covered lessons are paid to whoever taught them; cancelled lessons aren’t paid.</p>
+      <p>Gross pay, the same figures the office sees in Payroll. Every lesson that isn’t cancelled is paid to whoever taught it; covered lessons go to the cover teacher.</p>
       <p>This term’s figure grows as lessons are taught.</p>
     </div>
   </>;
