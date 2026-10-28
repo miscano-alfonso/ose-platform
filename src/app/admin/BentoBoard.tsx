@@ -1,0 +1,52 @@
+"use client";
+import { useState, useTransition, type ReactNode, useRef } from "react";
+import { saveDashLayoutAction } from "./actions";
+
+// A dashboard made of modules. "Customise" lets the person drag modules around, change their width,
+// take them off and add them back; the arrangement is saved for that person only.
+type Size = "s" | "m" | "l" | "xl" | "full";
+export type BoardModule = { id: string; title: string; node: ReactNode };
+type Item = { id: string; size: Size };
+const SIZES: [Size, string][] = [["s", "S"], ["m", "M"], ["l", "L"], ["xl", "XL"], ["full", "Full"]];
+
+export function BentoBoard({ page, modules, layout, defaults, saved }: { page: string; modules: BoardModule[]; layout: Item[]; defaults: Item[]; saved: boolean }) {
+  const [items, setItems] = useState<Item[]>(layout);
+  const [editing, setEditing] = useState(false);
+  const [drag, setDragS] = useState<string | null>(null);
+  const dragRef = useRef<string | null>(null); // drag events can fire before the next render
+  const setDrag = (d: string | null) => { dragRef.current = d; setDragS(d); };
+  const [pending, start] = useTransition();
+  const [msg, setMsg] = useState("");
+  const byId = new Map(modules.map((m) => [m.id, m]));
+  const hidden = modules.filter((m) => !items.some((i) => i.id === m.id));
+  const move = (id: string, to: number) => setItems((xs) => { const i = xs.findIndex((x) => x.id === id); if (i < 0) return xs; const c = [...xs]; const [it] = c.splice(i, 1); c.splice(Math.max(0, Math.min(c.length, to)), 0, it); return c; });
+  const save = (next: Item[] | null) => start(async () => { await saveDashLayoutAction(page, next); setMsg(next ? "Saved. This is now your dashboard." : "Back to the standard layout."); if (!next) setItems(defaults); setEditing(false); });
+  return <div className={`bb${editing ? " editing" : ""}`}>
+    <div className="bb-bar">
+      {!editing ? <><button type="button" className="abtn sm" onClick={() => { setEditing(true); setMsg(""); }}>
+        <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" /></svg>Customise</button>
+        {msg && <span className="bb-msg" role="status">{msg}</span>}</>
+      : <><span className="bb-help">Drag modules to move them, pick a width, or take them off. Only you see this arrangement.</span>
+        <button type="button" className="abtn sm pri" disabled={pending} onClick={() => save(items)}>{pending ? "Saving…" : "Save"}</button>
+        <button type="button" className="abtn sm" disabled={pending} onClick={() => { setItems(layout); setEditing(false); }}>Cancel</button>
+        {saved && <button type="button" className="abtn sm" disabled={pending} onClick={() => save(null)}>Reset to standard</button>}</>}
+    </div>
+    <div className="bb-grid">
+      {items.map((it, i) => { const m = byId.get(it.id); if (!m) return null;
+        return <div key={it.id} className={`bb-cell s-${it.size}${drag === it.id ? " dragging" : ""}`}
+          draggable={editing} onDragStart={(e) => { setDrag(it.id); e.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => setDrag(null)}
+          onDragOver={(e) => { if (editing && dragRef.current) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); const d = dragRef.current; if (d && d !== it.id) move(d, i); setDrag(null); }}>
+          {editing && <div className="bb-tools">
+            <span className="bb-grip" aria-hidden="true">⋮⋮</span><b>{m.title}</b>
+            <span className="bb-sizes" role="group" aria-label={`Width of ${m.title}`}>{SIZES.map(([s, l]) => <button key={s} type="button" aria-pressed={it.size === s} onClick={() => setItems((xs) => xs.map((x) => x.id === it.id ? { ...x, size: s } : x))}>{l}</button>)}</span>
+            <button type="button" aria-label={`Move ${m.title} earlier`} disabled={i === 0} onClick={() => move(it.id, i - 1)}>←</button>
+            <button type="button" aria-label={`Move ${m.title} later`} disabled={i === items.length - 1} onClick={() => move(it.id, i + 1)}>→</button>
+            <button type="button" aria-label={`Remove ${m.title}`} onClick={() => setItems((xs) => xs.filter((x) => x.id !== it.id))}>✕</button>
+          </div>}
+          <div className="bb-body">{m.node}</div>
+        </div>; })}
+    </div>
+    {editing && <div className="bb-add"><b>Add a module</b>{hidden.length === 0 ? <span className="muted">Every module is on your dashboard.</span>
+      : hidden.map((m) => <button key={m.id} type="button" className="abtn sm" onClick={() => setItems((xs) => [...xs, { id: m.id, size: defaults.find((d) => d.id === m.id)?.size ?? "m" }])}>+ {m.title}</button>)}</div>}
+  </div>;
+}

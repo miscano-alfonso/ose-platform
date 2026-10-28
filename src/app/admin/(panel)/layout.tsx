@@ -11,6 +11,7 @@ import { requireStaff, isDemoVisitor } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
 import { signOutAction } from "../actions";
 import { AdminNav } from "../AdminNav";
+import { menuFor } from "@/lib/menu-config";
 import "../admin.css";
 import { DashStyles } from "../DashStyles";
 import { brandSrc } from "@/lib/brand";
@@ -46,6 +47,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     withSchool((q) => q<{ enq: number; jobs: number; failed: number; tasters: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq, (select count(*)::int from job_applications where status = 'new') as jobs,
       (select count(*)::int from instalments where status = 'failed') as failed, 0 as tasters`)));
   const inboxUnread = await unreadInbox();
+  const menu = await menuFor("admin");
   const jar = await cookies();
   const sch = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string }; is_demo: boolean; name: string }>(`select brand, is_demo, name from schools where id = current_school()`)))[0];
   const brand = sch?.brand ?? {}, demo = !!sch?.is_demo;
@@ -60,7 +62,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {demo ? <a className="logo" href="/admin" title="Dashboard" style={{ color: "#fff", font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
       : <a className="logo" href="/admin" title="Dashboard"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></a>}
-      <AdminNav counts={{ "/admin/enquiries": c.enq, "/admin/jobs": c.jobs, "/admin/payments": c.failed, "/admin/tasters": c.tasters, "/admin/reports": x.rep, "/admin/messages": x.msg, "/admin/attendance": x.joins, "/admin/email": inboxUnread }} />
+      <AdminNav counts={{ "/admin/enquiries": c.enq, "/admin/jobs": c.jobs, "/admin/payments": c.failed, "/admin/tasters": c.tasters, "/admin/reports": x.rep, "/admin/messages": x.msg, "/admin/attendance": x.joins, "/admin/email": inboxUnread }} groups={menu} />
       <div className="side-foot">{<Switchers schools={schools.filter((x) => !isDemoVisitor(me.email) || x.slug === school).map((x) => ({ value: x.slug, label: x.name }))} school={school} views={views} view="admin" />}
       <div className="who"><span>Signed in as<br /><b>{me.name}</b></span>
         <form action={signOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form><ThemeToggle initial={theme ?? "auto"} />

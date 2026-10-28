@@ -1222,3 +1222,23 @@ export async function edtechTrialAction(f: FormData): Promise<void> {
   await updateTrial(String(f.get("id") ?? "").slice(0, 40), String(f.get("status") ?? ""), String(f.get("note") ?? ""));
   redirect("/admin/edtech?ok=" + encodeURIComponent("Saved."));
 }
+// ---------- customisable dashboard ----------
+const DASH_MODULES: Record<string, string[]> = { "admin-home": ["hero", "k-students", "k-places", "k-attendance", "k-collected", "k-next", "k-failed", "today", "attention", "collections", "bookings", "coming", "fullest", "tasters", "quick"] };
+export async function saveDashLayoutAction(page: string, layout: { id: string; size: string }[] | null): Promise<void> {
+  const me = await requireStaff();
+  const known = DASH_MODULES[page]; if (!known) return;
+  const { saveLayout } = await import("@/lib/dashboard-layout");
+  await saveLayout(me.id, page, layout as never, known);
+  revalidatePath("/admin");
+}
+// ---------- dashboard menus (Admin → Menus) ----------
+export async function saveMenuAction(area: string, cfg: { groups: { title: string; items: string[] }[]; hidden: string[] } | null): Promise<{ ok: boolean; error?: string }> {
+  await requireStaff();
+  const { MENU_AREAS } = await import("@/lib/menus");
+  if (!MENU_AREAS.some((a) => a.id === area)) return { ok: false, error: "Unknown menu." };
+  if (cfg && (!Array.isArray(cfg.groups) || !cfg.groups.length)) return { ok: false, error: "Keep at least one group." };
+  const { saveMenuConfig } = await import("@/lib/menu-config");
+  await saveMenuConfig(area as never, cfg as never);
+  revalidatePath("/", "layout");
+  return { ok: true };
+}

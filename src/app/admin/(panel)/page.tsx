@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getDashboard, getDashboardMore } from "@/lib/admin-data";
 import { requireStaff } from "@/lib/auth";
 import { money, dayMonth, yearLabel } from "@/lib/format";
+import { getLayout } from "@/lib/dashboard-layout";
+import { BentoBoard, type BoardModule } from "../BentoBoard";
 
 const PILL: Record<string, [string, string]> = { failed: ["bad", "Payment failed"], full: ["warn", "Class full"], almost: ["warn", "Almost full"], enquiry: ["info", "New enquiry"], waitlist: ["mute", "Waiting list"],
   clash: ["bad", "Timetable clash"], low: ["warn", "Low attendance"] };
@@ -57,8 +59,20 @@ export default async function Dashboard() {
   const st = (l: (typeof m.day.lessons)[number]) => l.status === "cancelled" ? "cancelled" : !m.day.today ? "later" : m.day.now >= l.ends ? "done" : m.day.now >= l.starts ? "live" : "later";
   const nextIdx = m.day.lessons.findIndex((l) => st(l) === "later");
 
-  return <div className="dx">
-    <section className="dx-hero">
+  const tasters = attention.filter((a) => a.kind === "enquiry").length;
+  const node = (n: React.ReactNode) => n;
+  const kpi = {
+    students: <div className="dx-kpi"><Ico d={I.users} /><span className="k">Students enrolled</span><span className="v">{t.students}</span><span className="h">from {t.families} famil{t.families === 1 ? "y" : "ies"}</span></div>,
+    places: <div className="dx-kpi ring"><div><span className="k">Class places filled</span><span className="v">{pct}%</span><span className="h">{t.taken} of {t.capacity} places</span></div><Ring pct={pct} /></div>,
+    attendance: <div className="dx-kpi ring"><div><span className="k">Attendance this term</span><span className="v">{m.att.pct == null ? "–" : `${m.att.pct}%`}</span><span className="h">{m.att.pct == null ? "no lessons marked yet" : m.att.low.length ? `${m.att.low.length} below ${LOW}%` : "nobody below 50%"}</span></div><Ring pct={m.att.pct} tone={attTone} /></div>,
+    collected: <div className="dx-kpi"><Ico d={I.pound} /><span className="k">Collected this year</span><span className="v">{money(t.collected)}</span>
+      <div className="dx-meter" role="img" aria-label={`${billed ? Math.round((t.collected / billed) * 100) : 0}% of the year's billing collected`}><i style={{ width: `${billed ? Math.min(100, (t.collected / billed) * 100) : 0}%` }} /></div>
+      <span className="h">{billed ? `of ${money(billed)} billed this year` : "paid instalments"}</span></div>,
+    next: <div className="dx-kpi"><Ico d={I.cal} /><span className="k">Next charge{t.next_bills_on ? ` · ${dayMonth(t.next_bills_on)}` : ""}</span><span className="v">{money(t.next_amount)}</span><span className="h">{t.next_families} families{t.next_term ? ` · ${t.next_term}` : ""}</span></div>,
+    failed: <Link href="/admin/payments" className={`dx-kpi${t.failed_count ? " alert" : " ok"}`}><Ico d={t.failed_count ? I.alert : I.check} /><span className="k">Failed payments</span><span className="v">{t.failed_count}</span><span className="h">{t.failed_count ? `${money(t.failed_amount)} to recover` : "Nothing to chase"}</span></Link>,
+  };
+  const modules: BoardModule[] = [
+    { id: "hero", title: "Greeting and today", node: <section className="dx-hero">
       <div className="dx-hi">
         <p className="dx-date">{DAY(todayIso, { weekday: "long", day: "numeric", month: "long" })} · {yearLabel(t.year_label)}</p>
         <h1>{hello}{first ? `, ${first}` : ""}</h1>
@@ -69,75 +83,72 @@ export default async function Dashboard() {
         <span className="dx-big">{m.day.lessons.filter((l) => l.status !== "cancelled").length}</span>
         <span>lesson{m.day.lessons.length === 1 ? "" : "s"} {m.day.today ? "today" : `on ${DAY(m.day.date, { weekday: "long" })}`}</span>
         {nextIdx >= 0 && <small>Next: {m.day.lessons[nextIdx].starts} {m.day.lessons[nextIdx].name}</small>}
-        <div className="dx-acts">
-          <Link href="/admin/timetable">Timetable</Link><Link href="/admin/families">Families</Link><Link href="/admin/messages">Messages</Link><Link href="/admin/social">New post</Link>
-        </div>
+        <div className="dx-acts"><Link href="/admin/timetable">Timetable</Link><Link href="/admin/families">Families</Link><Link href="/admin/messages">Messages</Link><Link href="/admin/social">New post</Link></div>
       </div>
       {t.students === 0 && <Link className="dx-flag" href="/admin/import">No families imported yet: import them</Link>}
-    </section>
-
-    <div className="dx-kpis">
-      <div className="dx-kpi"><Ico d={I.users} /><span className="k">Students enrolled</span><span className="v">{t.students}</span><span className="h">from {t.families} famil{t.families === 1 ? "y" : "ies"}</span></div>
-      <div className="dx-kpi ring"><div><span className="k">Class places filled</span><span className="v">{pct}%</span><span className="h">{t.taken} of {t.capacity} places</span></div><Ring pct={pct} /></div>
-      <div className="dx-kpi ring"><div><span className="k">Attendance this term</span><span className="v">{m.att.pct == null ? "–" : `${m.att.pct}%`}</span><span className="h">{m.att.pct == null ? "no lessons marked yet" : m.att.low.length ? `${m.att.low.length} below ${LOW}%` : "nobody below 50%"}</span></div><Ring pct={m.att.pct} tone={attTone} /></div>
-      <div className="dx-kpi"><Ico d={I.pound} /><span className="k">Collected this year</span><span className="v">{money(t.collected)}</span>
-        <div className="dx-meter" role="img" aria-label={`${billed ? Math.round((t.collected / billed) * 100) : 0}% of the year's billing collected`}><i style={{ width: `${billed ? Math.min(100, (t.collected / billed) * 100) : 0}%` }} /></div>
-        <span className="h">{billed ? `of ${money(billed)} billed this year` : "paid instalments"}</span></div>
-      <div className="dx-kpi"><Ico d={I.cal} /><span className="k">Next charge{t.next_bills_on ? ` · ${dayMonth(t.next_bills_on)}` : ""}</span><span className="v">{money(t.next_amount)}</span><span className="h">{t.next_families} families{t.next_term ? ` · ${t.next_term}` : ""}</span></div>
-      <Link href="/admin/payments" className={`dx-kpi${t.failed_count ? " alert" : " ok"}`}><Ico d={t.failed_count ? I.alert : I.check} /><span className="k">Failed payments</span><span className="v">{t.failed_count}</span><span className="h">{t.failed_count ? `${money(t.failed_amount)} to recover` : "Nothing to chase"}</span></Link>
-    </div>
-
-    <div className="dx-grid">
-      <div className="dx-col">
-        <section className="dx-card">
-          <header><h2>{m.day.today ? "Today" : `Next lessons · ${DAY(m.day.date, { weekday: "long", day: "numeric", month: "short" })}`}</h2>
-            <Link className="dx-more" href="/admin/timetable">Timetable →</Link></header>
-          {m.day.lessons.length === 0 ? <p className="empty">No lessons coming up.</p> :
-            <ol className="dx-tl">{m.day.lessons.map((l, i) => { const s = st(l); return <li key={i} className={`${s}${i === nextIdx ? " next" : ""}`} style={{ ["--c" as string]: l.colour }}>
-              <span className="tm">{l.starts}<small>{l.ends}</small></span>
-              <span className="bd"><b>{l.name}</b><span>{l.teacher ?? "No teacher set"} · {l.students} student{l.students === 1 ? "" : "s"} · {l.code}</span></span>
-              <span className="ac">{s === "live" ? <span className="dx-live">Live now</span> : s === "done" ? <span className="pill mute">Done</span> : s === "cancelled" ? <span className="pill bad">Cancelled</span> : i === nextIdx ? <span className="pill info">Next</span> : null}
-                {l.meet && (s === "live" || i === nextIdx) && <a className="abtn sm" href={l.meet} target="_blank" rel="noopener">Join</a>}</span>
-            </li>; })}</ol>}
-        </section>
-
-        <section className="dx-card">
-          <header><h2>Needs attention</h2>{items.length > 0 && <span className="dx-count">{items.length}</span>}</header>
-          {items.length > 0 && <div className="dx-chips">{Object.entries(counts).map(([k, n]) => <span key={k} className={`pill ${PILL[k][0]}`}>{n} · {PILL[k][1].toLowerCase()}</span>)}</div>}
-          {items.length === 0 ? <div className="dx-clear"><Ico d={I.check} /><b>All clear</b><span>Nothing needs you right now.</span></div> :
-            <div className="dx-list">{items.map((a, i) => <Link className={`dx-item ${PILL[a.kind][0]}`} key={i} href={a.href}>
-              <span className="t"><span className={`pill ${PILL[a.kind][0]}`}>{PILL[a.kind][1]}</span><b>{a.title}</b><span>{a.detail}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</div>}
-        </section>
-      </div>
-
-      <div className="dx-col">
-        <section className="dx-card">
-          <header><h2>Collections by term</h2><Link className="dx-more" href="/admin/payments">Payments →</Link></header>
-          <div className="termbars dx-bars" role="img" aria-label="Collections by term">{m.byTerm.map((x) => <div className="tb" key={x.number} title={`${x.name}: billed ${money(x.billed)}, collected ${money(x.paid)}${x.failed ? `, failed ${money(x.failed)}` : ""}`}>
-            <div className="col" style={{ height: `${Math.max(4, (x.billed / maxT) * 100)}%` }}><i style={{ height: `${x.billed ? (x.paid / x.billed) * 100 : 0}%` }} />
-              {x.failed > 0 && <i className="bad" style={{ height: `${(x.failed / x.billed) * 100}%`, bottom: `${(x.paid / x.billed) * 100}%` }} />}</div>
-            <b>{money(x.billed).replace(/\.\d+$/, "")}</b><span>T{x.number} · {dayMonth(x.bills_on)}</span></div>)}</div>
-          <div className="legend"><span><i style={{ background: "var(--bar)" }} />Collected</span><span><i style={{ background: "var(--bad)" }} />Failed</span><span><i style={{ background: "var(--track)" }} />Still to bill</span></div>
-        </section>
-
-        <section className="dx-card">
-          <header><h2>Latest bookings</h2><Link className="dx-more" href="/admin/families">Families →</Link></header>
-          {m.recent.length === 0 ? <p className="empty">No bookings yet.</p> : <div className="dx-people">{m.recent.map((r, i) =>
-            <Link key={i} className="dx-person" href={`/admin/families?q=${encodeURIComponent(r.parent)}`}><span className="av">{initials(r.student)}</span>
-              <span className="t"><b>{r.student}</b><span>{r.course} · {r.parent}</span></span><span className="amt">{money(r.amount)}<small>{dayMonth(r.on)}</small></span></Link>)}</div>}
-        </section>
-
-        <section className="dx-card">
-          <header><h2>Coming up</h2><span className="dx-sub">What the system does on its own</span></header>
-          <ol className="dx-steps">{m.coming.map((c, i) => <li key={i} className={c.kind}><b>{c.href ? <Link href={c.href}>{c.title}</Link> : c.title}</b><span>{c.detail}</span></li>)}</ol>
-        </section>
-
-        <section className="dx-card">
-          <header><h2>Fullest classes</h2><Link className="dx-more" href="/admin/classes">All classes →</Link></header>
-          {m.fullest.length === 0 ? <p className="empty">No open classes.</p> : <div className="bars">{m.fullest.map((g, i) => <div className="brow" key={i} title={`${g.name}: ${g.taken} of ${g.capacity}`}>
-            <span className="lbl"><span className="dot" style={{ background: g.colour }} />{g.name}</span><div className="track"><i className={g.taken >= g.capacity ? "full" : ""} style={{ width: `${Math.min(100, (g.taken / g.capacity) * 100)}%` }} /></div><span className="num">{g.taken}/{g.capacity}</span></div>)}</div>}
-        </section>
-      </div>
-    </div>
-  </div>;
+    </section> },
+    { id: "k-students", title: "Students enrolled", node: kpi.students },
+    { id: "k-places", title: "Class places filled", node: kpi.places },
+    { id: "k-attendance", title: "Attendance", node: kpi.attendance },
+    { id: "k-collected", title: "Collected this year", node: kpi.collected },
+    { id: "k-next", title: "Next charge", node: kpi.next },
+    { id: "k-failed", title: "Failed payments", node: kpi.failed },
+    { id: "today", title: m.day.today ? "Today’s lessons" : "Next lessons", node: <section className="dx-card">
+      <header><h2>{m.day.today ? "Today" : `Next lessons · ${DAY(m.day.date, { weekday: "long", day: "numeric", month: "short" })}`}</h2><Link className="dx-more" href="/admin/timetable">Timetable →</Link></header>
+      {m.day.lessons.length === 0 ? <p className="empty">No lessons coming up.</p> :
+        <ol className="dx-tl">{m.day.lessons.map((l, i) => { const s = st(l); return <li key={i} className={`${s}${i === nextIdx ? " next" : ""}`} style={{ ["--c" as string]: l.colour }}>
+          <span className="tm">{l.starts}<small>{l.ends}</small></span>
+          <span className="bd"><b>{l.name}</b><span>{l.teacher ?? "No teacher set"} · {l.students} student{l.students === 1 ? "" : "s"} · {l.code}</span></span>
+          <span className="ac">{s === "live" ? <span className="dx-live">Live now</span> : s === "done" ? <span className="pill mute">Done</span> : s === "cancelled" ? <span className="pill bad">Cancelled</span> : i === nextIdx ? <span className="pill info">Next</span> : null}
+            {l.meet && (s === "live" || i === nextIdx) && <a className="abtn sm" href={l.meet} target="_blank" rel="noopener">Join</a>}</span>
+        </li>; })}</ol>}
+    </section> },
+    { id: "attention", title: "Needs attention", node: <section className="dx-card">
+      <header><h2>Needs attention</h2>{items.length > 0 && <span className="dx-count">{items.length}</span>}</header>
+      {items.length > 0 && <div className="dx-chips">{Object.entries(counts).map(([k, n]) => <span key={k} className={`pill ${PILL[k][0]}`}>{n} · {PILL[k][1].toLowerCase()}</span>)}</div>}
+      {items.length === 0 ? <div className="dx-clear"><Ico d={I.check} /><b>All clear</b><span>Nothing needs you right now.</span></div> :
+        <div className="dx-list">{items.map((a, i) => <Link className={`dx-item ${PILL[a.kind][0]}`} key={i} href={a.href}>
+          <span className="t"><span className={`pill ${PILL[a.kind][0]}`}>{PILL[a.kind][1]}</span><b>{a.title}</b><span>{a.detail}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</div>}
+    </section> },
+    { id: "collections", title: "Collections by term", node: <section className="dx-card">
+      <header><h2>Collections by term</h2><Link className="dx-more" href="/admin/payments">Payments →</Link></header>
+      <div className="termbars dx-bars" role="img" aria-label="Collections by term">{m.byTerm.map((x) => <div className="tb" key={x.number} title={`${x.name}: billed ${money(x.billed)}, collected ${money(x.paid)}${x.failed ? `, failed ${money(x.failed)}` : ""}`}>
+        <div className="col" style={{ height: `${Math.max(4, (x.billed / maxT) * 100)}%` }}><i style={{ height: `${x.billed ? (x.paid / x.billed) * 100 : 0}%` }} />
+          {x.failed > 0 && <i className="bad" style={{ height: `${(x.failed / x.billed) * 100}%`, bottom: `${(x.paid / x.billed) * 100}%` }} />}</div>
+        <b>{money(x.billed).replace(/\.\d+$/, "")}</b><span>T{x.number} · {dayMonth(x.bills_on)}</span></div>)}</div>
+      <div className="legend"><span><i style={{ background: "var(--bar)" }} />Collected</span><span><i style={{ background: "var(--bad)" }} />Failed</span><span><i style={{ background: "var(--track)" }} />Still to bill</span></div>
+    </section> },
+    { id: "tasters", title: "Taster requests", node: <Link href="/admin/tasters" className="dx-pop"><span>{tasters ? `${tasters} new enquir${tasters === 1 ? "y" : "ies"}` : "Tasters"}</span><b>{tasters ? "Review requests →" : "See taster bookings →"}</b></Link> },
+    { id: "bookings", title: "Latest bookings", node: <section className="dx-card">
+      <header><h2>Latest bookings</h2><Link className="dx-more" href="/admin/families">Families →</Link></header>
+      {m.recent.length === 0 ? <p className="empty">No bookings yet.</p> : <div className="dx-people">{m.recent.map((r, i) =>
+        <Link key={i} className="dx-person" href={`/admin/families?q=${encodeURIComponent(r.parent)}`}><span className="av">{initials(r.student)}</span>
+          <span className="t"><b>{r.student}</b><span>{r.course} · {r.parent}</span></span><span className="amt">{money(r.amount)}<small>{dayMonth(r.on)}</small></span></Link>)}</div>}
+    </section> },
+    { id: "coming", title: "Coming up", node: <section className="dx-card">
+      <header><h2>Coming up</h2><span className="dx-sub">What the system does on its own</span></header>
+      <ol className="dx-steps">{m.coming.map((c, i) => <li key={i} className={c.kind}><b>{c.href ? <Link href={c.href}>{c.title}</Link> : c.title}</b><span>{c.detail}</span></li>)}</ol>
+    </section> },
+    { id: "fullest", title: "Fullest classes", node: <section className="dx-card">
+      <header><h2>Fullest classes</h2><Link className="dx-more" href="/admin/classes">All classes →</Link></header>
+      {m.fullest.length === 0 ? <p className="empty">No open classes.</p> : <div className="bars">{m.fullest.map((g, i) => <div className="brow" key={i} title={`${g.name}: ${g.taken} of ${g.capacity}`}>
+        <span className="lbl"><span className="dot" style={{ background: g.colour }} />{g.name}</span><div className="track"><i className={g.taken >= g.capacity ? "full" : ""} style={{ width: `${Math.min(100, (g.taken / g.capacity) * 100)}%` }} /></div><span className="num">{g.taken}/{g.capacity}</span></div>)}</div>}
+    </section> },
+    { id: "quick", title: "Quick links", node: <section className="dx-card">
+      <header><h2>Quick links</h2></header>
+      <div className="dx-quick"><Link href="/admin/classes">Classes</Link><Link href="/admin/tasters">Tasters</Link><Link href="/admin/enquiries">Enquiries</Link><Link href="/admin/reports">Reports</Link><Link href="/admin/payroll">Payroll</Link><Link href="/admin/newsletter">Newsletter</Link></div>
+    </section> },
+  ];
+  const known = modules.map((x) => x.id);
+  const saved = await getLayout(me.id, "admin-home", known);
+  void node;
+  return <BentoBoard page="admin-home" modules={modules} layout={saved ?? DEFAULT_LAYOUT} defaults={DEFAULT_LAYOUT} saved={!!saved} />;
 }
+
+const DEFAULT_LAYOUT: { id: string; size: "s" | "m" | "l" | "xl" | "full" }[] = [
+  { id: "hero", size: "full" },
+  { id: "k-students", size: "s" }, { id: "k-places", size: "s" }, { id: "k-attendance", size: "s" }, { id: "k-collected", size: "s" }, { id: "k-next", size: "s" }, { id: "k-failed", size: "s" },
+  { id: "today", size: "l" }, { id: "attention", size: "l" },
+  { id: "collections", size: "m" }, { id: "bookings", size: "m" }, { id: "tasters", size: "m" },
+  { id: "coming", size: "l" }, { id: "fullest", size: "l" },
+];

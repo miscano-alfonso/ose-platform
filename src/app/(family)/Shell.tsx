@@ -4,12 +4,13 @@ import { brandSrc } from "@/lib/brand";
 import { withSchool } from "@/lib/db";
 import type { Family } from "@/lib/family-auth";
 import { familySignOutAction } from "./actions";
-import { FamilyNav, type NavItem } from "./FamilyNav";
+import { FamilyNav } from "./FamilyNav";
+import type { ResolvedGroup } from "@/lib/menus";
 import { ThemeToggle } from "../admin/ThemeToggle";
 import { cookies } from "next/headers";
 
 // The parent and student areas share the admin's look: brand-coloured menu on the left, pages on the right.
-export async function Shell({ f, items, root, children }: { f: Family; items: NavItem[]; root: string; children: React.ReactNode }) {
+export async function Shell({ f, groups, counts = {}, root, children }: { f: Family; groups: ResolvedGroup[]; counts?: Record<string, number>; root: string; children: React.ReactNode }) {
   const { logo } = await brandSrc();
   const tv = (await cookies()).get("ose_theme")?.value, theme = tv === "light" || tv === "dark" ? tv : undefined;
   const sch = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string }; name: string; is_demo: boolean }>(`select brand, name, is_demo from schools where id = current_school()`)))[0];
@@ -23,7 +24,7 @@ export async function Shell({ f, items, root, children }: { f: Family; items: Na
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {sch?.is_demo ? <a className="logo" href={root} title="Home" style={{ font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}</a>
           : <a className="logo" href={root} title="Home"><img src={logo} alt="OH-SO ED: home" width={773} height={224} /></a>}
-        <FamilyNav items={items} root={root} />
+        <FamilyNav groups={groups} counts={counts} root={root} />
         <div className="who"><span>Signed in as<br /><b>{f.first} {f.last}</b></span>
           {!f.viewer && <form action={familySignOutAction}><button className="abtn sm side-btn" type="submit">Sign out</button></form>}
           <a href="/" style={{ fontSize: 15.5 }}>View the website</a><ThemeToggle initial={theme ?? "auto"} /></div>
