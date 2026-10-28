@@ -18,10 +18,15 @@ export default async function Tutoring({ searchParams }: { searchParams: Promise
   const show = sp.show === "past" ? "past" : "upcoming", rows = show === "past" ? past : upcoming;
   const booking = !!(sp.book || sp.level || times);
   return <>
-    <div className="top"><div><h1>1:1 tutoring</h1><div className="sub">45-minute online 1:1s · {upcoming.length} upcoming · {past.length} past. Prices and teachers’ times are in <Link href="/admin/tutoring-setup">1:1 tutoring setup</Link>.</div></div>
-      <Link className="abtn pri" href={booking ? "/admin/tutoring" : "/admin/tutoring?book=1"}>{booking ? "Close" : "Book a 1:1"}</Link></div>
+    <div className="top"><div><h1>1:1 tutoring</h1><div className="sub">45-minute online 1:1s · {upcoming.length} upcoming · {past.length} past. Prices and teachers’ times are in <Link href="/admin/tutoring-setup">1:1 tutoring setup</Link>.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
 
+
+    <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
+      <Link className="abtn pri" href={booking ? "/admin/tutoring" : "/admin/tutoring?book=1"}>{booking ? "Close" : "Book a 1:1"}</Link>
+    <div className="segl" role="group" aria-label="Show">
+      <Link href="/admin/tutoring" aria-current={show === "upcoming" ? "true" : undefined}>Upcoming ({upcoming.length})</Link>
+      <Link href="/admin/tutoring?show=past" aria-current={show === "past" ? "true" : undefined}>Past ({past.length})</Link></div></div>
     {booking && <section className="card"><h2>Book a 1:1</h2>
       <form className="eform" style={{ marginBottom: 10 }}>
         <label className="fld">Level<select name="level" defaultValue={sp.level ?? ""} required><option value="" disabled>Choose</option>{d.levels.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
@@ -37,10 +42,6 @@ export default async function Tutoring({ searchParams }: { searchParams: Promise
           <label className="fld">Help with<input name="focus" maxLength={300} /></label>
           <button className="abtn pri" type="submit">Book</button></form>)}
       <p className="cs" style={{ marginTop: 8 }}>The price comes from the rates in 1:1 tutoring setup (families with a course place pay the enrolled rate).</p></section>}
-
-    <div className="segl" role="group" aria-label="Show" style={{ marginBottom: 12 }}>
-      <Link href="/admin/tutoring" aria-current={show === "upcoming" ? "true" : undefined}>Upcoming ({upcoming.length})</Link>
-      <Link href="/admin/tutoring?show=past" aria-current={show === "past" ? "true" : undefined}>Past ({past.length})</Link></div>
     {rows.length === 0 ? <p className="empty">{show === "past" ? "No past 1:1s yet." : "No 1:1s booked."}</p> : <Table rows={rows} />}
   </>;
 }
