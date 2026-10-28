@@ -27,11 +27,11 @@ const when = (s: string) => new Date(s).toLocaleString("en-GB", { day: "numeric"
 
 export default async function Email({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; audience?: string; subject?: string; body?: string; tab?: string; show?: string; m?: string }> }) {
   const sp = await searchParams;
-  const tab = ["auto", "compose", "inbox", "sent", "design"].includes(sp.tab ?? "") ? sp.tab! : sp.audience || sp.ok || sp.err ? "compose" : "auto";
+  const tab = ["auto", "compose", "inbox", "sent", "design"].includes(sp.tab ?? "") ? sp.tab! : sp.audience || sp.ok || sp.err ? "compose" : "inbox";
   const ready = await emailReady();
   const box = await inboxStatus();
   const unread = box.connected ? (await inboxList("new")).unread : 0;
-  const TABS: [string, string][] = [["auto", "Automatic emails"], ["compose", "Send an email"], ["inbox", `Inbox${unread ? ` (${unread})` : ""}`], ["sent", "Sent"], ["design", "Email design"]];
+  const TABS: [string, string][] = [["inbox", `Inbox${unread ? ` (${unread})` : ""}`], ["compose", "Send an email"], ["sent", "Sent"], ["design", "Email design"], ["auto", "Automatic emails"]];
   const head = <>
     <div className="top"><div><h1>Email</h1><div className="sub">Automatic emails, one-off messages to families, students or teachers, replies from families, and everything sent.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
