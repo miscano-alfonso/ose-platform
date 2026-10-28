@@ -178,7 +178,7 @@ export function replyHtml(body: string, sig: Signature): string {
     + `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5">${p}`
     + `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.4">`
     + `<b>${sigEsc(sig.name)}</b>${sig.title ? `<br>${sigEsc(sig.title)}` : ""}</td></tr>`
-    + `<tr><td style="padding-top:10px">${img(sig.logo, "ose-l", false)}${img(sig.logoDark, "ose-d", true)}</td></tr></table></div></body></html>`;
+    + `<tr><td style="padding-top:16px">${img(sig.logo, "ose-l", false)}${img(sig.logoDark, "ose-d", true)}</td></tr></table></div></body></html>`;
 }
 
 export async function replyInbox(actor: { id: string; name: string }, id: string, text: string): Promise<string | null> {
