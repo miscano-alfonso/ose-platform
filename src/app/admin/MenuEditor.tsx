@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CATALOGUE, DEFAULT_MENUS, ICONS, LOCKED, type MenuArea, type MenuConfig } from "@/lib/menus";
 import { saveMenuAction } from "./actions";
@@ -72,6 +72,15 @@ export function MenuEditor({ area, initial, saved }: { area: MenuArea; initial: 
         {dest(href, g)}</span>
     </li>; };
 
+  // Masonry: each box spans as many 4px grid rows as it is tall, so short boxes tuck up under each other
+  // (left to right order kept), and nothing is pushed off the bottom by a long neighbour.
+  const cols = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = cols.current; if (!el) return;
+    const fit = () => { for (const c of Array.from(el.children) as HTMLElement[]) c.style.gridRowEnd = `span ${Math.ceil((c.getBoundingClientRect().height + 16) / 4)}`; };
+    const ro = new ResizeObserver(fit); Array.from(el.children).forEach((c) => ro.observe(c)); fit();
+    return () => ro.disconnect();
+  }, [cfg]);
   return <div className="me">
     <div className="me-bar">
       <button type="button" className="abtn pri" disabled={pending || !dirty} onClick={() => save(cfg)}>{pending ? "Saving…" : "Save menu"}</button>
@@ -80,7 +89,7 @@ export function MenuEditor({ area, initial, saved }: { area: MenuArea; initial: 
       {saved && <button type="button" className="abtn" disabled={pending} onClick={() => save(null)}>Reset to standard</button>}
       <span className="me-state" role="status">{msg ?? (dirty ? "Unsaved changes" : "")}</span>
     </div>
-    <div className="me-cols">
+    <div className="me-cols" ref={cols}>
       {cfg.groups.map((g, gi) => <section key={gi} className={`me-grp${over === `g${gi}` ? " over" : ""}`} onDragOver={allow(`g${gi}`)} onDrop={onDrop(gi)}>
         <header>
           <input className="me-title" value={g.title} aria-label="Group name" onChange={(e) => rename(gi, e.target.value)} placeholder="Group name" />

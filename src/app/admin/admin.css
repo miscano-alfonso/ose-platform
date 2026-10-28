@@ -454,7 +454,7 @@
 /* ---------- Admin → Menus editor ---------- */
 .adm .me-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
 .adm .me-state{font-size:15px;color:var(--muted)}
-.adm .me-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px;align-items:start}
+.adm .me-cols{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));grid-auto-rows:4px;grid-auto-flow:row dense;column-gap:16px;row-gap:0;align-items:start}
 .adm .me-grp{background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:14px;min-height:120px;transition:border-color .15s,background .15s}
 .adm .me-grp.over{border-color:var(--sky);border-style:dashed}
 .adm .me-grp header{display:flex;gap:8px;align-items:center;margin-bottom:10px}
