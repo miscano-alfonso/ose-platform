@@ -90,7 +90,7 @@ export async function saveChildAction(f: FormData): Promise<void> {
   const p = await parent("/parent/details");
   const chat = ["none", "class", "class_and_private"].includes(str(f, "chat", 20)) ? str(f, "chat", 20) : "none";
   const err = await F.saveChild(p.id, str(f, "student", 40), { email: f.has("email") ? str(f, "email", 120).toLowerCase() : null, chat, leaderboard: f.get("leaderboard") === "on" ? "first_initial" : "hidden",
-    share: f.has("share_present") ? f.get("share") === "on" : null });
+    share: f.has("share_present") ? f.get("share") === "on" : null, agree: f.get("agree_rules") === "on" });
   go("/parent/details", "Saved. Your choices are recorded with today’s date.", err);
 }
 export async function marketingAction(f: FormData): Promise<void> {

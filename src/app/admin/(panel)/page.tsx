@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { openFlags, ruleLabel } from "@/lib/chat-safety";
 import { getDashboard, getDashboardMore } from "@/lib/admin-data";
 import { requireStaff } from "@/lib/auth";
 import { money, dayMonth, yearLabel } from "@/lib/format";
@@ -6,7 +7,7 @@ import { getLayout } from "@/lib/dashboard-layout";
 import { BentoBoard, type BoardModule } from "../BentoBoard";
 
 const PILL: Record<string, [string, string]> = { failed: ["bad", "Payment failed"], full: ["warn", "Class full"], almost: ["warn", "Almost full"], enquiry: ["info", "New enquiry"], waitlist: ["mute", "Waiting list"],
-  clash: ["bad", "Timetable clash"], low: ["warn", "Low attendance"] };
+  clash: ["bad", "Timetable clash"], low: ["warn", "Low attendance"], chat: ["bad", "Chat alert"] };
 const LOW = 50;
 const DAY = (d: string, o: Intl.DateTimeFormatOptions) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { ...o, timeZone: "UTC" });
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join("").toUpperCase();
@@ -30,9 +31,11 @@ const I = {
 };
 
 export default async function Dashboard() {
-  const [{ t, attention }, m, me] = await Promise.all([getDashboard(), getDashboardMore(LOW), requireStaff()]);
+  const [{ t, attention }, m, me, flags] = await Promise.all([getDashboard(), getDashboardMore(LOW), requireStaff(), openFlags().catch(() => [])]);
   const pct = t.capacity ? Math.round((t.taken / t.capacity) * 100) : 0;
-  const items = [...attention.filter((a) => a.kind === "failed"),
+  const items = [...flags.slice(0, 6).map((x) => ({ kind: "chat", title: `${x.rules.includes("wellbeing") ? "Urgent: " : ""}${x.rules.map(ruleLabel).join(", ")} · ${x.sender}`,
+      detail: `${x.blocked ? "Blocked: " : ""}“${x.body.length > 70 ? x.body.slice(0, 70) + "…" : x.body}” · ${x.chat}`, href: "/admin/student-chat#alerts" })),
+    ...attention.filter((a) => a.kind === "failed"),
     ...m.clashes.map((c) => ({ kind: "clash", title: c.title, detail: c.detail, href: "/admin/timetable" })),
     ...m.att.low.map((x) => ({ kind: "low", title: `${x.name}: ${x.pct}%`, detail: `${x.level} · ${x.att} of ${x.held} lessons this term`, href: "/admin/attendance" })),
     ...attention.filter((a) => a.kind !== "failed")];

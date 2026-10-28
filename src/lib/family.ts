@@ -11,10 +11,10 @@ type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>
 const audit = (q: Q, act: string, ent: string, id: string | null, d: unknown = {}) =>
   q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), null, $1, $2, $3, $4)`, [act, ent, id, JSON.stringify(d)]);
 
-export type Kid = { id: string; first: string; last: string; email: string | null; level: string; att: number | null; chat_access: string; leaderboard_name: string;
+export type Kid = { id: string; first: string; last: string; email: string | null; level: string; att: number | null; chat_access: string; leaderboard_name: string; chat_rules_version: string | null; chat_rules_agreed_at: string | null;
   classes: { group_id: string; subject: string; level: string; colour: string; slots: string | null; teacher: string | null; teacher_id: string | null; invited: boolean; meet: string | null }[] };
 export async function kids(parentId: string): Promise<Kid[]> {
-  return withSchool((q) => q<Kid>(`select s.id, s.first_name as first, s.last_name as last, s.email::text, s.chat_access, s.leaderboard_name,
+  return withSchool((q) => q<Kid>(`select s.id, s.first_name as first, s.last_name as last, s.email::text, s.chat_access, s.leaderboard_name, s.chat_rules_version, s.chat_rules_agreed_at::text,
       coalesce((select string_agg(distinct l.name, ', ') from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id where e.student_id = s.id and e.status = 'active' and not e.is_taster), '') as level,
       (select a.attendance_pct from student_term_attendance a where a.student_id = s.id and a.term_id = ${TERM_NOW}) as att,
       coalesce((select json_agg(json_build_object('group_id', g.id, 'subject', sj.name, 'level', l.name, 'colour', coalesce(sj.colour,'#8494c2'), 'slots', ${SLOTS}, 'teacher', u.name, 'teacher_id', g.teacher_id,
@@ -231,19 +231,30 @@ export async function saveGuardian(parentId: string, g: { first: string; last: s
     return null;
   } catch { return "Check the second parent’s details: each needs a name and a valid email."; }
 }
-export async function saveChild(parentId: string, studentId: string, d: { email: string | null; chat: string; leaderboard: string; share: boolean | null }): Promise<string | null> {
+export async function saveChild(parentId: string, studentId: string, d: { email: string | null; chat: string; leaderboard: string; share: boolean | null; agree: boolean }): Promise<string | null> {
+  // turning chat on (or keeping it on after the school changed its rules) needs the parent's tick to agree the chat rules
+  const { safetyCfg, rulesVersion } = await import("./chat-safety");
+  const ver = rulesVersion((await safetyCfg()).rules);
   try {
     await withSchool(async (q) => {
       const own = await q(`select 1 from students where id = $1 and parent_id = $2`, [studentId, parentId]);
       if (!own.length) throw new Error("not yours");
       if (d.email !== null) await q(`update students set email = $2 where id = $1 and email is distinct from $2::citext`, [studentId, d.email || null]);
+      if (d.chat !== "none") {
+        const cur = (await q<{ v: string | null; a: string }>(`select chat_rules_version as v, chat_access as a from students where id = $1`, [studentId]))[0];
+        if (cur?.a === "none" && cur?.v !== ver && !d.agree) throw new Error("rules"); // turning chat on needs the tick; after a rules change it's asked for again but not forced
+        if (d.agree && cur?.v !== ver) {
+          await q(`update students set chat_rules_agreed_at = now(), chat_rules_version = $2 where id = $1`, [studentId, ver]);
+          await q(`insert into consent_events (school_id, parent_id, student_id, purpose, granted, notice_version) values (current_school(), $1, $2, 'chat_rules', true, $3)`, [parentId, studentId, ver]);
+        }
+      }
       await q(`select set_chat_access($1, $2, $3)`, [studentId, d.chat, parentId]);
       await q(`update students set leaderboard_name = $2 where id = $1`, [studentId, d.leaderboard]);
       if (d.share !== null) await q(`update student_support set share_with_teachers = $2, updated_at = now() where student_id = $1`, [studentId, d.share]);
       await q(`insert into consent_events (school_id, parent_id, student_id, purpose, granted, notice_version) values (current_school(), $1, $2, 'leaderboard_name', $3, '2026-10')`, [parentId, studentId, d.leaderboard !== "hidden"]);
     });
     return null;
-  } catch (e) { const m = (e as Error).message; return m.includes("Gmail") || m.includes("Google") ? "That isn’t a Gmail address. Use your child’s own Google account (or ask us to confirm another Google account)." : m.includes("parent") ? "That’s a parent’s email: each child needs their own Google account." : m.includes("already") || m.includes("unique") ? "Another child already uses that email." : "Couldn’t save that."; }
+  } catch (e) { const m = (e as Error).message; if (m === "rules") return "To turn chat on, please read the chat rules with your child and tick the box to agree."; return m.includes("Gmail") || m.includes("Google") ? "That isn’t a Gmail address. Use your child’s own Google account (or ask us to confirm another Google account)." : m.includes("parent") ? "That’s a parent’s email: each child needs their own Google account." : m.includes("already") || m.includes("unique") ? "Another child already uses that email." : "Couldn’t save that."; }
 }
 export async function setMarketing(parentId: string, on: boolean) {
   await withSchool(async (q) => {
@@ -347,7 +358,14 @@ export async function chatFor(studentId: string, chatId: string) {
 }
 export async function studentPost(studentId: string, chatId: string, body: string): Promise<string | null> {
   if (!(await chatFor(studentId, chatId))) return "That chat wasn’t found.";
-  try { await withSchool((q) => q(`insert into student_chat_messages (school_id, chat_id, sender_student_id, body) values (current_school(), $1, $2, $3)`, [chatId, studentId, body])); return null; }
+  const { screenMessage } = await import("./chat-safety");
+  const screen = await screenMessage(studentId, chatId, body); // the school's chat rules: blocked, or posted and flagged for staff
+  if (screen.blocked) return screen.blocked;
+  try {
+    const r = await withSchool((q) => q<{ id: string }>(`insert into student_chat_messages (school_id, chat_id, sender_student_id, body) values (current_school(), $1, $2, $3) returning id`, [chatId, studentId, body]));
+    await screen.after(r[0].id).catch((e) => console.error("chat flag", e));
+    return null;
+  }
   catch (e) { const m = (e as Error).message; return m.includes("turned off") ? "Chat is switched off. Ask your parent to turn it on." : m.includes("private") ? "Private chat needs both parents to allow it." : m.includes("not allowed") ? "That message has a word that isn’t allowed." : "Couldn’t send that."; }
 }
 export async function startDirect(studentId: string, other: string): Promise<{ id?: string; error?: string }> {

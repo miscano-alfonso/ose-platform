@@ -1273,3 +1273,21 @@ export async function zoomOptionsAction(f: FormData): Promise<void> {
     zoomBack(r.error ? "err" : "ok", r.error ?? `Zoom synced: ${r.joins} new join${r.joins === 1 ? "" : "s"} in ${r.lessons} lesson${r.lessons === 1 ? "" : "s"}${r.posted ? `, ${r.posted} recordings posted` : ""}.`);
   }
 }
+// ---------- chat safety rules and alerts (Student chat) ----------
+export async function saveChatSafetyAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { RULES, saveSafetyCfg } = await import("@/lib/chat-safety");
+  const modes = Object.fromEntries(RULES.map((r) => { const m = String(f.get(`mode_${r.id}`) ?? "alert"); return [r.id, m === "off" || (m === "block" && r.canBlock) ? m : "alert"]; }));
+  const email = String(f.get("email") ?? "").split(/[\s,;]+/).filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)).slice(0, 5).join(", ");
+  const rules = String(f.get("rules") ?? "").split("\n").map((x) => x.trim()).filter(Boolean).slice(0, 20).map((x) => x.slice(0, 200));
+  if (!rules.length) redirect("/admin/student-chat?err=" + encodeURIComponent("Keep at least one chat rule for families.") + "#safety");
+  await saveSafetyCfg({ modes: modes as never, email, rules });
+  redirect("/admin/student-chat?ok=" + encodeURIComponent("Chat safety rules saved.") + "#safety");
+}
+export async function resolveChatFlagAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { resolveFlag } = await import("@/lib/chat-safety");
+  await resolveFlag(me.id, String(f.get("id") ?? "").slice(0, 40), f.get("hide") === "1");
+  revalidatePath("/admin");
+  redirect("/admin/student-chat?ok=" + encodeURIComponent(f.get("hide") === "1" ? "Message hidden and alert closed." : "Alert closed."));
+}
