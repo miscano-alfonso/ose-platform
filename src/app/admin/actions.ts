@@ -221,24 +221,24 @@ const back = (path: string, err: string | null, ok: string) => redirect(`${path}
 export async function addSlotAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const day = parseInt(str(f, "weekday", 1), 10), start = str(f, "start", 5), mins = parseInt(str(f, "minutes", 3), 10) || 45;
-  if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(start) || mins < 15 || mins > 180) return back("/admin/timetable", "Pick a day, a start time and a length.", "");
+  if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(start) || mins < 15 || mins > 180) return back("/admin/timetable-setup", "Pick a day, a start time and a length.", "");
   const err = await addSlot(me.id, str(f, "group", 40), day, start, mins, str(f, "teacher", 40) || null);
   if (!err) await ensureLessonDates().catch(() => 0);
-  revalidatePath("/admin/timetable"); revalidatePath("/timetable"); revalidatePath("/courses");
-  back("/admin/timetable", err, "Lesson time added.");
+  revalidatePath("/admin/timetable"); revalidatePath("/admin/timetable-setup"); revalidatePath("/timetable"); revalidatePath("/courses");
+  back("/admin/timetable-setup", err, "Lesson time added.");
 }
 export async function removeSlotAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const note = await removeSlot(me.id, str(f, "id", 40));
-  revalidatePath("/admin/timetable"); revalidatePath("/timetable"); revalidatePath("/courses");
-  back("/admin/timetable", note, "Lesson time removed.");
+  revalidatePath("/admin/timetable"); revalidatePath("/admin/timetable-setup"); revalidatePath("/timetable"); revalidatePath("/courses");
+  back("/admin/timetable-setup", note, "Lesson time removed.");
 }
 export async function setClassTeacherAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const mins = Math.max(15, Math.min(180, parseInt(str(f, "minutes", 3), 10) || 45));
   const err = await setClassTeacher(me.id, str(f, "group", 40), str(f, "teacher", 40) || null, mins);
-  revalidatePath("/admin/timetable"); revalidatePath("/teachers"); revalidatePath("/courses");
-  back("/admin/timetable", err, "Class updated.");
+  revalidatePath("/admin/timetable"); revalidatePath("/admin/timetable-setup"); revalidatePath("/teachers"); revalidatePath("/courses");
+  back("/admin/timetable-setup", err, "Class updated.");
 }
 
 // ---------- attendance ----------

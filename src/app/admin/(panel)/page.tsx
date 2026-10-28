@@ -4,6 +4,7 @@ import { getDashboard, getDashboardMore } from "@/lib/admin-data";
 import { requireStaff } from "@/lib/auth";
 import { money, dayMonth, yearLabel } from "@/lib/format";
 import { getLayout } from "@/lib/dashboard-layout";
+import { MoreList } from "../MoreList";
 import { BentoBoard, type BoardModule } from "../BentoBoard";
 
 const PILL: Record<string, [string, string]> = { failed: ["bad", "Payment failed"], full: ["warn", "Class full"], almost: ["warn", "Almost full"], enquiry: ["info", "New enquiry"], waitlist: ["mute", "Waiting list"],
@@ -36,7 +37,7 @@ export default async function Dashboard() {
   const items = [...flags.slice(0, 6).map((x) => ({ kind: "chat", title: `${x.rules.includes("wellbeing") ? "Urgent: " : ""}${x.rules.map(ruleLabel).join(", ")} · ${x.sender}`,
       detail: `${x.blocked ? "Blocked: " : ""}“${x.body.length > 70 ? x.body.slice(0, 70) + "…" : x.body}” · ${x.chat}`, href: "/admin/student-chat#alerts" })),
     ...attention.filter((a) => a.kind === "failed"),
-    ...m.clashes.map((c) => ({ kind: "clash", title: c.title, detail: c.detail, href: "/admin/timetable" })),
+    ...m.clashes.map((c) => ({ kind: "clash", title: c.title, detail: c.detail, href: "/admin/timetable-setup#clashes" })),
     ...m.att.low.map((x) => ({ kind: "low", title: `${x.name}: ${x.pct}%`, detail: `${x.level} · ${x.att} of ${x.held} lessons this term`, href: "/admin/attendance" })),
     ...attention.filter((a) => a.kind !== "failed")];
   const counts = items.reduce<Record<string, number>>((a, x) => ({ ...a, [x.kind]: (a[x.kind] ?? 0) + 1 }), {});
@@ -99,19 +100,19 @@ export default async function Dashboard() {
     { id: "today", title: m.day.today ? "Today’s lessons" : "Next lessons", node: <section className="dx-card">
       <header><h2>{m.day.today ? "Today" : `Next lessons · ${DAY(m.day.date, { weekday: "long", day: "numeric", month: "short" })}`}</h2><Link className="dx-more" href="/admin/timetable">Timetable →</Link></header>
       {m.day.lessons.length === 0 ? <p className="empty">No lessons coming up.</p> :
-        <ol className="dx-tl">{m.day.lessons.map((l, i) => { const s = st(l); return <li key={i} className={`${s}${i === nextIdx ? " next" : ""}`} style={{ ["--c" as string]: l.colour }}>
+        <MoreList as="ol" className="dx-tl" limit={5}>{m.day.lessons.map((l, i) => { const s = st(l); return <li key={i} className={`${s}${i === nextIdx ? " next" : ""}`} style={{ ["--c" as string]: l.colour }}>
           <span className="tm">{l.starts}<small>{l.ends}</small></span>
           <span className="bd"><b>{l.name}</b><span>{l.teacher ?? "No teacher set"} · {l.students} student{l.students === 1 ? "" : "s"} · {l.code}</span></span>
           <span className="ac">{s === "live" ? <span className="dx-live">Live now</span> : s === "done" ? <span className="pill mute">Done</span> : s === "cancelled" ? <span className="pill bad">Cancelled</span> : i === nextIdx ? <span className="pill info">Next</span> : null}
             {l.meet && (s === "live" || i === nextIdx) && <a className="abtn sm" href={l.meet} target="_blank" rel="noopener">Join</a>}</span>
-        </li>; })}</ol>}
+        </li>; })}</MoreList>}
     </section> },
     { id: "attention", title: "Needs attention", node: <section className="dx-card">
       <header><h2>Needs attention</h2>{items.length > 0 && <span className="dx-count">{items.length}</span>}</header>
       {items.length > 0 && <div className="dx-chips">{Object.entries(counts).map(([k, n]) => <span key={k} className={`pill ${PILL[k][0]}`}>{n} · {PILL[k][1].toLowerCase()}</span>)}</div>}
       {items.length === 0 ? <div className="dx-clear"><Ico d={I.check} /><b>All clear</b><span>Nothing needs you right now.</span></div> :
-        <div className="dx-list">{items.map((a, i) => <Link className={`dx-item ${PILL[a.kind][0]}`} key={i} href={a.href}>
-          <span className="t"><span className={`pill ${PILL[a.kind][0]}`}>{PILL[a.kind][1]}</span><b>{a.title}</b><span>{a.detail}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</div>}
+        <MoreList className="dx-list" limit={4}>{items.map((a, i) => <Link className={`dx-item ${PILL[a.kind][0]}`} key={i} href={a.href}>
+          <span className="t"><span className={`pill ${PILL[a.kind][0]}`}>{PILL[a.kind][1]}</span><b>{a.title}</b><span>{a.detail}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
     </section> },
     { id: "collections", title: "Collections by term", node: <section className="dx-card">
       <header><h2>Collections by term</h2><Link className="dx-more" href="/admin/payments">Payments →</Link></header>
@@ -124,9 +125,9 @@ export default async function Dashboard() {
     { id: "tasters", title: "Taster requests", node: <Link href="/admin/tasters" className="dx-pop"><span>{tasters ? `${tasters} new enquir${tasters === 1 ? "y" : "ies"}` : "Tasters"}</span><b>{tasters ? "Review requests →" : "See taster bookings →"}</b></Link> },
     { id: "bookings", title: "Latest bookings", node: <section className="dx-card">
       <header><h2>Latest bookings</h2><Link className="dx-more" href="/admin/families">Families →</Link></header>
-      {m.recent.length === 0 ? <p className="empty">No bookings yet.</p> : <div className="dx-people">{m.recent.map((r, i) =>
+      {m.recent.length === 0 ? <p className="empty">No bookings yet.</p> : <MoreList className="dx-people" limit={4}>{m.recent.map((r, i) =>
         <Link key={i} className="dx-person" href={`/admin/families?q=${encodeURIComponent(r.parent)}`}><span className="av">{initials(r.student)}</span>
-          <span className="t"><b>{r.student}</b><span>{r.course} · {r.parent}</span></span><span className="amt">{money(r.amount)}<small>{dayMonth(r.on)}</small></span></Link>)}</div>}
+          <span className="t"><b>{r.student}</b><span>{r.course} · {r.parent}</span></span><span className="amt">{money(r.amount)}<small>{dayMonth(r.on)}</small></span></Link>)}</MoreList>}
     </section> },
     { id: "coming", title: "Coming up", node: <section className="dx-card">
       <header><h2>Coming up</h2><span className="dx-sub">What the system does on its own</span></header>
@@ -134,8 +135,8 @@ export default async function Dashboard() {
     </section> },
     { id: "fullest", title: "Fullest classes", node: <section className="dx-card">
       <header><h2>Fullest classes</h2><Link className="dx-more" href="/admin/classes">All classes →</Link></header>
-      {m.fullest.length === 0 ? <p className="empty">No open classes.</p> : <div className="bars">{m.fullest.map((g, i) => <div className="brow" key={i} title={`${g.name}: ${g.taken} of ${g.capacity}`}>
-        <span className="lbl"><span className="dot" style={{ background: g.colour }} />{g.name}</span><div className="track"><i className={g.taken >= g.capacity ? "full" : ""} style={{ width: `${Math.min(100, (g.taken / g.capacity) * 100)}%` }} /></div><span className="num">{g.taken}/{g.capacity}</span></div>)}</div>}
+      {m.fullest.length === 0 ? <p className="empty">No open classes.</p> : <MoreList className="bars" limit={6}>{m.fullest.map((g, i) => <div className="brow" key={i} title={`${g.name}: ${g.taken} of ${g.capacity}`}>
+        <span className="lbl"><span className="dot" style={{ background: g.colour }} />{g.name}</span><div className="track"><i className={g.taken >= g.capacity ? "full" : ""} style={{ width: `${Math.min(100, (g.taken / g.capacity) * 100)}%` }} /></div><span className="num">{g.taken}/{g.capacity}</span></div>)}</MoreList>}
     </section> },
     { id: "quick", title: "Quick links", node: <section className="dx-card">
       <header><h2>Quick links</h2></header>

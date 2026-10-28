@@ -508,3 +508,27 @@
 .adm .fx-row .dot{width:10px;height:10px;border-radius:50%;flex:none}
 .adm .fx-when{font:600 14px "Space Grotesk",sans-serif;min-width:86px;color:var(--muted)}
 .adm .dx-pop b.fx-big{font:700 clamp(54px,6vw,76px)/1 "Space Grotesk","Jost",sans-serif;letter-spacing:-.04em}
+/* lists on the dashboard: the first few, then "Show N more" opens the rest in a scrolling box */
+.adm .ml-open{max-height:440px;overflow-y:auto;overscroll-behavior:contain;padding-right:4px;scrollbar-width:thin}
+.adm .ml-btn{margin-top:10px;align-self:flex-start;background:transparent;border:1px solid var(--line);color:var(--ink);border-radius:20px;padding:6px 14px;font:600 14px "Space Grotesk","Jost",sans-serif;cursor:pointer}
+.adm .ml-btn:hover{background:var(--hover)}
+/* ---------- Timetable (the week's real lessons): click a lesson for Join, Register, Classroom ---------- */
+.adm .tt2t th.today,.adm .tt2t td.today{background:color-mix(in srgb,var(--pop) 12%,transparent)}
+.adm .tt2t td{vertical-align:top;min-width:150px}
+.adm .tt2{position:relative;margin:0 0 8px}
+.adm .tt2>summary{list-style:none;cursor:pointer;display:flex;flex-direction:column;gap:2px;padding:8px 10px 8px 12px;border-radius:12px;background:var(--panel);border:1px solid var(--line);position:relative}
+.adm .tt2>summary::-webkit-details-marker{display:none}
+.adm .tt2>summary::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:0 4px 4px 0;background:var(--c)}
+.adm .tt2>summary:hover,.adm .tt2[open]>summary{border-color:var(--ink)}
+.adm .tt2 .tm{font:600 13px "Space Grotesk",sans-serif;color:var(--muted);display:flex;gap:6px;align-items:center}
+.adm .tt2 b{font-size:15px}.adm .tt2 summary>span:not(.tm){font-size:13.5px;color:var(--muted)}
+.adm .tt2 em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--bad)}
+.adm .tt2.done>summary{opacity:.6}.adm .tt2.cancelled>summary{opacity:.55;text-decoration:line-through}
+.adm .tt2.live>summary{border-color:#2f9e63;box-shadow:0 0 0 3px rgba(47,158,99,.15)}
+.adm .tt2 .pulse{width:8px;height:8px;border-radius:50%;background:#2f9e63;box-shadow:0 0 0 0 rgba(47,158,99,.6);animation:ttpulse 1.6s infinite}
+@keyframes ttpulse{70%{box-shadow:0 0 0 8px rgba(47,158,99,0)}100%{box-shadow:0 0 0 0 rgba(47,158,99,0)}}
+.adm .tt2 .pop{position:absolute;z-index:30;top:calc(100% + 6px);left:0;width:290px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:14px;box-shadow:0 12px 32px rgba(0,0,0,.18)}
+.adm .tt2t td:nth-last-child(-n+2) .tt2 .pop{left:auto;right:0}
+.adm .tt2 .pop p{margin:0 0 6px}.adm .tt2 .pop .pt{font-size:16px}.adm .tt2 .pop .ps{font-size:14px;color:var(--muted)}
+.adm .tt2 .pop .pa{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+@media (prefers-reduced-motion:reduce){.adm .tt2 .pulse{animation:none}}

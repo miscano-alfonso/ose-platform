@@ -41,7 +41,7 @@ export const CATALOGUE: Record<MenuArea, MenuItem[]> = {
     it("Overview", "/admin/marketing", "mkt"), it("Newsletter", "/admin/newsletter", "mail"), it("Subscribers", "/admin/subscribers", "fam"), it("Email stats", "/admin/email-stats", "rep"), it("Social", "/admin/social", "mkt"),
     it("Website", "/admin/website", "web"), it("Home Ed hub", "/admin/home-ed", "web"), it("Page styles", "/admin/styles", "set"),
     it("School settings", "/admin/school", "set"), it("Teachers", "/admin/teachers", "fam"), it("Staff & access", "/admin/staff", "set"), it("Account", "/admin/account", "set"),
-    it("EdTech trials", "/admin/edtech", "set"), it("Menus", "/admin/menus", "menu"),
+    it("EdTech trials", "/admin/edtech", "set"), it("Menus", "/admin/menus", "menu"), it("Timetable setup", "/admin/timetable-setup", "cal"),
   ],
   teacher: [
     it("My day", "/admin/teacher", "home"), it("1:1s and workshops", "/admin/teacher/ones", "fam"), it("Messages", "/admin/teacher/messages", "mail"), it("Class chats", "/admin/teacher/chats", "chat"),
@@ -61,7 +61,7 @@ export const DEFAULT_MENUS: Record<MenuArea, MenuConfig> = {
     { title: "Marketing", items: hrefs("admin", "Overview", "Newsletter", "Subscribers", "Email stats", "Social") },
     { title: "Website", items: hrefs("admin", "Website", "Home Ed hub", "Page styles") },
     { title: "Main menu", items: CATALOGUE.admin.slice(0, 21).map((x) => x.href) },
-    { title: "Settings", items: hrefs("admin", "School settings", "Teachers", "Staff & access", "Account", "EdTech trials", "Menus") },
+    { title: "Settings", items: hrefs("admin", "School settings", "Timetable setup", "Teachers", "Staff & access", "Account", "EdTech trials", "Menus") },
   ] },
   teacher: { hidden: [], groups: [{ title: "Menu", items: CATALOGUE.teacher.map((x) => x.href) }] },
   parent: { hidden: [], groups: [{ title: "Menu", items: CATALOGUE.parent.map((x) => x.href) }] },
