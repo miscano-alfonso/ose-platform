@@ -153,3 +153,14 @@ a.bh-t{transition:transform .15s,box-shadow .15s}a.bh-t:hover{transform:translat
 @media (min-width:1081px) and (max-width:1360px){.bt .s-logo img{height:62px}}
 .bh{max-width:none;padding-inline:clamp(16px,2.5vw,40px)}
 .bt .s-phead>.wrap,.bt .s-hero>.wrap{max-width:none;width:calc(100% - 2 * clamp(16px,2.5vw,40px))}
+/* "Cost for a typical KS3 year": its white and yellow text needs the navy panel (the light page background made it unreadable) */
+.bt .s-price>.wrap{background:var(--b-hero);color:#fff;border-radius:28px;padding:clamp(28px,4vw,52px);max-width:none;width:calc(100% - 2 * clamp(16px,2.5vw,40px))}
+.bt .s-price .sec-head h2,.bt .s-price h3{color:#fff}
+
+/* dark mode: text that used the navy brand colour, and white boxes, now follow the dark palette (found by the site scan) */
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .tcard .role,html:not([data-theme=light]) .bt .tmore,html:not([data-theme=light]) .bt .hub-sec h2,html:not([data-theme=light]) .bt .hub-end h2,html:not([data-theme=light]) .bt .tyh,html:not([data-theme=light]) .bt .about-text .about-hello{color:var(--b-ink)}html:not([data-theme=light]) .bt .tynow{background:var(--b-inset);color:var(--b-ink)}html:not([data-theme=light]) .bt .tp-mini,html:not([data-theme=light]) .bt .hub-card{background:var(--b-tile);border-color:var(--b-line);color:var(--b-ink)}html:not([data-theme=light]) .bt .job-req{background:var(--b-tile);border-color:#8a7a1c;color:var(--b-ink)}}
+html[data-theme=dark] .bt .tcard .role,html[data-theme=dark] .bt .tmore,html[data-theme=dark] .bt .hub-sec h2,html[data-theme=dark] .bt .hub-end h2,html[data-theme=dark] .bt .tyh,html[data-theme=dark] .bt .about-text .about-hello{color:var(--b-ink)}html[data-theme=dark] .bt .tynow{background:var(--b-inset);color:var(--b-ink)}html[data-theme=dark] .bt .tp-mini,html[data-theme=dark] .bt .hub-card{background:var(--b-tile);border-color:var(--b-line);color:var(--b-ink)}html[data-theme=dark] .bt .job-req{background:var(--b-tile);border-color:#8a7a1c;color:var(--b-ink)}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .hub-card b,html:not([data-theme=light]) .bt .job-req h2,html:not([data-theme=light]) .bt .job-req h3{color:var(--b-ink)}}
+html[data-theme=dark] .bt .hub-card b,html[data-theme=dark] .bt .job-req h2,html[data-theme=dark] .bt .job-req h3{color:var(--b-ink)}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .hub-dates b{color:var(--b-ink)}html:not([data-theme=light]) .bt .hub-dates span{color:var(--b-muted)}html:not([data-theme=light]) .bt .hub-dates li::before{border-color:var(--b-bg)}}
+html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] .bt .hub-dates span{color:var(--b-muted)}html[data-theme=dark] .bt .hub-dates li::before{border-color:var(--b-bg)}

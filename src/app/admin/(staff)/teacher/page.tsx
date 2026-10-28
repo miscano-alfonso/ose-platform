@@ -36,7 +36,7 @@ export default async function MyDay() {
       <Link href="/admin/teacher/ones" className="dx-kpi c3"><Ico d={IC.users} /><span className="k">1:1s this week</span><span className="v">{d.onesThisWeek}</span><span className="h">See 1:1s →</span></Link>
       <Link href="/admin/teacher/pay" className="dx-kpi c3"><Ico d={IC.pound} /><span className="k">My pay this term</span><span className="v">{gbp(d.payThisTerm)}</span><span className="h">{d.term ? `paid ${dm(d.term.pay_date)}` : ""}</span></Link>
       <section className="dx-card c7 dx-tall"><header><h2>This week</h2><Link className="dx-more" href="/admin/teacher/timetable">Timetable →</Link></header>
-        {d.week.length === 0 ? <p className="empty">No lessons in the next 7 days.</p> : <div className="dx-scroll">{d.week.map((l) => <div className="fx-row" key={l.id}>
+        {d.week.length === 0 ? <p className="empty">No lessons coming up.</p> : <div className="dx-scroll">{d.week.map((l) => <div className="fx-row" key={l.id}>
           <span className="fx-when">{wd(l.d)} {dm(l.d)}</span>
           <div className="t"><b>{l.time} · {l.name}</b><span>{l.students} student{l.students === 1 ? "" : "s"}
             {l.not_in_classroom ? ` · ${l.not_in_classroom} not in Classroom yet` : ""}

@@ -49,14 +49,18 @@ export async function myDay(userId: string): Promise<MyDay> {
         (select count(*)::int from attendance_marks m where m.lesson_event_id = ev.id) as marked
       from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where ev.teacher_id = ${ME} and ev.status <> 'cancelled' and ev.lesson_date between current_date and current_date + 7
+      where ev.teacher_id = ${ME} and ev.status <> 'cancelled' and ev.lesson_date >= current_date
+        -- the rest of the teaching week (Monday to Sunday) that holds the teacher's next lesson, so a week starting after half term shows in full
+        and ev.lesson_date <= (select date_trunc('week', min(e2.lesson_date))::date + 6 from lesson_events e2 where e2.teacher_id = ${ME} and e2.status <> 'cancelled' and e2.lesson_date >= current_date)
       order by ev.lesson_date, sl.starts_at`, [userId]).catch(() => q<WeekLesson>(`
       select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url,
         (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students, 0 as not_in_classroom,
         '{}'::text[] as tasters, '{}'::text[] as absent, (select count(*)::int from attendance_marks m where m.lesson_event_id = ev.id) as marked
       from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where ev.teacher_id = ${ME} and ev.status <> 'cancelled' and ev.lesson_date between current_date and current_date + 7
+      where ev.teacher_id = ${ME} and ev.status <> 'cancelled' and ev.lesson_date >= current_date
+        -- the rest of the teaching week (Monday to Sunday) that holds the teacher's next lesson, so a week starting after half term shows in full
+        and ev.lesson_date <= (select date_trunc('week', min(e2.lesson_date))::date + 6 from lesson_events e2 where e2.teacher_id = ${ME} and e2.status <> 'cancelled' and e2.lesson_date >= current_date)
       order by ev.lesson_date, sl.starts_at`, [userId]));
     const [{ registers }] = await q<{ registers: number }>(`select count(*)::int as registers from lesson_events ev where ev.teacher_id = ${ME} and ev.status = 'scheduled'
       and ev.lesson_date < current_date and ev.lesson_date > current_date - 60`, [userId]);
