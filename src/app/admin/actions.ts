@@ -1298,3 +1298,31 @@ export async function resolveChatFlagAction(f: FormData): Promise<void> {
   revalidatePath("/admin");
   redirect("/admin/student-chat?ok=" + encodeURIComponent(f.get("hide") === "1" ? "Message hidden and alert closed." : "Alert closed."));
 }
+// ---------- Inbox: read the whole email and reply from the admin ----------
+export async function inboxMessageAction(id: string) {
+  await requireStaff();
+  const { inboxMessage } = await import("@/lib/inbox");
+  return inboxMessage(String(id).slice(0, 40));
+}
+export async function replyInboxAction(id: string, text: string): Promise<{ ok: boolean; error?: string }> {
+  const me = await requireStaff();
+  const { replyInbox } = await import("@/lib/inbox");
+  const err = await replyInbox({ id: me.id, name: me.name }, String(id).slice(0, 40), String(text).slice(0, 20000));
+  if (!err) revalidatePath("/admin/email");
+  return err ? { ok: false, error: err } : { ok: true };
+}
+// ---------- Email design (logo, colour, footer of every email) ----------
+export async function saveEmailDesignAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { saveEmailDesign } = await import("@/lib/email");
+  await saveEmailDesign({ logo: f.get("logo") === "on", color: String(f.get("color") ?? ""), footer: String(f.get("footer") ?? "").replace(/\r\n/g, "\n") });
+  redirect("/admin/email?tab=design&ok=" + encodeURIComponent("Email design saved. Every email from now on uses it."));
+}
+// ---------- Register: read the latest Google Meet joins now ----------
+export async function refreshJoinsAction(f: FormData): Promise<void> {
+  const me = await requireSignedIn();
+  const id = String(f.get("id") ?? "").slice(0, 40);
+  const { syncMeet } = await import("@/lib/meet");
+  const r = await syncMeet(me.name).catch(() => null);
+  redirect(`/admin/register/${id}?` + (r && !("error" in r && r.error) ? "ok=" + encodeURIComponent("Checked Google Meet for new joins.") : "err=" + encodeURIComponent((r as { error?: string } | null)?.error ?? "Couldn’t reach Google Meet.")));
+}

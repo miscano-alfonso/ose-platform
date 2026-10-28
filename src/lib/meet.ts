@@ -18,7 +18,7 @@ const G = "https://www.googleapis.com/auth/";
 export const CLASSROOM_SCOPES = ["classroom.courses.readonly", "classroom.rosters.readonly", "classroom.coursework.students.readonly", "classroom.profile.emails"].map((x) => G + x);
 const SCOPE = [G + "admin.reports.audit.readonly", ...CLASSROOM_SCOPES].join(" ");
 // The school inbox (the mailbox families reply to): read-only, so replies from families show in Admin → Email → Inbox.
-const GMAIL_SCOPE = G + "gmail.readonly";
+const GMAIL_SCOPE = G + "gmail.readonly " + G + "gmail.send"; // read the inbox; send replies written in the admin
 // The recordings account (ose@, which owns the Meet recordings and teaches every Classroom): Drive, and posting recordings to Classroom.
 const REC_SCOPE = ["drive", "classroom.courses.readonly", "classroom.coursework.students", "classroom.courseworkmaterials", "classroom.announcements.readonly",
   "classroom.rosters.readonly", "classroom.rosters", "classroom.profile.emails"].map((x) => G + x).join(" ");
@@ -114,7 +114,7 @@ export async function callback(base: string, sp: URLSearchParams): Promise<strin
     const pr = await fetch(`${GMAIL_URL()}/users/me/profile`, { headers: { authorization: `Bearer ${t.access_token}` }, signal: AbortSignal.timeout(20000) });
     if (!pr.ok) return pr.status === 403 ? "Google wouldn’t let the site read that inbox. In Google Cloud Console turn on the Gmail API for the project, then try again." : `Gmail answered ${pr.status}. Try again.`;
     const mailbox = String(((await pr.json()) as { emailAddress?: string }).emailAddress ?? "").toLowerCase();
-    const box = { refreshToken: String(t.refresh_token), mailbox, by: pend.email, at: new Date().toISOString() } satisfies Mailbox;
+    const box = { refreshToken: String(t.refresh_token), mailbox, by: pend.email, at: new Date().toISOString(), scopes: String(t.scope ?? "") } satisfies Mailbox;
     const first = await kvGet<Mailbox>("gmail");
     if (pend.kind === "gmail" || !first?.refreshToken || first.mailbox === mailbox) { await kvSet("gmail", box); return null; }
     const more = ((await kvGet<Mailbox[]>("gmail_more")) ?? []).filter((m) => m.mailbox !== mailbox);

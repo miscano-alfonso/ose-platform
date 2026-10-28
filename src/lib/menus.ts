@@ -33,7 +33,7 @@ export const CLASSES_TOKEN = "@classes";
 
 export const CATALOGUE: Record<MenuArea, MenuItem[]> = {
   admin: [
-    it("Classes", "/admin/classes", "cls"), it("1:1 tutoring", "/admin/tutoring", "fam"), it("Workshops", "/admin/workshops", "cal"), it("Timetable", "/admin/timetable", "cal"),
+    it("Dashboard", "/admin", "home"), it("Classes", "/admin/classes", "cls"), it("1:1 tutoring", "/admin/tutoring", "fam"), it("Workshops", "/admin/workshops", "cal"), it("Timetable", "/admin/timetable", "cal"),
     it("Families", "/admin/families", "fam"), it("Attendance", "/admin/attendance", "att"), it("Recordings", "/admin/recordings", "rec"), it("Reports", "/admin/reports", "rep"),
     it("Payments", "/admin/payments", "pay"), it("Payroll", "/admin/payroll", "gbp"), it("Prices & discounts", "/admin/prices", "price"), it("Term dates", "/admin/term-dates", "cal"),
     it("Tasters", "/admin/tasters", "att"), it("Waiting list & enquiries", "/admin/enquiries", "wait"), it("Messages", "/admin/messages", "mail"), it("Student chat", "/admin/student-chat", "chat"),
@@ -60,7 +60,7 @@ export const DEFAULT_MENUS: Record<MenuArea, MenuConfig> = {
   admin: { hidden: [], groups: [
     { title: "Marketing", items: hrefs("admin", "Overview", "Newsletter", "Subscribers", "Email stats", "Social") },
     { title: "Website", items: hrefs("admin", "Website", "Home Ed hub", "Page styles") },
-    { title: "Main menu", items: CATALOGUE.admin.slice(0, 21).map((x) => x.href) },
+    { title: "Main menu", items: CATALOGUE.admin.slice(0, 22).map((x) => x.href) }, // Dashboard first, then the daily pages
     { title: "Settings", items: hrefs("admin", "School settings", "Timetable setup", "Teachers", "Staff & access", "Account", "EdTech trials", "Menus") },
   ] },
   teacher: { hidden: [], groups: [{ title: "Menu", items: CATALOGUE.teacher.map((x) => x.href) }] },
@@ -69,7 +69,7 @@ export const DEFAULT_MENUS: Record<MenuArea, MenuConfig> = {
 };
 
 /** Links that can't be hidden, so the menu editor and each home page stay reachable. */
-export const LOCKED = new Set(["/admin/menus", "/admin/teacher", "/parent", "/student"]);
+export const LOCKED = new Set(["/admin", "/admin/menus", "/admin/teacher", "/parent", "/student"]);
 
 /** Tidy a saved arrangement against the catalogue: unknown links dropped, duplicates removed, and any page added to
  *  the platform since it was saved appended to the last group so nothing new goes missing. */
@@ -84,6 +84,9 @@ export function cleanMenu(area: MenuArea, raw: unknown): MenuConfig {
   const hidden = (Array.isArray(r.hidden) ? r.hidden : []).filter((h) => !LOCKED.has(String(h))).filter(take) as string[];
   if (!groups.length) return DEFAULT_MENUS[area];
   const missing = CATALOGUE[area].map((x) => x.href).filter((h) => !seen.has(h));
+  // a home page added later goes to the top of the main group; anything else new goes at the end of the last group
+  const home = MENU_AREAS.find((a) => a.id === area)!.root;
+  if (missing.includes(home)) { (groups.find((g) => g.title === "Main menu") ?? groups[0]).items.unshift(home); missing.splice(missing.indexOf(home), 1); }
   groups[groups.length - 1].items.push(...missing);
   return { groups, hidden };
 }

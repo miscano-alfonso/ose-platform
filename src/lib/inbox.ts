@@ -5,7 +5,7 @@ import { googleAccess, mailboxAccess, googleKv, googleKvSet, GMAIL_URL, MeetErro
 // Admin → Email → Inbox, as in the prototype: replies and emails from families, read (read-only) from the school's Gmail inbox
 // and linked to the family. Only senders the school already knows are kept; everything else stays in Gmail only.
 export type InboxInfo = { at?: string; added?: number; error?: string; last?: string };
-export type InboxRow = { id: string; thread_id: string; mailbox: string | null; from_name: string | null; from_email: string; subject: string; snippet: string; received_at: string;
+export type InboxRow = { id: string; thread_id: string; mailbox: string | null; replied_at: string | null; from_name: string | null; from_email: string; subject: string; snippet: string; received_at: string;
   parent_id: string | null; family: string | null; kind: string; read: boolean };
 
 /** Every inbox being read: the school's first, then any others connected after it. */
@@ -30,7 +30,7 @@ export async function setReplyFrom(email: string) { await googleKvSet("inbox_rep
 
 export async function inboxList(show: "new" | "all"): Promise<{ rows: InboxRow[]; unread: number }> {
   return withSchool(async (q) => ({
-    rows: await q<InboxRow>(`select m.id, m.thread_id, m.mailbox::text, m.from_name, m.from_email::text, m.subject, m.snippet, m.received_at::text, m.parent_id,
+    rows: await q<InboxRow>(`select m.id, m.thread_id, m.mailbox::text, m.replied_at::text, m.from_name, m.from_email::text, m.subject, m.snippet, m.received_at::text, m.parent_id,
         p.first_name || ' ' || p.last_name as family, m.kind, m.read_at is not null as read
       from inbox_messages m left join parents p on p.id = m.parent_id where ($1 = 'all' or m.read_at is null) order by m.received_at desc limit 200`, [show]),
     unread: (await q<{ n: number }>(`select count(*)::int as n from inbox_messages where read_at is null`))[0].n,
@@ -115,4 +115,73 @@ export async function inboxBackground() {
     await googleKvSet("inbox", { ...s.info, at: new Date().toISOString() });
     await syncInbox();
   } catch (e) { console.error("inbox background", e); }
+}
+
+// ---------- reading a whole email and replying from the admin ----------
+type Part = { mimeType?: string; body?: { data?: string }; parts?: Part[] };
+const b64 = (s: string) => Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+function textOf(p: Part | undefined): string {
+  if (!p) return "";
+  if (p.mimeType === "text/plain" && p.body?.data) return b64(p.body.data);
+  for (const c of p.parts ?? []) { const t = textOf(c); if (t) return t; }
+  if (p.mimeType === "text/html" && p.body?.data) return b64(p.body.data).replace(/<(br|\/p|\/div)[^>]*>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ");
+  return "";
+}
+/** The connected inbox for an address, with an access token. */
+async function tokenFor(mailbox: string | null): Promise<{ token: string; box: Mailbox } | null> {
+  const list = await boxes();
+  const i = mailbox ? list.findIndex((b) => b.mailbox === mailbox.toLowerCase()) : 0;
+  if (i < 0) return null;
+  return { token: i === 0 ? await googleAccess("gmail") : await mailboxAccess(list[i].refreshToken!), box: list[i] };
+}
+export type FullEmail = { body: string; to: string; replied: { at: string; from: string; body: string } | null };
+/** The full text of an email (fetched from Gmail when it's opened; only the preview is stored). */
+export async function inboxMessage(id: string): Promise<FullEmail | { error: string }> {
+  const m = (await withSchool((q) => q<{ gmail_id: string; mailbox: string | null; replied_at: string | null; reply_from: string | null; reply_body: string | null }>(
+    `select gmail_id, mailbox::text, replied_at::text, reply_from::text, reply_body from inbox_messages where id = $1`, [id])))[0];
+  if (!m) return { error: "That email wasn’t found." };
+  try {
+    const t = await tokenFor(m.mailbox); if (!t) return { error: `${m.mailbox} isn’t connected any more.` };
+    const r = await fetch(`${GMAIL_URL()}/users/me/messages/${m.gmail_id}?format=full`, { headers: { authorization: `Bearer ${t.token}` }, signal: AbortSignal.timeout(20000) });
+    if (!r.ok) return { error: `Gmail answered ${r.status}.` };
+    const j = (await r.json()) as { payload?: Part & { headers?: { name: string; value: string }[] } };
+    const to = (j.payload?.headers ?? []).find((h) => h.name.toLowerCase() === "to")?.value ?? "";
+    const body = textOf(j.payload).replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, 20000);
+    return { body, to, replied: m.replied_at ? { at: m.replied_at, from: m.reply_from ?? "", body: m.reply_body ?? "" } : null };
+  } catch (e) { return { error: e instanceof MeetError ? e.message : "Couldn’t reach Gmail." }; }
+}
+const hdr = (s: string) => /^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffer.from(s).toString("base64")}?=`;
+/** Send a reply from the Reply-from inbox, threaded with the family's email (In-Reply-To / References). */
+export async function replyInbox(actor: { id: string; name: string }, id: string, text: string): Promise<string | null> {
+  const body = text.replace(/\r\n/g, "\n").trim();
+  if (!body) return "Write a reply first.";
+  const m = (await withSchool((q) => q<{ gmail_id: string; thread_id: string; mailbox: string | null; from_email: string; from_name: string | null; subject: string; message_id: string | null }>(
+    `select gmail_id, thread_id, mailbox::text, from_email::text, from_name, subject, message_id from inbox_messages where id = $1`, [id])))[0];
+  if (!m) return "That email wasn’t found.";
+  const st = await inboxStatus(), from = st.replyFrom;
+  try {
+    const sender = await tokenFor(from);
+    if (!sender) return `To send from ${from}, connect that inbox first (Connect another inbox), or change Reply from.`;
+    // the original's Message-ID (for threading), read from the inbox it arrived in if it wasn't stored
+    let msgId = m.message_id, refs = "";
+    if (!msgId || (m.mailbox ?? st.mailbox) !== from) {
+      const src = await tokenFor(m.mailbox);
+      if (src) {
+        const r = await fetch(`${GMAIL_URL()}/users/me/messages/${m.gmail_id}?format=metadata&metadataHeaders=Message-ID&metadataHeaders=References`, { headers: { authorization: `Bearer ${src.token}` }, signal: AbortSignal.timeout(20000) });
+        if (r.ok) { const h = Object.fromEntries((((await r.json()) as { payload?: { headers?: { name: string; value: string }[] } }).payload?.headers ?? []).map((x) => [x.name.toLowerCase(), x.value])); msgId = h["message-id"] ?? msgId; refs = h.references ?? ""; }
+      }
+    }
+    const subject = /^re:/i.test(m.subject) ? m.subject : `Re: ${m.subject}`;
+    const to = m.from_name ? `${hdr(m.from_name.replace(/["\\]/g, ""))} <${m.from_email}>` : m.from_email;
+    const raw = [`From: ${hdr(actor.name)} <${from}>`, `To: ${to}`, `Subject: ${hdr(subject)}`, ...(msgId ? [`In-Reply-To: ${msgId}`, `References: ${(refs + " " + msgId).trim()}`] : []),
+      "MIME-Version: 1.0", "Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: base64", "", Buffer.from(body).toString("base64").replace(/(.{76})/g, "$1\r\n")].join("\r\n");
+    const sameBox = (m.mailbox ?? st.mailbox) === from;
+    const r = await fetch(`${GMAIL_URL()}/users/me/messages/send`, { method: "POST", signal: AbortSignal.timeout(20000),
+      headers: { authorization: `Bearer ${sender.token}`, "content-type": "application/json" },
+      body: JSON.stringify({ raw: Buffer.from(raw).toString("base64url"), ...(sameBox ? { threadId: m.thread_id } : {}) }) });
+    if (r.status === 403 || r.status === 401) return `Gmail won’t let the site send from ${from} yet. Disconnect that inbox and connect it again, ticking the box to send email.`;
+    if (!r.ok) return `Gmail answered ${r.status}. The reply wasn’t sent.`;
+    await withSchool((q) => q(`update inbox_messages set replied_at = now(), replied_by = $2, reply_from = $3, reply_body = $4, read_at = coalesce(read_at, now()), read_by = coalesce(read_by, $2) where id = $1`, [id, actor.id, from, body.slice(0, 20000)]));
+    return null;
+  } catch (e) { return e instanceof MeetError ? e.message : "Couldn’t reach Gmail. The reply wasn’t sent."; }
 }

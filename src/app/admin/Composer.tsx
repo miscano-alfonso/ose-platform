@@ -1,9 +1,11 @@
 import { sendEmailAction, sendTestEmailAction } from "./actions";
 import { RecipientPicker } from "./RecipientPicker";
+import { EmailPreview } from "./EmailPreview";
+import type { EmailDesign } from "@/lib/email-layout";
 
 // The email form used by Email (families, classes, teachers) and Marketing (opted-in list only).
-export function Composer({ kind, options, ready, draft }: { kind: "message" | "marketing"; options: { value: string; label: string; count: number; group?: string; people?: { name: string; email: string }[] }[]; ready: boolean; draft?: { audience?: string; subject?: string; body?: string } }) {
-  return <form action={sendEmailAction} className="card" id="compose" style={{ display: "grid", gap: 12 }}>
+export function Composer({ kind, options, ready, draft, design, from }: { kind: "message" | "marketing"; options: { value: string; label: string; count: number; group?: string; people?: { name: string; email: string }[] }[]; ready: boolean; draft?: { audience?: string; subject?: string; body?: string }; design: EmailDesign; from: string }) {
+  return <form action={sendEmailAction} className="card cmp" id="compose"><div className="cmp-main">
     {draft?.subject && <p className="note msg">Drafted by the Assistant. Check the wording and who it goes to before sending.</p>}
     <h2>{kind === "marketing" ? "Write a newsletter" : "Write an email"}</h2>
     <input type="hidden" name="kind" value={kind} />
@@ -15,8 +17,8 @@ export function Composer({ kind, options, ready, draft }: { kind: "message" | "m
       <button className="abtn pri" type="submit" disabled={!ready}>Send</button>
       <button className="abtn" type="submit" formAction={sendTestEmailAction} formNoValidate disabled={!ready}>Send a test to me</button>
     </div>
-    <p className="cs">Each person gets their own copy, so nobody sees anyone else’s address.</p>
-  </form>;
+    <p className="cs">Each person gets their own copy, so nobody sees anyone else’s address. The logo and footer come from <a href="/admin/email?tab=design">Email design</a>.</p>
+  </div><EmailPreview design={design} from={from} marketing={kind === "marketing"} /></form>;
 }
 
 export function NotConnected() {

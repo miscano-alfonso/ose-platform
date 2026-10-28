@@ -141,13 +141,14 @@ export async function makeLessonDates(actorId: string, termId: string): Promise<
 
 export type RegisterStudent = { id: string; name: string; mark: string | null; notice: string | null };
 export type Register = { id: string; lesson_date: string; starts_at: string; ends_at: string; code: string; name: string; status: string; note: string | null;
-  teacher: string | null; teacher_user: string | null; students: RegisterStudent[]; tasters: { id: string; child: string; status: string }[] };
+  teacher: string | null; teacher_user: string | null; link: string | null; start_at: string; end_at: string; students: RegisterStudent[]; tasters: { id: string; child: string; status: string }[] };
 
 export async function getRegister(eventId: string): Promise<Register | null> {
   return withSchool(async (q) => {
     const ev = (await q<Omit<Register, "students" | "tasters"> & { group_id: string }>(`select e.id, e.group_id, e.lesson_date::text, to_char(s.starts_at,'HH24:MI') as starts_at,
-        to_char(s.ends_at,'HH24:MI') as ends_at, g.code, l.name || ' ' || sj.name as name, e.status::text, e.note, u.name as teacher, t.user_id as teacher_user
-      from lesson_events e join lesson_slots s on s.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id
+        to_char(s.ends_at,'HH24:MI') as ends_at, g.code, l.name || ' ' || sj.name as name, e.status::text, e.note, u.name as teacher, t.user_id as teacher_user, g.meet_url as link,
+        ((e.lesson_date + s.starts_at) at time zone sc.timezone)::text as start_at, ((e.lesson_date + s.ends_at) at time zone sc.timezone)::text as end_at
+      from lesson_events e join lesson_slots s on s.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join schools sc on sc.id = e.school_id
       join subjects sj on sj.id = g.subject_id left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id where e.id = $1`, [eventId]))[0];
     if (!ev) return null;
     const students = await q<RegisterStudent>(`select st.id, st.first_name || ' ' || st.last_name as name, m.mark::text as mark,
@@ -280,4 +281,21 @@ export async function tasterFollowUp(actorId: string, id: string): Promise<strin
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'follow_up', 'taster', $2, '{}')`, [actorId, id]);
   });
   return null;
+}
+
+/** Who has joined a lesson so far (Join check-ins straight away; Google Meet's log as it arrives; Zoom after the lesson):
+ *  first arrival, last leave and minutes per student, plus joins not yet matched to anyone. */
+export type LessonJoin = { student_id: string; first: string; last: string | null; minutes: number; joins: number; sources: string[] };
+export async function lessonJoins(eventId: string): Promise<{ joins: LessonJoin[]; unknown: { name: string; at: string }[]; grace: number }> {
+  return withSchool(async (q) => ({
+    joins: await q<LessonJoin>(`select ms.student_id, min(ms.joined_at)::text as first, max(ms.left_at)::text as last, count(*)::int as joins, array_agg(distinct ms.source) as sources,
+        coalesce(sum(extract(epoch from (coalesce(ms.left_at, least(now(), (e.lesson_date + s.ends_at) at time zone sc.timezone)) - greatest(ms.joined_at, (e.lesson_date + s.starts_at) at time zone sc.timezone - interval '15 minutes'))) / 60), 0)::int as minutes
+      from meet_sessions ms join lesson_events e on e.id = ms.lesson_event_id join lesson_slots s on s.id = e.slot_id join schools sc on sc.id = e.school_id
+      where ms.lesson_event_id = $1 and ms.student_id is not null and not ms.ignored group by ms.student_id`, [eventId]),
+    unknown: await q<{ name: string; at: string }>(`select coalesce(ms.display_name, ms.participant_email::text, 'Someone signed out') as name, min(ms.joined_at)::text as at from meet_sessions ms
+      where ms.lesson_event_id = $1 and ms.student_id is null and not ms.ignored and ms.participant_email is distinct from ms.organizer_email
+        and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
+      group by 1 order by 2`, [eventId]),
+    grace: (await q<{ g: number }>(`select coalesce((select late_grace_minutes from attendance_settings where school_id = current_school()), 5)::int as g`))[0]?.g ?? 5,
+  }));
 }

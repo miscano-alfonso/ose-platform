@@ -1,9 +1,13 @@
 import Link from "next/link";
-import { audiences, recipients, emailReady, history } from "@/lib/email";
+import { audiences, recipients, emailReady, history, emailDesign, senderName } from "@/lib/email";
+import { EmailPreview } from "../../EmailPreview";
+import { saveEmailDesignAction } from "../../actions";
 import { automations } from "@/lib/automations";
 import { Composer, NotConnected } from "../../Composer";
 import { inboxStatus, inboxList } from "@/lib/inbox";
 import { syncInboxAction, markInboxAction, disconnectInboxAction, replyFromAction } from "../../actions";
+import { InboxReply } from "../../InboxReply";
+import { requireStaff } from "@/lib/auth";
 
 const KIND: Record<string, [string, string]> = { family: ["good", "Family"], taster: ["info", "Taster"], waiting: ["warn", "Waiting list"], enquiry: ["mute", "Enquiry"] };
 
@@ -11,11 +15,11 @@ const when = (s: string) => new Date(s).toLocaleString("en-GB", { day: "numeric"
 
 export default async function Email({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; audience?: string; subject?: string; body?: string; tab?: string; show?: string }> }) {
   const sp = await searchParams;
-  const tab = ["auto", "compose", "inbox", "sent"].includes(sp.tab ?? "") ? sp.tab! : sp.audience || sp.ok || sp.err ? "compose" : "auto";
+  const tab = ["auto", "compose", "inbox", "sent", "design"].includes(sp.tab ?? "") ? sp.tab! : sp.audience || sp.ok || sp.err ? "compose" : "auto";
   const ready = await emailReady();
   const box = await inboxStatus();
   const unread = box.connected ? (await inboxList("new")).unread : 0;
-  const TABS: [string, string][] = [["auto", "Automatic emails"], ["compose", "Send an email"], ["inbox", `Inbox${unread ? ` (${unread})` : ""}`], ["sent", "Sent"]];
+  const TABS: [string, string][] = [["auto", "Automatic emails"], ["compose", "Send an email"], ["inbox", `Inbox${unread ? ` (${unread})` : ""}`], ["sent", "Sent"], ["design", "Email design"]];
   const head = <>
     <div className="top"><div><h1>Email</h1><div className="sub">Automatic emails, one-off messages to families, students or teachers, replies from families, and everything sent.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
@@ -32,7 +36,20 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
   if (tab === "compose") {
     const auds = await audiences();
     const options = await Promise.all(auds.map(async (a) => { const to = await recipients(a.value); return { ...a, count: to.length, people: to.map((r) => ({ name: r.name, email: r.email })) }; }));
-    return <>{head}<Composer kind="message" options={options} ready={ready} draft={{ audience: sp.audience, subject: sp.subject, body: sp.body }} /></>;
+    const [design, from] = await Promise.all([emailDesign(), senderName()]);
+    return <>{head}<Composer kind="message" options={options} ready={ready} draft={{ audience: sp.audience, subject: sp.subject, body: sp.body }} design={design} from={from} /></>;
+  }
+  if (tab === "design") {
+    const [design, from] = await Promise.all([emailDesign(), senderName()]);
+    return <>{head}<form action={saveEmailDesignAction} className="card cmp"><div className="cmp-main">
+      <h2>Email design</h2>
+      <p className="cs">How every email from the school looks: one-off emails, automatic emails (reminders, taster emails, payment reminders) and replies to forms. The logo is the website logo (change it under Website).</p>
+      <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" name="logo" defaultChecked={design.logo} /> Show the logo at the top</label>
+      <label className="fld">Header colour (behind the logo)<input type="color" name="color" defaultValue={design.color} style={{ width: 90, height: 40, padding: 3 }} /></label>
+      <label className="fld">Footer, one line per line (address, website, phone, registration details…). Web and email addresses become links.<textarea name="footer" rows={6} maxLength={1000} defaultValue={design.footer} className="mini" style={{ width: "100%" }} /></label>
+      <p className="note" style={{ margin: 0 }}>Newsletters and marketing emails also get a line saying how to stop them.</p>
+      <div><button className="abtn pri" type="submit">Save email design</button></div>
+    </div><EmailPreview design={design} from={from} sample={{ subject: "Lesson reminder: KS3 Maths today at 16:00", body: "Hi Sam,\n\nYour KS3 Maths lesson with Becky starts at 16:00.\n\nJoin the lesson: https://meet.google.com/abc-defg-hij\n\nSee you there!" }} /></form></>;
   }
   if (tab === "inbox") {
     if (!box.connected) return <>{head}<section className="card"><h2>Connect the school inbox</h2>
@@ -43,11 +60,8 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
       <a className="abtn pri" href="/admin/meet-api?action=login&what=gmail">Connect the school inbox</a>
       <p className="note" style={{ marginTop: 10 }}>Google Meet has to be connected first (Attendance → Google Meet), because the inbox uses the same Google app.</p></section></>;
     const show = sp.show === "all" ? "all" : "new";
-    const { rows } = await inboxList(show);
+    const [{ rows }, me] = await Promise.all([inboxList(show), requireStaff()]);
     const gm = (t: string, mb?: string | null) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(mb || box.mailbox)}#all/${t}`;
-    // Reply as the chosen address: open the thread itself when it arrived in that inbox, otherwise a new Gmail message in that account
-    const reply = (m: { thread_id: string; mailbox: string | null; from_email: string; subject: string }) => (m.mailbox || box.mailbox) === box.replyFrom ? gm(m.thread_id, m.mailbox)
-      : `https://mail.google.com/mail/?authuser=${encodeURIComponent(box.replyFrom)}&view=cm&fs=1&to=${encodeURIComponent(m.from_email)}&su=${encodeURIComponent(/^re:/i.test(m.subject) ? m.subject : `Re: ${m.subject}`)}`;
     const many = box.mailboxes.length > 1;
     return <>{head}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
@@ -60,9 +74,9 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
         <div className="t"><b>{m.from_name || m.from_email} · {m.subject || "(no subject)"}</b><span>{m.snippet}</span>
           <span style={{ display: "block", fontSize: 13.5 }}>{when(m.received_at)} · <span className={`pill ${KIND[m.kind]?.[0] ?? "mute"}`} style={{ fontSize: 12 }}>{KIND[m.kind]?.[1] ?? m.kind}</span>
             {m.parent_id && <> · <Link href={`/admin/families/${m.parent_id}`}>{m.family}</Link></>}{m.from_name ? ` · ${m.from_email}` : ""}{many && m.mailbox ? ` · to ${m.mailbox}` : ""}</span></div>
-        <a className="abtn sm pri" href={reply(m)} target="_blank" rel="noopener" title={`Reply from ${box.replyFrom}`}>Reply</a>
         <a className="abtn sm" href={gm(m.thread_id, m.mailbox)} target="_blank" rel="noopener">Open in Gmail</a>
-        <form action={markInboxAction}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="show" value={show} /><input type="hidden" name="read" value={m.read ? "0" : "1"} /><button className="abtn sm" type="submit">{m.read ? "Mark unread" : "Mark read"}</button></form></div>)}</section>
+        <form action={markInboxAction}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="show" value={show} /><input type="hidden" name="read" value={m.read ? "0" : "1"} /><button className="abtn sm" type="submit">{m.read ? "Mark unread" : "Mark read"}</button></form>
+        <InboxReply id={m.id} first={(m.from_name || m.family || "").split(" ")[0] || "there"} signoff={me.name.split(" ")[0]} from={box.replyFrom} replied={!!m.replied_at} /></div>)}</section>
       <section className="card"><h2>Inboxes</h2>
         <p className="cs">Read-only, checked every 15 minutes while the admin is open{box.info.at ? `; last checked ${when(box.info.at)}` : ""}.{box.info.error ? ` Last check had a problem: ${box.info.error}` : ""} An email sent to more than one of these shows once.</p>
         {box.mailboxes.map((b) => <div className="li" key={b.mailbox}><div className="t"><b>{b.mailbox}</b><span>connected by {b.by}</span></div>
@@ -71,7 +85,7 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
           {box.mailboxes.length < 5 && <a className="abtn" href="/admin/meet-api?action=login&what=gmail2">Connect another inbox</a>}
           <form action={replyFromAction} className="eform" style={{ margin: 0 }}><label className="fld">Reply from<input name="from" type="email" defaultValue={box.replyFrom} className="mini" style={{ width: 260 }} /></label><button className="abtn sm" type="submit">Save</button></form>
         </div>
-        <p className="note" style={{ marginTop: 8 }}>Reply opens Gmail signed in as the Reply from address: the thread itself if the email arrived there, otherwise a new message to the family with “Re:” and the subject. To connect another inbox, sign in to Google as that address when asked.</p>
+        <p className="note" style={{ marginTop: 8 }}>Reply opens the whole email here and sends your answer through the Reply from address’s Gmail, in the same conversation for the family. That address must be one of the inboxes above. Inboxes connected before sending was added need to be disconnected and connected again (tick the box to send email). To connect another inbox, sign in to Google as that address when asked.</p>
       </section></>;
   }
   const past = await history("message");

@@ -1,5 +1,7 @@
 import "server-only";
 import { isDemoSchool, withSchool } from "./db";
+import { emailHtml, defaultFooter, type EmailDesign } from "./email-layout";
+import { siteBase } from "./social";
 
 // Sending email through Brevo (transactional API). The account is either set in the environment (BREVO_API_KEY and
 // BREVO_SENDER_EMAIL) or connected in Admin → Newsletter (key and verified sender kept in the database).
@@ -10,6 +12,8 @@ async function creds(): Promise<Creds | null> {
   const c = await withSchool((q) => q<{ value: { key?: string; senderEmail?: string; senderName?: string; replyTo?: string; copyTo?: string } }>(`select value from newsletter_kv where key = 'brevo'`)).then((r) => r[0]?.value).catch(() => undefined);
   return c?.key && c.senderEmail ? { key: c.key, email: c.senderEmail, name: c.senderName || "OH-SO ED", replyTo: c.replyTo || undefined, copyTo: c.copyTo || undefined } : null;
 }
+/** The name emails are sent from (shown in families' inboxes). */
+export async function senderName(): Promise<string> { return (await creds())?.name ?? (await withSchool((q) => q<{ name: string }>(`select name from schools where id = current_school()`)))[0]?.name ?? "OH-SO ED"; }
 /** True when email can be sent (Brevo set up in the environment, or connected under Newsletter). */
 export const emailReady = async () => !!(await creds());
 const SMTP_URL = () => process.env.BREVO_API_URL || (process.env.BREVO_API_BASE ? process.env.BREVO_API_BASE.replace(/\/?$/, "/") + "smtp/email" : "https://api.brevo.com/v3/smtp/email");
@@ -84,13 +88,22 @@ export async function recipients(audience: string): Promise<Recipient[]> {
 }
 
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
-function html(body: string, marketing: boolean) {
-  const paras = body.trim().split(/\n\s*\n/).map((p) => `<p style="margin:0 0 14px">${esc(p).replace(/\n/g, "<br>")}</p>`).join("");
-  const foot = marketing ? "You’re receiving this because you agreed to hear from OH-SO ED. To stop these emails, reply with UNSUBSCRIBE." : "OH-SO ED Online School";
-  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.55;color:#171b2b;max-width:600px">
-    <div style="background:#0f1747;color:#fff;padding:14px 18px;font-weight:bold;letter-spacing:.04em">OH–SO ED</div>
-    <div style="padding:18px">${paras}</div><div style="padding:0 18px 18px;font-size:12px;color:#5c6378">${foot}</div></div>`;
+/** The school's email design (logo, colour, footer), with defaults from the school and its website. */
+export async function emailDesign(): Promise<EmailDesign & { saved: boolean }> {
+  const [row, sc, base] = await Promise.all([
+    withSchool((q) => q<{ value: Partial<EmailDesign> }>(`select value from meet_kv where key = 'email_design'`)).then((r) => r[0]?.value ?? null).catch(() => null),
+    withSchool((q) => q<{ name: string; brand: { primary?: string } }>(`select name, brand from schools where id = current_school()`)).then((r) => r[0]),
+    siteBase(),
+  ]);
+  const school = sc?.name ?? "OH-SO ED", site = (process.env.SITE_URL || base || "").replace(/\/$/, "");
+  return { school, logo: row?.logo ?? true, color: row?.color || sc?.brand?.primary || "#0f1747", footer: row?.footer ?? defaultFooter(school, site),
+    logoUrl: site ? `${site}/brand/logo` : "", saved: !!row };
 }
+export async function saveEmailDesign(d: { logo: boolean; color: string; footer: string }) {
+  await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), 'email_design', $1) on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`,
+    [JSON.stringify({ logo: d.logo, color: /^#[0-9a-f]{6}$/i.test(d.color) ? d.color : "#0f1747", footer: d.footer.slice(0, 1000) })]));
+}
+const html = async (body: string, marketing: boolean) => emailHtml(body, marketing, await emailDesign());
 
 /** Sends one email per recipient (nobody sees anyone else's address), in batches. Returns how many were accepted by Brevo. */
 export async function sendBatch(subject: string, body: string, to: Recipient[], marketing: boolean): Promise<{ sent: number; failed: number; error?: string }> {
@@ -101,12 +114,12 @@ export async function sendBatch(subject: string, body: string, to: Recipient[], 
     const chunk = to.slice(i, i + 500);
     const res = await fetch(SMTP_URL(), {
       method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: html(body, marketing), textContent: body,
+      body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, marketing), textContent: body,
         messageVersions: chunk.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [marketing ? "marketing" : "admin-message"] }),
     }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
     if (res.ok) sent += chunk.length; else { failed += chunk.length; error = `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}`; }
   }
-  if (sent) await keepCopy(c, subject, html(body, marketing), body, to, failed ? `${failed} failed` : undefined);
+  if (sent) await keepCopy(c, subject, await html(body, marketing), body, to, failed ? `${failed} failed` : undefined);
   return { sent, failed, error };
 }
 
@@ -142,12 +155,12 @@ export async function sendOne(to: Recipient[], subject: string, body: string, op
   if (!to.length) return { ok: false, ids: [], error: "No one to send it to." };
   const res = await fetch(SMTP_URL(), {
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: html(body, false), textContent: body,
+    body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, false), textContent: body,
       messageVersions: to.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [opts.tag], ...(opts.scheduledAt ? { scheduledAt: opts.scheduledAt } : {}) }),
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e), json: async () => ({}) }) as Response);
   if (!res.ok) return { ok: false, ids: [], error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
   const j = await res.json().catch(() => ({})) as { messageId?: string; messageIds?: string[] };
-  await keepCopy(c, subject, html(body, false), body, to, opts.scheduledAt ? `scheduled for ${new Date(opts.scheduledAt).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" })}` : undefined);
+  await keepCopy(c, subject, await html(body, false), body, to, opts.scheduledAt ? `scheduled for ${new Date(opts.scheduledAt).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" })}` : undefined);
   return { ok: true, ids: j.messageIds ?? (j.messageId ? [j.messageId] : []) };
 }
 /** Cancels an email scheduled with Brevo (e.g. the lesson was cancelled). */

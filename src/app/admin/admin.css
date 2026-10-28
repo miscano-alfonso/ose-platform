@@ -539,3 +539,33 @@
 .adm .rcp ul{list-style:none;margin:0;padding:0;max-height:220px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 16px}
 .adm .rcp li{display:flex;gap:8px;justify-content:space-between;font-size:14.5px;padding:4px 2px;border-bottom:1px solid var(--line);min-width:0}
 .adm .rcp li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Inbox: reply panel under an email */
+.adm .irp{flex-basis:100%;display:grid;gap:12px;margin:6px 0 4px;padding:14px;border:1px solid var(--line);border-radius:16px;background:var(--soft)}
+.adm .irp-mail{white-space:pre-wrap;font-size:15px;line-height:1.55;max-height:320px;overflow:auto;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.adm .irp-sent{font-size:14.5px;border-left:3px solid var(--sky);padding:4px 10px}.adm .irp-sent div{white-space:pre-wrap;margin-top:4px;color:var(--muted)}
+.adm .bad{color:var(--bad)}
+.adm .irp textarea{font-weight:400}
+/* email preview: desktop (scaled to fit) and phone */
+.adm .epv{display:grid;gap:10px;align-content:start;position:sticky;top:16px;min-width:0}
+.adm .epv-bar{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.adm .epv .segl button{background:transparent;border:0;font:inherit;padding:6px 12px;cursor:pointer;color:var(--ink)}
+.adm .epv .segl button[aria-current]{background:var(--rail-on,#0f1747);color:var(--rail-on-ink,#fff);border-radius:20px}
+.adm .epv-meta{display:grid;gap:2px;font-size:14px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}
+.adm .epv-subj{font-weight:600}
+.adm .epv-desk{overflow:hidden;border:1px solid var(--line);border-radius:12px;background:#f3f4f8}
+.adm .epv-desk iframe{border:0;transform-origin:0 0;display:block;background:#f3f4f8}
+.adm .epv-phone{justify-self:center;width:300px;height:600px;border:10px solid #15171f;border-radius:38px;overflow:hidden;position:relative;background:#f3f4f8;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+.adm .epv-phone iframe{border:0;width:375px;height:750px;transform:scale(.8);transform-origin:0 0;display:block}
+.adm .epv-notch{position:absolute;top:0;left:50%;transform:translateX(-50%);width:110px;height:20px;background:#15171f;border-radius:0 0 14px 14px;z-index:1}
+.adm .cmp{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);gap:24px;align-items:start}
+.adm .cmp-main{display:grid;gap:12px;min-width:0}
+@media (max-width:1100px){.adm .cmp{grid-template-columns:minmax(0,1fr)}.adm .epv{position:static}}
+/* register: arrivals during the lesson */
+.adm .arr{display:grid;gap:6px}
+.adm .arr-row{display:grid;grid-template-columns:minmax(140px,1.2fr) minmax(110px,.8fr) minmax(0,2fr);gap:12px;align-items:center;padding:9px 12px;border-radius:12px;background:var(--soft);border-left:4px solid var(--line);font-size:15px}
+.adm .arr-row.in{border-left-color:#2f9e63}.adm .arr-row.late{border-left-color:#e0a12b}.adm .arr-row.missing{border-left-color:var(--bad)}.adm .arr-row.away{border-left-color:var(--sky);opacity:.85}
+.adm .arr-st{font-weight:600;font-size:14px}.adm .arr-row.in .arr-st{color:#2f9e63}.adm .arr-row.late .arr-st{color:#b77a0c}.adm .arr-row.missing .arr-st{color:var(--bad)}
+.adm .arr-t{color:var(--muted);font-size:13.5px}
+@media (max-width:700px){.adm .arr-row{grid-template-columns:1fr auto}.adm .arr-t{grid-column:1/-1}}
+.adm .staffbar .abtn{color:#fff;border-color:rgba(255,255,255,.7);background:transparent}
+.adm .staffbar .abtn:hover{background:rgba(255,255,255,.12)}
