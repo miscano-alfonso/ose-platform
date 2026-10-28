@@ -640,3 +640,15 @@
 .adm .payx-b table{width:100%;max-width:640px;border-collapse:collapse}.adm .payx-b td{padding:7px 8px;border-bottom:1px solid var(--line)}
 .adm .payx-b tr.tot td{border-bottom:0;font-weight:600}
 @media (max-width:640px){.adm .payx-h{display:none}.adm .payx-r>summary{grid-template-columns:1fr auto;row-gap:2px}.adm .payx-r>summary>span:nth-child(2),.adm .payx-r>summary>span:nth-child(3){font-size:13.5px;color:var(--muted)}}
+.adm .topbar .tb-note{font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;max-width:100%;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px}
+.adm .topbar .tb-note b{color:var(--ink)}.adm .topbar .tb-note a{color:var(--ink)}
+.adm .topbar{flex-wrap:nowrap}
+@media (max-width:820px){.adm .topbar .tb-note{white-space:normal;border-radius:12px}}
+/* teacher, parent and student menus: Light/Dark and Sign out sit just under the links */
+.adm .side .side-foot.inline{position:static;margin:6px 0 0;padding:14px 0 0;background:none}
+.adm .trate{display:grid;gap:8px;padding:12px 0;border-top:1px solid var(--line)}.adm .trate:first-of-type{border-top:0}
+.adm .trate-f{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px}
+.adm .trate-f label{display:grid;gap:3px;font-size:13px;color:var(--muted)}.adm .trate-i{display:flex;align-items:center;gap:4px;color:var(--ink)}.adm .trate-i input{width:100%;text-align:right}
+.adm .trate .abtn{justify-self:start}
+.adm .payx-notes{margin-top:12px;display:grid;gap:4px;font-size:15px;color:var(--muted)}.adm .payx-notes p{margin:0}.adm .payx-notes b{color:var(--ink)}
+.adm .side .logo img{max-width:calc(100% - 16px);object-fit:contain;object-position:left center}

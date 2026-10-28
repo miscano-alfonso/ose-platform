@@ -299,6 +299,21 @@ export async function setLevelRateAction(f: FormData): Promise<void> {
   await setLevelRate(me.id, str(f, "level", 40), p);
   revalidatePath("/admin/payroll"); payBack(null, "Rate saved.");
 }
+export async function setTeacherRatesAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { setTeacherRate, teacherRates } = await import("@/lib/payroll");
+  const teacher = str(f, "teacher", 40);
+  const cur = (await teacherRates()).find((t) => t.id === teacher);
+  if (!cur) return payBack("That teacher wasn’t found.", "");
+  for (const [k, v] of f.entries()) {
+    if (!k.startsWith("rate_")) continue;
+    const level = k.slice(5), raw = String(v).trim();
+    const pence = raw === "" ? null : pounds(raw.slice(0, 12));
+    if (pence != null && !(pence >= 0 && pence <= 100000)) return payBack("Enter rates in pounds, e.g. 45, or leave a box empty for the standard rate.", "");
+    if (pence !== (cur.rates[level] ?? null)) await setTeacherRate(me.id, teacher, level, pence);
+  }
+  revalidatePath("/admin/payroll"); payBack(null, `${cur.name}’s rates saved.`);
+}
 export async function buildPayRunAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const err = await buildPayRun(me.id, str(f, "term", 40));

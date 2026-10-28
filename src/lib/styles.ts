@@ -96,6 +96,7 @@ export const DASH_TOKENS: StyleToken[] = [
   { id: "d_label", group: "Text", label: "Form labels", sel: ".adm .fld", prop: "font-size", min: 11, max: 20, step: 0.5, unit: "px" },
   { id: "d_muted", group: "Text", label: "Notes and grey text", sel: ".adm .muted, .adm .note, .adm .top .sub, .adm .card .cs", prop: "font-size", min: 11, max: 20, step: 0.5, unit: "px" },
   { id: "d_nav", group: "Navigation & buttons", label: "Side menu links", sel: ".adm .nav a, .adm .nav span", prop: "font-size", min: 12, max: 24, step: 0.5, unit: "px" },
+  { id: "d_logo_h", group: "Navigation & buttons", label: "Logo size", hint: "Height of the logo at the top of the side menu", sel: ".adm .side .logo img", prop: "height", min: 24, max: 100, step: 1, unit: "px", important: true },
   { id: "d_nav_gap", group: "Navigation & buttons", label: "Space between menu links", sel: ".adm .nav a", prop: "padding-block", min: 0, max: 18, step: 1, unit: "px" },
   { id: "d_side", group: "Navigation & buttons", label: "Side menu width", sel: ".adm .app", prop: "--side-w", min: 180, max: 340, step: 2, unit: "px" },
   { id: "d_btn", group: "Navigation & buttons", label: "Button text", sel: ".adm .abtn", prop: "font-size", min: 11, max: 22, step: 0.5, unit: "px" },

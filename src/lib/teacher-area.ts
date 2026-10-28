@@ -80,7 +80,8 @@ async function myTermPay(q: Q, userId: string, termId: string): Promise<number> 
   return r?.pay ?? 0;
 }
 
-export type PayRow = { id: string; name: string; pay_date: string; starts_on: string; ends_on: string; lessons: number; gross: number; status: string };
+export type PayPart = { label: string; count: number; unit: string; pay: number };
+export type PayRow = { id: string; name: string; pay_date: string; starts_on: string; ends_on: string; lessons: number; gross: number; status: string; parts: PayPart[] };
 export async function myPay(userId: string) {
   return withSchool(async (q) => {
     const rates = await q<{ level: string; rate: number | null }>(`select l.name as level, coalesce(
@@ -101,7 +102,15 @@ export async function myPay(userId: string) {
         gross = await myTermPay(q, userId, t.id);
       }
       const status = t.run === "paid" ? "Paid" : t.run === "approved" ? "Approved" : t.ends_on < today ? "Being checked" : t.starts_on <= today ? "This term" : "Upcoming";
-      rows.push({ id: t.id, name: t.name, pay_date: t.pay_date, starts_on: t.starts_on, ends_on: t.ends_on, lessons, gross, status });
+      // the breakdown: lessons taught at each level, then 1:1s and workshops (paid with the term that ends next)
+      const parts: PayPart[] = [
+        ...(await q<{ level: string; n: number; pay: number }>(`select p.level, p.lessons as n, p.pay_pence as pay from teacher_term_pay p join levels l on l.name = p.level
+            where p.term_id = $2 and p.teacher_id = ${ME} order by l.sort_order, p.level`, [userId, t.id]).catch(() => []))
+          .map((x) => ({ label: `${x.level} lessons`, count: x.n, unit: x.n === 1 ? "lesson" : "lessons", pay: x.pay ?? 0 })),
+        ...(await q<{ kind: string; n: number; pay: number }>(`select kind, sessions as n, pay_pence as pay from teacher_term_extras where term_id = $2 and teacher_id = ${ME} order by kind`, [userId, t.id]).catch(() => []))
+          .map((x) => ({ label: x.kind === "1:1" ? "1:1s" : "Workshops", count: x.n, unit: x.kind === "1:1" ? (x.n === 1 ? "session" : "sessions") : (x.n === 1 ? "workshop" : "workshops"), pay: x.pay ?? 0 })),
+      ];
+      rows.push({ id: t.id, name: t.name, pay_date: t.pay_date, starts_on: t.starts_on, ends_on: t.ends_on, lessons, gross, status, parts });
     }
     const tut = await q<{ level: string; pay: number }>(`select distinct on (l.id) l.name as level, r.teacher_pay_pence as pay from tutoring_rates r join levels l on l.id = r.level_id
       where r.minutes = 45 and r.valid_from <= current_date order by l.id, r.valid_from desc`).catch(() => []);

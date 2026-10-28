@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { getPayroll, payrollTerm } from "@/lib/payroll";
+import { getPayroll, payrollTerm, teacherRates } from "@/lib/payroll";
 import { money } from "@/lib/format";
-import { setLevelRateAction, buildPayRunAction, setAdjustmentAction, setRunStatusAction } from "../../actions";
+import { setLevelRateAction, buildPayRunAction, setAdjustmentAction, setRunStatusAction, setTeacherRatesAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 const dm = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -11,7 +11,7 @@ const BANK_HOLS: Record<string, string> = { "2026-12-25": "Christmas Day", "2026
 
 export default async function Payroll({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; term?: string }> }) {
   const sp = await searchParams;
-  const [{ rates }, d] = await Promise.all([getPayroll(), payrollTerm(Number(sp.term) || null)]);
+  const [{ rates }, d, trates] = await Promise.all([getPayroll(), payrollTerm(Number(sp.term) || null), teacherRates()]);
   const t = d.term;
   const today = new Date().toISOString().slice(0, 10);
   if (!t) return <><div className="top"><div><h1>Payroll</h1><div className="sub">No terms set up yet.</div></div></div></>;
@@ -52,10 +52,16 @@ export default async function Payroll({ searchParams }: { searchParams: Promise<
         <a className="abtn" href={`/admin/payroll-file?term=${t.number}`}>Export for payroll</a></div>
       <p className="note">Gross pay only. Your payroll provider works out tax, National Insurance and pension as usual. {done ? "" : "Lessons after today are counted as scheduled, so this figure updates if a lesson is cancelled or covered. "}Lessons count as taught when anyone joins the class’s Google Meet. Start the pay run to add one-off adjustments.</p>
     </div><div className="dstack">
-      <section className="card"><h2>Pay per lesson</h2><p className="cs">The same for every teacher at each level. A new rate applies to lessons from today.</p>
+      <section className="card"><h2>Pay per lesson</h2><p className="cs">The standard rate at each level. Teachers on their own rate are set below. A new rate applies to lessons from today.</p>
         {rates.map((r) => <form key={r.level_id} action={setLevelRateAction} className="li"><input type="hidden" name="level" value={r.level_id} />
           <div className="t"><b>{r.level}</b><span>per lesson taught</span></div>
           <label style={{ display: "flex", alignItems: "center", gap: 4 }}>£<input name="rate" inputMode="decimal" defaultValue={r.rate != null ? (r.rate / 100).toFixed(2) : ""} className="mini" style={{ width: 80, textAlign: "right" }} aria-label={`${r.level} pay per lesson`} /></label>
+          <button className="abtn sm" type="submit">Save</button></form>)}</section>
+      <section className="card"><h2>Teacher rates</h2><p className="cs">For a teacher on their own rate. Leave a box empty to pay the standard rate above. A change applies to lessons from today; pay runs already approved don’t change.</p>
+        {trates.length === 0 ? <p className="empty">No teachers yet.</p> : trates.map((t) => <form key={t.id} action={setTeacherRatesAction} className="trate"><input type="hidden" name="teacher" value={t.id} />
+          <b>{t.name}</b>
+          <div className="trate-f">{rates.map((r) => <label key={r.level_id}><span>{r.level}</span><span className="trate-i">£<input name={`rate_${r.level_id}`} inputMode="decimal" className="mini"
+            defaultValue={t.rates[r.level_id] != null ? (t.rates[r.level_id]! / 100).toFixed(2) : ""} placeholder={r.rate != null ? (r.rate / 100).toFixed(0) : "–"} aria-label={`${t.name}, ${r.level} pay per lesson`} /></span></label>)}</div>
           <button className="abtn sm" type="submit">Save</button></form>)}</section>
       <section className="card"><h2>Cover and cancellations</h2><p className="cs">Pay follows whoever taught the lesson. Cancelled lessons aren’t paid.</p>
         {d.changes.length === 0 ? <p className="empty">None this term.</p> : d.changes.map((c, i) => <div className="li" key={i}><span className={`pill ${c.kind === "cancelled" ? "bad" : "info"}`}>{c.kind === "cancelled" ? "Cancelled" : "Cover"}</span>

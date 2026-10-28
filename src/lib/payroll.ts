@@ -110,3 +110,24 @@ export async function payrollTerm(termNumber: number | null) {
     return { terms, term, rows: [...map.values()].sort((a, b) => a.teacher.localeCompare(b.teacher)), levels, changes, counts };
   });
 }
+
+/** Teachers on their own rates: each teacher's rate per level, where it differs from the standard rate (null = standard). */
+export async function teacherRates(): Promise<{ id: string; name: string; rates: Record<string, number | null> }[]> {
+  return withSchool(async (q) => {
+    const rows = await q<{ id: string; name: string; level_id: string; rate: number | null }>(`select te.id, u.name, l.id as level_id,
+        (select r.rate_pence from pay_rates r where r.level_id = l.id and r.teacher_id = te.id and r.valid_from <= current_date order by r.valid_from desc limit 1) as rate
+      from teachers te join users u on u.id = te.user_id cross join levels l where te.archived_at is null and u.disabled_at is null order by u.name, l.sort_order`);
+    const by = new Map<string, { id: string; name: string; rates: Record<string, number | null> }>();
+    for (const r of rows) { const t = by.get(r.id) ?? { id: r.id, name: r.name, rates: {} }; t.rates[r.level_id] = r.rate; by.set(r.id, t); }
+    return [...by.values()];
+  });
+}
+/** Set a teacher's own rate for a level from today, or (pence null) put them back on the standard rate for that level. */
+export async function setTeacherRate(actorId: string, teacherId: string, levelId: string, pence: number | null) {
+  await withSchool(async (q) => {
+    if (pence == null) await q(`delete from pay_rates where teacher_id = $1 and level_id = $2`, [teacherId, levelId]);
+    else await q(`insert into pay_rates (school_id, level_id, teacher_id, rate_pence, valid_from) values (current_school(), $1, $2, $3::int, current_date)
+      on conflict (school_id, level_id, teacher_id, valid_from) do update set rate_pence = excluded.rate_pence`, [levelId, teacherId, pence]);
+    await audit(q, actorId, "teacher_rate", "pay_rates", teacherId, { levelId, pence });
+  });
+}

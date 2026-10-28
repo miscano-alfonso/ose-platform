@@ -98,7 +98,7 @@ export function StyleBuilder({ saved, kind = "site" }: { saved: SiteStyles; kind
             <div className="sb-lab"><label htmlFor={`sb-${t.id}`}>{t.label}</label>{t.hint && <small>{t.hint}</small>}{off && <small>Not on this preview page</small>}</div>
             {t.choices ? <select id={`sb-${t.id}`} className="mini" value={shown} onChange={(e) => set(t.id, Number(e.target.value))} style={{ gridColumn: "span 2" }}>{t.choices.map((c) => <option key={c.v} value={c.v}>{c.label}</option>)}</select>
             : <><input id={`sb-${t.id}`} type="range" min={t.min} max={t.max} step={t.step} value={shown} onChange={(e) => set(t.id, Number(e.target.value))} />
-            <span className="sb-val">{off ? "–" : t.unit ? `${shown}px` : shown}</span></>}
+            <span className="sb-val">{off ? "–" : t.unit ? `${Math.round(shown * 10) / 10}px` : Math.round(shown * 100) / 100}</span></>}
             {v != null ? <button type="button" className="abtn sm" onClick={() => set(t.id, null)} title="Back to the default">Reset</button> : <span className="sb-def">Default</span>}
             {t.prop === "font-size" && FontPick({ id: t.id, def: HEAD_IDS.test(t.id) ? "Same as headings font" : `Same as ${noun} font` })}
           </div>;
