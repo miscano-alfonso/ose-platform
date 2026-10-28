@@ -40,7 +40,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
       ? <section className="card"><h2>Who’s expected</h2><p className="cs">{r.students.length} student{r.students.length === 1 ? "" : "s"}{r.tasters.length ? ` and ${r.tasters.length} taster${r.tasters.length === 1 ? "" : "s"}` : ""}. On the day, arrivals show here as students join, and the register opens below.</p>
           <div className="arr">{r.students.map((s) => <div key={s.id} className={`arr-row ${s.notice ? "away" : "waiting"}`}><b>{s.name}</b><span>{s.notice ? `Away: ${s.notice}` : "Expected"}</span></div>)}
             {r.tasters.map((t) => <div key={t.id} className="arr-row waiting"><b>{t.child}</b><span>Taster</span></div>)}</div></section>
-      : <section className="card">
+      : <section className="card" data-lesson={`${r.name}, ${r.starts_at}`}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>{live ? "Arrivals" : "Who joined"}</h2>
             {live && <span className="dx-live">{now < st ? "Starting soon" : now <= en ? "Live now" : "Just finished"}</span>}
             <span className="pill info">{joinedN} of {r.students.length} joined</span><span style={{ flex: 1 }} />

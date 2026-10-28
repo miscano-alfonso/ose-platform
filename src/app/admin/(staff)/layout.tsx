@@ -7,6 +7,7 @@ import "../admin.css";
 import { DashStyles } from "../DashStyles";
 import { brandSrc } from "@/lib/brand";
 import { TeacherNav } from "../AdminNav";
+import { LessonWindow } from "../../LessonWindow";
 import { menuFor } from "@/lib/menu-config";
 import { after } from "next/server";
 import { checkinsBackground } from "@/lib/checkins";
@@ -31,7 +32,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   const style = { ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b"), ["--brand-accent-ink" as string]: inkOn(hex(brand.accent, "#e3cd4b")) };
 
   if (me.role === "school_admin") return <div className="adm" data-theme={theme} style={style}><DashStyles />
-    <div className="staffbar">
+    <LessonWindow /><div className="staffbar">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <a href="/admin"><img src={logo} alt="OH-SO ED" width={773} height={224} /></a>
       <span className="grow" /><a className="abtn sm side-btn" href="/admin">Back to the admin</a>
@@ -54,7 +55,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   return <div className="adm" data-theme={theme} style={style}><DashStyles />
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
-    <div className="app">
+    <LessonWindow /><div className="app">
       <aside className="side"><SideToggle />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>

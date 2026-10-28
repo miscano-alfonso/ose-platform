@@ -2,6 +2,7 @@ import Link from "next/link";
 import { openFlags, ruleLabel } from "@/lib/chat-safety";
 import { getDashboard, getDashboardMore } from "@/lib/admin-data";
 import { requireStaff } from "@/lib/auth";
+import { inboxList, inboxStatus } from "@/lib/inbox";
 import { money, dayMonth, yearLabel } from "@/lib/format";
 import { getLayout } from "@/lib/dashboard-layout";
 import { MoreList } from "../MoreList";
@@ -32,7 +33,9 @@ const I = {
 };
 
 export default async function Dashboard() {
-  const [{ t, attention }, m, me, flags] = await Promise.all([getDashboard(), getDashboardMore(LOW), requireStaff(), openFlags().catch(() => [])]);
+  const [{ t, attention }, m, me, flags, box] = await Promise.all([getDashboard(), getDashboardMore(LOW), requireStaff(), openFlags().catch(() => []), inboxStatus().catch(() => null)]);
+  const mail = box?.connected ? await inboxList("new").catch(() => ({ rows: [], unread: 0 })) : { rows: [], unread: 0 };
+  const ago = (iso: string) => { const h = (Date.now() - Date.parse(iso)) / 3600e3; return h < 1 ? `${Math.max(1, Math.round(h * 60))} min ago` : h < 24 ? `${Math.round(h)} h ago` : dayMonth(iso.slice(0, 10)); };
   const pct = t.capacity ? Math.round((t.taken / t.capacity) * 100) : 0;
   const items = [...flags.slice(0, 6).map((x) => ({ kind: "chat", title: `${x.rules.includes("wellbeing") ? "Urgent: " : ""}${x.rules.map(ruleLabel).join(", ")} · ${x.sender}`,
       detail: `${x.blocked ? "Blocked: " : ""}“${x.body.length > 70 ? x.body.slice(0, 70) + "…" : x.body}” · ${x.chat}`, href: "/admin/student-chat#alerts" })),
@@ -100,7 +103,7 @@ export default async function Dashboard() {
     { id: "today", title: m.day.today ? "Today’s lessons" : "Next lessons", node: <section className="dx-card">
       <header><h2>{m.day.today ? "Today" : `Next lessons · ${DAY(m.day.date, { weekday: "long", day: "numeric", month: "short" })}`}</h2><Link className="dx-more" href="/admin/timetable">Timetable →</Link></header>
       {m.day.lessons.length === 0 ? <p className="empty">No lessons coming up.</p> :
-        <MoreList as="ol" className="dx-tl" limit={5}>{m.day.lessons.map((l, i) => { const s = st(l); return <li key={i} className={`${s}${i === nextIdx ? " next" : ""}`} style={{ ["--c" as string]: l.colour }}>
+        <MoreList as="ol" className="dx-tl" limit={5}>{m.day.lessons.map((l, i) => { const s = st(l); return <li key={i} data-lesson={`${l.name}, ${l.starts}`} className={`${s}${i === nextIdx ? " next" : ""}`} style={{ ["--c" as string]: l.colour }}>
           <span className="tm">{l.starts}<small>{l.ends}</small></span>
           <span className="bd"><b>{l.name}</b><span>{l.teacher ?? "No teacher set"} · {l.students} student{l.students === 1 ? "" : "s"} · {l.code}</span></span>
           <span className="ac">{s === "live" ? <span className="dx-live">Live now</span> : s === "done" ? <span className="pill mute">Done</span> : s === "cancelled" ? <span className="pill bad">Cancelled</span> : i === nextIdx ? <span className="pill info">Next</span> : null}
@@ -138,6 +141,14 @@ export default async function Dashboard() {
       {m.fullest.length === 0 ? <p className="empty">No open classes.</p> : <MoreList className="bars" limit={6}>{m.fullest.map((g, i) => <div className="brow" key={i} title={`${g.name}: ${g.taken} of ${g.capacity}`}>
         <span className="lbl"><span className="dot" style={{ background: g.colour }} />{g.name}</span><div className="track"><i className={g.taken >= g.capacity ? "full" : ""} style={{ width: `${Math.min(100, (g.taken / g.capacity) * 100)}%` }} /></div><span className="num">{g.taken}/{g.capacity}</span></div>)}</MoreList>}
     </section> },
+    { id: "email", title: "Email", node: <section className="dx-card">
+      <header><h2>Email</h2>{mail.unread > 0 && <span className="dx-count">{mail.unread}</span>}<Link className="dx-more" href="/admin/email?tab=inbox">Inbox →</Link></header>
+      {!box?.connected ? <p className="empty">Connect the school inbox to see families’ emails here. <Link href="/admin/email?tab=inbox">Connect it</Link></p>
+        : mail.rows.length === 0 ? <div className="dx-clear"><Ico d={I.check} /><b>All read</b><span>No new emails from families.</span></div>
+        : <MoreList className="dx-list" limit={4}>{mail.rows.map((e) => <Link key={e.id} className="dx-item info" href="/admin/email?tab=inbox">
+          <span className="t"><b>{e.from_name || e.from_email} · {e.subject || "(no subject)"}</b><span>{e.snippet.length > 90 ? e.snippet.slice(0, 90) + "…" : e.snippet}</span><span style={{ fontSize: 13 }}>{ago(e.received_at)}{e.family ? ` · ${e.family}` : ""}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><Link className="abtn sm" href="/admin/email?tab=inbox">Reply to families</Link><Link className="abtn sm" href="/admin/email?tab=compose">Write an email</Link></div>
+    </section> },
     { id: "quick", title: "Quick links", node: <section className="dx-card">
       <header><h2>Quick links</h2></header>
       <div className="dx-quick"><Link href="/admin/classes">Classes</Link><Link href="/admin/tasters">Tasters</Link><Link href="/admin/enquiries">Enquiries</Link><Link href="/admin/reports">Reports</Link><Link href="/admin/payroll">Payroll</Link><Link href="/admin/newsletter">Newsletter</Link></div>
@@ -154,5 +165,6 @@ const DEFAULT_LAYOUT: { id: string; size: "s" | "m" | "l" | "xl" | "full" }[] = 
   { id: "k-students", size: "s" }, { id: "k-places", size: "s" }, { id: "k-attendance", size: "s" }, { id: "k-collected", size: "s" }, { id: "k-next", size: "s" }, { id: "k-failed", size: "s" },
   { id: "today", size: "l" }, { id: "attention", size: "l" },
   { id: "collections", size: "m" }, { id: "bookings", size: "m" }, { id: "tasters", size: "m" },
+  { id: "email", size: "l" },
   { id: "coming", size: "l" }, { id: "fullest", size: "l" },
 ];

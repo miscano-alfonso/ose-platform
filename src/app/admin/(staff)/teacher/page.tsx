@@ -22,7 +22,7 @@ export default async function MyDay() {
   const isToday = next?.d === today;
   return <>
     <div className="fx">
-      <section className="dx-hero c8">
+      <section className="dx-hero c8" data-lesson={next ? `${next.name}, ${next.time}` : undefined}>
         <p className="fx-live" style={isToday ? undefined : { color: "#c9cdea" }}>{isToday && <i />}{next ? (isToday ? `Today · ${next.time}` : `Next lesson · ${wd(next.d)} ${dm(next.d)} ${next.time}`) : d.term?.name ?? "My day"}</p>
         <h1 className="fx-hero-t"><span style={{ fontSize: ".55em", fontWeight: 500 }}>Hello {me.name.split(" ")[0]}</span>{next && <><br />{next.name}</>}</h1>
         <p className="fx-hero-s">{next ? <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>

@@ -1231,7 +1231,7 @@ export async function edtechTrialAction(f: FormData): Promise<void> {
   redirect("/admin/edtech?ok=" + encodeURIComponent("Saved."));
 }
 // ---------- customisable dashboard ----------
-const DASH_MODULES: Record<string, string[]> = { "admin-home": ["hero", "k-students", "k-places", "k-attendance", "k-collected", "k-next", "k-failed", "today", "attention", "collections", "bookings", "coming", "fullest", "tasters", "quick"] };
+const DASH_MODULES: Record<string, string[]> = { "admin-home": ["hero", "k-students", "k-places", "k-attendance", "k-collected", "k-next", "k-failed", "today", "attention", "collections", "bookings", "coming", "fullest", "tasters", "quick", "email"] };
 export async function saveDashLayoutAction(page: string, layout: { id: string; size: string }[] | null): Promise<void> {
   const me = await requireStaff();
   const known = DASH_MODULES[page]; if (!known) return;

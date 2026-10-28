@@ -16,7 +16,7 @@ export default async function StudentHome() {
   const chatOff = h.me.chat_access === "none";
   return <>
     <div className="fx">
-      <section className="dx-hero c8">
+      <section className="dx-hero c8" data-lesson={next ? `${next.subject}, ${hm(next.next!)}` : undefined}>
         {next ? <>
           <p className="fx-live" style={soon ? undefined : { color: "#c9cdea" }}>{soon && <i />}{soon ? whenText(next.next!, now) : `Next lesson · ${dlong(next.next!)} ${hm(next.next!)}`}</p>
           <h1 className="fx-hero-t"><span style={{ fontSize: ".55em", fontWeight: 500 }}>Hi {h.me.first} ✦</span><br />{next.subject}</h1>
