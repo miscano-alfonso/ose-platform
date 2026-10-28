@@ -52,6 +52,7 @@ export async function buildSchedules(actorId: string): Promise<ScheduleReport> {
 export type TermTotal = { number: number; name: string; bills_on: string; due: number; paid: number; scheduled: number; failed: number; places: number };
 export type FamilyPay = { id: string; name: string; email: string; kids: string | null; places: number; unscheduled: number; paid: number; total: number;
   next_on: string | null; next_due: number; overdue: number; techsaga_next: number | null;
+  overdue_terms: { n: number; due_on: string }[]; stripe_waiting: number;
   grid: { n: number; amount: number; status: string }[] };
 
 export async function getPayments(): Promise<{ year: string | null; terms: TermTotal[]; families: FamilyPay[]; unscheduled: number }> {
@@ -80,6 +81,9 @@ export async function getPayments(): Promise<{ year: string | null; terms: TermT
         nxt.d::text as next_on,
         coalesce((select sum(amount_pence) from x where x.parent_id = p.id and status = 'scheduled' and due_on = nxt.d), 0)::int as next_due,
         coalesce((select sum(amount_pence) from x where x.parent_id = p.id and status in ('scheduled','failed') and due_on < current_date), 0)::int as overdue,
+        coalesce((select json_agg(distinct jsonb_build_object('n', t.number, 'due_on', x.due_on::text)) from x join terms t on t.id = x.term_id
+          where x.parent_id = p.id and x.status in ('scheduled','failed') and x.due_on < current_date), '[]') as overdue_terms,
+        (select count(*)::int from stripe_charges c where c.parent_id = p.id and c.matched_at is null and not c.ignored and c.status = 'succeeded') as stripe_waiting,
         coalesce((select json_agg(json_build_object('n', t.number, 'amount', g.amount, 'status', g.status) order by t.number)
           from terms t cross join lateral (select coalesce(sum(x.amount_pence) filter (where x.status not in ('cancelled','waived')), 0)::int as amount,
               case when count(*) = 0 then 'none' when bool_and(x.status in ('paid','part_refunded','cancelled','waived','refunded')) then

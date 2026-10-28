@@ -5,7 +5,7 @@ import { stopContactAction } from "../../actions";
 import { money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
-const STATE: Record<FamState, [string, string]> = { failed: ["bad", "Payment failed"], overdue: ["warn", "Not recorded as paid"], unscheduled: ["info", "No payment schedule"],
+const STATE: Record<FamState, [string, string]> = { failed: ["bad", "Payment failed"], overdue: ["warn", "Past term not recorded as paid"], unscheduled: ["info", "No payment schedule"],
   check: ["warn", "Needs a check"], paid: ["good", "Paid to date"], none: ["mute", "No courses"] };
 const CR: Record<string, [string, string]> = { pending: ["info", "Waiting"], accepted: ["good", "Shared"], declined: ["mute", "Declined"], withdrawn: ["mute", "Withdrawn"], expired: ["mute", "Expired"], revoked: ["bad", "Stopped"] };
 const day = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
@@ -40,7 +40,7 @@ export default async function Families({ searchParams }: { searchParams: Promise
         <label className="muted" htmlFor="fsort" style={{ fontSize: 14 }}>Sort</label><select id="fsort" name="sort" defaultValue={sort} className="mini">{Object.entries(SORTS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}</select>
         <button className="abtn sm" type="submit">Sort</button></form>
     </div>
-    {all.some((f) => f.state === "overdue") && <p className="note" style={{ marginTop: 0 }}>“Not recorded as paid” means a term’s payment date has passed and this site hasn’t recorded the payment yet (payments made through TechSaga aren’t known here). <Link href="/admin/payments/stripe">Match payments from Stripe</Link></p>}
+    {all.some((f) => f.state === "overdue") && <p className="note" style={{ marginTop: 0 }}>“Past term not recorded as paid” means a term whose payment date has already passed (not the next payment) and this site hasn’t recorded the payment yet (payments made through TechSaga aren’t known here). <Link href="/admin/payments/stripe">Match payments from Stripe</Link></p>}
     <div className="tw"><table><thead><tr>{th("Parent", "name", "name_desc")}<th>Children</th>{th("Courses", "courses", undefined, "n")}{th("Latest booking", "recent", "oldest")}<th>Payments</th><th className="n">Next payment</th></tr></thead><tbody>
       {list.length === 0 ? <tr><td colSpan={6} className="muted" style={{ padding: 24, textAlign: "center" }}>{all.length ? "No families match." : "No families yet. Use Import families to bring them across from TechSaga."}</td></tr>
       : list.map((f) => <tr key={f.id} className="click">

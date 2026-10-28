@@ -7,6 +7,7 @@ import { yearLabel } from "@/lib/format";
 
 const STATE: Record<string, string> = { paid: "Paid", scheduled: "To collect", failed: "Failed", part: "Part paid", waived: "Waived", none: "" };
 const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+const termsLabel = (f: { overdue_terms: { n: number }[] }) => { const ns = [...new Set(f.overdue_terms.map((t) => t.n))].sort((a, b) => a - b); return ns.length ? (ns.length === 1 ? `Term ${ns[0]}` : `Terms ${ns.join(", ")}`) : "Earlier term"; };
 
 export default async function Payments({ searchParams }: { searchParams: Promise<{ built?: string; show?: string; q?: string }> }) {
   const sp = await searchParams;
@@ -65,7 +66,10 @@ export default async function Payments({ searchParams }: { searchParams: Promise
         <td>{f.places}</td><td>{money(f.paid)}</td><td>{money(f.total)}</td>
         <td>{f.next_on ? <>{money(f.next_due)} <span className="muted">on {day(f.next_on)}</span></> : <span className="muted">None scheduled</span>}</td>
         <td>{f.unscheduled > 0 ? <span className="pill info">No schedule yet</span>
-          : f.overdue > 0 ? <span className="pill warn">{money(f.overdue)} not recorded as paid</span>
+          : f.overdue > 0 ? <>{f.stripe_waiting > 0
+              ? <Link className="pill info" href="/admin/payments/stripe" title="A Stripe payment from this family is waiting to be confirmed">{termsLabel(f)}: paid in Stripe, confirm it</Link>
+              : <span className="pill warn" title="This term's payment date has passed and no payment is recorded for it in the site yet">{termsLabel(f)}: no payment recorded</span>}
+              <div className="muted" style={{ fontSize: 13.5, marginTop: 3 }}>{money(f.overdue)} · payment date {f.overdue_terms.map((t) => day(t.due_on)).filter((v, i, a) => a.indexOf(v) === i).join(", ")}</div></>
           : diff(f) ? <span className="pill warn" title="TechSaga's next payment for this family">TechSaga said {money(f.techsaga_next!)}</span>
           : f.techsaga_next != null ? <span className="pill good">Matches TechSaga</span> : <span className="muted">—</span>}</td>
       </tr>
@@ -81,7 +85,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
         </details></td></tr>}
       </tbody>)}
     </table></div>}
-    <p className="note">Card payments through OH-SO ED’s Stripe account come next: once connected, each term’s payments are charged on the date shown, and failed or overdue payments are listed here. “Not recorded as paid” means a term whose charge date has passed but TechSaga’s export (taken on 12 October, before Term 2 was charged on 19 October) didn’t show it as paid. Open “Terms” on a family to mark a term paid or waive it. Card payments never touch terms marked here.</p>
+    <p className="note">The Check column looks back, not forward: it’s about a term whose payment date has <b>already passed</b> (for example Term 2, 19 Oct), never the next payment. Invoices for the next payment aren’t involved. “Paid in Stripe, confirm it” means the family’s card payment is in <Link href="/admin/payments/stripe">Stripe payments</Link> waiting for you to press Confirm. “No payment recorded” means no Stripe payment from them matches yet (they may have paid another way, or it’s in Stripe under a different email). Open “Terms” on a family to mark a term paid or waive it.</p>
   </>;
 }
 
