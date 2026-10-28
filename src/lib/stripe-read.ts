@@ -105,61 +105,98 @@ export async function syncStripe(): Promise<{ added: number; error?: string }> {
 }
 
 // ---------- matching payments to terms ----------
-type TermDue = { term_id: string; number: number; name: string; due_on: string; total: number; ids: string[]; status: string };
-async function unpaidTerms(q: Q, parentId: string): Promise<TermDue[]> {
-  return q<TermDue>(`select i.term_id, t.number, t.name, min(i.due_on)::text as due_on, sum(i.amount_pence)::int as total, array_agg(i.id) as ids, max(i.status::text) as status
+// A payment belongs to the term whose payment date is nearest to when it was paid (a term isn't paid months early),
+// with the same total. If that term is already recorded as paid (e.g. TechSaga's paid terms, set when the schedules
+// were made), the payment is only linked to it: nothing changes. Several terms together (a full year) also match.
+type TermRow = { term_id: string; number: number; name: string; due_on: string; total: number; open_ids: string[]; paid: boolean };
+async function yearTerms(q: Q, parentId: string): Promise<TermRow[]> {
+  return q<TermRow>(`select i.term_id, t.number, t.name, min(i.due_on)::text as due_on, sum(i.amount_pence)::int as total,
+      coalesce(array_agg(i.id) filter (where i.status in ('scheduled', 'failed') and i.stripe_payment_intent_id is null), '{}') as open_ids,
+      bool_and(i.status in ('paid', 'part_refunded', 'waived') or i.stripe_payment_intent_id is not null) as paid
     from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id join terms t on t.id = i.term_id join academic_years y on y.id = t.academic_year_id
-    where s.parent_id = $1 and y.ends_on >= current_date and i.status in ('scheduled', 'failed') and i.stripe_payment_intent_id is null
+    where s.parent_id = $1 and y.ends_on >= current_date and i.status not in ('cancelled', 'refunded')
     group by i.term_id, t.number, t.name order by min(i.due_on)`, [parentId]);
 }
 const near = (a: number, b: number) => Math.abs(a - b) <= 2;   // pennies
+const daysBetween = (due: string, paid: string) => Math.round((Date.parse(due + "T12:00:00Z") - Date.parse(paid)) / 864e5);
+const dm = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+type Match = { terms: TermRow[]; already: boolean; why: string } | null;
+/** The term(s) a payment was for, or null. `used`: terms already taken by other payments in this pass. */
+function matchTerms(all: TermRow[], amount: number, paidAt: string, desc: string | null, used: Set<string>): Match {
+  const terms = all.filter((t) => !used.has(t.term_id));
+  const named = Number((desc ?? "").match(/\bterm\s*([1-6])\b/i)?.[1] ?? 0);
+  // one term: same total, payment date no more than 6 weeks before its payment date (or any time after)
+  const singles = terms.filter((t) => near(t.total, amount) && daysBetween(t.due_on, paidAt) <= 42)
+    .sort((a, b) => (named ? Number(b.number === named) - Number(a.number === named) : 0) || Math.abs(daysBetween(a.due_on, paidAt)) - Math.abs(daysBetween(b.due_on, paidAt)));
+  if (singles.length) { const t = singles[0];
+    return { terms: [t], already: t.paid, why: `${t.name} (payment date ${dm(t.due_on)})${named === t.number ? ", named on the payment" : ""}${t.paid ? ": already recorded as paid" : ""}` }; }
+  // several terms in one payment (e.g. the whole year), starting with the term due around the payment date
+  const start = terms.findIndex((t) => daysBetween(t.due_on, paidAt) >= -42);
+  if (start >= 0) { let sum = 0; for (let k = start; k < terms.length; k++) { sum += terms[k].total; if (k > start && near(sum, amount)) {
+    const pick = terms.slice(start, k + 1); return { terms: pick, already: pick.every((t) => t.paid), why: `${pick[0].name} to ${pick[pick.length - 1].name} together${pick.every((t) => t.paid) ? ": already recorded as paid" : ""}` }; } } }
+  return null;
+}
 export type Suggestion = { charge: { id: string; created_at: string; amount: number; refunded: number; email: string | null; description: string | null };
-  family: { id: string; name: string } | null; terms: { term_id: string; number: number; name: string; total: number; due_on: string; ids: string[] }[];
-  sure: boolean; options: { term_id: string; number: number; name: string; total: number; due_on: string }[]; why: string };
+  family: { id: string; name: string } | null; terms: { term_id: string; number: number; name: string; total: number; due_on: string }[];
+  sure: boolean; already: boolean; options: { term_id: string; number: number; name: string; total: number; due_on: string }[]; why: string };
 /** For each payment not yet matched: the family (by email) and the term(s) it most likely paid. */
 export async function suggestions(): Promise<Suggestion[]> {
   return withSchool(async (q) => {
     const rows = await q<{ id: string; created_at: string; amount_pence: number; refunded_pence: number; email: string | null; description: string | null; parent_id: string | null; family: string | null }>(`
       select c.id, c.created_at::text, c.amount_pence, c.refunded_pence, c.email::text, c.description, c.parent_id, p.first_name || ' ' || p.last_name as family
       from stripe_charges c left join parents p on p.id = c.parent_id where c.matched_at is null and not c.ignored and c.status = 'succeeded' and c.refunded_pence < c.amount_pence order by c.created_at`);
-    const taken = new Map<string, Set<string>>(), out: Suggestion[] = [];
+    const taken = new Map<string, Set<string>>(), cache = new Map<string, TermRow[]>(), out: Suggestion[] = [];
     for (const r of rows) {
       const ch = { id: r.id, created_at: r.created_at, amount: r.amount_pence - r.refunded_pence, refunded: r.refunded_pence, email: r.email, description: r.description };
-      if (!r.parent_id) { out.push({ charge: ch, family: null, terms: [], sure: false, options: [], why: r.email ? "No family with this email" : "No email on the payment" }); continue; }
+      if (!r.parent_id) { out.push({ charge: ch, family: null, terms: [], sure: false, already: false, options: [], why: r.email ? "No family with this email" : "No email on the payment" }); continue; }
       const used = taken.get(r.parent_id) ?? new Set<string>(); taken.set(r.parent_id, used);
-      const terms = (await unpaidTerms(q, r.parent_id)).filter((t) => !used.has(t.term_id));
-      let pick: TermDue[] = [], why = "";
-      const one = terms.find((t) => near(t.total, ch.amount));
-      if (one) { pick = [one]; why = `Matches ${one.name}`; }
-      else { let sum = 0; for (let k = 0; k < terms.length; k++) { sum += terms[k].total; if (k > 0 && near(sum, ch.amount)) { pick = terms.slice(0, k + 1); why = `Matches ${pick.length} terms together`; break; } } }
-      if (!pick.length) why = terms.length ? "Amount doesn’t match an unpaid term: choose one, or ignore" : "Nothing unpaid for this family this year";
-      for (const t of pick) used.add(t.term_id);
-      out.push({ charge: ch, family: { id: r.parent_id, name: r.family ?? r.email ?? "" }, terms: pick.map(({ status: _s, ...t }) => t), sure: pick.length > 0, why,
-        options: terms.map((t) => ({ term_id: t.term_id, number: t.number, name: t.name, total: t.total, due_on: t.due_on })) });
+      if (!cache.has(r.parent_id)) cache.set(r.parent_id, await yearTerms(q, r.parent_id));
+      const all = cache.get(r.parent_id)!, m = matchTerms(all, ch.amount, r.created_at, r.description, used);
+      for (const t of m?.terms ?? []) used.add(t.term_id);
+      const open = all.filter((t) => !t.paid && !used.has(t.term_id));
+      out.push({ charge: ch, family: { id: r.parent_id, name: r.family ?? r.email ?? "" }, terms: (m?.terms ?? []).map(({ open_ids: _o, paid: _p, ...t }) => t), sure: !!m, already: !!m?.already,
+        why: m?.why ?? (open.length ? "The amount and date don’t match a term: choose one, or set it aside" : "Nothing unpaid for this family this year"),
+        options: open.map((t) => ({ term_id: t.term_id, number: t.number, name: t.name, total: t.total, due_on: t.due_on })) });
     }
     return out;
   });
 }
-/** Mark the chosen terms paid by a Stripe payment (in this site only; nothing is sent to Stripe or to families). */
+/** Record a Stripe payment against the chosen terms (in this site only; nothing is sent to Stripe or to families).
+ *  Unpaid instalments of those terms are marked paid; terms already recorded as paid are just linked to the payment. */
 export async function applyMatch(q: Q, chargeId: string, termIds: string[], by: string): Promise<number> {
   const ch = (await q<{ parent_id: string | null; created_at: string; payment_intent: string | null; matched_at: string | null }>(`select parent_id, created_at::text, payment_intent, matched_at::text from stripe_charges where id = $1`, [chargeId]))[0];
   if (!ch?.parent_id || ch.matched_at || !termIds.length) return 0;
   const ids = await q<{ id: string; amount_pence: number }>(`update instalments i set status = 'paid', paid_at = $3::timestamptz, stripe_payment_intent_id = $4
     from enrolments e, students s where e.id = i.enrolment_id and s.id = e.student_id and s.parent_id = $1 and i.term_id = any($2::uuid[]) and i.status in ('scheduled', 'failed') and i.stripe_payment_intent_id is null
     returning i.id, i.amount_pence`, [ch.parent_id, termIds, ch.created_at, ch.payment_intent ?? chargeId]);
-  if (!ids.length) return 0;
   for (const x of ids) await q(`insert into ledger_entries (school_id, parent_id, kind, amount_pence, instalment_id, stripe_object_id, created_at) values (current_school(), $1, 'charge', $2, $3, $4, $5::timestamptz) on conflict (stripe_object_id) do nothing`,
     [ch.parent_id, x.amount_pence, x.id, `${chargeId}:${x.id}`, ch.created_at]);
-  await q(`update stripe_charges set instalment_ids = $2::uuid[], matched_at = now(), matched_by = $3 where id = $1`, [chargeId, ids.map((x) => x.id), by]);
+  const linked = ids.length ? ids.map((x) => x.id) : (await q<{ id: string }>(`select i.id from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id
+    where s.parent_id = $1 and i.term_id = any($2::uuid[]) and i.status in ('paid', 'part_refunded', 'waived')`, [ch.parent_id, termIds])).map((x) => x.id);
+  if (!linked.length) return 0;
+  await q(`update stripe_charges set instalment_ids = $2::uuid[], matched_at = now(), matched_by = $3 where id = $1`, [chargeId, linked, ids.length ? by : `${by} (already paid)`]);
   return ids.length;
 }
-export async function confirmMatches(by: string, picks: { charge: string; terms: string[] }[], ignore: string[]): Promise<{ terms: number; payments: number }> {
+export async function confirmMatches(by: string, picks: { charge: string; terms: string[] }[], ignore: string[]): Promise<{ terms: number; payments: number; linked: number }> {
   return withSchool(async (q) => {
-    let terms = 0, payments = 0;
-    for (const p of picks) { const n = await applyMatch(q, p.charge, p.terms, by); if (n) { terms += n; payments++; } }
+    let terms = 0, payments = 0, linked = 0;
+    for (const p of picks) { const n = await applyMatch(q, p.charge, p.terms, by); if (n) { terms += n; payments++; } else linked++; }
     for (const id of ignore) await q(`update stripe_charges set ignored = true where id = $1 and matched_at is null`, [id]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) select current_school(), null, 'stripe_match', 'school', current_school(), $1`, [JSON.stringify({ by, payments, terms })]).catch(() => {});
-    return { terms, payments };
+    return { terms, payments, linked };
+  });
+}
+
+/** Undo a recorded match: the terms it marked paid go back to unpaid (terms that were already paid before stay paid). */
+export async function undoMatch(chargeId: string, by: string): Promise<boolean> {
+  return withSchool(async (q) => {
+    const ch = (await q<{ instalment_ids: string[]; payment_intent: string | null; matched_at: string | null }>(`select instalment_ids, payment_intent, matched_at::text from stripe_charges where id = $1`, [chargeId]))[0];
+    if (!ch?.matched_at) return false;
+    await q(`update instalments set status = 'scheduled', paid_at = null, stripe_payment_intent_id = null where id = any($1::uuid[]) and stripe_payment_intent_id = $2 and status = 'paid'`, [ch.instalment_ids, ch.payment_intent ?? chargeId]);
+    // the money ledger is append-only, so its record of the payment stays; only the match to terms is undone
+    await q(`update stripe_charges set instalment_ids = '{}', matched_at = null, matched_by = null, ignored = false where id = $1`, [chargeId]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) select current_school(), null, 'stripe_unmatch', 'school', current_school(), $1`, [JSON.stringify({ by, charge: chargeId })]).catch(() => {});
+    return true;
   });
 }
 
@@ -181,15 +218,12 @@ export async function stripeWebhook(raw: string, sigHeader: string | null): Prom
     if (!ch?.parent_id) return;
     if (ch.status === "succeeded" && !ch.matched_at && ch.refunded_pence === 0 && c.auto !== false) {
       // a new payment that exactly matches one unpaid term (or several together) is recorded straight away
-      const terms = await unpaidTerms(q, ch.parent_id);
-      const one = terms.find((x) => near(x.total, ch.amount_pence));
-      let pick = one ? [one] : [];
-      if (!pick.length) { let s = 0; for (let k = 0; k < terms.length; k++) { s += terms[k].total; if (k > 0 && near(s, ch.amount_pence)) { pick = terms.slice(0, k + 1); break; } } }
-      if (pick.length) await applyMatch(q, ch.id, pick.map((x) => x.term_id), "auto");
+      const m = matchTerms(await yearTerms(q, ch.parent_id), ch.amount_pence, new Date().toISOString(), ev.data.object.description ?? null, new Set());
+      if (m) await applyMatch(q, ch.id, m.terms.map((x) => x.term_id), "auto");
     }
     if (ch.status === "failed" && !ch.matched_at) {
-      const due = (await unpaidTerms(q, ch.parent_id)).find((x) => near(x.total, ch.amount_pence) && x.due_on <= new Date(Date.now() + 3 * 864e5).toISOString().slice(0, 10));
-      if (due) await q(`update instalments set status = 'failed', attempts = attempts + 1 where id = any($1::uuid[]) and status = 'scheduled'`, [due.ids]);
+      const m = matchTerms((await yearTerms(q, ch.parent_id)).filter((x) => !x.paid), ch.amount_pence, new Date().toISOString(), ev.data.object.description ?? null, new Set());
+      if (m && m.terms.length === 1) await q(`update instalments set status = 'failed', attempts = attempts + 1 where id = any($1::uuid[]) and status = 'scheduled'`, [m.terms[0].open_ids]);
     }
     if (ch.matched_at && ch.refunded_pence > 0) {
       const full = ch.refunded_pence >= ch.amount_pence;

@@ -366,25 +366,26 @@ export async function saveWriteSheetAction(f: FormData): Promise<void> {
 }
 
 // ---------- 1:1 tutoring ----------
-const tutBack = (err: string | null, ok: string) => redirect(`/admin/tutoring?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok)}`);
+const tutBack = (err: string | null, ok: string, page = "/admin/tutoring") => redirect(`${page}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok)}`);
+const TSET = "/admin/tutoring-setup"; // prices and teachers' 1:1 times live in Settings
 export async function setTutorRateAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const price = pounds(str(f, "price", 12)), pay = pounds(str(f, "pay", 12)), aud = str(f, "audience", 10);
-  if (!(price >= 0 && pay >= 0) || !["public", "enrolled"].includes(aud)) return tutBack("Enter both amounts in pounds.", "");
+  if (!(price >= 0 && pay >= 0) || !["public", "enrolled"].includes(aud)) return tutBack("Enter both amounts in pounds.", "", TSET);
   await setTutorRate(me.id, str(f, "level", 40), aud, price, pay);
-  revalidatePath("/admin/tutoring"); tutBack(null, "Price saved.");
+  revalidatePath("/admin/tutoring"); revalidatePath(TSET); tutBack(null, "Price saved.", TSET);
 }
 export async function addAvailabilityAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const day = parseInt(str(f, "weekday", 1), 10), a = str(f, "start", 5), b = str(f, "end", 5);
-  if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(a) || !/^\d{2}:\d{2}$/.test(b) || b <= a) return tutBack("The end time must be after the start time.", "");
+  if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(a) || !/^\d{2}:\d{2}$/.test(b) || b <= a) return tutBack("The end time must be after the start time.", "", TSET);
   await addAvailability(me.id, str(f, "teacher", 40), day, a, b);
-  revalidatePath("/admin/tutoring"); tutBack(null, "Availability added.");
+  revalidatePath("/admin/tutoring"); revalidatePath(TSET); tutBack(null, "Availability added.", TSET);
 }
 export async function removeAvailabilityAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   await removeAvailability(me.id, str(f, "id", 40));
-  revalidatePath("/admin/tutoring"); tutBack(null, "Availability removed.");
+  revalidatePath("/admin/tutoring"); revalidatePath(TSET); tutBack(null, "Availability removed.", TSET);
 }
 export async function bookTutoringAction(f: FormData): Promise<void> {
   const me = await requireStaff();
@@ -1141,6 +1142,12 @@ export async function replyFromAction(f: FormData): Promise<void> {
   await setReplyFrom(String(f.get("from") ?? "").trim().slice(0, 200));
   mailBack("Saved. Reply buttons now open Gmail as that address.");
 }
+export async function signatureAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { saveSignature } = await import("@/lib/inbox");
+  await saveSignature(me.id, String(f.get("title") ?? ""));
+  mailBack("Your signature is saved. It goes under every reply you send from here.");
+}
 // ---------- Post designs: Canva connection and the picture library ----------
 const dsBack = (ok?: string | null, err?: string | null) => redirect(`/admin/social?view=pictures` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
 async function dsAdmin() { const me = await requireStaff(); if (me.role !== "school_admin") dsBack(null, "Only a school admin can change this."); return me; }
@@ -1354,5 +1361,12 @@ export async function confirmStripeAction(f: FormData): Promise<void> {
   }
   const r = await confirmMatches(me.name, picks.slice(0, 500), ignore.slice(0, 500));
   revalidatePath("/admin/families"); revalidatePath("/admin/payments");
-  stBack("ok", `Recorded ${r.payments} payment${r.payments === 1 ? "" : "s"} against ${r.terms} course term${r.terms === 1 ? "" : "s"}${ignore.length ? `; ${ignore.length} set aside` : ""}. Nothing was sent to Stripe or to families.`);
+  stBack("ok", `Recorded ${r.payments} payment${r.payments === 1 ? "" : "s"} against ${r.terms} course term${r.terms === 1 ? "" : "s"}${r.linked ? `; linked ${r.linked} to terms already recorded as paid` : ""}${ignore.length ? `; ${ignore.length} set aside` : ""}. Nothing was sent to Stripe or to families.`);
+}
+export async function undoStripeMatchAction(f: FormData): Promise<void> {
+  const me = await stripeAdmin();
+  const { undoMatch } = await import("@/lib/stripe-read");
+  const ok = await undoMatch(String(f.get("id") ?? "").slice(0, 80), me.name);
+  revalidatePath("/admin/families"); revalidatePath("/admin/payments");
+  stBack(ok ? "ok" : "err", ok ? "Undone: that payment is back in the list to record, and the terms it marked paid are unpaid again." : "That payment wasn’t recorded.");
 }

@@ -5,7 +5,7 @@ import { saveEmailDesignAction } from "../../actions";
 import { automations } from "@/lib/automations";
 import { Composer, NotConnected } from "../../Composer";
 import { inboxStatus, inboxList } from "@/lib/inbox";
-import { syncInboxAction, markInboxAction, disconnectInboxAction, replyFromAction } from "../../actions";
+import { syncInboxAction, markInboxAction, disconnectInboxAction, replyFromAction, signatureAction } from "../../actions";
 import { InboxReply } from "../../InboxReply";
 import { requireStaff } from "@/lib/auth";
 
@@ -61,6 +61,8 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
       <p className="note" style={{ marginTop: 10 }}>Google Meet has to be connected first (Attendance → Google Meet), because the inbox uses the same Google app.</p></section></>;
     const show = sp.show === "all" ? "all" : "new";
     const [{ rows }, me] = await Promise.all([inboxList(show), requireStaff()]);
+    const { signatureFor } = await import("@/lib/inbox");
+    const sig = await signatureFor(me);
     const gm = (t: string, mb?: string | null) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(mb || box.mailbox)}#all/${t}`;
     const many = box.mailboxes.length > 1;
     return <>{head}
@@ -76,7 +78,13 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
             {m.parent_id && <> · <Link href={`/admin/families/${m.parent_id}`}>{m.family}</Link></>}{m.from_name ? ` · ${m.from_email}` : ""}{many && m.mailbox ? ` · to ${m.mailbox}` : ""}</span></div>
         <a className="abtn sm" href={gm(m.thread_id, m.mailbox)} target="_blank" rel="noopener">Open in Gmail</a>
         <form action={markInboxAction}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="show" value={show} /><input type="hidden" name="read" value={m.read ? "0" : "1"} /><button className="abtn sm" type="submit">{m.read ? "Mark unread" : "Mark read"}</button></form>
-        <InboxReply id={m.id} first={(m.from_name || m.family || "").split(" ")[0] || "there"} signoff={me.name.split(" ")[0]} from={box.replyFrom} replied={!!m.replied_at} /></div>)}</section>
+        <InboxReply id={m.id} first={(m.from_name || m.family || "").split(" ")[0] || "there"} sig={sig} from={box.replyFrom} replied={!!m.replied_at} /></div>)}</section>
+      <section className="card"><h2>Your signature</h2>
+        <p className="cs">Added under every reply you send from here, with the school logo in blue (most families read email in light mode).</p>
+        <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-end" }}>
+          <form action={signatureAction} className="eform" style={{ margin: 0 }}><label className="fld">Your job title<input name="title" defaultValue={sig.title} maxLength={80} placeholder="e.g. Founder and Head of School" className="mini" style={{ width: 280 }} /></label><button className="abtn sm" type="submit">Save</button></form>
+          <div className="irp-sig sigcard"><b>{sig.name}</b>{sig.title && <span>{sig.title}</span>}<img src={sig.logo} alt="OH-SO ED Online School" width={120} /></div>
+        </div></section>
       <section className="card"><h2>Inboxes</h2>
         <p className="cs">Read-only, checked every 15 minutes while the admin is open{box.info.at ? `; last checked ${when(box.info.at)}` : ""}.{box.info.error ? ` Last check had a problem: ${box.info.error}` : ""} An email sent to more than one of these shows once.</p>
         {box.mailboxes.map((b) => <div className="li" key={b.mailbox}><div className="t"><b>{b.mailbox}</b><span>connected by {b.by}</span></div>

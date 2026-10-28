@@ -1,5 +1,6 @@
 import "server-only";
 import { withSchool } from "./db";
+import { siteBase } from "./social";
 import { googleAccess, mailboxAccess, googleKv, googleKvSet, GMAIL_URL, MeetError, type Mailbox } from "./meet";
 
 // Admin → Email → Inbox, as in the prototype: replies and emails from families, read (read-only) from the school's Gmail inbox
@@ -152,6 +153,27 @@ export async function inboxMessage(id: string): Promise<FullEmail | { error: str
 }
 const hdr = (s: string) => /^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffer.from(s).toString("base64")}?=`;
 /** Send a reply from the Reply-from inbox, threaded with the family's email (In-Reply-To / References). */
+
+// ---------- Each staff member's email signature: name, job title and the school logo (blue, for light-mode inboxes) ----------
+export type Signature = { name: string; title: string; logo: string };
+const sigEsc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+export async function signatureFor(user: { id: string; name: string }): Promise<Signature> {
+  const [v, base] = await Promise.all([googleKv<{ title?: string }>(`sig_${user.id}`).catch(() => null), siteBase().catch(() => "")]);
+  const site = (process.env.SITE_URL || base || "").replace(/\/$/, "");
+  return { name: user.name, title: v?.title ?? "", logo: site ? `${site}/ose-logo-blue.png` : "/ose-logo-blue.png" };
+}
+export async function saveSignature(userId: string, title: string) {
+  await googleKvSet(`sig_${userId}`, { title: title.replace(/\s+/g, " ").trim().slice(0, 80) });
+}
+/** The reply as an HTML email: the text as written, then the signature with the logo underneath. */
+export function replyHtml(body: string, sig: Signature): string {
+  const p = sigEsc(body).replace(/\n/g, "<br>");
+  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1a1f3d">${p}`
+    + `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.4;color:#1a1f3d">`
+    + `<b>${sigEsc(sig.name)}</b>${sig.title ? `<br><span style="color:#4a5170">${sigEsc(sig.title)}</span>` : ""}</td></tr>`
+    + `<tr><td style="padding-top:10px"><img src="${sigEsc(sig.logo)}" width="140" alt="OH-SO ED Online School" style="display:block;border:0;width:140px;height:auto"></td></tr></table></div>`;
+}
+
 export async function replyInbox(actor: { id: string; name: string }, id: string, text: string): Promise<string | null> {
   const body = text.replace(/\r\n/g, "\n").trim();
   if (!body) return "Write a reply first.";
@@ -171,10 +193,14 @@ export async function replyInbox(actor: { id: string; name: string }, id: string
         if (r.ok) { const h = Object.fromEntries((((await r.json()) as { payload?: { headers?: { name: string; value: string }[] } }).payload?.headers ?? []).map((x) => [x.name.toLowerCase(), x.value])); msgId = h["message-id"] ?? msgId; refs = h.references ?? ""; }
       }
     }
+    // the reply goes as text and HTML, with the signature (name, job title, logo) under it
+    const sig = await signatureFor(actor), text = `${body}\n\n${sig.name}${sig.title ? `\n${sig.title}` : ""}`;
+    const bnd = `ose-${crypto.randomUUID()}`;
+    const part = (type: string, content: string) => [`--${bnd}`, `Content-Type: ${type}; charset=UTF-8`, "Content-Transfer-Encoding: base64", "", Buffer.from(content).toString("base64").replace(/(.{76})/g, "$1\r\n")];
     const subject = /^re:/i.test(m.subject) ? m.subject : `Re: ${m.subject}`;
     const to = m.from_name ? `${hdr(m.from_name.replace(/["\\]/g, ""))} <${m.from_email}>` : m.from_email;
     const raw = [`From: ${hdr(actor.name)} <${from}>`, `To: ${to}`, `Subject: ${hdr(subject)}`, ...(msgId ? [`In-Reply-To: ${msgId}`, `References: ${(refs + " " + msgId).trim()}`] : []),
-      "MIME-Version: 1.0", "Content-Type: text/plain; charset=UTF-8", "Content-Transfer-Encoding: base64", "", Buffer.from(body).toString("base64").replace(/(.{76})/g, "$1\r\n")].join("\r\n");
+      "MIME-Version: 1.0", `Content-Type: multipart/alternative; boundary="${bnd}"`, "", ...part("text/plain", text), ...part("text/html", replyHtml(body, sig)), `--${bnd}--`, ""].join("\r\n");
     const sameBox = (m.mailbox ?? st.mailbox) === from;
     const r = await fetch(`${GMAIL_URL()}/users/me/messages/send`, { method: "POST", signal: AbortSignal.timeout(20000),
       headers: { authorization: `Bearer ${sender.token}`, "content-type": "application/json" },

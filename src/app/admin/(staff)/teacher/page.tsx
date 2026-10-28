@@ -43,7 +43,7 @@ export default async function MyDay() {
             {l.tasters.length ? ` · ${l.tasters.length} taster${l.tasters.length > 1 ? "s" : ""}: ${l.tasters.join(", ")}` : ""}
             {l.absent.length ? ` · away: ${l.absent.join(", ")}` : ""}</span></div>
           {l.d < today || l.status !== "scheduled" ? <Link className="abtn sm" href={`/admin/register/${l.id}`}>Attendance</Link>
-            : l.meet_url ? <a className="abtn sm pri" href={l.meet_url} target="_blank" rel="noopener">Join</a>
+            : l.meet_url ? null // the next lesson's Join button is at the top
             : <span className="pill mute" title="The office adds the Meet link to the class">No Meet link</span>}
         </div>)}
       </section>

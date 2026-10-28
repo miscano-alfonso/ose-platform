@@ -4,7 +4,7 @@ import { withSchool } from "./db";
 
 // Logo and browser-tab icon (Admin → Website). Not set → the built-in files.
 export type BrandKind = "logo" | "icon";
-export const DEFAULT_SRC: Record<BrandKind, string> = { logo: "/ose-logo.png", icon: "/ose-icon.svg" };
+export const DEFAULT_SRC: Record<BrandKind, string> = { logo: "/ose-logo.svg", icon: "/ose-icon.svg" };
 export const BRAND_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 
 /** Image URLs for the page, with a version so a new upload shows straight away. */
