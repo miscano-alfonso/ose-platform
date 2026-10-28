@@ -8,14 +8,18 @@ const YEAR_SQL = `(select id from academic_years where ends_on >= current_date o
 
 export type FamState = "failed" | "overdue" | "unscheduled" | "check" | "paid" | "none";
 export type FamilyListRow = { id: string; name: string; email: string; children: { first: string; level: string }[]; courses: number;
-  state: FamState; next_on: string | null; next_due: number; checks: number };
+  state: FamState; next_on: string | null; next_due: number; checks: number; last_name: string;
+  /** the family's most recent course booking (and their first, to see how long they've been with the school) */
+  latest_on: string | null; latest_course: string | null; latest_child: string | null; first_on: string | null };
 
 export async function familyList(): Promise<FamilyListRow[]> {
   return withSchool((q) => q<FamilyListRow>(`
     with i as (select s.parent_id, i.* from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id
                join terms t on t.id = i.term_id where t.academic_year_id = ${YEAR_SQL}),
          nxt as (select parent_id, min(due_on) as d from i where status = 'scheduled' and due_on >= current_date group by parent_id)
-    select p.id, p.first_name || ' ' || p.last_name as name, p.email::text,
+    select p.id, p.first_name || ' ' || p.last_name as name, p.last_name, p.email::text,
+      lb.on_ as latest_on, lb.course as latest_course, lb.child as latest_child,
+      (select min(e.enrolled_at)::date::text from enrolments e join students s on s.id = e.student_id where s.parent_id = p.id and not e.is_taster) as first_on,
       coalesce((select json_agg(json_build_object('first', s.first_name, 'level',
           coalesce((select string_agg(distinct l.name, ', ') from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id
             where e.student_id = s.id and e.status = 'active' and not e.is_taster), '')) order by s.first_name) from students s where s.parent_id = p.id), '[]') as children,
@@ -29,6 +33,9 @@ export async function familyList(): Promise<FamilyListRow[]> {
       nxt.d::text as next_on, coalesce((select sum(amount_pence) from i where i.parent_id = p.id and i.status = 'scheduled' and i.due_on = nxt.d), 0)::int as next_due,
       (select count(*)::int from enrolments e join students s on s.id = e.student_id where s.parent_id = p.id and e.needs_check) as checks
     from parents p left join nxt on nxt.parent_id = p.id
+    left join lateral (select e.enrolled_at::date::text as on_, l.name || ' ' || sj.name as course, s.first_name as child
+      from enrolments e join students s on s.id = e.student_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+      where s.parent_id = p.id and not e.is_taster order by e.enrolled_at desc limit 1) lb on true
     order by p.last_name, p.first_name`));
 }
 
