@@ -619,3 +619,10 @@
 .adm .side .sf-row{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:nowrap}.adm .side .sf-row .theme-seg button{padding:4px 8px}
 .adm .side .sf-links{display:grid;gap:4px}.adm .side .sf-links a{font-size:14.5px;color:var(--muted)}.adm .side .sf-links a:hover{color:var(--ink)}
 @media (max-width:820px){.adm .side .side-foot{position:static;margin:0;padding:10px 0 0}}
+/* "Viewing as" bar stays at the top, so the side menu (and its Light/Dark + Sign out footer) fits the screen under it */
+@media (min-width:821px){
+  .adm:has(>.viewbar) .viewbar{position:sticky;top:0;z-index:40;height:46px;box-sizing:border-box;flex-wrap:nowrap;overflow:hidden}
+  .adm:has(>.viewbar) .viewbar span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .adm:has(>.viewbar) .side{top:46px;height:calc(100vh - 46px)}
+}
+@media (min-width:821px){.adm .side{height:100dvh}.adm:has(>.viewbar) .side{height:calc(100dvh - 46px)}}

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { requireViewer } from "@/lib/auth";
-import { withSchool, schoolsFor, siteSchool, SCHOOL_COOKIE } from "@/lib/db";
+import { withSchool } from "@/lib/db";
 import { signOutAction, stopViewingAction } from "../actions";
 import "../admin.css";
 import { DashStyles } from "../DashStyles";
@@ -11,7 +11,6 @@ import { LessonWindow } from "../../LessonWindow";
 import { menuFor } from "@/lib/menu-config";
 import { after } from "next/server";
 import { checkinsBackground } from "@/lib/checkins";
-import { Switchers } from "../Switchers";
 import { TopBar, SideFoot } from "../TopBar";
 
 export const dynamic = "force-dynamic";
@@ -42,15 +41,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       and (select m.sender from messages m where m.thread_id = th.id order by m.created_at desc limit 1) = 'parent') as msgs,
     (select count(*)::int from report_entries e join report_cycles cy on cy.id = e.cycle_id join course_groups g on g.id = e.group_id join teachers t on t.id = g.teacher_id
       where t.user_id = $1 and cy.status <> 'published' and e.status in ('todo','draft','returned')) as reports`, [me.id]));
-  let switchers = null;
-  if (me.viewing) {
-    const jar = await cookies();
-    const [schools, teachers] = await Promise.all([schoolsFor(me.realEmail ?? ""), withSchool((q) => q<{ id: string; name: string }>(`select u.id, u.name from teachers t join users u on u.id = t.user_id
-      where t.archived_at is null and u.disabled_at is null order by u.name`))]);
-    const views = [{ value: "admin", label: "Admin" }, ...teachers.map((t) => ({ value: `t:${t.id}`, label: `Teacher: ${t.name}` })),
-      { value: "p", label: "Parent…" }, { value: "s", label: "Student…" }];
-    switchers = <Switchers schools={schools.map((x) => ({ value: x.slug, label: x.name }))} school={jar.get(SCHOOL_COOKIE)?.value || siteSchool()} views={views} view={`t:${me.id}`} showSchool={false} />;
-  }
+
   return <div className="adm" data-theme={theme} style={style}><DashStyles />
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
@@ -59,7 +50,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports }} groups={await menuFor("teacher")} />
-        <SideFoot theme={theme} signOut={signOutAction} switchers={switchers} />
+        <SideFoot theme={theme} signOut={signOutAction} />
       </aside>
       <main className="main"><TopBar />{children}</main>
     </div></div>;
