@@ -664,3 +664,9 @@
   .adm .sb-side{max-height:calc(100dvh - 290px);min-height:380px;top:16px}
   .adm .sb-view{height:calc(100dvh - 290px);min-height:380px;overflow:hidden}
 }
+/* tall dashboard cards whose list scrolls inside (teacher My day: This week, Reports) */
+.adm .dx-card.dx-tall{height:clamp(400px,calc(100dvh - 620px),680px);display:flex;flex-direction:column}
+.adm .dx-card.dx-tall>header{flex:none}
+.adm .dx-scroll{flex:1;min-height:0;overflow:auto;margin-right:-8px;padding-right:8px;overscroll-behavior:contain}
+.adm .dx-scroll>.fx-row:first-child{margin-top:0}
+@media (max-width:820px){.adm .dx-card.dx-tall{height:auto;min-height:0}.adm .dx-scroll{max-height:420px}}

@@ -35,8 +35,8 @@ export default async function MyDay() {
       <div className="dx-kpi ring c3"><div><span className="k">Reports written</span><span className="v">{rpct == null ? "–" : `${rpct}%`}</span><span className="h">{total ? `${done} of ${total}` : "none open"}</span></div><Ring pct={rpct} /></div>
       <Link href="/admin/teacher/ones" className="dx-kpi c3"><Ico d={IC.users} /><span className="k">1:1s this week</span><span className="v">{d.onesThisWeek}</span><span className="h">See 1:1s →</span></Link>
       <Link href="/admin/teacher/pay" className="dx-kpi c3"><Ico d={IC.pound} /><span className="k">My pay this term</span><span className="v">{gbp(d.payThisTerm)}</span><span className="h">{d.term ? `paid ${dm(d.term.pay_date)}` : ""}</span></Link>
-      <section className="dx-card c7"><header><h2>This week</h2><Link className="dx-more" href="/admin/teacher/timetable">Timetable →</Link></header>
-        {d.week.length === 0 ? <p className="empty">No lessons in the next 7 days.</p> : d.week.slice(0, 12).map((l) => <div className="fx-row" key={l.id}>
+      <section className="dx-card c7 dx-tall"><header><h2>This week</h2><Link className="dx-more" href="/admin/teacher/timetable">Timetable →</Link></header>
+        {d.week.length === 0 ? <p className="empty">No lessons in the next 7 days.</p> : <div className="dx-scroll">{d.week.map((l) => <div className="fx-row" key={l.id}>
           <span className="fx-when">{wd(l.d)} {dm(l.d)}</span>
           <div className="t"><b>{l.time} · {l.name}</b><span>{l.students} student{l.students === 1 ? "" : "s"}
             {l.not_in_classroom ? ` · ${l.not_in_classroom} not in Classroom yet` : ""}
@@ -45,9 +45,9 @@ export default async function MyDay() {
           {l.d < today || l.status !== "scheduled" ? <Link className="abtn sm" href={`/admin/register/${l.id}`}>Attendance</Link>
             : l.meet_url ? null // the next lesson's Join button is at the top
             : <span className="pill mute" title="The office adds the Meet link to the class">No Meet link</span>}
-        </div>)}
+        </div>)}</div>}
       </section>
-      <section className="dx-card c5"><header><h2>{d.reportCycle ?? "Reports"}</h2><Link className="dx-more" href="/admin/teacher/reports">Write →</Link></header>
+      <section className="dx-card c5 dx-tall"><header><h2>{d.reportCycle ?? "Reports"}</h2><Link className="dx-more" href="/admin/teacher/reports">Write →</Link></header>
         {d.reportBars.length === 0 ? <p className="empty">No reports to write right now.</p> : <div className="bars">{d.reportBars.map((r) => <div className="brow" key={r.group_id}>
           <span className="lbl">{r.name}</span><div className="track"><i style={{ width: `${r.total ? r.done / r.total * 100 : 0}%` }} /></div><span className="num">{r.done}/{r.total}</span></div>)}</div>}
       </section>
