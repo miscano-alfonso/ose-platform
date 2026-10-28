@@ -22,7 +22,7 @@ export async function middleware(req: NextRequest) {
   }
   if (!pass) return next();
   // pictures and link previews that Facebook and Instagram fetch for Social posts stay reachable
-  if (/^\/api\/cron\/|^\/api\/stripe\/webhook$|^\/(social-img|s|newsletter|teacher-photo|brand|join)\/|^\/teachers\/[\w.-]+\.(webp|jpe?g|png)$|^\/ose-(logo|logo-blue|logo-white|icon)\.(png|svg)$/.test(path)) return next();
+  if (/^\/api\/cron\/|^\/api\/stripe\/webhook$|^\/(social-img|s|newsletter|teacher-photo|brand|join|cal)\/|^\/teachers\/[\w.-]+\.(webp|jpe?g|png)$|^\/ose-(logo|logo-blue|logo-white|icon)\.(png|svg)$/.test(path)) return next();
   if (/^\/osedtech(\/|$)/.test(path)) return robots(next());
   if (familyOrAdmin && demo) return robots(next());
   const auth = req.headers.get("authorization") || "";

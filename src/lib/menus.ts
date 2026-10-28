@@ -45,14 +45,14 @@ export const CATALOGUE: Record<MenuArea, MenuItem[]> = {
   ],
   teacher: [
     it("My day", "/admin/teacher", "home"), it("1:1s and workshops", "/admin/teacher/ones", "fam"), it("Messages", "/admin/teacher/messages", "mail"), it("Class chats", "/admin/teacher/chats", "chat"),
-    it("Reward points", "/admin/points", "star"), it("Reports to write", "/admin/teacher/reports", "rep"), it("My timetable", "/admin/teacher/timetable", "cal"), it("My pay", "/admin/teacher/pay", "gbp"),
+    it("Reward points", "/admin/points", "star"), it("Reports to write", "/admin/teacher/reports", "rep"), it("My timetable", "/admin/teacher/timetable", "cal"), it("Calendar sync", "/admin/teacher/calendar", "cal"), it("My pay", "/admin/teacher/pay", "gbp"),
   ],
   parent: [
     it("Home", "/parent", "home"), it("Attendance", "/parent/attendance", "att"), it("Assignments", "/parent/assignments", "rep"), it("Book a 1:1", "/parent/book", "fam"),
     it("Workshops", "/parent/workshops", "cal"), it("Messages", "/parent/messages", "mail"), it("Other parents", "/parent/connect", "fam"), it("My details", "/parent/details", "set"),
-    it("Privacy", "/parent/privacy", "set"), it("Reports", "/parent/reports", "rep"), it("Payments", "/parent/payments", "pay"),
+    it("Privacy", "/parent/privacy", "set"), it("Reports", "/parent/reports", "rep"), it("Payments", "/parent/payments", "pay"), it("Calendar sync", "/parent/calendar", "cal"),
   ],
-  student: [it("Home", "/student", "home"), it("My classes", CLASSES_TOKEN, "cls"), it("Chat", "/student/chat", "chat"), it("Rewards", "/student/rewards", "star")],
+  student: [it("Home", "/student", "home"), it("My classes", CLASSES_TOKEN, "cls"), it("Chat", "/student/chat", "chat"), it("Rewards", "/student/rewards", "star"), it("Calendar sync", "/student/calendar", "cal")],
 };
 
 const hrefs = (a: MenuArea, ...ls: string[]) => ls.map((l) => CATALOGUE[a].find((x) => x.label === l)!.href);
