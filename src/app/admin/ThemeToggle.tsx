@@ -7,7 +7,7 @@ export function ThemeToggle({ initial }: { initial: string }) {
   const [t, setT] = useState(initial === "light" || initial === "dark" ? initial : "auto");
   const pick = (v: string) => {
     setT(v);
-    document.querySelectorAll<HTMLElement>(".adm").forEach((el) => { if (v === "auto") el.removeAttribute("data-theme"); else el.setAttribute("data-theme", v); });
+    [document.documentElement, ...document.querySelectorAll<HTMLElement>(".adm")].forEach((el) => { if (v === "auto") el.removeAttribute("data-theme"); else el.setAttribute("data-theme", v); });
     document.cookie = `ose_theme=${v}; path=/; max-age=${v === "auto" ? 0 : 31536000}; samesite=lax`;
   };
   return <div className="theme-seg" role="group" aria-label="Colours">{OPTS.map(([v, l]) =>

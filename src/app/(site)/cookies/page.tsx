@@ -7,7 +7,7 @@ const COOKIES: [string, string, string][] = [
   ["ose_family", "Keeps parents and students signed in to their account", "Until you sign out, or a few hours"],
   ["ose_admin", "Keeps staff signed in to the school’s dashboard", "Until they sign out, or a few hours"],
   ["ose_school", "Remembers which school a staff member is working in", "8 hours"],
-  ["ose_theme", "Remembers light or dark mode in the dashboard", "1 year"],
+  ["ose_theme", "Remembers whether you chose light or dark mode", "1 year"],
   ["ose_site, ose_demo", "Only on the demo school: shows the demo website and dashboard", "4 hours"],
 ];
 

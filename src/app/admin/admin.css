@@ -2,7 +2,7 @@
 .adm{--bg:color-mix(in srgb,var(--brand) 4%,#f5f6f8);--panel:#fff;--ink:#171b2b;--muted:#5c6378;--line:color-mix(in srgb,var(--brand) 9%,#e2e4ea);--soft:color-mix(in srgb,var(--brand) 3%,#f7f8fa);--hover:color-mix(in srgb,var(--brand) 7%,#f2f3f6);
   --accent:var(--brand);--good:#177a46;--good-bg:#e3f4ea;--warn:#9a5b00;--warn-bg:#fdf1d8;--bad:#b42323;--bad-bg:#fbe5e5;--info:#2c4fb8;--info-bg:#e6ecfb;
   --track:#e7e9f0;--bar:#3b5fc7;--brand:#0f1747;--brand-accent:#e3cd4b;
-  background:var(--bg);color:var(--ink);font:16px/1.45 "Jost",system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
+  background:var(--bg);color:var(--ink);font:16px/1.45 "Space Grotesk","Jost",system-ui,-apple-system,"Segoe UI",sans-serif;min-height:100vh}
 @media (prefers-color-scheme:dark){.adm:not([data-theme=light]){--bg:color-mix(in srgb,var(--brand) 22%,#0c0e14);--panel:color-mix(in srgb,var(--brand) 16%,#171a23);--ink:#e7e9f1;--muted:#a0a7b8;--line:color-mix(in srgb,var(--brand) 22%,#2a2e3a);--soft:color-mix(in srgb,var(--brand) 18%,#1d2029);--hover:color-mix(in srgb,var(--brand) 22%,#232733);
   --accent:var(--brand-accent);--good:#5bd393;--good-bg:#1d3a2b;--warn:#f0b454;--warn-bg:#3a2f1a;--bad:#ff8080;--bad-bg:#3d2224;--info:#8fb0ff;--info-bg:#1f2840;--track:#2a2f40;--bar:#7f9cf0;color-scheme:dark}}
 .adm[data-theme=dark]{--bg:color-mix(in srgb,var(--brand) 22%,#0c0e14);--panel:color-mix(in srgb,var(--brand) 16%,#171a23);--ink:#e7e9f1;--muted:#a0a7b8;--line:color-mix(in srgb,var(--brand) 22%,#2a2e3a);--soft:color-mix(in srgb,var(--brand) 18%,#1d2029);--hover:color-mix(in srgb,var(--brand) 22%,#232733);
@@ -33,16 +33,16 @@
 .adm .side .who{margin-top:auto;font-size:15px;padding:10px 8px 0;border-top:1px solid rgba(255,255,255,.13);display:grid;gap:8px}
 .adm .main{min-width:0;padding:22px clamp(16px,3vw,34px) 48px}
 .adm .top{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-bottom:18px}
-.adm .top h1{font:600 30px/1.2 "Jost",sans-serif;margin:0}
+.adm .top h1{font:600 30px/1.2 "Space Grotesk","Jost",sans-serif;margin:0}
 .adm .top .sub{color:var(--muted);font-size:15.5px}
 .adm .grow{flex:1}
 .adm .tag{font-size:14.5px;color:var(--warn);background:var(--warn-bg);border-radius:999px;padding:3px 11px;white-space:nowrap}
 .adm .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-bottom:16px}
 .adm .tile{container-type:inline-size;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:4px;align-content:start}
-.adm .tile .k{font-size:15px;color:var(--muted)}.adm .tile .v{font:600 34.5px/1.1 "Jost",sans-serif;font-size:min(var(--tv,34.5px),19cqi);font-variant-numeric:tabular-nums;white-space:nowrap}.adm .tile .h{font-size:15px;color:var(--muted)}
+.adm .tile .k{font-size:15px;color:var(--muted)}.adm .tile .v{font:600 34.5px/1.1 "Space Grotesk","Jost",sans-serif;font-size:min(var(--tv,34.5px),19cqi);font-variant-numeric:tabular-nums;white-space:nowrap}.adm .tile .h{font-size:15px;color:var(--muted)}
 .adm .tile.alert{border-color:var(--bad)}.adm .tile.alert .v{color:var(--bad)}
 .adm .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;min-width:0;margin-bottom:16px}
-.adm .card h2{font:600 20.5px/1.3 "Jost",sans-serif;margin:0 0 4px}.adm .card .cs{color:var(--muted);font-size:15px;margin:0 0 12px}
+.adm .card h2{font:600 20.5px/1.3 "Space Grotesk","Jost",sans-serif;margin:0 0 4px}.adm .card .cs{color:var(--muted);font-size:15px;margin:0 0 12px}
 .adm .li{display:flex;align-items:center;gap:12px;padding:10px 0;border-top:1px solid var(--line)}.adm .li:first-of-type{border-top:0}
 .adm .li .t{flex:1;min-width:0}.adm .li .t b{display:block;font-weight:600}.adm .li .t span{color:var(--muted);font-size:15px}
 .adm .pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:14.5px;font-weight:500;white-space:nowrap}
@@ -59,7 +59,7 @@
 .adm .track i{display:block;height:100%;background:var(--bar)}.adm .track i.full{background:var(--warn)}
 .adm .muted{color:var(--muted)}.adm .empty{color:var(--muted);padding:6px 0}
 /* buttons: hover swaps the two colours, no tints */
-.adm .abtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--ink);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 13px;font:600 15.5px "Jost",sans-serif;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background-color .15s,color .15s,border-color .15s}
+.adm .abtn{display:inline-flex;align-items:center;justify-content:center;gap:6px;border:1.5px solid var(--ink);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 13px;font:600 15.5px "Space Grotesk","Jost",sans-serif;cursor:pointer;text-decoration:none;white-space:nowrap;transition:background-color .15s,color .15s,border-color .15s}
 .adm .abtn:hover{background:var(--ink);color:var(--panel)}
 .adm .abtn.pri{background:var(--brand-accent);border-color:var(--brand-accent);color:var(--brand-accent-ink,#0f1747)}.adm .abtn.pri:hover{background:var(--brand);color:var(--brand-accent);border-color:var(--brand-accent)}
 .adm .abtn.sm{padding:4px 10px;font-size:14.5px}
@@ -68,17 +68,17 @@
 .adm .editrow td{background:var(--soft)}
 .adm .eform{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
 .adm .fld{display:grid;gap:4px;font-size:14.5px;font-weight:600;color:var(--muted)}
-.adm .fld input,.adm .fld select{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 9px;font:16px "Jost",sans-serif;min-width:0}
+.adm .fld input,.adm .fld select{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 9px;font:16px "Space Grotesk","Jost",sans-serif;min-width:0}
 .adm .note{font-size:15px;color:var(--muted)}
 .adm .msg{white-space:pre-wrap;max-width:60ch}
 /* sign-in */
-.adm-auth{min-height:100vh;display:grid;place-items:center;background:#0f1747;padding:24px;font-family:"Jost",system-ui,sans-serif}
+.adm-auth{min-height:100vh;display:grid;place-items:center;background:#0f1747;padding:24px;font-family:"Space Grotesk","Jost",system-ui,sans-serif}
 .adm-auth .box{background:#fff;color:#171b2b;border-radius:16px;padding:28px;width:min(420px,100%);display:grid;gap:14px}
 .adm-auth .box img{height:44px;width:auto;background:#0f1747;border-radius:8px;padding:6px 10px;justify-self:start}
-.adm-auth h1{margin:0;font:600 27.5px "Jost",sans-serif}.adm-auth p{margin:0;color:#5c6378;font-size:16px}
+.adm-auth h1{margin:0;font:600 27.5px "Space Grotesk","Jost",sans-serif}.adm-auth p{margin:0;color:#5c6378;font-size:16px}
 .adm-auth label{display:grid;gap:5px;font-weight:600;font-size:16px}
-.adm-auth input{font:18.5px "Jost",sans-serif;padding:11px 12px;border:1.5px solid #d5d9ea;border-radius:10px}
-.adm-auth button{font:600 17px "Jost",sans-serif;padding:12px;border-radius:999px;border:2px solid #0f1747;background:#0f1747;color:#fff;cursor:pointer;transition:background-color .15s,color .15s}
+.adm-auth input{font:18.5px "Space Grotesk","Jost",sans-serif;padding:11px 12px;border:1.5px solid #d5d9ea;border-radius:10px}
+.adm-auth button{font:600 17px "Space Grotesk","Jost",sans-serif;padding:12px;border-radius:999px;border:2px solid #0f1747;background:#0f1747;color:#fff;cursor:pointer;transition:background-color .15s,color .15s}
 .adm-auth button:hover{background:#fff;color:#0f1747}
 .adm-auth .err{background:#fbe5e5;color:#9b1c1c;border-radius:8px;padding:9px 12px;font-size:16px}
 .adm-auth .ok{background:#e3f4ea;color:#177a46;border-radius:8px;padding:9px 12px;font-size:16px}
@@ -96,7 +96,7 @@
 .adm .msg.bad{color:var(--bad)}
 .adm .ttgrid{display:grid;gap:10px;overflow-x:auto;padding-bottom:6px}
 .adm .ttday{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px;min-width:150px;display:grid;gap:6px;align-content:start}
-.adm .ttday h3{margin:0 0 2px;font:600 16px Jost,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.adm .ttday h3{margin:0 0 2px;font:600 16px "Space Grotesk",Jost,sans-serif;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
 .adm .ttslot{border:1px solid var(--line);border-left:4px solid;border-radius:8px;padding:6px 8px;display:grid;gap:1px;font-size:15px}
 .adm .ttslot small{color:var(--muted);font-size:13px}
 .adm .slotchip{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:999px;padding:3px 4px 3px 12px;font-size:15px}
@@ -121,7 +121,7 @@
 .adm .sb-side{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;display:grid;gap:10px;max-height:calc(100vh - 150px);overflow:auto;position:sticky;top:12px}
 .adm .sb-bar{display:flex;gap:12px;align-items:end;flex-wrap:wrap}
 .adm .seg{display:inline-flex;border:1.5px solid var(--ink);border-radius:9px;overflow:hidden}
-.adm .seg button{font:600 15px "Jost",sans-serif;padding:7px 14px;border:0;background:var(--panel);color:var(--ink);cursor:pointer}
+.adm .seg button{font:600 15px "Space Grotesk","Jost",sans-serif;padding:7px 14px;border:0;background:var(--panel);color:var(--ink);cursor:pointer}
 .adm .seg button.on{background:var(--ink);color:var(--panel)}
 .adm .sb-page{flex:1;min-width:150px}.adm .sb-page select{font:inherit;font-weight:500;color:var(--ink);padding:6px 8px;border:1.5px solid var(--line);border-radius:8px;background:var(--panel)}
 .adm .sb-note{margin:0;font-size:14px}
@@ -168,7 +168,7 @@
 .adm .kv dt{color:var(--muted);font-weight:600;font-size:14.5px}.adm .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
 .adm .refbox{padding:10px 0;border-top:1px solid var(--line);display:grid;gap:2px}.adm .refbox:first-of-type{border-top:0}
 .adm .stmt{white-space:pre-line;line-height:1.6}
-.adm .sb-tabs{margin:0 0 14px}.adm .sb-tabs a{font:600 15.5px "Jost",sans-serif;padding:8px 18px;color:var(--ink);text-decoration:none;background:var(--panel)}
+.adm .sb-tabs{margin:0 0 14px}.adm .sb-tabs a{font:600 15.5px "Space Grotesk","Jost",sans-serif;padding:8px 18px;color:var(--ink);text-decoration:none;background:var(--panel)}
 .adm .sb-tabs a.on{background:var(--ink);color:var(--panel)}
 /* menu: one part open at a time */
 .adm .nav .ngrp-list{display:grid;gap:2px}
@@ -201,12 +201,12 @@
 .adm .switchers{display:grid;gap:8px;padding:0 4px}
 .adm .switchers .sw{display:grid;gap:4px}
 .adm .switchers label{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#c9cde4}
-.adm .switchers select{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:8px;padding:7px 9px;font:500 15px "Jost",sans-serif;width:100%}
+.adm .switchers select{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.28);color:#fff;border-radius:8px;padding:7px 9px;font:500 15px "Space Grotesk","Jost",sans-serif;width:100%}
 .adm .switchers option{color:#171b2b}
 .adm .viewbar{display:flex;align-items:center;gap:12px;flex-wrap:wrap;background:var(--brand-accent);color:var(--brand-accent-ink,#0f1747);padding:8px clamp(16px,3vw,34px);font-weight:500}
 @media (max-width:820px){.adm .switchers{grid-template-columns:1fr 1fr}}
 /* the ✦ Assistant (as in the prototype) */
-.adm .ag-btn{position:fixed;right:20px;bottom:20px;z-index:40;border:0;border-radius:999px;padding:10px 18px;background:var(--brand);color:#fff;border:2px solid var(--brand-accent);font:600 16px "Jost",sans-serif;box-shadow:0 8px 24px rgba(15,23,71,.25);cursor:pointer}
+.adm .ag-btn{position:fixed;right:20px;bottom:20px;z-index:40;border:0;border-radius:999px;padding:10px 18px;background:var(--brand);color:#fff;border:2px solid var(--brand-accent);font:600 16px "Space Grotesk","Jost",sans-serif;box-shadow:0 8px 24px rgba(15,23,71,.25);cursor:pointer}
 .adm .ag-btn:hover{background:var(--brand-accent);color:var(--brand-accent-ink,#0f1747)}
 .adm .ag{position:fixed;right:16px;bottom:76px;z-index:45;width:min(440px,calc(100vw - 32px));height:min(660px,calc(100vh - 100px));background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 18px 48px rgba(10,12,24,.25);display:grid;grid-template-rows:auto 1fr auto;overflow:hidden}
 .adm .ag-h{display:flex;gap:10px;align-items:flex-start;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line)}.adm .ag-h b{display:block;font-size:17px}.adm .ag-h span>span,.adm .ag-h div>span{font-size:14px;color:var(--muted)}
@@ -247,7 +247,7 @@
 /* bigger logo; the side menu can be hidden for more room */
 .adm .logo img{height:52px;margin:4px 8px 10px}
 .adm .side-toggle{position:fixed;z-index:30;bottom:14px;left:calc(var(--side-w) - 44px);display:inline-flex;align-items:center;gap:6px;height:32px;min-width:32px;padding:0 7px;border-radius:8px;
-  border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font:600 14px Jost,sans-serif}
+  border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:#fff;cursor:pointer;font:600 14px "Space Grotesk",Jost,sans-serif}
 .adm .side-toggle:hover{background:rgba(255,255,255,.18)}
 .adm .app.side-closed{grid-template-columns:0 minmax(0,1fr)}
 .adm .app.side-closed .side{visibility:hidden;padding:0;overflow:hidden}
@@ -264,12 +264,12 @@
 .adm .dx-hero::after{content:"";position:absolute;right:-110px;bottom:-170px;width:300px;height:300px;border-radius:50%;border:34px solid color-mix(in srgb,var(--brand-accent) 22%,transparent);pointer-events:none}
 .adm .dx-hi{display:grid;gap:6px;min-width:0;position:relative;z-index:1}
 .adm .dx-date{margin:0;font-size:13px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:color-mix(in srgb,#fff 70%,transparent)}
-.adm .dx-hero h1{margin:0;font:500 clamp(30px,4vw,44px)/1.05 "Jost",sans-serif;letter-spacing:-.01em}
+.adm .dx-hero h1{margin:0;font:500 clamp(30px,4vw,44px)/1.05 "Space Grotesk","Jost",sans-serif;letter-spacing:-.01em}
 .adm .dx-term{margin:4px 0 0;color:color-mix(in srgb,#fff 82%,transparent)}
 .adm .dx-prog{height:8px;border-radius:99px;background:rgba(255,255,255,.16);overflow:hidden;max-width:460px;margin-top:6px}
 .adm .dx-prog i{display:block;height:100%;border-radius:99px;background:var(--brand-accent)}
 .adm .dx-today{position:relative;z-index:1;display:grid;gap:2px;justify-items:end;text-align:right}
-.adm .dx-big{font:600 52px/1 "Jost",sans-serif;font-variant-numeric:tabular-nums}
+.adm .dx-big{font:600 52px/1 "Space Grotesk","Jost",sans-serif;font-variant-numeric:tabular-nums}
 .adm .dx-today small{color:color-mix(in srgb,#fff 75%,transparent);font-size:14px}
 .adm .dx-acts{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;margin-top:12px}
 .adm .dx-acts a{color:#fff;text-decoration:none;font-size:14px;font-weight:500;padding:7px 13px;border-radius:99px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(6px);transition:background-color .15s}
@@ -286,7 +286,7 @@
 .adm .dx-kpi.ring{grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px}
 .adm .dx-kpi.ring>div{display:grid;gap:3px;min-width:0}
 .adm .dx-kpi .k{font-size:14px;color:var(--muted)}
-.adm .dx-kpi{container-type:inline-size}.adm .dx-kpi .v{font:600 min(30px,15cqi)/1.1 "Jost",sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em}
+.adm .dx-kpi{container-type:inline-size}.adm .dx-kpi .v{font:600 min(30px,15cqi)/1.1 "Space Grotesk","Jost",sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap;letter-spacing:-.01em}
 .adm .dx-kpi .h{font-size:13.5px;color:var(--muted)}
 .adm .dx-kpi.alert{border-color:color-mix(in srgb,var(--bad) 55%,var(--line));background:color-mix(in srgb,var(--bad) 7%,var(--panel))}.adm .dx-kpi.alert .v{color:var(--bad)}
 .adm .dx-kpi.ok .dx-ico{color:var(--good);background:var(--good-bg)}
@@ -308,7 +308,7 @@
 .adm .dx-col{display:grid;gap:16px;min-width:0}
 .adm .dx-card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:18px 20px;box-shadow:0 1px 2px rgba(0,0,0,.04);min-width:0}
 .adm .dx-card>header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
-.adm .dx-card h2{margin:0;font:600 19px/1.2 "Jost",sans-serif}
+.adm .dx-card h2{margin:0;font:600 19px/1.2 "Space Grotesk","Jost",sans-serif}
 .adm .dx-more{margin-left:auto;font-size:14px;font-weight:500;color:var(--muted);text-decoration:none}.adm .dx-more:hover{color:var(--ink)}
 .adm .dx-sub{margin-left:auto;font-size:13.5px;color:var(--muted)}
 .adm .dx-count{display:inline-grid;place-items:center;min-width:24px;height:24px;padding:0 7px;border-radius:99px;background:var(--bad);color:#fff;font-size:13px;font-weight:600}
@@ -317,7 +317,7 @@
 .adm .dx-tl{list-style:none;margin:0;padding:0;display:grid;gap:8px}
 .adm .dx-tl li{display:grid;grid-template-columns:62px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--soft);border:1px solid transparent;position:relative}
 .adm .dx-tl li::before{content:"";position:absolute;left:0;top:10px;bottom:10px;width:4px;border-radius:0 4px 4px 0;background:var(--c)}
-.adm .dx-tl .tm{font:600 16px/1.1 "Jost",sans-serif;font-variant-numeric:tabular-nums;display:grid;padding-left:6px}.adm .dx-tl .tm small{font-weight:400;font-size:12.5px;color:var(--muted)}
+.adm .dx-tl .tm{font:600 16px/1.1 "Space Grotesk","Jost",sans-serif;font-variant-numeric:tabular-nums;display:grid;padding-left:6px}.adm .dx-tl .tm small{font-weight:400;font-size:12.5px;color:var(--muted)}
 .adm .dx-tl .bd{display:grid;min-width:0}.adm .dx-tl .bd b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.adm .dx-tl .bd span{font-size:13.5px;color:var(--muted)}
 .adm .dx-tl .ac{display:flex;gap:8px;align-items:center}
 .adm .dx-tl li.done{opacity:.55}
@@ -357,3 +357,67 @@
 .adm .dx-steps span{font-size:13.5px;color:var(--muted)}
 .adm .dx-bars{height:180px}
 .adm .dx-bars .col{border-radius:8px 8px 0 0}.adm .dx-bars .col i{border-radius:8px 8px 0 0}
+
+/* ---------- Bento (Oct 2026): every dashboard (admin, teachers, parents, students) in light and dark ---------- */
+.adm{--bg:#f3f4f8;--panel:#ffffff;--ink:#0f1747;--muted:#4b5274;--line:#e2e4ee;--soft:#f3f4f8;--hover:#eceef6;--track:#e7e9f0;
+  --rail:#ffffff;--rail-on:#0f1747;--rail-on-ink:#ffffff;--pop:#e9f56a;--pop-ink:#0d0f1c;--sky:#1f6f96;--bar:#2c4fb8;
+  font-family:"Space Grotesk","Jost",system-ui,sans-serif}
+@media (prefers-color-scheme:dark){.adm:not([data-theme=light]){--bg:#0d0f1c;--panel:#171a2e;--ink:#eef0f7;--muted:#b9c0e4;--line:#2a2e4a;--soft:#1e2238;--hover:#232741;--track:#2a2e4a;
+  --rail:#0a0c17;--rail-on:#e9f56a;--rail-on-ink:#0d0f1c;--sky:#8fd6f0;--bar:#8fb0ff}}
+.adm[data-theme=dark]{--bg:#0d0f1c;--panel:#171a2e;--ink:#eef0f7;--muted:#b9c0e4;--line:#2a2e4a;--soft:#1e2238;--hover:#232741;--track:#2a2e4a;
+  --rail:#0a0c17;--rail-on:#e9f56a;--rail-on-ink:#0d0f1c;--sky:#8fd6f0;--bar:#8fb0ff}
+
+/* the menu becomes a quiet rail */
+.adm .side{background:var(--rail);color:var(--ink);border-right:1px solid var(--line)}
+.adm .nav a,.adm .nav span{color:var(--muted);border-radius:12px}
+.adm .nav a:hover{background:var(--hover);color:var(--ink)}
+.adm .nav a[aria-current=page]{background:var(--rail-on);color:var(--rail-on-ink);box-shadow:none}
+.adm .nav a[aria-current=page]:hover{background:var(--rail-on)}
+.adm .nav span{color:var(--muted);opacity:.7}
+.adm .nav .ngrp,.adm .side .who{border-top-color:var(--line)}
+.adm .nav .ngrp summary,.adm .nav .ngrp-h{color:var(--muted)}
+.adm .nav .ngrp summary:hover,.adm .nav .ngrp-h:hover,.adm .nav .ngrp-h:focus-visible{background:var(--hover);color:var(--ink)}
+.adm .nav .cnt{background:var(--pop);color:var(--pop-ink)}
+.adm .theme-seg{border-color:var(--line)}.adm .theme-seg button{color:var(--ink)}
+.adm .theme-seg button[aria-pressed=true]{background:var(--rail-on);color:var(--rail-on-ink)}
+.adm .abtn.side-btn{border-color:var(--line);color:var(--ink)}.adm .abtn.side-btn:hover{background:var(--hover);color:var(--ink)}
+.adm .side-toggle{border-color:var(--line);background:var(--panel);color:var(--ink)}.adm .side-toggle:hover{background:var(--hover)}
+.adm .side a[href="/"]{color:var(--muted)!important}
+.adm .side select{background:var(--panel);color:var(--ink);border-color:var(--line)}
+/* the white logo turns navy on the light rail */
+.adm[data-theme=light] .side .logo img{filter:brightness(0) invert(9%) sepia(60%) saturate(3600%) hue-rotate(228deg) brightness(88%)}
+@media not all and (prefers-color-scheme:dark){.adm:not([data-theme=dark]) .side .logo img{filter:brightness(0) invert(9%) sepia(60%) saturate(3600%) hue-rotate(228deg) brightness(88%)}}
+.adm[data-theme=light] .side a.logo,.adm .side a.logo{color:var(--ink)!important}
+
+/* tiles and buttons */
+.adm .card{border-radius:24px;padding:20px 22px}
+.adm .tile{border-radius:20px}
+.adm .tw{border-radius:18px}
+.adm .abtn{border-radius:999px;border-color:var(--line);font-weight:600}
+.adm .abtn:hover{border-color:var(--ink)}
+.adm .abtn.pri{background:var(--pop);border-color:var(--pop);color:var(--pop-ink)}
+.adm .abtn.pri:hover{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+.adm .pill{border-radius:999px}
+.adm .ag-btn{background:var(--pop);color:var(--pop-ink);border:0}
+.adm .ag-btn:hover{background:var(--ink);color:var(--bg)}
+.adm .viewbar{background:var(--pop);color:var(--pop-ink)}
+.adm input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]),.adm select,.adm textarea{border-radius:12px}
+.adm h1{letter-spacing:-.02em}
+
+/* dashboard home: hero stays in the school's colours; Bento greys and lime elsewhere */
+.adm .dx-hero{background:radial-gradient(circle at 88% 10%,color-mix(in srgb,var(--brand) 55%,#5b6cff) 0%,transparent 55%),linear-gradient(125deg,var(--brand),color-mix(in srgb,var(--brand) 55%,#000))}
+.adm .dx-hero::after{border-color:color-mix(in srgb,var(--pop) 22%,transparent)}
+.adm .dx-prog i,.adm .dx-meter i{background:var(--pop)}
+.adm .dx-acts a{border-radius:999px}
+.adm .dx-kpi,.adm .dx-card{border-radius:24px}
+.adm .dx-ring .val{stroke:var(--pop)}
+.adm[data-theme=light] .dx-ring .val{stroke:var(--ink)}
+@media not all and (prefers-color-scheme:dark){.adm:not([data-theme=dark]) .dx-ring .val{stroke:var(--ink)}.adm:not([data-theme=dark]) .dx-prog i{background:var(--pop)}}
+.adm .dx-ico{color:var(--ink);background:var(--soft)}
+.adm[data-theme=dark] .dx-ico{color:var(--pop);background:var(--soft)}
+@media (prefers-color-scheme:dark){.adm:not([data-theme=light]) .dx-ico{color:var(--pop);background:var(--soft)}}
+.adm .dx-tl li,.adm .dx-item{border-radius:16px}
+.adm .dx-person .av{background:var(--soft)}
+.adm .dx-count{background:var(--pop);color:var(--pop-ink)}
+.adm .nav a span{color:inherit;opacity:1}
+.adm .segl a[aria-current]{background:var(--rail-on);color:var(--rail-on-ink)}

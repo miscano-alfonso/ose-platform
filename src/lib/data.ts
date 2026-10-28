@@ -184,3 +184,22 @@ export async function getCoursePage(slug: string): Promise<CoursePage | null> {
       topics: page?.topics ?? [], exam_board: page?.exam_board ?? null, intro: page?.intro ?? null, video: page?.video ?? null, video_title: page?.video_title ?? null, groups };
   });
 }
+
+/** The home page's "live now" and "next" tiles: today's lessons (London time), the one on now and the next to start. */
+export type NowLesson = { level: string; subject: string; teacher: string | null; starts: string; ends: string; date: string; page_slug: string | null };
+export async function getNowNext(): Promise<{ live: NowLesson | null; next: NowLesson | null }> {
+  try {
+    return await withSchool(async (q) => {
+      const rows = await q<NowLesson & { state: string }>(`with n as (select (now() at time zone 'Europe/London') as t)
+        select l.name as level, sj.name as subject, split_part(u.name, ' ', 1) as teacher, to_char(sl.starts_at,'HH24:MI') as starts, to_char(sl.ends_at,'HH24:MI') as ends,
+          ev.lesson_date::text as date, (select cp.slug from course_pages cp where cp.level_id = g.level_id and cp.subject_id = g.subject_id limit 1) as page_slug,
+          case when ev.lesson_date = (select t::date from n) and sl.starts_at <= (select t::time from n) and sl.ends_at > (select t::time from n) then 'live' else 'next' end as state
+        from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+        left join teachers t on t.id = coalesce(ev.teacher_id, sl.teacher_id) left join users u on u.id = t.user_id
+        where ev.status = 'scheduled' and g.status <> 'hidden'
+          and (ev.lesson_date > (select t::date from n) or (ev.lesson_date = (select t::date from n) and sl.ends_at > (select t::time from n)))
+        order by ev.lesson_date, sl.starts_at limit 6`);
+      return { live: rows.find((r) => r.state === "live") ?? null, next: rows.find((r) => r.state === "next") ?? null };
+    });
+  } catch { return { live: null, next: null }; }
+}
