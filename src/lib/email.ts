@@ -31,7 +31,7 @@ async function keepCopy(c: Creds, subject: string, htmlContent: string, textCont
       htmlContent: banner + htmlContent, textContent: `Copy for your records. ${who}\n\n${textContent}`, tags: ["copy"] }),
   }).catch(() => undefined);
 }
-export type Audience = { value: string; label: string };
+export type Audience = { value: string; label: string; group?: string };
 
 export async function audiences(): Promise<Audience[]> {
   return withSchool(async (q) => {
@@ -39,8 +39,11 @@ export async function audiences(): Promise<Audience[]> {
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join academic_years y on y.id = g.academic_year_id
       where y.ends_on >= current_date and exists (select 1 from enrolments e where e.group_id = g.id and e.status = 'active') order by l.sort_order, sj.name`);
     const levels = await q<{ id: string; name: string }>(`select id, name from levels order by sort_order`);
-    return [{ value: "families", label: "Parents of enrolled students" }, { value: "students", label: "Enrolled students (their Google accounts)" },
-      ...levels.map((l) => ({ value: `level:${l.id}`, label: `${l.name} families` })), ...groups.map((g) => ({ value: `class:${g.id}`, label: g.label })),
+    return [{ value: "families", label: "All enrolled parents", group: "Everyone" }, { value: "students", label: "All enrolled students (their Google accounts)", group: "Everyone" },
+      { value: "everyone", label: "All enrolled parents and students", group: "Everyone" },
+      ...levels.map((l) => ({ value: `level:${l.id}`, label: `${l.name} parents`, group: "By level" })),
+      ...groups.map((g) => ({ value: `class:${g.id}`, label: `${g.label} · parents`, group: "A class: parents" })),
+      ...groups.map((g) => ({ value: `classstu:${g.id}`, label: `${g.label} · students`, group: "A class: students" })),
       { value: "waiting", label: "Waiting list" }, { value: "enquiries", label: "Enquired, not booked" }, { value: "lowatt", label: "Parents: attendance below 50% this term" }, { value: "twocourses", label: "Parents: a child on 2 courses (a third gives 10% off)" },
       { value: "oneoff", label: "1:1 and workshop families, no course" }, { value: "teachers", label: "All teachers" }];
   });
@@ -53,6 +56,13 @@ export async function recipients(audience: string): Promise<Recipient[]> {
     if (audience === "teachers") return q<Recipient>(`select u.name, u.email::text from teachers t join users u on u.id = t.user_id where t.archived_at is null`);
     if (audience === "students") return q<Recipient>(`select distinct on (lower(s.email)) s.first_name || ' ' || s.last_name as name, s.email::text from students s join enrolments e on e.student_id = s.id
       join course_groups g on g.id = e.group_id join academic_years y on y.id = g.academic_year_id where e.status = 'active' and not e.is_taster and y.ends_on >= current_date and s.email is not null order by lower(s.email)`);
+    if (audience === "everyone") {
+      const seen = new Set<string>(), out: Recipient[] = [];
+      for (const r of [...await recipients("families"), ...await recipients("students")]) if (!seen.has(r.email.toLowerCase())) { seen.add(r.email.toLowerCase()); out.push(r); }
+      return out;
+    }
+    if (audience.startsWith("classstu:")) return q<Recipient>(`select distinct on (lower(s.email)) s.first_name || ' ' || s.last_name as name, s.email::text from students s join enrolments e on e.student_id = s.id
+      where e.group_id = $1::uuid and e.status = 'active' and not e.is_taster and s.email is not null order by lower(s.email)`, [audience.slice(9)]);
     if (audience === "waiting") return q<Recipient>(`select distinct on (lower(email)) parent_name as name, email::text from waitlist_entries where enrolled_at is null order by lower(email)`);
     if (audience === "enquiries") return q<Recipient>(`select distinct on (lower(q.email)) q.name, q.email::text from enquiries q where q.created_at > now() - interval '12 months'
       and not exists (select 1 from parents p join students s on s.parent_id = p.id join enrolments e on e.student_id = s.id where p.email = q.email and e.status = 'active') order by lower(q.email)`);

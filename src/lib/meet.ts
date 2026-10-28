@@ -22,7 +22,7 @@ const GMAIL_SCOPE = G + "gmail.readonly";
 // The recordings account (ose@, which owns the Meet recordings and teaches every Classroom): Drive, and posting recordings to Classroom.
 const REC_SCOPE = ["drive", "classroom.courses.readonly", "classroom.coursework.students", "classroom.courseworkmaterials", "classroom.announcements.readonly",
   "classroom.rosters.readonly", "classroom.rosters", "classroom.profile.emails"].map((x) => G + x).join(" ");
-export type GKind = "gmail" | "rec";
+export type GKind = "gmail" | "gmail2" | "rec"; // gmail2: another inbox to read (e.g. a person’s own address next to the school’s)
 const AUTH_URL = () => process.env.GOOGLE_AUTH_URL || "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = () => process.env.GOOGLE_TOKEN_URL || "https://oauth2.googleapis.com/token";
 const REPORTS_URL = () => process.env.GOOGLE_REPORTS_URL || "https://admin.googleapis.com/admin/reports/v1/activity/users/all/applications/meet";
@@ -78,7 +78,7 @@ export async function loginUrl(base: string, email: string, kind?: GKind): Promi
   const state = randomBytes(16).toString("hex");
   const stored = (await kvGet<Conn>("google")) ?? {};
   stored.pending = { state, email, exp: Date.now() + 15 * 60000, ...(kind ? { kind } : {}) }; await kvSet("google", stored);
-  const q = new URLSearchParams({ client_id: c.clientId!, redirect_uri: redirectUri(base), response_type: "code", scope: kind === "gmail" ? GMAIL_SCOPE : kind === "rec" ? REC_SCOPE : SCOPE, access_type: "offline",
+  const q = new URLSearchParams({ client_id: c.clientId!, redirect_uri: redirectUri(base), response_type: "code", scope: kind === "gmail" || kind === "gmail2" ? GMAIL_SCOPE : kind === "rec" ? REC_SCOPE : SCOPE, access_type: "offline",
     prompt: "consent select_account", include_granted_scopes: "true", state });
   return `${AUTH_URL()}?${q}`;
 }
@@ -109,12 +109,16 @@ export async function callback(base: string, sp: URLSearchParams): Promise<strin
     await kvSet("rec_google", { refreshToken: String(t.refresh_token), mailbox: account, by: pend.email, at: new Date().toISOString(), scopes: sc } satisfies Mailbox);
     return null;
   }
-  if (pend.kind === "gmail") {
+  if (pend.kind === "gmail" || pend.kind === "gmail2") {
     await kvSet("google", stored);
     const pr = await fetch(`${GMAIL_URL()}/users/me/profile`, { headers: { authorization: `Bearer ${t.access_token}` }, signal: AbortSignal.timeout(20000) });
     if (!pr.ok) return pr.status === 403 ? "Google wouldn’t let the site read that inbox. In Google Cloud Console turn on the Gmail API for the project, then try again." : `Gmail answered ${pr.status}. Try again.`;
     const mailbox = String(((await pr.json()) as { emailAddress?: string }).emailAddress ?? "").toLowerCase();
-    await kvSet("gmail", { refreshToken: String(t.refresh_token), mailbox, by: pend.email, at: new Date().toISOString() } satisfies Mailbox);
+    const box = { refreshToken: String(t.refresh_token), mailbox, by: pend.email, at: new Date().toISOString() } satisfies Mailbox;
+    const first = await kvGet<Mailbox>("gmail");
+    if (pend.kind === "gmail" || !first?.refreshToken || first.mailbox === mailbox) { await kvSet("gmail", box); return null; }
+    const more = ((await kvGet<Mailbox[]>("gmail_more")) ?? []).filter((m) => m.mailbox !== mailbox);
+    await kvSet("gmail_more", [...more, box].slice(0, 4));
     return null;
   }
   const test = await fetch(`${REPORTS_URL()}?eventName=call_ended&maxResults=1`, { headers: { authorization: `Bearer ${t.access_token}` }, signal: AbortSignal.timeout(20000) });
@@ -129,6 +133,8 @@ export async function callback(base: string, sp: URLSearchParams): Promise<strin
 
 export const GMAIL_URL = () => process.env.GMAIL_API_URL || "https://gmail.googleapis.com/gmail/v1";
 export const DRIVE_URL = () => process.env.DRIVE_API_URL || "https://www.googleapis.com/drive/v3";
+/** An access token for one of the extra inboxes, from its own refresh token. */
+export async function mailboxAccess(refreshToken: string): Promise<string> { return accessToken({ ...(await conn()), refreshToken }); }
 /** An access token for the school connection ("google") or the school inbox ("gmail"). */
 export async function googleAccess(kind: "google" | GKind): Promise<string> {
   const c = await conn();

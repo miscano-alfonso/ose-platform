@@ -3,7 +3,7 @@ import { audiences, recipients, emailReady, history } from "@/lib/email";
 import { automations } from "@/lib/automations";
 import { Composer, NotConnected } from "../../Composer";
 import { inboxStatus, inboxList } from "@/lib/inbox";
-import { syncInboxAction, markInboxAction, disconnectInboxAction } from "../../actions";
+import { syncInboxAction, markInboxAction, disconnectInboxAction, replyFromAction } from "../../actions";
 
 const KIND: Record<string, [string, string]> = { family: ["good", "Family"], taster: ["info", "Taster"], waiting: ["warn", "Waiting list"], enquiry: ["mute", "Enquiry"] };
 
@@ -31,7 +31,7 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
   }
   if (tab === "compose") {
     const auds = await audiences();
-    const options = await Promise.all(auds.map(async (a) => ({ ...a, count: (await recipients(a.value)).length })));
+    const options = await Promise.all(auds.map(async (a) => { const to = await recipients(a.value); return { ...a, count: to.length, people: to.map((r) => ({ name: r.name, email: r.email })) }; }));
     return <>{head}<Composer kind="message" options={options} ready={ready} draft={{ audience: sp.audience, subject: sp.subject, body: sp.body }} /></>;
   }
   if (tab === "inbox") {
@@ -44,7 +44,11 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
       <p className="note" style={{ marginTop: 10 }}>Google Meet has to be connected first (Attendance → Google Meet), because the inbox uses the same Google app.</p></section></>;
     const show = sp.show === "all" ? "all" : "new";
     const { rows } = await inboxList(show);
-    const gm = (t: string) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(box.mailbox)}#all/${t}`;
+    const gm = (t: string, mb?: string | null) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(mb || box.mailbox)}#all/${t}`;
+    // Reply as the chosen address: open the thread itself when it arrived in that inbox, otherwise a new Gmail message in that account
+    const reply = (m: { thread_id: string; mailbox: string | null; from_email: string; subject: string }) => (m.mailbox || box.mailbox) === box.replyFrom ? gm(m.thread_id, m.mailbox)
+      : `https://mail.google.com/mail/?authuser=${encodeURIComponent(box.replyFrom)}&view=cm&fs=1&to=${encodeURIComponent(m.from_email)}&su=${encodeURIComponent(/^re:/i.test(m.subject) ? m.subject : `Re: ${m.subject}`)}`;
+    const many = box.mailboxes.length > 1;
     return <>{head}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
         <div className="segl" role="group" aria-label="Show"><Link href="/admin/email?tab=inbox" aria-current={show === "new" ? "true" : undefined}>New</Link><Link href="/admin/email?tab=inbox&show=all" aria-current={show === "all" ? "true" : undefined}>All</Link></div>
@@ -55,11 +59,20 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
         <span className={`pill ${m.read ? "mute" : "info"}`}>{m.read ? "Read" : "New"}</span>
         <div className="t"><b>{m.from_name || m.from_email} · {m.subject || "(no subject)"}</b><span>{m.snippet}</span>
           <span style={{ display: "block", fontSize: 13.5 }}>{when(m.received_at)} · <span className={`pill ${KIND[m.kind]?.[0] ?? "mute"}`} style={{ fontSize: 12 }}>{KIND[m.kind]?.[1] ?? m.kind}</span>
-            {m.parent_id && <> · <Link href={`/admin/families/${m.parent_id}`}>{m.family}</Link></>}{m.from_name ? ` · ${m.from_email}` : ""}</span></div>
-        <a className="abtn sm" href={gm(m.thread_id)} target="_blank" rel="noopener">Open in Gmail</a>
+            {m.parent_id && <> · <Link href={`/admin/families/${m.parent_id}`}>{m.family}</Link></>}{m.from_name ? ` · ${m.from_email}` : ""}{many && m.mailbox ? ` · to ${m.mailbox}` : ""}</span></div>
+        <a className="abtn sm pri" href={reply(m)} target="_blank" rel="noopener" title={`Reply from ${box.replyFrom}`}>Reply</a>
+        <a className="abtn sm" href={gm(m.thread_id, m.mailbox)} target="_blank" rel="noopener">Open in Gmail</a>
         <form action={markInboxAction}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="show" value={show} /><input type="hidden" name="read" value={m.read ? "0" : "1"} /><button className="abtn sm" type="submit">{m.read ? "Mark unread" : "Mark read"}</button></form></div>)}</section>
-      <p className="note">Reading <b>{box.mailbox}</b> (read-only), connected by {box.by}. Checked every 15 minutes while the admin is open{box.info.at ? `; last checked ${when(box.info.at)}` : ""}.{box.info.error ? ` Last check failed: ${box.info.error}` : ""} Reply in Gmail as usual.</p>
-      <form action={disconnectInboxAction}><button className="lnk" type="submit">Disconnect the inbox</button></form></>;
+      <section className="card"><h2>Inboxes</h2>
+        <p className="cs">Read-only, checked every 15 minutes while the admin is open{box.info.at ? `; last checked ${when(box.info.at)}` : ""}.{box.info.error ? ` Last check had a problem: ${box.info.error}` : ""} An email sent to more than one of these shows once.</p>
+        {box.mailboxes.map((b) => <div className="li" key={b.mailbox}><div className="t"><b>{b.mailbox}</b><span>connected by {b.by}</span></div>
+          <form action={disconnectInboxAction}><input type="hidden" name="mailbox" value={b.mailbox} /><button className="abtn sm" type="submit">Disconnect</button></form></div>)}
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginTop: 12 }}>
+          {box.mailboxes.length < 5 && <a className="abtn" href="/admin/meet-api?action=login&what=gmail2">Connect another inbox</a>}
+          <form action={replyFromAction} className="eform" style={{ margin: 0 }}><label className="fld">Reply from<input name="from" type="email" defaultValue={box.replyFrom} className="mini" style={{ width: 260 }} /></label><button className="abtn sm" type="submit">Save</button></form>
+        </div>
+        <p className="note" style={{ marginTop: 8 }}>Reply opens Gmail signed in as the Reply from address: the thread itself if the email arrived there, otherwise a new message to the family with “Re:” and the subject. To connect another inbox, sign in to Google as that address when asked.</p>
+      </section></>;
   }
   const past = await history("message");
   return <>{head}

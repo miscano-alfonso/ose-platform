@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
   const action = req.nextUrl.searchParams.get("action");
   try {
     const what = req.nextUrl.searchParams.get("what");
-    if (action === "login") return NextResponse.redirect(await loginUrl(base, me.email, what === "gmail" || what === "rec" ? what : undefined), 302);
+    if (action === "login") return NextResponse.redirect(await loginUrl(base, me.email, what === "gmail" || what === "gmail2" || what === "rec" ? what : undefined), 302);
     if (action === "callback") {
       const was = await googleKv<{ pending?: { kind?: string } }>("google");
-      const inbox = was?.pending?.kind === "gmail", rec = was?.pending?.kind === "rec";
+      const inbox = was?.pending?.kind === "gmail" || was?.pending?.kind === "gmail2", rec = was?.pending?.kind === "rec";
       const err = await callback(base, req.nextUrl.searchParams);
       if (rec) return NextResponse.redirect(`${base}/admin/recordings?tab=settings&${err ? "err" : "ok"}=${encodeURIComponent(err ?? "The recordings account is connected.")}`, 302);
       if (inbox) return NextResponse.redirect(`${base}/admin/email?tab=inbox&${err ? "err" : "ok"}=${encodeURIComponent(err ?? "The school inbox is connected. Replies from families will show here.")}`, 302);

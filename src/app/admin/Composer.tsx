@@ -1,12 +1,13 @@
 import { sendEmailAction, sendTestEmailAction } from "./actions";
+import { RecipientPicker } from "./RecipientPicker";
 
 // The email form used by Email (families, classes, teachers) and Marketing (opted-in list only).
-export function Composer({ kind, options, ready, draft }: { kind: "message" | "marketing"; options: { value: string; label: string; count: number }[]; ready: boolean; draft?: { audience?: string; subject?: string; body?: string } }) {
+export function Composer({ kind, options, ready, draft }: { kind: "message" | "marketing"; options: { value: string; label: string; count: number; group?: string; people?: { name: string; email: string }[] }[]; ready: boolean; draft?: { audience?: string; subject?: string; body?: string } }) {
   return <form action={sendEmailAction} className="card" id="compose" style={{ display: "grid", gap: 12 }}>
     {draft?.subject && <p className="note msg">Drafted by the Assistant. Check the wording and who it goes to before sending.</p>}
     <h2>{kind === "marketing" ? "Write a newsletter" : "Write an email"}</h2>
     <input type="hidden" name="kind" value={kind} />
-    <label className="fld">To<select name="audience" required defaultValue={options.some((o) => o.value === draft?.audience) ? draft!.audience : options[0]?.value}>{options.map((o) => <option key={o.value} value={o.value} disabled={!o.count}>{o.label} · {o.count} {o.count === 1 ? "person" : "people"}</option>)}</select></label>
+    <RecipientPicker options={options} initial={draft?.audience} />
     <label className="fld">Subject<input name="subject" required maxLength={200} defaultValue={draft?.subject} style={{ maxWidth: 560 }} /></label>
     <label className="fld">Message (leave a blank line between paragraphs)<textarea name="body" required rows={10} maxLength={20000} defaultValue={draft?.body} className="mini" style={{ width: "100%" }} /></label>
     <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" name="confirm" required /> I’ve checked the message and who it goes to</label>

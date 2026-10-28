@@ -1127,12 +1127,19 @@ export async function markInboxAction(f: FormData): Promise<void> {
   await markInbox(me.id, all ? "all" : [id], f.get("read") !== "0");
   mailBack(null, null, str(f, "show", 5));
 }
-export async function disconnectInboxAction(): Promise<void> {
+export async function disconnectInboxAction(f?: FormData): Promise<void> {
   const me = await requireStaff();
   if (me.role !== "school_admin") mailBack(null, "Only a school admin can disconnect the inbox.");
   const { disconnectInbox } = await import("@/lib/inbox");
-  await disconnectInbox();
-  mailBack("The school inbox is disconnected. Emails already shown here stay until they’re a year old.");
+  const box = f ? String(f.get("mailbox") ?? "").slice(0, 200) : "";
+  await disconnectInbox(box || undefined);
+  mailBack(`${box || "The school inbox"} is disconnected. Emails already shown here stay until they’re a year old.`);
+}
+export async function replyFromAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { setReplyFrom } = await import("@/lib/inbox");
+  await setReplyFrom(String(f.get("from") ?? "").trim().slice(0, 200));
+  mailBack("Saved. Reply buttons now open Gmail as that address.");
 }
 // ---------- Post designs: Canva connection and the picture library ----------
 const dsBack = (ok?: string | null, err?: string | null) => redirect(`/admin/social?view=pictures` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));

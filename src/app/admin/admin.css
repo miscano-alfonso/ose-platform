@@ -532,3 +532,10 @@
 .adm .tt2 .pop p{margin:0 0 6px}.adm .tt2 .pop .pt{font-size:16px}.adm .tt2 .pop .ps{font-size:14px;color:var(--muted)}
 .adm .tt2 .pop .pa{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 @media (prefers-reduced-motion:reduce){.adm .tt2 .pulse{animation:none}}
+/* email: everyone the message will go to, under the To list */
+.adm .rcp{border:1px solid var(--line);border-radius:14px;background:var(--soft);padding:10px 12px;margin-top:-4px}
+.adm .rcp-h{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-bottom:6px;font-size:15px}
+.adm .rcp-h input{max-width:240px}
+.adm .rcp ul{list-style:none;margin:0;padding:0;max-height:220px;overflow-y:auto;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:2px 16px}
+.adm .rcp li{display:flex;gap:8px;justify-content:space-between;font-size:14.5px;padding:4px 2px;border-bottom:1px solid var(--line);min-width:0}
+.adm .rcp li span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
