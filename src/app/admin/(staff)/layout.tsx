@@ -12,7 +12,7 @@ import { menuFor } from "@/lib/menu-config";
 import { after } from "next/server";
 import { checkinsBackground } from "@/lib/checkins";
 import { Switchers } from "../Switchers";
-import { TopBar } from "../TopBar";
+import { TopBar, SideFoot } from "../TopBar";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Staff", robots: { index: false, follow: false } };
@@ -49,7 +49,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       where t.archived_at is null and u.disabled_at is null order by u.name`))]);
     const views = [{ value: "admin", label: "Admin" }, ...teachers.map((t) => ({ value: `t:${t.id}`, label: `Teacher: ${t.name}` })),
       { value: "p", label: "Parent…" }, { value: "s", label: "Student…" }];
-    switchers = <Switchers schools={schools.map((x) => ({ value: x.slug, label: x.name }))} school={jar.get(SCHOOL_COOKIE)?.value || siteSchool()} views={views} view={`t:${me.id}`} />;
+    switchers = <Switchers schools={schools.map((x) => ({ value: x.slug, label: x.name }))} school={jar.get(SCHOOL_COOKIE)?.value || siteSchool()} views={views} view={`t:${me.id}`} showSchool={false} />;
   }
   return <div className="adm" data-theme={theme} style={style}><DashStyles />
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
@@ -59,8 +59,8 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports }} groups={await menuFor("teacher")} />
-        {switchers && <div className="side-foot">{switchers}</div>}
+        <SideFoot theme={theme} signOut={signOutAction} switchers={switchers} />
       </aside>
-      <main className="main"><TopBar theme={theme} signOut={signOutAction} />{children}</main>
+      <main className="main"><TopBar />{children}</main>
     </div></div>;
 }

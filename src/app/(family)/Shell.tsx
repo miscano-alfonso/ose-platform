@@ -7,7 +7,7 @@ import { familySignOutAction } from "./actions";
 import { FamilyNav } from "./FamilyNav";
 import { LessonWindow } from "../LessonWindow";
 import type { ResolvedGroup } from "@/lib/menus";
-import { TopBar } from "../admin/TopBar";
+import { SideFoot } from "../admin/TopBar";
 import { cookies } from "next/headers";
 
 // The parent and student areas share the admin's look: brand-coloured menu on the left, pages on the right.
@@ -26,8 +26,9 @@ export async function Shell({ f, groups, counts = {}, root, children }: { f: Fam
         {sch?.is_demo ? <a className="logo" href={root} title="Home" style={{ font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}</a>
           : <a className="logo" href={root} title="Home"><img src={logo} alt="OH-SO ED: home" width={773} height={224} /></a>}
         <FamilyNav groups={groups} counts={counts} root={root} />
+        <SideFoot theme={theme} signOut={f.viewer ? undefined : familySignOutAction} site={[{ href: "/", label: "View the website" }]} />
 
       </aside>
-      <main className="main"><TopBar theme={theme} signOut={f.viewer ? undefined : familySignOutAction} menuToggle={false} />{children}</main>
+      <main className="main">{children}</main>
     </div></div>;
 }

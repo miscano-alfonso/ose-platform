@@ -613,3 +613,9 @@
 .adm .topbar .side-toggle,.adm .app.side-closed .topbar .side-toggle{position:static;visibility:visible;border-color:var(--line);background:var(--panel);color:var(--ink);box-shadow:none}
 .adm .topbar .side-toggle:hover{background:var(--hover)}
 .adm .app.side-closed .main{padding-left:clamp(16px,3vw,34px)}
+/* bottom of the side menu: always in view (sticky), Light/Dark + Sign out, website link */
+.adm .side .side-foot{position:sticky;bottom:-18px;margin:auto -12px -18px;padding:12px 12px 16px;background:var(--rail,var(--brand));border-top:1px solid var(--line);display:grid;gap:10px;z-index:2}
+.adm .side .side-foot .theme-seg{margin-top:0}
+.adm .side .sf-row{display:flex;align-items:center;justify-content:space-between;gap:6px;flex-wrap:nowrap}.adm .side .sf-row .theme-seg button{padding:4px 8px}
+.adm .side .sf-links{display:grid;gap:4px}.adm .side .sf-links a{font-size:14.5px;color:var(--muted)}.adm .side .sf-links a:hover{color:var(--ink)}
+@media (max-width:820px){.adm .side .side-foot{position:static;margin:0;padding:10px 0 0}}

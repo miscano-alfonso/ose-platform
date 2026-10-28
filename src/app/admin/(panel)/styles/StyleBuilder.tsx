@@ -92,12 +92,13 @@ export function StyleBuilder({ saved, kind = "site" }: { saved: SiteStyles; kind
       {STYLE_GROUPS.map((g) => <details key={g} className="sb-grp" open={g === "Headings"}>
         <summary>{g}</summary>
         {TOKENS.filter((t) => t.group === g).map((t) => {
-          const v = styles[device][t.id]; const seen = sizes[t.id]; const shown = v ?? seen ?? Math.round((t.min + t.max) / 2);
+          const v = styles[device][t.id]; const seen = t.choices ? t.dflt : sizes[t.id]; const shown = v ?? seen ?? Math.round((t.min + t.max) / 2);
           const off = v == null && seen == null;
           return <div key={t.id} className={`sb-row${v != null ? " set" : ""}`}>
             <div className="sb-lab"><label htmlFor={`sb-${t.id}`}>{t.label}</label>{t.hint && <small>{t.hint}</small>}{off && <small>Not on this preview page</small>}</div>
-            <input id={`sb-${t.id}`} type="range" min={t.min} max={t.max} step={t.step} value={shown} onChange={(e) => set(t.id, Number(e.target.value))} />
-            <span className="sb-val">{off ? "–" : t.unit ? `${shown}px` : shown}</span>
+            {t.choices ? <select id={`sb-${t.id}`} className="mini" value={shown} onChange={(e) => set(t.id, Number(e.target.value))} style={{ gridColumn: "span 2" }}>{t.choices.map((c) => <option key={c.v} value={c.v}>{c.label}</option>)}</select>
+            : <><input id={`sb-${t.id}`} type="range" min={t.min} max={t.max} step={t.step} value={shown} onChange={(e) => set(t.id, Number(e.target.value))} />
+            <span className="sb-val">{off ? "–" : t.unit ? `${shown}px` : shown}</span></>}
             {v != null ? <button type="button" className="abtn sm" onClick={() => set(t.id, null)} title="Back to the default">Reset</button> : <span className="sb-def">Default</span>}
             {t.prop === "font-size" && FontPick({ id: t.id, def: HEAD_IDS.test(t.id) ? "Same as headings font" : `Same as ${noun} font` })}
           </div>;
