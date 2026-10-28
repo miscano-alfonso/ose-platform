@@ -13,7 +13,7 @@ import { withSchool } from "./db";
 
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 const API = () => (process.env.STRIPE_API_URL || "https://api.stripe.com/v1").replace(/\/$/, "");
-export type StripeCfg = { key?: string; webhookSecret?: string; at?: string; by?: string; account?: string; sync?: { at?: string; added?: number; error?: string }; auto?: boolean };
+export type StripeCfg = { key?: string; webhookSecret?: string; at?: string; by?: string; account?: string; sync?: { at?: string; added?: number; error?: string; v?: number }; auto?: boolean };
 
 async function kv(q?: Q): Promise<StripeCfg> {
   const run = async (qq: Q) => (await qq<{ value: StripeCfg }>(`select value from meet_kv where key = 'stripe_read'`))[0]?.value ?? {};
@@ -62,17 +62,46 @@ export async function disconnectStripe() { const c = await kv(); delete c.key; d
 export async function setStripeAuto(on: boolean) { const c = await kv(); c.auto = on; await kvPut(c); }
 
 type Charge = { id: string; payment_intent?: string | null; created: number; amount: number; amount_refunded: number; currency: string; status: string; description?: string | null;
-  receipt_email?: string | null; billing_details?: { email?: string | null }; customer?: string | { id: string; email?: string | null } | null };
+  receipt_email?: string | null; billing_details?: { email?: string | null; name?: string | null }; customer?: string | { id: string; email?: string | null; name?: string | null } | null;
+  payment_method_details?: { card?: { fingerprint?: string | null; last4?: string | null } | null } | null };
 async function saveCharge(q: Q, ch: Charge) {
   const cust = typeof ch.customer === "object" && ch.customer ? ch.customer : null;
   const email = (ch.billing_details?.email || ch.receipt_email || cust?.email || "").toLowerCase() || null;
   const parent = email ? (await q<{ id: string }>(`select id from parents where email = $1 union select parent_id from guardians where email = $1 limit 1`, [email]))[0]?.id ?? null : null;
-  const r = await q(`insert into stripe_charges (id, school_id, payment_intent, created_at, amount_pence, refunded_pence, currency, status, email, customer, description, parent_id)
-      values ($1, current_school(), $2, to_timestamp($3), $4, $5, $6, $7, $8, $9, $10, $11)
+  const card = ch.payment_method_details?.card, name = (ch.billing_details?.name || cust?.name || "").replace(/\s+/g, " ").trim().slice(0, 120) || null;
+  const r = await q(`insert into stripe_charges (id, school_id, payment_intent, created_at, amount_pence, refunded_pence, currency, status, email, customer, description, parent_id, card_fp, card_last4, payer_name, linked_by)
+      values ($1, current_school(), $2, to_timestamp($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, case when $11::uuid is not null then 'email' end)
     on conflict (id) do update set refunded_pence = excluded.refunded_pence, status = excluded.status, email = coalesce(excluded.email, stripe_charges.email),
-      parent_id = coalesce(stripe_charges.parent_id, excluded.parent_id), synced_at = now() returning (xmax = 0) as added`,
-    [ch.id, ch.payment_intent ?? null, ch.created, ch.amount, ch.amount_refunded ?? 0, ch.currency, ch.status, email, cust?.id ?? (typeof ch.customer === "string" ? ch.customer : null), ch.description?.slice(0, 300) ?? null, parent]);
+      parent_id = coalesce(stripe_charges.parent_id, excluded.parent_id), linked_by = coalesce(stripe_charges.linked_by, excluded.linked_by),
+      card_fp = coalesce(excluded.card_fp, stripe_charges.card_fp), card_last4 = coalesce(excluded.card_last4, stripe_charges.card_last4),
+      payer_name = coalesce(excluded.payer_name, stripe_charges.payer_name), synced_at = now() returning (xmax = 0) as added`,
+    [ch.id, ch.payment_intent ?? null, ch.created, ch.amount, ch.amount_refunded ?? 0, ch.currency, ch.status, email, cust?.id ?? (typeof ch.customer === "string" ? ch.customer : null), ch.description?.slice(0, 300) ?? null, parent,
+     card?.fingerprint ?? null, card?.last4 ?? null, name]);
   return (r[0] as { added?: boolean } | undefined)?.added ?? false;
+}
+
+/** Payments made under another email or as a guest: linked to a family when the same card paid one of that family's
+ *  other payments, or else when the name on the payment matches one parent (first name and surname, so
+ *  "Nola Koranteng-Asare" finds Nola Asare). Only a single clear family is used; the admin still confirms every match. */
+export async function linkByCardOrName(q: Q): Promise<number> {
+  const byCard = await q(`update stripe_charges c set parent_id = k.parent_id, linked_by = 'card'
+    from (select distinct on (card_fp) card_fp, parent_id from stripe_charges where parent_id is not null and card_fp is not null and linked_by in ('email', 'hand')
+          and card_fp not in (select card_fp from stripe_charges where card_fp is not null and parent_id is not null and linked_by in ('email', 'hand') group by card_fp having count(distinct parent_id) > 1)) k
+    where c.parent_id is null and c.card_fp = k.card_fp returning c.id`);
+  const loose = await q<{ id: string; payer_name: string }>(`select id, payer_name from stripe_charges where parent_id is null and payer_name is not null`);
+  let named = 0;
+  if (loose.length) {
+    const people = await q<{ id: string; first: string; last: string }>(`select id, lower(first_name) as first, lower(last_name) as last from parents
+      union all select parent_id, lower(first_name), lower(last_name) from guardians`);
+    for (const c of loose) {
+      const words = c.payer_name.toLowerCase().split(/[\s-]+/).filter(Boolean);
+      if (words.length < 2) continue;
+      const hits = new Set(people.filter((p) => p.first && p.last && words[0] === p.first.split(/\s+/)[0]
+        && p.last.split(/[\s-]+/).every((w) => words.slice(1).includes(w))).map((p) => p.id));
+      if (hits.size === 1) { await q(`update stripe_charges set parent_id = $2, linked_by = 'name' where id = $1 and parent_id is null`, [c.id, [...hits][0]]); named++; }
+    }
+  }
+  return byCard.length + named;
 }
 
 /** Copy card payments from Stripe (read only): from the start of the school year, or since the last copy. */
@@ -84,7 +113,7 @@ export async function syncStripe(): Promise<{ added: number; error?: string }> {
   try {
     await withSchool(async (q) => {
       const y = (await q<{ s: string }>(`select extract(epoch from (min(starts_on) - interval '120 days'))::bigint::text as s from academic_years where ends_on >= current_date`))[0]?.s;
-      const since = c.sync?.at && !c.sync.error ? Math.floor(Date.parse(c.sync.at) / 1000) - 3 * 86400 : Number(y ?? Math.floor(Date.now() / 1000) - 400 * 86400);
+      const since = c.sync?.at && !c.sync.error && c.sync.v === 2 ? Math.floor(Date.parse(c.sync.at) / 1000) - 3 * 86400 : Number(y ?? Math.floor(Date.now() / 1000) - 400 * 86400);
       let after = "", expand = "&expand[]=data.customer";
       for (let i = 0; i < 40; i++) {
         let page: { data: Charge[]; has_more: boolean };
@@ -98,8 +127,9 @@ export async function syncStripe(): Promise<{ added: number; error?: string }> {
         if (!page.has_more || !page.data.length) break;
         after = page.data[page.data.length - 1].id;
       }
+      await linkByCardOrName(q);
     });
-    c.sync = { at: new Date().toISOString(), added }; await kvPut(c);
+    c.sync = { at: new Date().toISOString(), added, v: 2 }; await kvPut(c);
     return { added };
   } catch (e) { c.sync = { at: new Date().toISOString(), error: (e as Error).message }; await kvPut(c); return { added, error: (e as Error).message }; }
 }
@@ -142,20 +172,21 @@ export type Suggestion = { charge: { id: string; created_at: string; amount: num
 /** For each payment not yet matched: the family (by email) and the term(s) it most likely paid. */
 export async function suggestions(): Promise<Suggestion[]> {
   return withSchool(async (q) => {
-    const rows = await q<{ id: string; created_at: string; amount_pence: number; refunded_pence: number; email: string | null; description: string | null; parent_id: string | null; family: string | null }>(`
-      select c.id, c.created_at::text, c.amount_pence, c.refunded_pence, c.email::text, c.description, c.parent_id, p.first_name || ' ' || p.last_name as family
+    const rows = await q<{ id: string; created_at: string; amount_pence: number; refunded_pence: number; email: string | null; description: string | null; parent_id: string | null; family: string | null; linked_by: string | null; payer_name: string | null; card_last4: string | null }>(`
+      select c.id, c.created_at::text, c.amount_pence, c.refunded_pence, c.email::text, c.description, c.parent_id, p.first_name || ' ' || p.last_name as family, c.linked_by, c.payer_name, c.card_last4
       from stripe_charges c left join parents p on p.id = c.parent_id where c.matched_at is null and not c.ignored and c.status = 'succeeded' and c.refunded_pence < c.amount_pence order by c.created_at`);
     const taken = new Map<string, Set<string>>(), cache = new Map<string, TermRow[]>(), out: Suggestion[] = [];
     for (const r of rows) {
       const ch = { id: r.id, created_at: r.created_at, amount: r.amount_pence - r.refunded_pence, refunded: r.refunded_pence, email: r.email, description: r.description };
-      if (!r.parent_id) { out.push({ charge: ch, family: null, terms: [], sure: false, already: false, options: [], why: r.email ? "No family with this email" : "No email on the payment" }); continue; }
+      if (!r.parent_id) { out.push({ charge: ch, family: null, terms: [], sure: false, already: false, options: [], why: `${r.email ? "No family with this email" : "No email on the payment"}${r.payer_name ? ` (paid by ${r.payer_name})` : ""}` }); continue; }
+      const via = r.linked_by === "card" ? `Paid with the same card (•••• ${r.card_last4 ?? "?"}) as another of this family’s payments. ` : r.linked_by === "name" ? `Linked by the name on the payment (${r.payer_name}). ` : "";
       const used = taken.get(r.parent_id) ?? new Set<string>(); taken.set(r.parent_id, used);
       if (!cache.has(r.parent_id)) cache.set(r.parent_id, await yearTerms(q, r.parent_id));
       const all = cache.get(r.parent_id)!, m = matchTerms(all, ch.amount, r.created_at, r.description, used);
       for (const t of m?.terms ?? []) used.add(t.term_id);
       const open = all.filter((t) => !t.paid && !used.has(t.term_id));
       out.push({ charge: ch, family: { id: r.parent_id, name: r.family ?? r.email ?? "" }, terms: (m?.terms ?? []).map(({ open_ids: _o, paid: _p, ...t }) => t), sure: !!m, already: !!m?.already,
-        why: m?.why ?? (open.length ? "The amount and date don’t match a term: choose one, or set it aside" : "Nothing unpaid for this family this year"),
+        why: via + (m?.why ?? (open.length ? "The amount and date don’t match a term: choose one, or set it aside" : "Nothing unpaid for this family this year")),
         options: open.map((t) => ({ term_id: t.term_id, number: t.number, name: t.name, total: t.total, due_on: t.due_on })) });
     }
     // matched oldest first (so earlier payments claim earlier terms), shown newest first
@@ -213,11 +244,11 @@ export async function stripeWebhook(raw: string, sigHeader: string | null): Prom
   const ev = JSON.parse(raw) as { type: string; data: { object: Charge } };
   if (!ev.type?.startsWith("charge.")) return { status: 200, body: "ignored" };
   await withSchool(async (q) => {
-    await saveCharge(q, ev.data.object);
-    const ch = (await q<{ id: string; status: string; amount_pence: number; refunded_pence: number; parent_id: string | null; matched_at: string | null; instalment_ids: string[] }>(
-      `select id, status, amount_pence, refunded_pence, parent_id, matched_at::text, instalment_ids from stripe_charges where id = $1`, [ev.data.object.id]))[0];
+    await saveCharge(q, ev.data.object); await linkByCardOrName(q);
+    const ch = (await q<{ id: string; status: string; amount_pence: number; refunded_pence: number; parent_id: string | null; matched_at: string | null; instalment_ids: string[]; linked_by: string | null }>(
+      `select id, status, amount_pence, refunded_pence, parent_id, matched_at::text, instalment_ids, linked_by from stripe_charges where id = $1`, [ev.data.object.id]))[0];
     if (!ch?.parent_id) return;
-    if (ch.status === "succeeded" && !ch.matched_at && ch.refunded_pence === 0 && c.auto !== false) {
+    if (ch.status === "succeeded" && !ch.matched_at && ch.refunded_pence === 0 && c.auto !== false && ch.linked_by !== "name") { // a name-only link always waits for the admin
       // a new payment that exactly matches one unpaid term (or several together) is recorded straight away
       const m = matchTerms(await yearTerms(q, ch.parent_id), ch.amount_pence, new Date().toISOString(), ev.data.object.description ?? null, new Set());
       if (m) await applyMatch(q, ch.id, m.terms.map((x) => x.term_id), "auto");

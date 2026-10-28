@@ -6,7 +6,7 @@ import { automations } from "@/lib/automations";
 import { Composer, NotConnected } from "../../Composer";
 import { inboxStatus, inboxList } from "@/lib/inbox";
 import { syncInboxAction, markInboxAction, disconnectInboxAction, replyFromAction, signatureAction } from "../../actions";
-import { InboxReply } from "../../InboxReply";
+import { InboxReply, SigPreview } from "../../InboxReply";
 import { requireStaff } from "@/lib/auth";
 
 const KIND: Record<string, [string, string]> = { family: ["good", "Family"], taster: ["info", "Taster"], waiting: ["warn", "Waiting list"], enquiry: ["mute", "Enquiry"] };
@@ -80,10 +80,10 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
         <form action={markInboxAction}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="show" value={show} /><input type="hidden" name="read" value={m.read ? "0" : "1"} /><button className="abtn sm" type="submit">{m.read ? "Mark unread" : "Mark read"}</button></form>
         <InboxReply id={m.id} first={(m.from_name || m.family || "").split(" ")[0] || "there"} sig={sig} from={box.replyFrom} replied={!!m.replied_at} /></div>)}</section>
       <section className="card"><h2>Your signature</h2>
-        <p className="cs">Added under every reply you send from here, with the school logo in blue (most families read email in light mode).</p>
+        <p className="cs">Added under every reply you send from here: your name, job title and the school logo. The logo is blue; email apps that switch to dark mode (Apple Mail, iPhone Mail, Outlook) show it in white instead. Gmail doesn’t tell emails it’s in dark mode, so Gmail readers see the blue one.</p>
         <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-end" }}>
           <form action={signatureAction} className="eform" style={{ margin: 0 }}><label className="fld">Your job title<input name="title" defaultValue={sig.title} maxLength={80} placeholder="e.g. Founder and Head of School" className="mini" style={{ width: 280 }} /></label><button className="abtn sm" type="submit">Save</button></form>
-          <div className="irp-sig sigcard"><b>{sig.name}</b>{sig.title && <span>{sig.title}</span>}<img src={sig.logo} alt="OH-SO ED Online School" width={120} /></div>
+          <SigPreview sig={sig} />
         </div></section>
       <section className="card"><h2>Inboxes</h2>
         <p className="cs">Read-only, checked every 15 minutes while the admin is open{box.info.at ? `; last checked ${when(box.info.at)}` : ""}.{box.info.error ? ` Last check had a problem: ${box.info.error}` : ""} An email sent to more than one of these shows once.</p>

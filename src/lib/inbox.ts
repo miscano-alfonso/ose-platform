@@ -155,23 +155,30 @@ const hdr = (s: string) => /^[\x20-\x7e]*$/.test(s) ? s : `=?UTF-8?B?${Buffer.fr
 /** Send a reply from the Reply-from inbox, threaded with the family's email (In-Reply-To / References). */
 
 // ---------- Each staff member's email signature: name, job title and the school logo (blue, for light-mode inboxes) ----------
-export type Signature = { name: string; title: string; logo: string };
+export type Signature = { name: string; title: string; logo: string; logoDark: string };
 const sigEsc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 export async function signatureFor(user: { id: string; name: string }): Promise<Signature> {
   const [v, base] = await Promise.all([googleKv<{ title?: string }>(`sig_${user.id}`).catch(() => null), siteBase().catch(() => "")]);
   const site = (process.env.SITE_URL || base || "").replace(/\/$/, "");
-  return { name: user.name, title: v?.title ?? "", logo: site ? `${site}/ose-logo-blue.png` : "/ose-logo-blue.png" };
+  const at = (f: string) => site ? `${site}/${f}` : `/${f}`;
+  return { name: user.name, title: v?.title ?? "", logo: at("ose-logo-blue.png"), logoDark: at("ose-logo-white.png") };
 }
 export async function saveSignature(userId: string, title: string) {
   await googleKvSet(`sig_${userId}`, { title: title.replace(/\s+/g, " ").trim().slice(0, 80) });
 }
-/** The reply as an HTML email: the text as written, then the signature with the logo underneath. */
+/** The reply as an HTML email: the text as written, then the signature with the logo underneath.
+ *  The logo is blue; email apps that tell the email they're in dark mode (Apple Mail, iPhone/iPad Mail, Outlook,
+ *  some others) are given the white logo instead. Gmail doesn't say, so Gmail readers always see the blue one. */
 export function replyHtml(body: string, sig: Signature): string {
   const p = sigEsc(body).replace(/\n/g, "<br>");
-  return `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5;color:#1a1f3d">${p}`
-    + `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.4;color:#1a1f3d">`
-    + `<b>${sigEsc(sig.name)}</b>${sig.title ? `<br><span style="color:#4a5170">${sigEsc(sig.title)}</span>` : ""}</td></tr>`
-    + `<tr><td style="padding-top:10px"><img src="${sigEsc(sig.logo)}" width="140" alt="OH-SO ED Online School" style="display:block;border:0;width:140px;height:auto"></td></tr></table></div>`;
+  const img = (src: string, cls: string, hide: boolean) => `<img class="${cls}" src="${sigEsc(src)}" width="130" alt="OH-SO ED Online School" style="${hide ? "display:none;max-height:0;overflow:hidden;mso-hide:all;" : "display:block;"}border:0;width:130px;height:auto">`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark">`
+    + `<style>@media (prefers-color-scheme: dark){.ose-l{display:none!important}.ose-d{display:block!important;max-height:none!important}}`
+    + `[data-ogsc] .ose-l,[data-ogsb] .ose-l{display:none!important}[data-ogsc] .ose-d,[data-ogsb] .ose-d{display:block!important;max-height:none!important}</style></head><body>`
+    + `<div style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.5">${p}`
+    + `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.4">`
+    + `<b>${sigEsc(sig.name)}</b>${sig.title ? `<br>${sigEsc(sig.title)}` : ""}</td></tr>`
+    + `<tr><td style="padding-top:10px">${img(sig.logo, "ose-l", false)}${img(sig.logoDark, "ose-d", true)}</td></tr></table></div></body></html>`;
 }
 
 export async function replyInbox(actor: { id: string; name: string }, id: string, text: string): Promise<string | null> {
