@@ -7,7 +7,7 @@ import { googleAccess, mailboxAccess, googleKv, googleKvSet, GMAIL_URL, MeetErro
 // and linked to the family. Only senders the school already knows are kept; everything else stays in Gmail only.
 export type InboxInfo = { at?: string; added?: number; error?: string; last?: string };
 export type InboxRow = { id: string; thread_id: string; mailbox: string | null; replied_at: string | null; from_name: string | null; from_email: string; subject: string; snippet: string; received_at: string;
-  parent_id: string | null; family: string | null; kind: string; read: boolean };
+  parent_id: string | null; family: string | null; kind: string; read: boolean; to_name?: string | null };
 
 /** Every inbox being read: the school's first, then any others connected after it. */
 async function boxes(): Promise<Mailbox[]> {
@@ -32,8 +32,8 @@ export async function setReplyFrom(email: string) { await googleKvSet("inbox_rep
 export async function inboxList(show: "new" | "all"): Promise<{ rows: InboxRow[]; unread: number }> {
   return withSchool(async (q) => ({
     rows: await q<InboxRow>(`select m.id, m.thread_id, m.mailbox::text, m.replied_at::text, m.from_name, m.from_email::text, m.subject, m.snippet, m.received_at::text, m.parent_id,
-        p.first_name || ' ' || p.last_name as family, m.kind, m.read_at is not null as read
-      from inbox_messages m left join parents p on p.id = m.parent_id where ($1 = 'all' or m.read_at is null) order by m.received_at desc limit 200`, [show]),
+        p.first_name || ' ' || p.last_name as family, m.kind, m.read_at is not null as read, tu.name as to_name
+      from inbox_messages m left join parents p on p.id = m.parent_id left join users tu on tu.id = m.to_user where ($1 = 'all' or m.read_at is null) order by m.received_at desc limit 200`, [show]),
     unread: (await q<{ n: number }>(`select count(*)::int as n from inbox_messages where read_at is null`))[0].n,
   }));
 }
