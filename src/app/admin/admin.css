@@ -791,3 +791,5 @@
 .adm .ibx-sw.on{background:var(--sky)}
 .adm .ibx-sw.on i{transform:translateX(14px)}
 .adm .ibx-sw:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.adm .ibx-ico{width:36px;height:36px;padding:0;display:inline-grid;place-items:center}
+.adm .ibx-ico svg{width:18px;height:18px}

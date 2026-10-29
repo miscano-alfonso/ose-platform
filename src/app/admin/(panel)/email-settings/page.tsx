@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
-import { inboxStatus, signatureFor, inboxEveryone } from "@/lib/inbox";
+import { inboxStatus, signatureFor, inboxEveryone, inboxEvery, EVERY_CHOICES } from "@/lib/inbox";
 import { teacherContacts, officeInfo } from "@/lib/teacher-area";
-import { disconnectInboxAction, replyFromAction, signatureAction, inboxEveryoneAction } from "../../actions";
+import { disconnectInboxAction, replyFromAction, signatureAction, inboxEveryoneAction, inboxEveryAction } from "../../actions";
 import { teacherContactsAction } from "../teacher-contacts/actions";
 import { SigPreview } from "../../InboxReply";
 
@@ -15,7 +15,7 @@ export default async function EmailSettings({ searchParams }: { searchParams: Pr
   const [sp, me] = await Promise.all([searchParams, requireStaff()]);
   const [box, sig, admins, list, office] = await Promise.all([inboxStatus(), signatureFor(me), withSchool((q) => q<{ id: string; name: string; email: string }>(
     `select id, name, email::text from users where role = 'school_admin' and disabled_at is null order by name`)), teacherContacts(), officeInfo()]);
-  const everyone = await inboxEveryone();
+  const [everyone, every] = await Promise.all([inboxEveryone(), inboxEvery()]);
   const on = new Map(list.map((c) => [c.user_id, c.label]));
   return <>
     <div className="top"><div><h1>Email settings</h1><div className="sub">Your signature, the school inboxes and who teachers can email. Read and answer emails in <Link href="/admin/email">Email</Link>.</div></div></div>
@@ -39,7 +39,7 @@ export default async function EmailSettings({ searchParams }: { searchParams: Pr
           <li>Press Connect and sign in as the mailbox families write to.</li></ol>
         <a className="abtn pri" href="/admin/meet-api?action=login&what=gmail">Connect the school inbox</a></>
       : <>
-      <p className="cs">Read-only, checked every 15 minutes while the admin is open{box.info.at ? `; last checked ${when(box.info.at)}` : ""}.{box.info.error ? ` Last check had a problem: ${box.info.error}` : ""} An email sent to more than one of these shows once.</p>
+      <p className="cs">Checked {every ? `every ${every === 60 ? "hour" : `${every} minutes`}` : "only when you press refresh"}{box.info.at ? `; last checked ${when(box.info.at)}` : ""}.{box.info.error ? ` Last check had a problem: ${box.info.error}` : ""} An email sent to more than one of these shows once.</p>
       {box.mailboxes.some((b) => !b.syncRead) && <p className="note msg" style={{ marginTop: 0 }}>To keep read and unread in step with Gmail (and Mail on your Mac and phone), press <b>Reconnect</b> on each inbox below and allow the site to manage your email when Google asks. Until then, reading an email here doesn’t change it in Mail.</p>}
       {box.mailboxes.map((b) => <div className="li" key={b.mailbox}><div className="t"><b>{b.mailbox}</b><span>connected by {b.by}{b.syncRead ? " · read and unread stay in step with Gmail" : ""}</span></div>
         {!b.syncRead && <a className="abtn sm pri" href={`/admin/meet-api?action=login&what=${b.mailbox === box.mailbox ? "gmail" : "gmail2"}`}>Reconnect</a>}
@@ -48,6 +48,11 @@ export default async function EmailSettings({ searchParams }: { searchParams: Pr
         {box.mailboxes.length < 5 && <a className="abtn" href="/admin/meet-api?action=login&what=gmail2">Connect another inbox</a>}
         <form action={replyFromAction} className="eform" style={{ margin: 0 }}><label className="fld">Reply from<input name="from" type="email" defaultValue={box.replyFrom} className="mini" style={{ width: 260 }} /></label><button className="abtn sm" type="submit">Save</button></form>
       </div>
+      <form action={inboxEveryAction} id="checking" className="li" style={{ marginTop: 12 }}>
+        <div className="t"><b>Check for new emails</b><span>While the admin is open (and every few minutes in the background). The refresh button on the Inbox checks straight away.</span></div>
+        <select name="every" defaultValue={String(every)} className="mini" style={{ padding: "7px 10px", borderRadius: 10, border: "1.5px solid var(--line)", background: "var(--panel)", color: "var(--ink)", font: "inherit" }}>
+          {EVERY_CHOICES.map((m) => <option key={m} value={m}>{m === 0 ? "Only when I press refresh" : m === 60 ? "Every hour" : `Every ${m} minutes`}</option>)}</select>
+        <button className="abtn sm" type="submit">Save</button></form>
       <form action={inboxEveryoneAction} className="li" style={{ marginTop: 12 }}><input type="hidden" name="on" value={everyone ? "0" : "1"} />
         <div className="t"><b>Show emails from everyone</b><span>{everyone ? "On: every email in the inbox shows, tagged “Other” when the sender isn’t a family, enquiry, waiting-list family, taster or teacher." : "Off: only emails from families, enquiries, the waiting list, tasters and teachers show; everything else stays in Gmail only."}</span></div>
         <button className={`abtn sm${everyone ? "" : " pri"}`} type="submit">{everyone ? "Turn off" : "Turn on"}</button></form>

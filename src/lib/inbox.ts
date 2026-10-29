@@ -160,10 +160,15 @@ export async function syncInbox(): Promise<InboxInfo> {
 const decode = (s: string) => s.replace(/&#39;/g, "’").replace(/&quot;/g, "\"").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 
 /** With the other background jobs: at most every 15 minutes while the admin is open. */
+/** How often the inbox is checked by itself, in minutes (0 = only when someone presses refresh). Default 15. */
+export const EVERY_CHOICES = [0, 5, 15, 30, 60] as const;
+export async function inboxEvery(): Promise<number> { const v = await googleKv<number>("inbox_every").catch(() => null); return typeof v === "number" && (EVERY_CHOICES as readonly number[]).includes(v) ? v : 15; }
+export async function setInboxEvery(m: number) { if ((EVERY_CHOICES as readonly number[]).includes(m)) await googleKvSet("inbox_every", m); }
 export async function inboxBackground() {
   try {
     const s = await inboxStatus(); if (!s.connected) return;
-    if (s.info.at && Date.now() - Date.parse(s.info.at) < 15 * 60e3) return;
+    const every = await inboxEvery(); if (!every) return;   // "Only when I press refresh"
+    if (s.info.at && Date.now() - Date.parse(s.info.at) < every * 60e3) return;
     await googleKvSet("inbox", { ...s.info, at: new Date().toISOString() });
     await syncInbox();
   } catch (e) { console.error("inbox background", e); }

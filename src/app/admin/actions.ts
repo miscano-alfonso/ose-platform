@@ -1160,6 +1160,12 @@ export async function inboxEveryoneAction(f: FormData): Promise<void> {
   if (on) await syncInbox().catch(() => null);
   setBack(on ? "Emails from everyone now show in the inbox (checked just now)." : "Only emails from families, enquiries, the waiting list, tasters and teachers show now.");
 }
+export async function inboxEveryAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { setInboxEvery } = await import("@/lib/inbox");
+  await setInboxEvery(Number(f.get("every")));
+  setBack("Saved.");
+}
 export async function replyFromAction(f: FormData): Promise<void> {
   await requireStaff();
   const { setReplyFrom } = await import("@/lib/inbox");
