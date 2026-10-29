@@ -670,3 +670,7 @@
 .adm .dx-scroll{flex:1;min-height:0;overflow:auto;margin-right:-8px;padding-right:8px;overscroll-behavior:contain}
 .adm .dx-scroll>.fx-row:first-child{margin-top:0}
 @media (max-width:820px){.adm .dx-card.dx-tall{height:auto;min-height:0}.adm .dx-scroll{max-height:420px}}
+/* admin greeting: the date sits at the top of the panel, the greeting in yellow */
+.adm .dx-hero .dx-hi{align-self:stretch;display:flex;flex-direction:column;gap:6px}
+.adm .dx-hero .dx-hi .dx-date{margin:0 0 auto;padding-bottom:22px}
+.adm .dx-hero .dx-hello{color:var(--pop,#e9f56a)}
