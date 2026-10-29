@@ -311,3 +311,9 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 /* floating symbols: fuller chalk (less grain) in the same cyan as the boy */
 .bh-home .bh-art .fl{color:#6cf0f7}
 .bh-home .bh-art .fl g{filter:url(#bh-chalk2)}
+/* the light in the hero now comes from the boy at his desk (not the top-right corner), and he is drawn in the same
+   full, vivid chalk as the atom */
+.bh-home .bh-hero{background:radial-gradient(ellipse 55% 70% at 72% 64%,#2b3cab 0%,#1a2470 45%,#0f1747 80%)}
+.bh-home .bh-art .desk{color:#6cf0f7}
+.bh-home .bh-art .desk g{filter:url(#bh-chalk2)}
+@media (max-aspect-ratio:1/1){.bh-home .bh-hero{background:radial-gradient(ellipse 80% 45% at 50% 28%,#2b3cab 0%,#1a2470 45%,#0f1747 80%)}}
