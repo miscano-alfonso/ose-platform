@@ -50,7 +50,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
   const open = courses.filter((c: Course) => c.bookable && !c.is_full);
   const seen = new Set<string>(); const withSpace: Course[] = [];
   for (const c of [...open].sort((a, b) => (a.places_left ?? 99) - (b.places_left ?? 99))) { const k = `${c.level}|${c.subject}`; if (!seen.has(k)) { seen.add(k); withSpace.push(c); } }
-  const show = withSpace.slice(0, 8).sort((a, b) => a.level_order - b.level_order || a.subject.localeCompare(b.subject));
+  const show = withSpace.slice(0, 16).sort((a, b) => a.level_order - b.level_order || a.subject.localeCompare(b.subject));
   const from = prices[0];
   const classes = new Set(courses.filter((c) => c.status !== "hidden" && c.status !== "closed").map((c) => c.code)).size;
   return <div className="bh bh-home"><HeroNav />
@@ -71,11 +71,12 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
         <span className="go">Meet the team →</span></Link>
       {show.length > 0 && <section className="bh-t bh-wide">
         <div className="bh-head"><h2>Courses with space</h2><Link className="go" href="/courses">All courses →</Link></div>
-        <div className="bh-courses">{show.map((c) => <Link key={c.code} className="bh-course" href={`/courses/${c.page_slug}`} style={{ ["--c" as string]: c.colour }}>
+        <div className="bh-marquee"><div className="bh-track" style={{ ["--n" as string]: show.length }}>{[...show, ...show].map((c, i) => { const dup = i >= show.length;
+          return <Link key={i} className="bh-course" href={`/courses/${c.page_slug}`} style={{ ["--c" as string]: c.colour }} aria-hidden={dup || undefined} tabIndex={dup ? -1 : undefined}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="rd" src={roundelSrc(c.subject)} alt="" width={64} height={64} loading="lazy" />
           <span className="lv"><i />{c.level}</span><b>{c.subject}</b>
-          <span>{c.slots?.length ? c.slots.map((x) => `${DAYS[x.d]} ${x.t}`).join(" & ") : "Times to be announced"}</span></Link>)}</div>
+          <span>{c.slots?.length ? c.slots.map((x) => `${DAYS[x.d]} ${x.t}`).join(" & ") : "Times to be announced"}</span></Link>; })}</div></div>
       </section>}
       <Link className="bh-t bh-half bh-cta bh-homeed" href="/home-ed"><p className="k">New to home education?</p>
         <b>Start here: how home education works in the UK, and how we fit in →</b></Link>

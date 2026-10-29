@@ -289,3 +289,17 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .bt .course .when.wl,.bt .course .wltag{color:#7a6200}
 @media (prefers-color-scheme:dark){:root:not([data-theme=light]) .bt .course .when.wl,:root:not([data-theme=light]) .bt .course .wltag{color:#e3cd4b}}
 :root[data-theme=dark] .bt .course .when.wl,:root[data-theme=dark] .bt .course .wltag{color:#e3cd4b}
+/* Courses with space: one row (5 across on wide screens, 4 below, 2–3 on small), gliding slowly sideways in a loop;
+   it stops when hovered or focused, and can be scrolled sideways by hand */
+.bh-marquee{overflow-x:auto;overflow-y:hidden;margin:0 -26px;padding:0 26px 6px;scrollbar-width:none;
+  -webkit-mask-image:linear-gradient(to right,transparent,#000 26px,#000 calc(100% - 26px),transparent);mask-image:linear-gradient(to right,transparent,#000 26px,#000 calc(100% - 26px),transparent)}
+.bh-marquee::-webkit-scrollbar{display:none}
+.bh-track{--per:5;--gap:12px;display:flex;gap:var(--gap);width:max-content;animation:bhslide calc(var(--n) * 6s) linear infinite}
+.bh-marquee{container-type:inline-size}
+.bh-track .bh-course{flex:none;width:calc((100cqw - 52px - (var(--per) - 1) * var(--gap)) / var(--per))}
+.bh-marquee:hover .bh-track,.bh-marquee:focus-within .bh-track{animation-play-state:paused}
+@keyframes bhslide{to{transform:translateX(calc(-50% - var(--gap) / 2))}}
+@media (max-width:1250px){.bh-track{--per:4}}
+@media (max-width:900px){.bh-track{--per:3}}
+@media (max-width:600px){.bh-track{--per:1.4}}
+@media (prefers-reduced-motion:reduce){.bh-track{animation:none}}
