@@ -250,3 +250,8 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
   mask-image:radial-gradient(ellipse 75% 85% at 79% 74%,#000 32%,rgba(0,0,0,.78) 58%,rgba(0,0,0,.45) 100%)}
 @media (max-aspect-ratio:1/1){.bh-home .bh-art{-webkit-mask-image:radial-gradient(ellipse 90% 60% at 50% 30%,#000 32%,rgba(0,0,0,.75) 60%,rgba(0,0,0,.42) 100%);
   mask-image:radial-gradient(ellipse 90% 60% at 50% 30%,#000 32%,rgba(0,0,0,.75) 60%,rgba(0,0,0,.42) 100%)}}
+/* hero buttons: hovers that read well on the navy */
+.bh-home .bh-hero .btn-accent:hover,.bh-home .bh-hero .btn-accent:focus-visible{background:#f4fa9e;color:#0f1747;border-color:#f4fa9e}
+.bh-home .bh-hero .btn-ghost:hover,.bh-home .bh-hero .btn-ghost:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+/* menu over the hero: see-through only at the very top; once scrolled it gets a dark bar so the words don't show through */
+.bt .s-nav.over:not(.top){background:rgba(15,23,71,.88);backdrop-filter:blur(10px);border-bottom-color:rgba(255,255,255,.08)}

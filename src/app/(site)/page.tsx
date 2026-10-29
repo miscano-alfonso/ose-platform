@@ -1,7 +1,7 @@
 import { HERO_ART } from "./hero-art";
 import { HeroNav } from "./HeroNav";
 import Link from "next/link";
-import { getFewPlaces, getBundles, getSpaceAvailable, getCourses, getNowNext, getPriceRows, getTeachers, type Course, type NowLesson } from "@/lib/data";
+import { getFewPlaces, getBundles, getSpaceAvailable, getCourses, getPriceRows, getTeachers, type Course } from "@/lib/data";
 import { CourseCard, roundelSrc } from "./CourseCard";
 import { HeroLessons } from "./HeroLessons";
 import { MeetHead, Reviews, MemberOf } from "./HomeExtras";
@@ -44,18 +44,14 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
 // ---------- the Bento home page (OH-SO ED; the demo school keeps the page above) ----------
 const DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const COLOURS = ["#8fd6f0", "#e9a6ff", "#ffb38a", "#7fe0aa", "#f5c84b"];
-const dayLabel = (d: string) => { const t = new Date(); const iso = (x: Date) => x.toISOString().slice(0, 10); const tom = new Date(t.getTime() + 864e5);
-  return d === iso(t) ? "Today" : d === iso(tom) ? "Tomorrow" : new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" }); };
-const lessonLine = (l: NowLesson) => `${l.teacher ? `with ${l.teacher} · ` : ""}${l.starts}–${l.ends}`;
 
 async function BentoHome({ txt }: { txt: Record<string, string> }) {
-  const [courses, nn, prices, teachers] = await Promise.all([getCourses(), getNowNext(), getPriceRows().catch(() => []), getTeachers().catch(() => [])]);
+  const [courses, prices, teachers] = await Promise.all([getCourses(), getPriceRows().catch(() => []), getTeachers().catch(() => [])]);
   const open = courses.filter((c: Course) => c.bookable && !c.is_full);
   const seen = new Set<string>(); const withSpace: Course[] = [];
   for (const c of [...open].sort((a, b) => (a.places_left ?? 99) - (b.places_left ?? 99))) { const k = `${c.level}|${c.subject}`; if (!seen.has(k)) { seen.add(k); withSpace.push(c); } }
   const show = withSpace.slice(0, 8).sort((a, b) => a.level_order - b.level_order || a.subject.localeCompare(b.subject));
   const from = prices[0];
-  const live = nn.live, next = nn.next;
   const classes = new Set(courses.filter((c) => c.status !== "hidden" && c.status !== "closed").map((c) => c.code)).size;
   return <div className="bh bh-home"><HeroNav />
     <div className="bh-grid">
@@ -66,10 +62,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
         <p>{txt.home_lead}</p>
         <div className="btns"><Link className="btn btn-accent" href="/taster">Book a free taster →</Link><Link className="btn btn-ghost" href="/courses">See the courses</Link></div>
       </section>
-      {live ? <Link className="bh-t bh-live" href={live.page_slug ? `/courses/${live.page_slug}` : "/timetable"}><p className="k">Live now</p><div><b>{live.level} {live.subject}</b><span>{lessonLine(live)}</span></div></Link>
-        : next ? <Link className="bh-t bh-next" href={next.page_slug ? `/courses/${next.page_slug}` : "/timetable"}><p className="k">Next lesson · {dayLabel(next.date)}</p><div><b>{next.level} {next.subject}</b><span>{lessonLine(next)}</span></div></Link>
-        : <Link className="bh-t bh-next" href="/timetable"><p className="k">Timetable</p><div><b>See when lessons run</b><span>Weekly classes across six terms</span></div></Link>}
-      <Link className="bh-t bh-pop" href="/taster"><p className="k">Free taster</p><b>Try a real lesson this week →</b></Link>
+      <Link className="bh-t bh-pop bh-half" href="/taster"><p className="k">Free taster</p><b>Try a real lesson this week →</b></Link>
       <Link className="bh-t" href="/pricing"><p className="k">{from ? `${from.level} from` : "Prices"}</p><p className="v">{from ? from.per : "£"}<small>{from ? " a lesson" : ""}</small></p><span className="go">Price calculator →</span></Link>
       <Link className="bh-t" href="/teachers"><p className="k">Specialist teachers</p>
         <div className="bh-faces">{teachers.slice(0, 6).map((t, i) => <span key={t.slug} style={{ background: COLOURS[i % COLOURS.length] }}>{t.photo
