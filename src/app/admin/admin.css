@@ -793,3 +793,10 @@
 .adm .ibx-sw:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 .adm .ibx-ico{width:36px;height:36px;padding:0;display:inline-grid;place-items:center}
 .adm .ibx-ico svg{width:18px;height:18px}
+/* My day hero layout: clock top right, Join / Attendance / countdown along the bottom left, the bell bottom right */
+.adm .fx .dx-hero.has-clock{align-items:stretch}
+.adm .fx .dx-hero .fx-side{justify-content:space-between;align-items:flex-end;gap:12px}
+.adm .fx .dx-hero .fx-side .lclock{margin:-14px -8px 0 0;align-self:flex-end}
+.adm .fx .dx-hero .fx-side .ntf-bellwrap{align-self:flex-end}
+.adm .fx .dx-hero .fx-main .fx-btns{margin-top:auto;padding-top:18px}
+@media (max-width:640px){.adm .fx .dx-hero .fx-side{flex-direction:row;align-items:center}.adm .fx .dx-hero .fx-side .lclock{margin:0}}

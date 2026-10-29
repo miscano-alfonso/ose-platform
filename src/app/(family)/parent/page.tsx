@@ -24,8 +24,8 @@ export default async function ParentHome() {
         <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {f.first}</span>{next && <><br />{who?.first ?? ""}: {next.class}</>}</h1>
         <p className="fx-hero-s">{next ? `${dlong(next.date)} · ${next.time}` : ks.length ? "No lessons in the next four weeks." : "No children on your account yet."}</p>
         <div className="fx-btns"><Link className="go" href="/parent/attendance">Report an absence</Link><Link href="/parent/messages">Message a teacher</Link>
-          {next && <LessonCountdown date={next.date} time={next.time} />}<NotifyBell settingsHref="/parent/notifications" /></div>
-      </div>{next && <LessonClock date={next.date} time={next.time} />}</section> },
+          {next && <LessonCountdown date={next.date} time={next.time} />}</div>
+      </div>{next && <div className="fx-side"><LessonClock date={next.date} time={next.time} /><NotifyBell settingsHref="/parent/notifications" /></div>}</section> },
     { id: "payment", title: "Next payment", node: <Link href="/parent/payments" className="dx-pop c4"><span>Next payment</span>
         <b className="fx-big">{h.next ? gbp(h.next.amount) : "£0"}</b><span>{h.next ? `on ${dm(h.next.due)} from your saved card →` : "Nothing due →"}</span></Link> },
     { id: "children", title: "Your children", size: "full", node: <div className="fx-kids">{ks.map((st) => <section className="dx-card c6" key={st.id}>
