@@ -189,3 +189,9 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .bt .s-nav{transition:background-color .25s,border-color .25s}
 .bt .s-nav.over{background:transparent;backdrop-filter:none;border-bottom-color:transparent}
 .bt .s-nav.over .s-logo img{filter:brightness(0) invert(1)}
+/* the illustration scales with the window's width (and never taller than the hero), so it stays on the right of the words */
+.bh-home .bh-art{height:auto;width:min(66vw,calc((100svh - var(--navh)) * 1.64));right:-3%}
+@media (max-width:980px){.bh-home .bh-art{width:115vw;right:-38%}}
+@media (max-width:600px){.bh-home .bh-art{width:150vw;height:auto;right:-62%}}
+/* menu links: light cyan on hover (the chalk colour) */
+@media (min-width:1081px){.bt .s-links a:hover,.bt .s-links a:focus-visible{background:#5fe0e8;color:#0f1747}}
