@@ -1,3 +1,4 @@
+import { NotifyBell } from "../../NotifyBell";
 import Link from "next/link";
 import { LessonClock, LessonCountdown } from "../../LessonClock";
 const ldate = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Europe/London" });
@@ -29,7 +30,7 @@ export default async function StudentHome() {
           {next.invited && <p className="fx-hero-s"><b>Accept the Google Classroom invitation in your email first.</b></p>}
           <div className="fx-btns">{next.meet && <a className={soon ? "go" : undefined} href={`/join/${next.group_id}`} target="_blank" rel="noopener">{joinLabel(next.meet)}</a>}<Link href={`/student/class/${next.group_id}`}>Open class</Link>
             {last.get(next.group_id) && <a href={last.get(next.group_id)!.url} target="_blank" rel="noopener" title={last.get(next.group_id)!.title}>Last lesson’s slides</a>}
-            <LessonCountdown date={ldate(next.next!)} time={hm(next.next!)} /></div>
+            <LessonCountdown date={ldate(next.next!)} time={hm(next.next!)} /><NotifyBell settingsHref="/student/notifications" /></div>
         </div><LessonClock date={ldate(next.next!)} time={hm(next.next!)} /></> : <><h1 className="fx-hero-t"><span className="fx-hello">Hi</span> {h.me.first} ✦</h1><p className="fx-hero-s">{h.classes.length ? "No lessons coming up just now: enjoy the break." : "You’re not in any classes yet."}</p></>}
       </section> },
     { id: "points", title: "Reward points", node: <Link href="/student/rewards" className="dx-pop c4"><span>Reward points this term</span><b className="fx-big">{pts}</b>

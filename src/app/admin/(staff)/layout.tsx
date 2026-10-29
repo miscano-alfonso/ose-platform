@@ -1,3 +1,4 @@
+import { NotifyCenter } from "../../NotifyCenter";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { requireViewer } from "@/lib/auth";
@@ -30,7 +31,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   const style = { ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b"), ["--brand-accent-ink" as string]: inkOn(hex(brand.accent, "#e3cd4b")) };
 
   if (me.role === "school_admin") return <div className="adm" data-theme={theme} style={style}><DashStyles />
-    <LessonWindow /><div className="staffbar">
+    <LessonWindow /><NotifyCenter api="/admin/notify-api" role="admin" /><div className="staffbar">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <a href="/admin"><img src={logo} alt="OH-SO ED" width={773} height={224} /></a>
       <span className="grow" /><a className="abtn sm side-btn" href="/admin">Back to the admin</a>
@@ -45,7 +46,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   return <div className="adm" data-theme={theme} style={style}><DashStyles />
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
-    <LessonWindow /><div className="app">
+    <LessonWindow /><NotifyCenter api="/admin/notify-api" role="teacher" /><div className="app">
       <aside className="side">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>

@@ -41,18 +41,18 @@ export const CATALOGUE: Record<MenuArea, MenuItem[]> = {
     it("Overview", "/admin/marketing", "mkt"), it("Newsletter", "/admin/newsletter", "mail"), it("Subscribers", "/admin/subscribers", "fam"), it("Email stats", "/admin/email-stats", "rep"), it("Social", "/admin/social", "mkt"),
     it("Website", "/admin/website", "web"), it("Home Ed hub", "/admin/home-ed", "web"), it("Page styles", "/admin/styles", "set"),
     it("School settings", "/admin/school", "set"), it("Teachers", "/admin/teachers", "fam"), it("Staff & access", "/admin/staff", "set"), it("Account", "/admin/account", "set"),
-    it("EdTech trials", "/admin/edtech", "set"), it("Menus", "/admin/menus", "menu"), it("Timetable setup", "/admin/timetable-setup", "cal"), it("1:1 tutoring setup", "/admin/tutoring-setup", "fam"), it("Test mode", "/admin/test-mode", "set"),
+    it("EdTech trials", "/admin/edtech", "set"), it("Menus", "/admin/menus", "menu"), it("Timetable setup", "/admin/timetable-setup", "cal"), it("1:1 tutoring setup", "/admin/tutoring-setup", "fam"), it("Test mode", "/admin/test-mode", "set"), it("Notifications", "/admin/notifications", "set"),
   ],
   teacher: [
     it("My day", "/admin/teacher", "home"), it("1:1s and workshops", "/admin/teacher/ones", "fam"), it("Messages", "/admin/teacher/messages", "mail"), it("Email", "/admin/teacher/email", "mail"), it("Class chats", "/admin/teacher/chats", "chat"),
-    it("Reward points", "/admin/points", "star"), it("Reports to write", "/admin/teacher/reports", "rep"), it("My timetable", "/admin/teacher/timetable", "cal"), it("Calendar sync", "/admin/teacher/calendar", "cal"), it("Google Drive", "/admin/teacher/drive", "set"), it("My pay", "/admin/teacher/pay", "gbp"),
+    it("Reward points", "/admin/points", "star"), it("Reports to write", "/admin/teacher/reports", "rep"), it("My timetable", "/admin/teacher/timetable", "cal"), it("Calendar sync", "/admin/teacher/calendar", "cal"), it("Google Drive", "/admin/teacher/drive", "set"), it("Notifications", "/admin/teacher/notifications", "set"), it("My pay", "/admin/teacher/pay", "gbp"),
   ],
   parent: [
     it("Home", "/parent", "home"), it("Attendance", "/parent/attendance", "att"), it("Assignments", "/parent/assignments", "rep"), it("Book a 1:1", "/parent/book", "fam"),
     it("Workshops", "/parent/workshops", "cal"), it("Messages", "/parent/messages", "mail"), it("Other parents", "/parent/connect", "fam"), it("My details", "/parent/details", "set"),
-    it("Privacy", "/parent/privacy", "set"), it("Reports", "/parent/reports", "rep"), it("Payments", "/parent/payments", "pay"), it("Calendar sync", "/parent/calendar", "cal"),
+    it("Privacy", "/parent/privacy", "set"), it("Reports", "/parent/reports", "rep"), it("Payments", "/parent/payments", "pay"), it("Calendar sync", "/parent/calendar", "cal"), it("Notifications", "/parent/notifications", "set"),
   ],
-  student: [it("Home", "/student", "home"), it("My classes", CLASSES_TOKEN, "cls"), it("Chat", "/student/chat", "chat"), it("Rewards", "/student/rewards", "star"), it("Calendar sync", "/student/calendar", "cal")],
+  student: [it("Home", "/student", "home"), it("My classes", CLASSES_TOKEN, "cls"), it("Chat", "/student/chat", "chat"), it("Rewards", "/student/rewards", "star"), it("Calendar sync", "/student/calendar", "cal"), it("Notifications", "/student/notifications", "set")],
 };
 
 const hrefs = (a: MenuArea, ...ls: string[]) => ls.map((l) => CATALOGUE[a].find((x) => x.label === l)!.href);
@@ -61,7 +61,7 @@ export const DEFAULT_MENUS: Record<MenuArea, MenuConfig> = {
     { title: "Marketing", items: hrefs("admin", "Overview", "Newsletter", "Subscribers", "Email stats", "Social") },
     { title: "Website", items: hrefs("admin", "Website", "Home Ed hub", "Page styles") },
     { title: "Main menu", items: CATALOGUE.admin.slice(0, 22).map((x) => x.href) }, // Dashboard first, then the daily pages
-    { title: "Settings", items: hrefs("admin", "School settings", "Test mode", "Timetable setup", "1:1 tutoring setup", "Teachers", "Staff & access", "Account", "EdTech trials", "Menus") },
+    { title: "Settings", items: hrefs("admin", "School settings", "Notifications", "Test mode", "Timetable setup", "1:1 tutoring setup", "Teachers", "Staff & access", "Account", "EdTech trials", "Menus") },
   ] },
   teacher: { hidden: [], groups: [{ title: "Menu", items: CATALOGUE.teacher.map((x) => x.href) }] },
   parent: { hidden: [], groups: [{ title: "Menu", items: CATALOGUE.parent.map((x) => x.href) }] },

@@ -1,3 +1,4 @@
+import { NotifyBell } from "../../../NotifyBell";
 import Link from "next/link";
 import { LessonClock, LessonCountdown } from "../../../LessonClock";
 import { requireViewer } from "@/lib/auth";
@@ -44,7 +45,7 @@ export default async function MyDay() {
           <span>{next.birthdays.map((b, i) => <span key={i}>{i ? (i === next.birthdays!.length - 1 ? " and " : ", ") : ""}<b>{b.name}</b>’s birthday {b.d === today ? "is today" : b.d === next.d ? "is on the lesson day" : `${b.d < today ? "was" : "is"} on ${wd(b.d)} ${dm(b.d)}`} (turns {b.age})</span>)}</span></p>}
         <div className="fx-btns">{next?.meet_url && <a className="go" href={next.meet_url} target="_blank" rel="noopener">{joinLabel(next.meet_url)}</a>}
           {next && <Link href={`/admin/register/${next.id}`}>Attendance</Link>}
-          {next && <LessonCountdown date={next.d} time={next.time} withTime />}
+          {next && <LessonCountdown date={next.d} time={next.time} withTime />}<NotifyBell settingsHref="/admin/teacher/notifications" />
 </div>
       </div>{next && <div className="fx-side"><LessonClock date={next.d} time={next.time} /></div>}</section> },
     { id: "reports-pop", title: "Reports to write", node: <Link href="/admin/teacher/reports" className="dx-pop c4"><span>{d.reportCycle ?? "Reports"}</span>

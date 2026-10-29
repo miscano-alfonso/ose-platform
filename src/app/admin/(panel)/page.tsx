@@ -1,3 +1,4 @@
+import { NotifyBell } from "../../NotifyBell";
 import Link from "next/link";
 import { openFlags, ruleLabel } from "@/lib/chat-safety";
 import { getDashboard, getDashboardMore } from "@/lib/admin-data";
@@ -81,7 +82,7 @@ export default async function Dashboard() {
   const modules: BoardModule[] = [
     { id: "hero", title: "Greeting and today", node: <section className="dx-hero">
       <div className="dx-hi">
-        <p className="dx-date">{DAY(todayIso, { weekday: "long", day: "numeric", month: "long" })} · {yearLabel(t.year_label)}</p>
+        <p className="dx-date">{DAY(todayIso, { weekday: "long", day: "numeric", month: "long" })} · {yearLabel(t.year_label)} <NotifyBell settingsHref="/admin/notifications" /></p>
         <h1><span className="dx-hello">{hello}{first ? "," : ""}</span>{first ? ` ${first}` : ""}</h1>
         <p className="dx-term">{termLine}</p>
         {t.term_name && <div className="dx-prog" role="img" aria-label={`${termPct}% of the term done`}><i style={{ width: `${termPct}%` }} /></div>}

@@ -751,3 +751,26 @@
 .adm .bb-grid.packed>.bb-cell{position:absolute}
 /* a fixed-height module that the board grows to line up keeps scrolling inside, at the new height */
 .adm .bb-grid.packed>.bb-cell.grown[class*=" h-"] .bb-body{height:auto;flex:1 1 0;min-height:0}
+/* ---------- notifications: bell, corner notes, settings ---------- */
+.adm .ntf-bellwrap{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;position:relative}
+.adm .ntf-bell,.adm .ntf-set{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:999px;border:0;background:transparent;color:rgba(201,205,234,.45);cursor:pointer;padding:0}
+.adm .ntf-bell svg{width:20px;height:20px}.adm .ntf-set svg{width:16px;height:16px}
+.adm .ntf-bell.on{color:var(--pop,#e9f56a)}
+.adm .ntf-bell:hover,.adm .ntf-set:hover{background:rgba(255,255,255,.1);color:#fff}
+.adm .ntf-set{color:rgba(201,205,234,.6);width:28px;height:28px}
+.adm .ntf-err{position:absolute;top:100%;left:0;white-space:nowrap;font-size:12.5px;color:#ffb4ab}
+.adm .dx-date .ntf-bellwrap{margin-left:6px}
+.adm .ntf-stack{position:fixed;right:16px;bottom:16px;z-index:60;display:grid;gap:8px;width:min(360px,calc(100vw - 32px))}
+.adm .ntf-toast{display:grid;gap:2px;padding:12px 14px;border-radius:14px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-left:4px solid var(--rail-on,#0f1747);box-shadow:0 10px 30px rgba(15,23,71,.18);text-decoration:none;font-size:14.5px}
+.adm .ntf-toast b{font-weight:600}.adm .ntf-toast span{color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media (prefers-reduced-motion:no-preference){.adm .ntf-toast{animation:ntfin .25s ease-out}@keyframes ntfin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}}
+.adm .ntf-master{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.adm .ntf-switch{display:inline-flex;gap:8px;align-items:center;font-weight:600}
+.adm .ntf-switch input,.adm .ntf-tick input{width:20px;height:20px;accent-color:var(--rail-on,#0f1747)}
+.adm .ntf-perm{margin-top:12px}
+.adm .ntf-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:10px 0;border-top:1px solid var(--line)}
+.adm .ntf-row:first-of-type{border-top:0}
+.adm .ntf-tick{display:flex;gap:10px;align-items:flex-start;flex:1 1 260px;min-width:0;cursor:pointer}
+.adm .ntf-tick span{display:grid}.adm .ntf-tick small{color:var(--muted);font-size:13.5px}
+.adm .ntf-row select{padding:7px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:inherit}
+.adm .fx-btns a.ntf-set{padding:0;border:0;border-radius:999px;font-size:inherit;color:rgba(201,205,234,.6)}
