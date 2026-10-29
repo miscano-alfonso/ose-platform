@@ -749,3 +749,5 @@
 /* packed board: modules placed by bento-pack.ts so they fill the space */
 .adm .bb-grid.packed{display:block;position:relative}
 .adm .bb-grid.packed>.bb-cell{position:absolute}
+/* a fixed-height module that the board grows to line up keeps scrolling inside, at the new height */
+.adm .bb-grid.packed>.bb-cell.grown[class*=" h-"] .bb-body{height:auto;flex:1 1 0;min-height:0}

@@ -39,10 +39,10 @@ export function BentoBoard({ page, modules, layout, defaults, saved, scope = "ow
       const colW = (W - gap * 11) / 12;
       const ins = cells.map((c) => ({ w: spanOf(c.dataset.size ?? "m", W), fixed: !!c.dataset.h }));
       g.classList.add("packed");
-      cells.forEach((c, i) => { const w = ins[i].w; c.style.width = `${w * colW + (w - 1) * gap}px`; c.style.height = ""; });
+      cells.forEach((c, i) => { const w = ins[i].w; c.classList.remove("grown"); c.style.width = `${w * colW + (w - 1) * gap}px`; c.style.height = ""; });
       const hs = cells.map((c) => c.offsetHeight);
       const { boxes, height } = pack(ins.map((x, i) => ({ ...x, h: hs[i] })), 12, gap);
-      cells.forEach((c, i) => { const b = boxes[i]; c.style.left = `${b.x * (colW + gap)}px`; c.style.top = `${b.top}px`; c.style.height = `${b.height}px`; });
+      cells.forEach((c, i) => { const b = boxes[i]; c.style.left = `${b.x * (colW + gap)}px`; c.style.top = `${b.top}px`; c.style.height = `${b.height}px`; c.classList.toggle("grown", b.height > hs[i] + 1); });
       g.style.height = `${height}px`;
     };
     const again = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); };

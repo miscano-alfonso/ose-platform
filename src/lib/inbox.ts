@@ -85,7 +85,8 @@ export async function syncInbox(): Promise<InboxInfo> {
         if (msgId && (await q(`select 1 from inbox_messages where message_id = $1 limit 1`, [msgId])).length) continue;
         // who is it? a family first, then someone who enquired, is waiting, or booked a taster
         const [who] = await q<{ parent_id: string | null; kind: string }>(`
-          select p.id as parent_id, 'family' as kind, 1 as o from parents p where p.email = $1
+          select null::uuid as parent_id, 'staff' as kind, 0 as o from users u join teachers t on t.user_id = u.id where lower(u.email::text) = lower($1) and u.disabled_at is null
+          union all select p.id, 'family', 1 from parents p where p.email = $1
           union all select g.parent_id, 'family', 2 from guardians g where g.email = $1
           union all select r.parent_id, 'taster', 3 from taster_requests r where r.parent_email = $1
           union all select null, 'waiting', 4 from waitlist_entries w where w.email = $1
@@ -142,6 +143,10 @@ export async function inboxMessage(id: string): Promise<FullEmail | { error: str
   const m = (await withSchool((q) => q<{ gmail_id: string; mailbox: string | null; replied_at: string | null; reply_from: string | null; reply_body: string | null }>(
     `select gmail_id, mailbox::text, replied_at::text, reply_from::text, reply_body from inbox_messages where id = $1`, [id])))[0];
   if (!m) return { error: "That email wasn’t found." };
+  if (m.gmail_id.startsWith("local:")) {   // written in the site by a teacher
+    const b = (await withSchool((q) => q<{ body: string | null }>(`select body from inbox_messages where id = $1`, [id])))[0]?.body ?? "";
+    return { body: b, to: "the school (sent from the teacher’s Email page)", replied: m.replied_at ? { at: m.replied_at, from: m.reply_from ?? "", body: m.reply_body ?? "" } : null };
+  }
   try {
     const t = await tokenFor(m.mailbox); if (!t) return { error: `${m.mailbox} isn’t connected any more.` };
     const r = await fetch(`${GMAIL_URL()}/users/me/messages/${m.gmail_id}?format=full`, { headers: { authorization: `Bearer ${t.token}` }, signal: AbortSignal.timeout(20000) });
@@ -206,8 +211,9 @@ export async function replyInbox(actor: { id: string; name: string; email?: stri
     const sender = await tokenFor(from);
     if (!sender) return `To send from ${from}, connect that inbox first (Connect another inbox), or change Reply from.`;
     // the original's Message-ID (for threading), read from the inbox it arrived in if it wasn't stored
-    let msgId = m.message_id, refs = "";
-    if (!msgId || (m.mailbox ?? st.mailbox) !== from) {
+    const local = m.gmail_id.startsWith("local:");   // written in the site: the reply starts a new email to the teacher
+    let msgId = local ? null : m.message_id, refs = "";
+    if (!local && (!msgId || (m.mailbox ?? st.mailbox) !== from)) {
       const src = await tokenFor(m.mailbox);
       if (src) {
         const r = await fetch(`${GMAIL_URL()}/users/me/messages/${m.gmail_id}?format=metadata&metadataHeaders=Message-ID&metadataHeaders=References`, { headers: { authorization: `Bearer ${src.token}` }, signal: AbortSignal.timeout(20000) });
@@ -222,7 +228,7 @@ export async function replyInbox(actor: { id: string; name: string; email?: stri
     const to = m.from_name ? `${hdr(m.from_name.replace(/["\\]/g, ""))} <${m.from_email}>` : m.from_email;
     const raw = [`From: ${hdr(actor.name)} <${from}>`, `To: ${to}`, `Subject: ${hdr(subject)}`, ...(msgId ? [`In-Reply-To: ${msgId}`, `References: ${(refs + " " + msgId).trim()}`] : []),
       "MIME-Version: 1.0", `Content-Type: multipart/alternative; boundary="${bnd}"`, "", ...part("text/plain", text), ...part("text/html", replyHtml(body, sig)), `--${bnd}--`, ""].join("\r\n");
-    const sameBox = (m.mailbox ?? st.mailbox) === from;
+    const sameBox = !local && (m.mailbox ?? st.mailbox) === from;
     const r = await fetch(`${GMAIL_URL()}/users/me/messages/send`, { method: "POST", signal: AbortSignal.timeout(20000),
       headers: { authorization: `Bearer ${sender.token}`, "content-type": "application/json" },
       body: JSON.stringify({ raw: Buffer.from(raw).toString("base64url"), ...(sameBox ? { threadId: m.thread_id } : {}) }) });

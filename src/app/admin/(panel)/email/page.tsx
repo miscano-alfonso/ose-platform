@@ -9,7 +9,7 @@ import { syncInboxAction, markInboxAction, disconnectInboxAction, replyFromActio
 import { InboxPanel, SigPreview } from "../../InboxReply";
 import { requireStaff } from "@/lib/auth";
 
-const KIND: Record<string, [string, string]> = { family: ["good", "Family"], taster: ["info", "Taster"], waiting: ["warn", "Waiting list"], enquiry: ["mute", "Enquiry"] };
+const KIND: Record<string, [string, string]> = { family: ["good", "Family"], taster: ["info", "Taster"], waiting: ["warn", "Waiting list"], enquiry: ["mute", "Enquiry"], staff: ["warn", "Teacher"] };
 
 const LDN = "Europe/London";
 const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: LDN });
@@ -85,7 +85,7 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
     const sel = rows.find((m) => m.id === sp.m) ?? rows[0] ?? null;
     const href = (id: string) => `/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}&m=${id}`;
     const panel = sel && { id: sel.id, name: who(sel), email: sel.from_email, familyHref: sel.parent_id ? `/admin/families/${sel.parent_id}` : null, subject: sel.subject,
-      when: fullWhen(sel.received_at), kind: KIND[sel.kind] ?? null, mailbox: many ? sel.mailbox : null, gmail: gm(sel.thread_id, sel.mailbox), read: sel.read,
+      when: fullWhen(sel.received_at), kind: KIND[sel.kind] ?? null, mailbox: many ? sel.mailbox : null, gmail: sel.thread_id.startsWith("local:") ? null : gm(sel.thread_id, sel.mailbox), read: sel.read,
       replied: !!sel.replied_at, first: (who(sel).includes("@") ? "" : who(sel).split(" ")[0]) || "there" };
     return <>{head}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>

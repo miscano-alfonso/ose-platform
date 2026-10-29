@@ -44,6 +44,17 @@ export function pack(items: PackIn[], cols = 12, gap = 16, tall = 1.5): { boxes:
       if (!blocked) b.height = target - b.top;
     }
   }
+  // a module with nothing under it grows down to the bottom of the modules beside it (up to 420px), so the
+  // board ends in a straight line instead of a ragged edge
+  boxes.forEach((b, k) => {
+    if (!b) return;
+    const end = b.top + b.height;
+    if (boxes.some((o, j) => j !== k && o && o.x < b.x + b.w && o.x + o.w > b.x && o.top >= end)) return;
+    const beside = boxes.filter((o, j) => j !== k && o && (o.x + o.w <= b.x || o.x >= b.x + b.w) && o.top < end + 1 && o.top + o.height > end);
+    if (!beside.length) return;
+    const target = Math.max(...beside.map((o) => o.top + o.height));
+    if (target - end <= 420) b.height = target - b.top;
+  });
   const height = Math.max(0, ...boxes.map((b) => b ? b.top + b.height : 0));
   return { boxes, height };
 }

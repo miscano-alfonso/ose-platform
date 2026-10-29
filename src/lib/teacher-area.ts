@@ -216,21 +216,32 @@ export async function removeMyHours(userId: string, id: string, actorId = userId
   });
 }
 
-export type TeacherMail = { id: string; from: string; subject: string; snippet: string; received_at: string; parent_id: string; children: string };
-/** Emails from families addressed to this teacher (To or Cc, or read from the teacher's own connected inbox), last 30 days.
- *  Read-only: the office replies, or the teacher uses Messages. */
-export async function teacherMail(userId: string): Promise<{ connected: boolean; rows: TeacherMail[] }> {
+// ---------- Email between a teacher and the school ----------
+// Parents and teachers talk through Messages only. A teacher's Email is for writing to the school (the office):
+// written here it lands in Admin → Email → Inbox (kind 'staff'); emails the teacher sends the school from their own
+// email show too. The office's replies are emailed to the teacher and shown here.
+export type TeacherEmail = { id: string; thread_id: string; subject: string; body: string; at: string; replied_at: string | null; reply_body: string | null; reply_from: string | null; local: boolean };
+export async function teacherEmails(userId: string, limit = 60): Promise<TeacherEmail[]> {
+  return withSchool((q) => q<TeacherEmail>(`
+    select m.id, m.thread_id, m.subject, coalesce(m.body, m.snippet) as body, m.received_at::text as at, m.replied_at::text, m.reply_body, m.reply_from::text, m.gmail_id like 'local:%' as local
+    from inbox_messages m where m.kind = 'staff' and lower(m.from_email::text) = (select lower(email::text) from users where id = $1)
+    order by greatest(m.received_at, coalesce(m.replied_at, m.received_at)) desc limit $2`, [userId, limit])).catch(() => []);
+}
+export async function sendTeacherEmail(user: { id: string; name: string; email: string }, subject: string, body: string, thread?: string): Promise<string | null> {
+  const sub = subject.trim().slice(0, 200), text = body.replace(/\r\n/g, "\n").trim().slice(0, 20000);
+  if (!sub) return "Add a subject."; if (!text) return "Write your email first.";
   return withSchool(async (q) => {
-    const rows = await q<TeacherMail>(`
-      with me as (select lower(email::text) as email from users where id = $1)
-      select m.id, coalesce(nullif(m.from_name, ''), p.first_name || ' ' || p.last_name, m.from_email::text) as "from", m.subject, m.snippet, m.received_at::text, m.parent_id,
-        (select string_agg(distinct coalesce(nullif(s.known_as, ''), s.first_name), ', ') from students s join enrolments e on e.student_id = s.id join course_groups g on g.id = e.group_id
-          where s.parent_id = m.parent_id and e.status in ('pending','active') and g.teacher_id = ${ME}) as children
-      from inbox_messages m left join parents p on p.id = m.parent_id, me
-      where m.received_at > now() - interval '30 days' and (lower(m.mailbox::text) = me.email or me.email = any(m.to_addrs))
-      order by m.received_at desc limit 20`, [userId]).catch(() => []);
-    const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_kv where key = 'gmail' and jsonb_typeof(value) = 'object' and value ? 'refreshToken'`).catch(() => [{ n: 0 }]);
-    return { connected: n > 0, rows };
+    const id = crypto.randomUUID();
+    let th = `local:${id}`;
+    if (thread && /^[\w:-]{1,120}$/.test(thread)) {
+      const own = await q(`select 1 from inbox_messages where thread_id = $1 and kind = 'staff' and lower(from_email::text) = lower($2) limit 1`, [thread, user.email]);
+      if (own.length) th = thread;
+    }
+    const box = (await q<{ m: string | null }>(`select value->>'mailbox' as m from meet_kv where key = 'gmail'`))[0]?.m ?? null;
+    await q(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, body, received_at, parent_id, kind, mailbox, sent_by)
+      values (current_school(), $1, $2, $3, $4, $5, $6, $7, now(), null, 'staff', $8, $9)`,
+      [`local:${id}`, th, user.name.slice(0, 120), user.email, sub, text.replace(/\s+/g, " ").slice(0, 400), text, box, user.id]);
+    return null;
   });
 }
 

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { LessonClock, LessonCountdown } from "../../../LessonClock";
 import { requireViewer } from "@/lib/auth";
-import { myDay, teacherMail, myChats, pointsGiven } from "@/lib/teacher-area";
+import { myDay, teacherEmails, myChats, pointsGiven } from "@/lib/teacher-area";
 import { teacherStream } from "@/lib/classroom-stream";
 import { SlidesButton } from "./SlidesButton";
 import { findSlides } from "@/lib/lesson-slides";
@@ -24,7 +24,7 @@ const gbp = (p: number) => "£" + (p / 100).toLocaleString("en-GB", { minimumFra
 // My day: the teacher's Bento dashboard: next lesson with Join up top, reports in lime, then the week.
 export default async function MyDay() {
   const me = await requireViewer();
-  const [d, threads, mail, chats, given, pclasses] = await Promise.all([myDay(me.id), listThreads(me.id, "open").catch(() => []), teacherMail(me.id),
+  const [d, threads, mail, chats, given, pclasses] = await Promise.all([myDay(me.id), listThreads(me.id, "open").catch(() => []), teacherEmails(me.id, 8),
     myChats(me.id).catch(() => []), pointsGiven(me.id).catch(() => []), classesForPoints(me.id, false).catch(() => [])]);
   const [stream, found] = await Promise.all([teacherStream(me.id).catch(() => ({ connected: false, linked: 0, items: [] })),
     findSlides(d.week.map((l) => ({ id: l.id, course: l.course_id ?? null, n: l.lesson_no ?? null, termStart: l.term_start ?? null }))).catch(() => new Map())]);
@@ -78,12 +78,12 @@ export default async function MyDay() {
           <span className="t">{t.last_sender === "parent" && <span className="pill warn">Waiting for your reply</span>}<b>{t.subject}</b><span>{t.parent} · about {t.student} · {dm(t.last_message_at.slice(0, 10))}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><Link className="abtn sm" href="/admin/messages/new">New message</Link></div>
     </section> },
-    { id: "email", title: "Emails to you", size: "l", node: <section className="dx-card dx-tall"><header><h2>Emails to you</h2><span className="dx-sub">from families, last 30 days</span></header>
-      {!mail.connected ? <p className="empty">Families’ emails addressed to you show here once the office connects the school inbox.</p>
-        : mail.rows.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>Nothing new</b><span>No family emails addressed to you this month.</span></div>
-        : <MoreList className="dx-list" limit={4}>{mail.rows.map((e) => <div key={e.id} className="dx-item info">
-          <span className="t"><b>{e.from} · {e.subject || "(no subject)"}</b><span>{e.snippet.length > 110 ? e.snippet.slice(0, 110) + "…" : e.snippet}</span><span style={{ fontSize: 13 }}>{dm(e.received_at.slice(0, 10))}{e.children ? ` · ${e.children}` : ""}</span></span></div>)}</MoreList>}
-      <p className="note" style={{ marginTop: 10 }}>The office replies to emails. To reply yourself, send a message.</p>
+    { id: "email", title: "Email", size: "l", node: <section className="dx-card dx-tall"><header><h2>Email</h2><span className="dx-sub">with the school</span><Link className="dx-more" href="/admin/teacher/email">All email →</Link></header>
+      {mail.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No emails yet</b><span>Email the school (the office) from here. Parents use Messages.</span></div>
+        : <MoreList className="dx-list" limit={4}>{mail.map((e) => <Link key={e.id} className={`dx-item ${e.replied_at ? "good" : "info"}`} href={`/admin/teacher/email#e-${e.id}`}>
+          <span className="t">{e.replied_at ? <span className="pill good">The school replied</span> : <span className="pill mute">Sent</span>}<b>{e.subject || "(no subject)"}</b>
+            <span>{(e.reply_body ?? e.body).length > 110 ? (e.reply_body ?? e.body).slice(0, 110) + "…" : (e.reply_body ?? e.body)}</span><span style={{ fontSize: 13 }}>{dm((e.replied_at ?? e.at).slice(0, 10))}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
+      <div style={{ marginTop: 12 }}><Link className="abtn sm" href="/admin/teacher/email?new=1">Email the school</Link></div>
     </section> },
     { id: "chats", title: "Class chats", size: "l", node: <section className="dx-card"><header><h2>Class chats</h2><Link className="dx-more" href="/admin/teacher/chats">All chats →</Link></header>
       {chats.length === 0 ? <p className="empty">You have no classes this year.</p>

@@ -7,7 +7,7 @@ type Full = { body: string; to: string; replied: { at: string; from: string; bod
 type Sig = { name: string; title: string; email: string; web: string; logo: string; logoDark: string };
 const sigText = (x: Sig) => [x.name, x.title, x.email, x.web].filter(Boolean).join("\n");
 export type PanelMail = { id: string; name: string; email: string; familyHref: string | null; subject: string; when: string; kind: [string, string] | null;
-  mailbox: string | null; gmail: string; read: boolean; replied: boolean; first: string };
+  mailbox: string | null; gmail: string | null; read: boolean; replied: boolean; first: string };
 
 /** Inbox → the right-hand panel: the chosen email in full, and the reply box under it (sent from the Reply-from address).
  *  Opening an email (clicking it in the list) marks it read. */
@@ -38,7 +38,7 @@ export function InboxPanel({ m, sig, from, opened }: { m: PanelMail; sig: Sig; f
       <span className="ibp-when">{m.when}</span>
     </div>
     <h3 className="ibp-subj">{m.subject || "(no subject)"} {m.kind && <span className={`pill ${m.kind[0]}`} style={{ fontSize: 12, verticalAlign: 2 }}>{m.kind[1]}</span>}{sent && <span className="pill good" style={{ fontSize: 12, verticalAlign: 2, marginLeft: 4 }}>Replied</span>}</h3>
-    <div className="ibp-acts"><a className="abtn sm" href={m.gmail} target="_blank" rel="noopener">Open in Gmail</a>
+    <div className="ibp-acts">{m.gmail && <a className="abtn sm" href={m.gmail} target="_blank" rel="noopener">Open in Gmail</a>}
       <button type="button" className="abtn sm" onClick={toggleRead} disabled={busy}>{read ? "Mark unread" : "Mark read"}</button></div>
     {!mail && !err && <p className="muted">Loading the email…</p>}
     {err && <p className="note msg bad" style={{ margin: 0 }}>{err}</p>}
