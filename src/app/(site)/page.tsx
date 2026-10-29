@@ -79,6 +79,8 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
       {show.length > 0 && <section className="bh-t bh-wide">
         <div className="bh-head"><h2>Courses with space</h2><Link className="go" href="/courses">All courses →</Link></div>
         <div className="bh-courses">{show.map((c) => <Link key={c.code} className="bh-course" href={`/courses/${c.page_slug}`} style={{ ["--c" as string]: c.colour }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="rd" src={roundelSrc(c.subject)} alt="" width={64} height={64} loading="lazy" />
           <span className="lv"><i />{c.level}</span><b>{c.subject}</b>
           <span>{c.slots?.length ? c.slots.map((x) => `${DAYS[x.d]} ${x.t}`).join(" & ") : "Times to be announced"}{c.places_left != null ? ` · ${c.places_left <= 2 ? `last ${c.places_left}` : c.places_left} place${c.places_left === 1 ? "" : "s"}` : ""}</span></Link>)}</div>
       </section>}

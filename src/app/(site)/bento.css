@@ -195,3 +195,9 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 @media (max-width:600px){.bh-home .bh-art{width:150vw;height:auto;right:-62%}}
 /* menu links: light cyan on hover (the chalk colour) */
 @media (min-width:1081px){.bt .s-links a:hover,.bt .s-links a:focus-visible{background:#5fe0e8;color:#0f1747}}
+/* Courses with space: each tile carries the subject's roundel, top right */
+.bh-course{position:relative;padding-right:84px}
+.bh-course .rd{position:absolute;top:14px;right:14px;width:58px;height:58px;border-radius:50%;object-fit:cover;transition:transform .2s}
+.bh-course:hover .rd{transform:rotate(-8deg) scale(1.05)}
+.bh-course span:last-child{margin-right:-66px}
+@media (prefers-reduced-motion:reduce){.bh-course:hover .rd{transform:none}}
