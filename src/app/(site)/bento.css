@@ -255,3 +255,12 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .bh-home .bh-hero .btn-ghost:hover,.bh-home .bh-hero .btn-ghost:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
 /* menu over the hero: see-through only at the very top; once scrolled it gets a dark bar so the words don't show through */
 .bt .s-nav.over:not(.top){background:rgba(15,23,71,.88);backdrop-filter:blur(10px);border-bottom-color:rgba(255,255,255,.08)}
+/* bigger boy at his desk; symbols away from him less faded */
+.bh-home .bh-art{--s:calc(min(46vw,72svh) / 744);
+  -webkit-mask-image:radial-gradient(ellipse 80% 90% at 79% 74%,#000 34%,rgba(0,0,0,.88) 58%,rgba(0,0,0,.66) 100%);
+  mask-image:radial-gradient(ellipse 80% 90% at 79% 74%,#000 34%,rgba(0,0,0,.88) 58%,rgba(0,0,0,.66) 100%)}
+.bh-home .bh-art .desk{right:max(3vw,calc(50vw - 72svh))}
+@media (max-width:1100px){.bh-home .bh-art{--s:calc(min(56vw,60svh) / 744)}}
+@media (max-width:760px){.bh-home .bh-art{--s:calc(min(92vw,46svh) / 744)}}
+@media (max-aspect-ratio:1/1){.bh-home .bh-art{-webkit-mask-image:radial-gradient(ellipse 90% 60% at 50% 30%,#000 32%,rgba(0,0,0,.85) 60%,rgba(0,0,0,.62) 100%);mask-image:radial-gradient(ellipse 90% 60% at 50% 30%,#000 32%,rgba(0,0,0,.85) 60%,rgba(0,0,0,.62) 100%)}}
+@media (max-aspect-ratio:1/1) and (min-width:761px){.bh-home .bh-art{--s:calc(min(80vw,44svh) / 744)}}
