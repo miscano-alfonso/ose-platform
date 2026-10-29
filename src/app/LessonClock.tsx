@@ -1,12 +1,10 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-// The My day panel's clock: a ring that fills in yellow over the last hour before the next lesson, with the lesson's
-// start time in the middle, and (separately, beside the Join button) how long until it starts. Times are the
+// The My day panel's clock (a classic dial with the time now) and, beside the Join button, how long until the next lesson starts. Times are the
 // lesson's date and start time in the UK, read in the viewer's own clock.
 
 const at = (date: string, time: string) => new Date(`${date}T${time.length === 5 ? time + ":00" : time}`).getTime();
-const R = 84, C = 2 * Math.PI * R;
 
 function useNow(ms: number) {
   const [now, setNow] = useState<number | null>(null);
@@ -25,24 +23,39 @@ export function untilText(start: number, now: number, endMin = 45): string {
   return days <= 0 ? `at ${new Date(start).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : days === 1 ? "tomorrow" : `in ${days} days`;
 }
 
+const TICKS = Array.from({ length: 60 }, (_, i) => i);
+
+/** Clock option B: a classic dial (hour marks, white hour and minute hands, a sweeping yellow second hand) showing the time now. */
 export function LessonClock({ date, time }: { date: string; time: string }) {
-  const now = useNow(15000);
-  const start = at(date, time);
-  const left = now == null ? Infinity : start - now;
-  const frac = left <= 0 ? 1 : left >= 3600e3 ? 0 : 1 - left / 3600e3;   // fills over the last hour
-  return <svg className="lclock" viewBox="0 0 200 200" role="img" aria-label={`Starts at ${time.slice(0, 5)}`}>
-    <circle cx="100" cy="100" r={R} fill="none" stroke="rgba(255,255,255,.16)" strokeWidth="12" />
-    {frac > 0 && <circle cx="100" cy="100" r={R} fill="none" stroke="var(--pop,#e9f56a)" strokeWidth="12" strokeLinecap="round"
-      transform="rotate(-90 100 100)" strokeDasharray={`${frac * C} ${C}`} />}
-    <text x="100" y="104" textAnchor="middle" className="lclock-t">{time.slice(0, 5)}</text>
-    <text x="100" y="130" textAnchor="middle" className="lclock-l">{left <= 0 ? "started" : "starts"}</text>
+  const h = useRef<SVGLineElement>(null), m = useRef<SVGLineElement>(null), s = useRef<SVGLineElement>(null);
+  useEffect(() => {
+    const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let raf = 0, iv = 0;
+    const set = () => {
+      const d = new Date(), sec = d.getSeconds() + (still ? 0 : d.getMilliseconds() / 1000), min = d.getMinutes() + sec / 60, hr = (d.getHours() % 12) + min / 60;
+      h.current?.setAttribute("transform", `rotate(${hr * 30} 100 100)`);
+      m.current?.setAttribute("transform", `rotate(${min * 6} 100 100)`);
+      s.current?.setAttribute("transform", `rotate(${sec * 6} 100 100)`);
+    };
+    const loop = () => { set(); raf = requestAnimationFrame(loop); };
+    if (still) { set(); iv = window.setInterval(set, 1000); } else loop();
+    return () => { cancelAnimationFrame(raf); clearInterval(iv); };
+  }, []);
+  return <svg className="lclock" viewBox="0 0 200 200" role="img" aria-label={`Clock. Next lesson ${date} at ${time.slice(0, 5)}`}>
+    <circle cx="100" cy="100" r="92" fill="rgba(255,255,255,.06)" stroke="rgba(255,255,255,.25)" strokeWidth="2" />
+    {TICKS.map((i) => { const big = i % 5 === 0; return <line key={i} x1="100" x2="100" y1={big ? 14 : 16} y2={big ? 26 : 21}
+      stroke={big ? "#fff" : "rgba(255,255,255,.4)"} strokeWidth={big ? 3 : 1.2} strokeLinecap="round" transform={`rotate(${i * 6} 100 100)`} />; })}
+    <line ref={h} x1="100" y1="108" x2="100" y2="56" stroke="#fff" strokeWidth="6" strokeLinecap="round" />
+    <line ref={m} x1="100" y1="112" x2="100" y2="28" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
+    <line ref={s} x1="100" y1="118" x2="100" y2="20" stroke="var(--pop,#e9f56a)" strokeWidth="1.6" strokeLinecap="round" />
+    <circle cx="100" cy="100" r="5" fill="var(--pop,#e9f56a)" />
   </svg>;
 }
 
 /** The time left, for the row with the Join button. */
-export function LessonCountdown({ date, time }: { date: string; time: string }) {
+export function LessonCountdown({ date, time, withTime }: { date: string; time: string; withTime?: boolean }) {
   const now = useNow(15000);
   if (now == null) return null;
   const t = untilText(at(date, time), now);
-  return t ? <span className="fx-cd" aria-live="polite">{t}</span> : null;
+  return t ? <span className="fx-cd" aria-live="polite">{withTime && t !== "on now" ? `${time.slice(0, 5)} · ${t}` : t}</span> : null;
 }

@@ -30,7 +30,7 @@ export default async function MyDay() {
         {!!next?.birthdays?.length && <p className="fx-bday"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 1.2 1.5 2.1 1.5 2.8a1.5 1.5 0 0 1-3 0c0-.7.5-1.6 1.5-2.8zM11.2 8h1.6v3h-1.6zM4 13a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.2c-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-.7.6-1.3.9-2 .9zM4 17.5c.7 0 1.4-.2 2-.7 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 .6.5 1.3.7 2 .7V21H4z" fill="currentColor"/></svg>
           <span>{next.birthdays.map((b, i) => <span key={i}>{i ? (i === next.birthdays!.length - 1 ? " and " : ", ") : ""}<b>{b.name}</b>’s birthday {b.d === today ? "is today" : b.d === next.d ? "is on the lesson day" : `${b.d < today ? "was" : "is"} on ${wd(b.d)} ${dm(b.d)}`} (turns {b.age})</span>)}</span></p>}
         <div className="fx-btns">{next?.meet_url && <a className="go" href={next.meet_url} target="_blank" rel="noopener">{joinLabel(next.meet_url)}</a>}
-          {next && <LessonCountdown date={next.d} time={next.time} />}
+          {next && <LessonCountdown date={next.d} time={next.time} withTime />}
           {next && <Link href={`/admin/register/${next.id}`}>Register</Link>}<Link href="/admin/teacher/timetable">My timetable</Link></div>
       </div>{next && <LessonClock date={next.d} time={next.time} />}</section>
       <Link href="/admin/teacher/reports" className="dx-pop c4"><span>{d.reportCycle ?? "Reports"}</span>
