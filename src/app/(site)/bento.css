@@ -187,8 +187,8 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 @media (max-width:600px){.bh-home .bh-hero{border-radius:0 0 28px 28px}.bh-home .bh-art{top:var(--navh);height:52%}}
 /* the menu bar while the hero is behind it */
 .bt .s-nav{transition:background-color .25s,border-color .25s}
-.bt .s-nav.over{background:transparent;backdrop-filter:none;border-bottom-color:transparent}
-.bt .s-nav.over .s-logo img{filter:brightness(0) invert(1)}
+.bt .s-nav.over,.bt:has(.bh-home) .s-nav:not(.past){background:transparent;backdrop-filter:none;border-bottom-color:transparent}
+.bt .s-nav.over .s-logo img,.bt:has(.bh-home) .s-nav:not(.past) .s-logo img{filter:brightness(0) invert(1)}
 /* the illustration scales with the window's width (and never taller than the hero), so it stays on the right of the words */
 .bh-home .bh-art{height:auto;width:min(66vw,calc((100svh - var(--navh)) * 1.64));right:-3%}
 @media (max-width:980px){.bh-home .bh-art{width:115vw;right:-38%}}
@@ -227,11 +227,11 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 @media (max-aspect-ratio:1/1) and (min-width:761px){.bh-home .bh-art{--s:calc(min(76vw,40svh) / 744)}
   .bh-home .bh-art .desk{right:auto;left:50%;bottom:auto;top:calc(var(--navh) + 6svh);transform:translateX(-50%)}}
 /* over the hero the menu always looks as it does in dark mode (also in light mode) */
-.bt .s-nav.over .s-links,.bt .s-nav.over .s-theme,.bt .s-nav.over .s-ico{background:#161a33;border-color:rgba(255,255,255,.12);color:#eef0f7}
-.bt .s-nav.over .s-links a{color:#eef0f7}
-.bt .s-nav.over .s-links a[aria-current=page]{background:#eef0f7;color:#0f1747}
-.bt .s-nav.over .s-theme:hover{background:#262c52}
-@media (max-width:1080px){.bt .s-nav.over .s-links{background:#161a33}}
+.bt .s-nav.over .s-links,.bt .s-nav.over .s-theme,.bt .s-nav.over .s-ico,.bt:has(.bh-home) .s-nav:not(.past) .s-links,.bt:has(.bh-home) .s-nav:not(.past) .s-theme,.bt:has(.bh-home) .s-nav:not(.past) .s-ico{background:#161a33;border-color:rgba(255,255,255,.12);color:#eef0f7}
+.bt .s-nav.over .s-links a,.bt:has(.bh-home) .s-nav:not(.past) .s-links a{color:#eef0f7}
+.bt .s-nav.over .s-links a[aria-current=page],.bt:has(.bh-home) .s-nav:not(.past) .s-links a[aria-current=page]{background:#eef0f7;color:#0f1747}
+.bt .s-nav.over .s-theme:hover,.bt:has(.bh-home) .s-nav:not(.past) .s-theme:hover{background:#262c52}
+@media (max-width:1080px){.bt .s-nav.over .s-links,.bt:has(.bh-home) .s-nav:not(.past) .s-links{background:#161a33}}
 .bh-home .bh-hero{padding-left:var(--side);padding-right:var(--side)}   /* words line up with the logo */
 /* symbols behind the words are fainter, so the text stays easy to read */
 .bh-home .bh-art .dim{opacity:.32}
@@ -254,7 +254,7 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .bh-home .bh-hero .btn-accent:hover,.bh-home .bh-hero .btn-accent:focus-visible{background:#f4fa9e;color:#0f1747;border-color:#f4fa9e}
 .bh-home .bh-hero .btn-ghost:hover,.bh-home .bh-hero .btn-ghost:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
 /* menu over the hero: see-through only at the very top; once scrolled it gets a dark bar so the words don't show through */
-.bt .s-nav.over:not(.top){background:rgba(15,23,71,.88);backdrop-filter:blur(10px);border-bottom-color:rgba(255,255,255,.08)}
+.bt .s-nav.over:not(.top),.bt:has(.bh-home) .s-nav:not(.past):not(.top){background:rgba(15,23,71,.88);backdrop-filter:blur(10px);border-bottom-color:rgba(255,255,255,.08)}
 /* bigger boy at his desk; symbols away from him less faded */
 .bh-home .bh-art{--s:calc(min(46vw,72svh) / 744);
   -webkit-mask-image:radial-gradient(ellipse 80% 90% at 79% 74%,#000 34%,rgba(0,0,0,.88) 58%,rgba(0,0,0,.66) 100%);
@@ -279,8 +279,8 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .cbtns{position:relative}
 .cbtns .sticky{top:50%;right:12px;transform:translateY(-50%) rotate(-3deg);z-index:2;pointer-events:none}
 /* cyan hovers always get navy text (the over-the-hero menu sets white text, so this must be at least as specific) */
-@media (min-width:1081px){.bt .s-nav .s-links a:hover,.bt .s-nav .s-links a:focus-visible,.bt .s-nav.over .s-links a:hover,.bt .s-nav.over .s-links a:focus-visible{background:#5fe0e8;color:#0f1747}}
-.bt .s-nav.over .s-theme:hover,.bt .s-nav.over .s-ico:hover,.bt .s-nav.over .s-ico:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+@media (min-width:1081px){.bt .s-nav .s-links a:hover,.bt .s-nav .s-links a:focus-visible,.bt .s-nav.over .s-links a:hover,.bt .s-nav.over .s-links a:focus-visible,.bt:has(.bh-home) .s-nav:not(.past) .s-links a:hover,.bt:has(.bh-home) .s-nav:not(.past) .s-links a:focus-visible{background:#5fe0e8;color:#0f1747}}
+.bt .s-nav.over .s-theme:hover,.bt .s-nav.over .s-ico:hover,.bt .s-nav.over .s-ico:focus-visible,.bt:has(.bh-home) .s-nav:not(.past) .s-theme:hover,.bt:has(.bh-home) .s-nav:not(.past) .s-ico:hover,.bt:has(.bh-home) .s-nav:not(.past) .s-ico:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
 /* cyan tile: everything in it navy */
 .bt .bh .bh-homeed,.bt .bh .bh-homeed *,.bh .bh-homeed b,.bh .bh-homeed .k{color:#0f1747}
 /* only the symbols behind the words are subdued; everything on the right is full strength */
@@ -320,3 +320,13 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 /* glow centred on the boy as marked (round, a little higher and further right) */
 .bh-home .bh-hero{background:radial-gradient(circle min(34vw,62svh) at 76% 50%,#2c3eb0 0%,#1d2878 55%,#0f1747 100%)}
 @media (max-aspect-ratio:1/1){.bh-home .bh-hero{background:radial-gradient(circle min(60vw,40svh) at 50% 28%,#2c3eb0 0%,#1d2878 55%,#0f1747 100%)}}
+/* the big headline's letters sit a little in from its edge (the "L" has side space), so the small lines above and
+   below are nudged in to start where the letters start, in line with the logo */
+.bh-home .bh-hero{--h1:clamp(52px,min(8vw,14svh),168px)}
+.bh-home .bh-hero h1{font-size:var(--h1)}
+.bh-home .bh-hero>.k,.bh-home .bh-hero>p:not(.k){margin-left:calc(var(--h1) * .072)}
+@media (max-aspect-ratio:1/1){.bh-home .bh-hero{--h1:clamp(46px,11vw,120px)}}
+/* home page: no white strip above the hero when the page is pulled down (overscroll shows navy, and the bounce is off) */
+html:has(.bh-home){background:#0f1747;overscroll-behavior-y:none}
+body:has(.bh-home){background:transparent}
+.bt:has(.bh-home){background:linear-gradient(#0f1747 0 50vh,var(--b-bg) 50vh)}

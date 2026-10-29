@@ -10,13 +10,14 @@ export function HeroNav() {
     const root = document.documentElement;
     const set = () => {
       root.style.setProperty("--navh", `${nav.offsetHeight}px`);
-      nav.classList.toggle("over", window.scrollY < hero.offsetHeight - nav.offsetHeight - 10);
+      const over = window.scrollY < hero.offsetHeight - nav.offsetHeight - 10;
+      nav.classList.toggle("over", over); nav.classList.toggle("past", !over);
       nav.classList.toggle("top", window.scrollY < 8);
     };
     set();
     window.addEventListener("scroll", set, { passive: true }); window.addEventListener("resize", set);
     const ro = new ResizeObserver(set); ro.observe(nav);
-    return () => { window.removeEventListener("scroll", set); window.removeEventListener("resize", set); ro.disconnect(); nav.classList.remove("over", "top"); root.style.removeProperty("--navh"); };
+    return () => { window.removeEventListener("scroll", set); window.removeEventListener("resize", set); ro.disconnect(); nav.classList.remove("over", "top", "past"); root.style.removeProperty("--navh"); };
   }, []);
   return null;
 }
