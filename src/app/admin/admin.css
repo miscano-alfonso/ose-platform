@@ -692,3 +692,9 @@
 .adm .fx-bday svg{width:18px;height:18px;flex:none;margin-top:1px;color:var(--pop,#e9f56a)}
 .adm .fx-bday b{color:var(--pop,#e9f56a);font-weight:600}
 .adm .fx .dx-hero .fx-main .fx-btns .fx-cd{padding:0 6px 0 2px}
+/* teacher hero: Attendance sits at the bottom right, under the clock */
+.adm .fx .dx-hero .fx-side{display:flex;flex-direction:column;align-items:center;justify-content:space-between;gap:14px}
+.adm .fx .dx-hero .fx-side .lclock{align-self:center;margin:-6px 0 0}
+.adm .fx .dx-hero .fx-side .fx-att{display:inline-flex;align-items:center;padding:10px 22px;border-radius:999px;border:1.5px solid rgba(255,255,255,.55);color:#fff;font-weight:600;text-decoration:none;white-space:nowrap}
+.adm .fx .dx-hero .fx-side .fx-att:hover{background:rgba(255,255,255,.1)}
+@media (max-width:640px){.adm .fx .dx-hero .fx-side{flex-direction:row;order:-1;justify-content:space-between;width:100%}.adm .fx .dx-hero .fx-side .lclock{margin:0}}

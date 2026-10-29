@@ -31,8 +31,8 @@ export default async function MyDay() {
           <span>{next.birthdays.map((b, i) => <span key={i}>{i ? (i === next.birthdays!.length - 1 ? " and " : ", ") : ""}<b>{b.name}</b>’s birthday {b.d === today ? "is today" : b.d === next.d ? "is on the lesson day" : `${b.d < today ? "was" : "is"} on ${wd(b.d)} ${dm(b.d)}`} (turns {b.age})</span>)}</span></p>}
         <div className="fx-btns">{next?.meet_url && <a className="go" href={next.meet_url} target="_blank" rel="noopener">{joinLabel(next.meet_url)}</a>}
           {next && <LessonCountdown date={next.d} time={next.time} withTime />}
-          {next && <Link href={`/admin/register/${next.id}`}>Register</Link>}<Link href="/admin/teacher/timetable">My timetable</Link></div>
-      </div>{next && <LessonClock date={next.d} time={next.time} />}</section>
+</div>
+      </div>{next && <div className="fx-side"><LessonClock date={next.d} time={next.time} /><Link className="fx-att" href={`/admin/register/${next.id}`}>Attendance</Link></div>}</section>
       <Link href="/admin/teacher/reports" className="dx-pop c4"><span>{d.reportCycle ?? "Reports"}</span>
         <b className="fx-big">{d.reportsLeft}</b><span>{d.reportsLeft ? `comment${d.reportsLeft === 1 ? "" : "s"} to write${d.reportsDue ? ` · due ${dm(d.reportsDue)}` : ""} →` : "Nothing to write right now →"}</span></Link>
       <div className="dx-kpi ring c3"><div><span className="k">Attendance in my classes</span><span className="v">{d.attendance == null ? "–" : `${d.attendance}%`}</span><span className="h">this term</span></div><Ring pct={d.attendance} tone={d.attendance == null ? "brand" : d.attendance < 50 ? "bad" : d.attendance < 80 ? "warn" : "good"} /></div>
