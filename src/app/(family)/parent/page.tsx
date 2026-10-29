@@ -47,10 +47,10 @@ export default async function ParentHome() {
         {t.unread ? <span className="pill info">New</span> : null}<Link className="abtn sm" href={`/parent/messages?t=${t.id}`}>Open</Link></div>)}
       <div style={{ marginTop: 10 }}><Link className="abtn sm" href="/parent/messages?new=1">New message</Link></div></section> },
   ];
-  const b = await boardLayout("parent-home", f.viewer ? null : f.id, BOARD_MODULES["parent-home"], BUILT_IN);
+  const b = await boardLayout("parent-home", null, BOARD_MODULES["parent-home"], BUILT_IN);
   return <div className="fx fx-board">
-    <BentoBoard page="parent-home" modules={modules.filter((m) => m.id !== "coming" || a.upcoming.length > 1)} layout={f.viewer ? b.defaults : b.layout} defaults={f.viewer ? BUILT_IN : b.defaults}
-      saved={f.viewer ? b.std : b.saved} scope={f.viewer ? "standard" : "own"} audience="parents" />
+    <BentoBoard page="parent-home" modules={modules.filter((m) => m.id !== "coming" || a.upcoming.length > 1)} layout={b.layout} defaults={BUILT_IN}
+      saved={b.std} scope="standard" locked={!f.viewer} audience="parents" />
   </div>;
 }
 

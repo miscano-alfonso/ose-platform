@@ -73,10 +73,11 @@ export async function syncInbox(): Promise<InboxInfo> {
       const have = new Set((await q<{ g: string }>(`select gmail_id as g from inbox_messages where gmail_id = any($1::text[])`, [ids.map((x) => x.id)])).map((x) => x.g));
       for (const { id } of ids) {
         if (have.has(id) || seen.has(id)) continue;
-        const r = await fetch(`${GMAIL_URL()}/users/me/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=Subject&metadataHeaders=Message-ID`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) });
+        const r = await fetch(`${GMAIL_URL()}/users/me/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Subject&metadataHeaders=Message-ID`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) });
         if (!r.ok) continue;
         const m = (await r.json()) as { threadId: string; snippet?: string; internalDate?: string; payload?: { headers?: { name: string; value: string }[] } };
         const h = Object.fromEntries((m.payload?.headers ?? []).map((x) => [x.name.toLowerCase(), x.value]));
+        const to = [...new Set(`${h.to ?? ""},${h.cc ?? ""}`.toLowerCase().match(/[^\s<>,;"']+@[^\s<>,;"']+/g) ?? [])].slice(0, 30);
         const from = fromOf(h.from ?? ""), msgId = (h["message-id"] ?? "").trim().slice(0, 300) || null;
         seen.add(id);
         if (!/@/.test(from.email)) continue;
@@ -91,9 +92,9 @@ export async function syncInbox(): Promise<InboxInfo> {
           union all select null, 'enquiry', 5 from enquiries e where e.email = $1
           order by o limit 1`, [from.email]);
         if (!who) continue;
-        const ins = await q(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, received_at, parent_id, kind, mailbox, message_id)
-          values (current_school(), $1, $2, $3, $4, $5, $6, to_timestamp($7::bigint / 1000.0), $8, $9, $10, $11) on conflict (school_id, gmail_id) do nothing returning id`,
-          [id, m.threadId, from.name?.slice(0, 120) ?? null, from.email, (h.subject ?? "").slice(0, 300), decode(m.snippet ?? "").slice(0, 400), m.internalDate ?? String(Date.now()), who.parent_id, who.kind, box.mailbox ?? null, msgId]);
+        const ins = await q(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, received_at, parent_id, kind, mailbox, message_id, to_addrs)
+          values (current_school(), $1, $2, $3, $4, $5, $6, to_timestamp($7::bigint / 1000.0), $8, $9, $10, $11, $12) on conflict (school_id, gmail_id) do nothing returning id`,
+          [id, m.threadId, from.name?.slice(0, 120) ?? null, from.email, (h.subject ?? "").slice(0, 300), decode(m.snippet ?? "").slice(0, 400), m.internalDate ?? String(Date.now()), who.parent_id, who.kind, box.mailbox ?? null, msgId, to]);
         added += ins.length;
       }
     });

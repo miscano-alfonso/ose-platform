@@ -208,16 +208,17 @@ export async function removeMyHours(userId: string, id: string, actorId = userId
 }
 
 export type TeacherMail = { id: string; from: string; subject: string; snippet: string; received_at: string; parent_id: string; children: string };
-/** Emails to the school inbox from families whose children this teacher teaches (last 30 days, read-only: the office replies, or the teacher uses Messages). */
+/** Emails from families addressed to this teacher (To or Cc, or read from the teacher's own connected inbox), last 30 days.
+ *  Read-only: the office replies, or the teacher uses Messages. */
 export async function teacherMail(userId: string): Promise<{ connected: boolean; rows: TeacherMail[] }> {
   return withSchool(async (q) => {
     const rows = await q<TeacherMail>(`
-      select m.id, coalesce(nullif(m.from_name, ''), p.first_name || ' ' || p.last_name) as "from", m.subject, m.snippet, m.received_at::text, m.parent_id,
+      with me as (select lower(email::text) as email from users where id = $1)
+      select m.id, coalesce(nullif(m.from_name, ''), p.first_name || ' ' || p.last_name, m.from_email::text) as "from", m.subject, m.snippet, m.received_at::text, m.parent_id,
         (select string_agg(distinct coalesce(nullif(s.known_as, ''), s.first_name), ', ') from students s join enrolments e on e.student_id = s.id join course_groups g on g.id = e.group_id
           where s.parent_id = m.parent_id and e.status in ('pending','active') and g.teacher_id = ${ME}) as children
-      from inbox_messages m join parents p on p.id = m.parent_id
-      where m.received_at > now() - interval '30 days' and exists (select 1 from students s join enrolments e on e.student_id = s.id join course_groups g on g.id = e.group_id
-          where s.parent_id = m.parent_id and e.status in ('pending','active') and g.teacher_id = ${ME})
+      from inbox_messages m left join parents p on p.id = m.parent_id, me
+      where m.received_at > now() - interval '30 days' and (lower(m.mailbox::text) = me.email or me.email = any(m.to_addrs))
       order by m.received_at desc limit 20`, [userId]).catch(() => []);
     const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_kv where key = 'gmail' and jsonb_typeof(value) = 'object' and value ? 'refreshToken'`).catch(() => [{ n: 0 }]);
     return { connected: n > 0, rows };

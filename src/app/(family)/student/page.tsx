@@ -38,10 +38,10 @@ export default async function StudentHome() {
     { id: "chat", title: "Chat", node: <section className="dx-card c4"><header><h2>Chat</h2>{!chatOff && <Link className="dx-more" href="/student/chat">Open →</Link>}</header>
         <div className="fx-ringv"><Ico d={IC.chat} /><span>{chatOff ? "Chat is off. Ask your parent to turn it on." : h.me.chat_access === "class" ? "Talk with your classes and teachers." : "Talk with your classes, teachers and friends."}</span></div></section> },
   ];
-  const b = await boardLayout("student-home", f.viewer ? null : f.id, BOARD_MODULES["student-home"], BUILT_IN);
+  const b = await boardLayout("student-home", null, BOARD_MODULES["student-home"], BUILT_IN);
   return <div className="fx fx-board">
-    <BentoBoard page="student-home" modules={modules} layout={f.viewer ? b.defaults : b.layout} defaults={f.viewer ? BUILT_IN : b.defaults}
-      saved={f.viewer ? b.std : b.saved} scope={f.viewer ? "standard" : "own"} audience="students" />
+    <BentoBoard page="student-home" modules={modules} layout={b.layout} defaults={BUILT_IN}
+      saved={b.std} scope="standard" locked={!f.viewer} audience="students" />
   </div>;
 }
 
