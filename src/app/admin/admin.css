@@ -727,3 +727,21 @@
 .adm .dx-pop .fx-pop-bar{display:block;height:8px;border-radius:99px;background:rgba(13,15,28,.14);overflow:hidden}
 .adm .dx-pop .fx-pop-bar i{display:block;height:100%;border-radius:inherit;background:var(--pop-ink,#0d0f1c)}
 .adm .dx-pop .fx-pop-prog small{font-size:14px;font-weight:600}
+/* lesson slides (teacher My day) */
+.adm .fx-sub-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+.adm .fx-sub-row .fx-hero-s{margin:0}
+.adm .fx-slides{display:inline-flex;align-items:center;gap:2px}
+.adm .fx-slides a,.adm .fx-slides .add{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:999px;border:1.5px solid rgba(255,255,255,.45);color:#fff;background:transparent;font:600 14px inherit;font-family:inherit;text-decoration:none;cursor:pointer}
+.adm .fx-slides a:hover,.adm .fx-slides .add:hover{background:rgba(255,255,255,.1)}
+.adm .fx-slides svg{width:16px;height:16px}
+.adm .fx-slides>button:not(.add){border:0;background:none;color:#c9cdea;padding:6px;border-radius:8px;cursor:pointer;display:inline-flex}
+.adm .fx-slides>button:not(.add):hover{color:#fff}
+.adm .fx-slides-edit{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}
+.adm .fx-slides-edit input{flex:1 1 260px;min-width:0;padding:8px 12px;border-radius:10px;border:1.5px solid var(--line);font:inherit;background:var(--panel);color:var(--ink)}
+.adm .fx-slides-err{color:var(--bad);font-size:14px}
+.adm .dx-hero .fx-slides-err{color:#ffb4ab}
+/* in the This week list (light card) */
+.adm .fx-row .fx-slides a,.adm .fx-row .fx-slides .add{border-color:var(--line);color:var(--ink);padding:4px 10px;font-size:13px}
+.adm .fx-row .fx-slides .add{color:var(--muted)}
+.adm .fx-row .fx-slides>button:not(.add){color:var(--muted)}
+.adm .fx-row .fx-slides-edit{flex-basis:100%}

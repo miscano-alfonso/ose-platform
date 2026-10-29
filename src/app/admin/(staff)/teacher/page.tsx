@@ -2,6 +2,8 @@ import Link from "next/link";
 import { LessonClock, LessonCountdown } from "../../../LessonClock";
 import { requireViewer } from "@/lib/auth";
 import { myDay, teacherMail, myChats, pointsGiven } from "@/lib/teacher-area";
+import { teacherStream } from "@/lib/classroom-stream";
+import { SlidesButton } from "./SlidesButton";
 import { classesForPoints } from "@/lib/community";
 import { listThreads } from "@/lib/community";
 import { boardLayout } from "@/lib/dashboard-layout";
@@ -23,6 +25,7 @@ export default async function MyDay() {
   const me = await requireViewer();
   const [d, threads, mail, chats, given, pclasses] = await Promise.all([myDay(me.id), listThreads(me.id, "open").catch(() => []), teacherMail(me.id),
     myChats(me.id).catch(() => []), pointsGiven(me.id).catch(() => []), classesForPoints(me.id, false).catch(() => [])]);
+  const stream = await teacherStream(me.id).catch(() => ({ connected: false, linked: 0, items: [] }));
   const top = [...new Map(pclasses.flatMap((c) => c.students.map((st) => [st.id, { name: st.name, pts: st.term_points }] as const))).values()].filter((x) => x.pts > 0).sort((a, b) => b.pts - a.pts).slice(0, 3);
   const today = new Date().toISOString().slice(0, 10);
   const next = d.week.find((l) => l.d > today || (l.d === today && l.status === "scheduled")) ?? d.week[0];
@@ -34,7 +37,7 @@ export default async function MyDay() {
     { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">
         <p className="fx-live" style={isToday ? undefined : { color: "#c9cdea" }}>{isToday && <i />}{next ? (isToday ? "Today" : `Next lesson · ${wd(next.d)} ${dm(next.d)}`) : d.term?.name ?? "My day"}</p>
         <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {me.name.split(" ")[0]}</span>{next && <><br />{next.name}</>}</h1>
-        <p className="fx-hero-s">{next ? <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>
+        <div className="fx-sub-row"><p className="fx-hero-s">{next ? <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>{next && <SlidesButton eventId={next.id} url={next.slides_url ?? null} />}</div>
         {!!next?.birthdays?.length && <p className="fx-bday"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 1.2 1.5 2.1 1.5 2.8a1.5 1.5 0 0 1-3 0c0-.7.5-1.6 1.5-2.8zM11.2 8h1.6v3h-1.6zM4 13a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.2c-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-.7.6-1.3.9-2 .9zM4 17.5c.7 0 1.4-.2 2-.7 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 .6.5 1.3.7 2 .7V21H4z" fill="currentColor"/></svg>
           <span>{next.birthdays.map((b, i) => <span key={i}>{i ? (i === next.birthdays!.length - 1 ? " and " : ", ") : ""}<b>{b.name}</b>’s birthday {b.d === today ? "is today" : b.d === next.d ? "is on the lesson day" : `${b.d < today ? "was" : "is"} on ${wd(b.d)} ${dm(b.d)}`} (turns {b.age})</span>)}</span></p>}
         <div className="fx-btns">{next?.meet_url && <a className="go" href={next.meet_url} target="_blank" rel="noopener">{joinLabel(next.meet_url)}</a>}
@@ -57,6 +60,7 @@ export default async function MyDay() {
             {l.not_in_classroom ? ` · ${l.not_in_classroom} not in Classroom yet` : ""}
             {l.tasters.length ? ` · ${l.tasters.length} taster${l.tasters.length > 1 ? "s" : ""}: ${l.tasters.join(", ")}` : ""}
             {l.absent.length ? ` · away: ${l.absent.join(", ")}` : ""}</span></div>
+          {l.id !== next?.id && <SlidesButton compact eventId={l.id} url={l.slides_url ?? null} />}
           {l.d < today || l.status !== "scheduled" ? <Link className="abtn sm" href={`/admin/register/${l.id}`}>Attendance</Link>
             : l.meet_url ? null // the next lesson's Join button is at the top
             : <span className="pill mute" title="The office adds the Meet link to the class">No Meet link</span>}
@@ -89,6 +93,14 @@ export default async function MyDay() {
       {given.length === 0 ? <p className="empty">You haven’t given any points yet. Reward great work with 1–10 points.</p>
         : <MoreList className="dx-list" limit={4}>{given.map((p) => <div key={p.id} className="dx-item good"><span className="t"><b>+{p.points} · {p.student}</b><span>{p.reason} · {p.class} · {dm(p.awarded_on)}</span></span></div>)}</MoreList>}
       <div style={{ marginTop: 12 }}><Link className="abtn sm" href="/admin/points">Give points</Link></div>
+    </section> },
+    { id: "stream", title: "Classroom stream", size: "l", node: <section className="dx-card"><header><h2>Classroom stream</h2><a className="dx-more" href="https://classroom.google.com/" target="_blank" rel="noopener">Classroom →</a></header>
+      {stream.linked === 0 ? <p className="empty">None of your classes is linked to a Google Classroom course yet. The office links them.</p>
+        : !stream.connected ? <p className="empty">The Classroom stream shows here once the office connects the recordings account.</p>
+        : stream.items.length === 0 ? <p className="empty">No posts in your Classroom courses yet.</p>
+        : <MoreList className="dx-list" limit={5}>{stream.items.map((it) => { const inner = <><span className="t"><span className={`pill ${it.kind === "work" ? "warn" : it.kind === "material" ? "info" : "mute"}`}>{it.kind === "work" ? "Assignment" : it.kind === "material" ? "Material" : "Post"}</span>
+            <b>{it.title || "(no title)"}</b>{it.text && <span>{it.text.length > 120 ? it.text.slice(0, 120) + "…" : it.text}</span>}<span style={{ fontSize: 13 }}>{it.course}{it.at ? ` · ${dm(it.at.slice(0, 10))}` : ""}</span></span>{it.link && <span className="go" aria-hidden="true">→</span>}</>;
+          return it.link ? <a key={it.id} className="dx-item info" href={it.link} target="_blank" rel="noopener" style={it.colour ? { borderLeftColor: it.colour } : undefined}>{inner}</a> : <div key={it.id} className="dx-item info">{inner}</div>; })}</MoreList>}
     </section> },
   ];
   const known = BOARD_MODULES["teacher-home"];
