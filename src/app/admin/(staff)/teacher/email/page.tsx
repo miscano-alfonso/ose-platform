@@ -6,7 +6,7 @@ import { teacherEmailAction } from "./actions";
 export const dynamic = "force-dynamic";
 const when = (s: string) => new Date(s).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 
-// A teacher's Email: for writing to the school (the office). Parents and teachers talk through Messages instead.
+// A teacher's Email: for writing to the people the school lists (e.g. the principal, IT support). Parents and teachers talk through Messages instead.
 export default async function TeacherEmail({ searchParams }: { searchParams: Promise<{ new?: string; re?: string; ok?: string; err?: string; to?: string }> }) {
   const [sp, me] = await Promise.all([searchParams, requireViewer()]);
   const [mails, contacts, office] = await Promise.all([teacherEmails(me.id), teacherContacts().catch(() => []), officeInfo().catch(() => ({ label: "the office", mailbox: null }))]);
@@ -18,15 +18,14 @@ export default async function TeacherEmail({ searchParams }: { searchParams: Pro
   // one card per conversation, newest first; inside, oldest first
   const threads = [...mails.reduce((m, e) => m.set(e.thread_id, [...(m.get(e.thread_id) ?? []), e]), new Map<string, typeof mails>()).values()].map((t) => [...t].reverse());
   return <>
-    <div className="top"><div><h1>Email</h1><div className="sub">Email the school: {office.label}, or someone in particular. Attach files (up to 3.5 MB) or add Google Drive links. Replies come to {me.email} and show here too. To talk with a parent, use <Link href="/admin/teacher/messages">Messages</Link>.</div></div>
+    <div className="top"><div><h1>Email</h1><div className="sub">Email {contacts.length ? contacts.map((c) => c.name.split(" ")[0]).join(" or ") : "the school"}. Attach files (up to 3.5 MB) or add Google Drive links. Replies come to {me.email} and show here too. To talk with a parent, use <Link href="/admin/teacher/messages">Messages</Link>.</div></div>
       <span className="grow" />{!compose && <Link className="abtn pri" href="/admin/teacher/email?new=1">Email the school</Link>}</div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {compose && <section className="card"><h2>{re ? "Reply" : "New email"}</h2>
       <form action={teacherEmailAction} encType="multipart/form-data" style={{ display: "grid", gap: 10, maxWidth: 720 }}>
         {re && <input type="hidden" name="thread" value={re.thread_id} />}
-        {!re && <label className="fld">To<select name="to" defaultValue={sp.to ?? ""} style={{ padding: "8px 12px", borderRadius: 10, border: "1.5px solid var(--line)", background: "var(--panel)", color: "var(--ink)", font: "inherit" }}>
-          <option value="">{cap(office.label)}{office.mailbox ? ` (${office.mailbox})` : ""}</option>
-          {contacts.map((c) => <option key={c.user_id} value={c.user_id}>{c.name}: {c.label}</option>)}</select></label>}
+        {!re && <label className="fld">To<select name="to" required defaultValue={sp.to ?? contacts[0]?.user_id ?? ""} style={{ padding: "8px 12px", borderRadius: 10, border: "1.5px solid var(--line)", background: "var(--panel)", color: "var(--ink)", font: "inherit" }}>
+          {contacts.length === 0 && <option value="">No one set up yet: ask the office</option>}{contacts.map((c) => <option key={c.user_id} value={c.user_id}>{c.name}: {c.label}</option>)}</select></label>}
         {re && <p className="muted" style={{ margin: 0 }}>To {labelOf(re.to_name)}</p>}
         <label className="fld">Subject<input name="subject" required maxLength={200} defaultValue={re ? (/^re:/i.test(re.subject) ? re.subject : `Re: ${re.subject}`) : ""} /></label>
         <label className="fld">Message<textarea name="body" required rows={8} maxLength={20000} /></label>

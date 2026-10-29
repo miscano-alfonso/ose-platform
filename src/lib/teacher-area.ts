@@ -226,9 +226,8 @@ export type TeacherEmail = { id: string; thread_id: string; subject: string; bod
 export type Contact = { user_id: string; name: string; label: string };
 export async function teacherContacts(): Promise<Contact[]> {
   return withSchool(async (q) => {
-    const box = ((await q<{ value: { mailbox?: string } }>(`select value from meet_kv where key = 'gmail'`))[0]?.value?.mailbox ?? "").toLowerCase();
     const admins = await q<{ id: string; name: string; title: string | null }>(`select u.id, u.name, k.value->>'title' as title from users u left join meet_kv k on k.key = 'sig_' || u.id
-      where u.role = 'school_admin' and u.disabled_at is null and lower(u.email::text) <> $1 order by u.name`, [box]);
+      where u.role = 'school_admin' and u.disabled_at is null order by u.name`);
     const saved = (await q<{ value: { user_id: string; label: string }[] }>(`select value from meet_kv where key = 'teacher_contacts'`))[0]?.value;
     if (!Array.isArray(saved)) return admins.map((a) => ({ user_id: a.id, name: a.name, label: a.title || "Admin" }));
     return saved.map((c) => { const a = admins.find((x) => x.id === c.user_id); return a ? { user_id: a.id, name: a.name, label: String(c.label || "").slice(0, 60) || "Admin" } : null; }).filter((x): x is Contact => !!x);
@@ -287,7 +286,9 @@ export async function sendTeacherEmail(user: { id: string; name: string; email: 
       if (!c) return "Choose who to email from the list.";
       const u = (await q<{ email: string }>(`select email::text from users where id = $1`, [c.user_id]))[0];
       toUser = c.user_id; toEmail = u?.email ?? null; toName = c.name;
-    } else if (thread) {
+    } else if (!thread) {
+      return "Choose who to email.";
+    } else {
       toUser = (await q<{ t: string | null }>(`select to_user as t from inbox_messages where thread_id = $1 order by received_at limit 1`, [thread]))[0]?.t ?? null;
     }
     const [row0] = await q<{ id: string }>(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, body, received_at, parent_id, kind, mailbox, sent_by, to_user, links)
