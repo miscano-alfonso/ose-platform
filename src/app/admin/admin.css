@@ -774,3 +774,14 @@
 .adm .ntf-tick span{display:grid}.adm .ntf-tick small{color:var(--muted);font-size:13.5px}
 .adm .ntf-row select{padding:7px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:inherit}
 .adm .fx-btns a.ntf-set{padding:0;border:0;border-radius:999px;font-size:inherit;color:rgba(201,205,234,.6)}
+/* inbox: the whole row opens the email; the read/unread dot sits above that link */
+.adm .ibx-hit{position:absolute;inset:0;z-index:1;border-radius:inherit}
+.adm .ibx-hit:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
+.adm .ibx-tr{display:inline-flex;gap:8px;align-items:center;flex:none}
+.adm .ibx-dot{position:relative;z-index:2;width:22px;height:22px;border-radius:50%;border:0;background:transparent;cursor:pointer;display:grid;place-items:center;padding:0}
+.adm .ibx-dot::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--sky);box-shadow:0 0 0 2px var(--panel)}
+.adm .ibx-dot.read::before{background:transparent;box-shadow:inset 0 0 0 1.5px var(--muted)}
+.adm .ibx-dot:hover{background:var(--soft)}
+.adm .ibp-when{display:inline-flex;gap:12px;align-items:center}
+.adm .ibp-reply{display:grid;gap:12px}
+.adm .ibp-orig.first{border-top:0;padding-top:0;margin-top:0}

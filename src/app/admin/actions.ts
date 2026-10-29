@@ -1130,12 +1130,13 @@ export async function syncClassroomAction(): Promise<void> {
   const r = await syncClassroom(me.name);
   attBack("google", r.error ? null : `Classroom read: ${r.classes ?? 0} class${r.classes === 1 ? "" : "es"}, ${r.work ?? 0} pieces of work, ${r.submissions ?? 0} hand-ins${r.joined ? `, ${r.joined} invitation${r.joined === 1 ? "" : "s"} now accepted` : ""}.${r.problems?.length ? ` ${r.problems.length} class${r.problems.length === 1 ? "" : "es"} couldn’t be read (see below).` : ""}`, r.error ?? null);
 }
+const setBack = (ok?: string | null, err?: string | null) => redirect(`/admin/email-settings` + (err ? `?err=${encodeURIComponent(err)}` : ok ? `?ok=${encodeURIComponent(ok)}` : ""));
 const mailBack = (ok?: string | null, err?: string | null, show?: string) => redirect(`/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
 export async function syncInboxAction(): Promise<void> {
   await requireStaff();
   const { syncInbox } = await import("@/lib/inbox");
   const r = await syncInbox();
-  mailBack(r.error ? null : `Inbox read: ${r.added ?? 0} new email${r.added === 1 ? "" : "s"} from families.`, r.error ?? null);
+  mailBack(r.error ? null : `Inbox read: ${r.added ?? 0} new email${r.added === 1 ? "" : "s"}.`, r.error ?? null);
 }
 export async function markInboxAction(f: FormData): Promise<void> {
   const me = await requireStaff();
@@ -1146,23 +1147,30 @@ export async function markInboxAction(f: FormData): Promise<void> {
 }
 export async function disconnectInboxAction(f?: FormData): Promise<void> {
   const me = await requireStaff();
-  if (me.role !== "school_admin") mailBack(null, "Only a school admin can disconnect the inbox.");
+  if (me.role !== "school_admin") setBack(null, "Only a school admin can disconnect the inbox.");
   const { disconnectInbox } = await import("@/lib/inbox");
   const box = f ? String(f.get("mailbox") ?? "").slice(0, 200) : "";
   await disconnectInbox(box || undefined);
-  mailBack(`${box || "The school inbox"} is disconnected. Emails already shown here stay until they’re a year old.`);
+  setBack(`${box || "The school inbox"} is disconnected. Emails already shown here stay until they’re a year old.`);
+}
+export async function inboxEveryoneAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); if (me.role !== "school_admin") setBack(null, "Only a school admin can change this.");
+  const { setInboxEveryone, syncInbox } = await import("@/lib/inbox");
+  const on = f.get("on") === "1"; await setInboxEveryone(on);
+  if (on) await syncInbox().catch(() => null);
+  setBack(on ? "Emails from everyone now show in the inbox (checked just now)." : "Only emails from families, enquiries, the waiting list, tasters and teachers show now.");
 }
 export async function replyFromAction(f: FormData): Promise<void> {
   await requireStaff();
   const { setReplyFrom } = await import("@/lib/inbox");
   await setReplyFrom(String(f.get("from") ?? "").trim().slice(0, 200));
-  mailBack("Saved. Reply buttons now open Gmail as that address.");
+  setBack("Saved. Reply buttons now open Gmail as that address.");
 }
 export async function signatureAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const { saveSignature } = await import("@/lib/inbox");
   await saveSignature(me.id, { title: String(f.get("title") ?? ""), email: String(f.get("email") ?? ""), web: String(f.get("web") ?? "") });
-  mailBack("Your signature is saved. It goes under every reply you send from here.");
+  setBack("Your signature is saved. It goes under every reply you send from here.");
 }
 // ---------- Post designs: Canva connection and the picture library ----------
 const dsBack = (ok?: string | null, err?: string | null) => redirect(`/admin/social?view=pictures` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));

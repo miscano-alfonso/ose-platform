@@ -8,5 +8,5 @@ export async function teacherContactsAction(f: FormData): Promise<void> {
   const ids = f.getAll("on").map(String);
   await saveTeacherContacts(ids.map((id) => ({ user_id: id, label: String(f.get(`label_${id}`) ?? "") || "Admin" })));
   await saveOfficeLabel(String(f.get("office_label") ?? ""));
-  redirect("/admin/teacher-contacts?ok=Saved.");
+  redirect("/admin/email-settings?ok=Saved.");
 }

@@ -4,7 +4,8 @@ import { siteBase } from "./social";
 import { googleAccess, mailboxAccess, googleKv, googleKvSet, GMAIL_URL, MeetError, type Mailbox } from "./meet";
 
 // Admin → Email → Inbox, as in the prototype: replies and emails from families, read (read-only) from the school's Gmail inbox
-// and linked to the family. Only senders the school already knows are kept; everything else stays in Gmail only.
+// and linked to the family. Emails from everyone are kept (tagged "Other" when the sender isn't known), unless
+// Settings → Email → "Show emails from everyone" is switched off; then only known senders are kept.
 export type InboxInfo = { at?: string; added?: number; error?: string; last?: string };
 export type InboxRow = { id: string; thread_id: string; mailbox: string | null; replied_at: string | null; from_name: string | null; from_email: string; subject: string; snippet: string; received_at: string;
   parent_id: string | null; family: string | null; kind: string; read: boolean; to_name?: string | null };
@@ -30,6 +31,14 @@ export async function disconnectInbox(mailbox?: string) {
   if (first?.mailbox === mailbox) { const [next, ...rest] = more; await googleKvSet("gmail", next ?? null); await googleKvSet("gmail_more", rest); }
   else await googleKvSet("gmail_more", more.filter((x) => x.mailbox !== mailbox));
 }
+export async function setInboxEveryone(on: boolean) {
+  await googleKvSet("inbox_everyone", on);
+  if (on) {   // emails skipped before (unknown senders) are fetched again on the next check, looking back 30 days
+    await googleKvSet("inbox_seen", []);
+    const prev = (await googleKv<InboxInfo>("inbox")) ?? {}; await googleKvSet("inbox", { ...prev, last: undefined });
+  }
+}
+export async function inboxEveryone() { return (await googleKv<boolean>("inbox_everyone").catch(() => null)) !== false; }
 export async function setReplyFrom(email: string) { await googleKvSet("inbox_reply_from", /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email.toLowerCase() : null); }
 
 export async function inboxList(show: "new" | "all"): Promise<{ rows: InboxRow[]; unread: number }> {
@@ -46,7 +55,8 @@ export async function unreadInbox(): Promise<number> {
 export async function markInbox(actorId: string, ids: string[] | "all", read: boolean) {
   await withSchool((q) => ids === "all"
     ? q(`update inbox_messages set read_at = now(), read_by = $1 where read_at is null`, [actorId])
-    : q(`update inbox_messages set read_at = ${read ? "now()" : "null"}, read_by = ${read ? "$1" : "null"} where id = any($2::uuid[])`, [actorId, ids]));
+    // every parameter is used either way (Postgres refuses a query with an unused one, which broke "Mark unread")
+    : q(`update inbox_messages set read_at = case when $3 then now() end, read_by = case when $3 then $1::uuid end where id = any($2::uuid[])`, [actorId, ids, read]));
 }
 
 const fromOf = (v: string) => { const m = /^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/.exec(v); return m ? { name: m[1].trim() || null, email: m[2].trim().toLowerCase() } : { name: null, email: v.trim().toLowerCase() }; };
@@ -72,6 +82,7 @@ export async function syncInbox(): Promise<InboxInfo> {
       ids.push(...(j.messages ?? [])); if (!j.nextPageToken) break; pageToken = j.nextPageToken;
     }
     if (failed) continue;
+    const everyone = (await googleKv<boolean>("inbox_everyone").catch(() => null)) !== false;   // on unless switched off
     await withSchool(async (q) => {
       const have = new Set((await q<{ g: string }>(`select gmail_id as g from inbox_messages where gmail_id = any($1::text[])`, [ids.map((x) => x.id)])).map((x) => x.g));
       for (const { id } of ids) {
@@ -95,10 +106,10 @@ export async function syncInbox(): Promise<InboxInfo> {
           union all select null, 'waiting', 4 from waitlist_entries w where w.email = $1
           union all select null, 'enquiry', 5 from enquiries e where e.email = $1
           order by o limit 1`, [from.email]);
-        if (!who) continue;
+        if (!who && !everyone) continue;   // someone the school doesn't know: only kept when "Show emails from everyone" is on
         const ins = await q(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, received_at, parent_id, kind, mailbox, message_id, to_addrs)
           values (current_school(), $1, $2, $3, $4, $5, $6, to_timestamp($7::bigint / 1000.0), $8, $9, $10, $11, $12) on conflict (school_id, gmail_id) do nothing returning id`,
-          [id, m.threadId, from.name?.slice(0, 120) ?? null, from.email, (h.subject ?? "").slice(0, 300), decode(m.snippet ?? "").slice(0, 400), m.internalDate ?? String(Date.now()), who.parent_id, who.kind, box.mailbox ?? null, msgId, to]);
+          [id, m.threadId, from.name?.slice(0, 120) ?? null, from.email, (h.subject ?? "").slice(0, 300), decode(m.snippet ?? "").slice(0, 400), m.internalDate ?? String(Date.now()), who?.parent_id ?? null, who?.kind ?? "other", box.mailbox ?? null, msgId, to]);
         added += ins.length;
       }
     });

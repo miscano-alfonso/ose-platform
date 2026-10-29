@@ -5,11 +5,11 @@ import { saveEmailDesignAction } from "../../actions";
 import { automations } from "@/lib/automations";
 import { Composer, NotConnected } from "../../Composer";
 import { inboxStatus, inboxList } from "@/lib/inbox";
-import { syncInboxAction, markInboxAction, disconnectInboxAction, replyFromAction, signatureAction } from "../../actions";
-import { InboxPanel, SigPreview } from "../../InboxReply";
+import { syncInboxAction, markInboxAction } from "../../actions";
+import { InboxPanel, ReadToggle } from "../../InboxReply";
 import { requireStaff } from "@/lib/auth";
 
-const KIND: Record<string, [string, string]> = { family: ["good", "Family"], taster: ["info", "Taster"], waiting: ["warn", "Waiting list"], enquiry: ["mute", "Enquiry"], staff: ["warn", "Teacher"] };
+const KIND: Record<string, [string, string]> = { family: ["good", "Family"], taster: ["info", "Taster"], waiting: ["warn", "Waiting list"], enquiry: ["mute", "Enquiry"], staff: ["warn", "Teacher"], other: ["mute", "Other"] };
 
 const LDN = "Europe/London";
 const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: LDN });
@@ -95,34 +95,16 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
         <form action={syncInboxAction}><button className="abtn sm" type="submit">Check now</button></form></div>
       {rows.length === 0 ? <section className="card"><p className="empty">{show === "new" ? "Nothing new from families." : "No emails from families yet."}</p></section> :
       <div className={`ibx${sp.m ? " picked" : ""}`}>
-        <nav className="ibx-list" aria-label="Emails">{rows.map((m) => <Link key={m.id} href={href(m.id)} scroll={false} className={`ibx-row${m.read ? "" : " unread"}`} aria-current={m.id === sel?.id ? "true" : undefined}>
-          <span className="ibx-top"><b>{who(m)}</b><time dateTime={m.received_at}>{shortWhen(m.received_at)}</time></span>
+        <nav className="ibx-list" aria-label="Emails">{rows.map((m) => <div key={m.id} className={`ibx-row${m.read ? "" : " unread"}`} aria-current={m.id === sel?.id ? "true" : undefined}>
+          <Link className="ibx-hit" href={href(m.id)} scroll={false} aria-label={`${who(m)}: ${m.subject || "(no subject)"}`} />
+          <span className="ibx-top"><b>{who(m)}</b><span className="ibx-tr"><ReadToggle id={m.id} read={m.read} /><time dateTime={m.received_at}>{shortWhen(m.received_at)}</time></span></span>
           <span className="ibx-subj">{m.subject || "(no subject)"}</span>
           <span className="ibx-snip">{m.snippet}</span>
           <span className="ibx-tags">{KIND[m.kind] && <span className={`pill ${KIND[m.kind][0]}`}>{KIND[m.kind][1]}</span>}{m.to_name && <span className="pill info">To {m.to_name.split(" ")[0]}</span>}{m.replied_at && <span className="pill good">Replied</span>}{many && m.mailbox && <span className="muted">to {m.mailbox}</span>}</span>
-        </Link>)}</nav>
+        </div>)}</nav>
         {panel && <InboxPanel key={panel.id} m={panel} sig={sig} from={box.replyFrom} opened={!!sp.m} />}
       </div>}
-      <section className="card"><h2>Your signature</h2>
-        <p className="cs">Added under every reply you send from here: your name, job title, email address, website and the school logo. Leave a box empty to leave it out. The logo is blue; email apps that switch to dark mode (Apple Mail, iPhone Mail, Outlook) show it in white instead. Gmail doesn’t tell emails it’s in dark mode, so Gmail readers see the blue one.</p>
-        <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "flex-end" }}>
-          <form action={signatureAction} className="eform" style={{ margin: 0 }}>
-            <label className="fld">Your job title<input name="title" defaultValue={sig.title} maxLength={80} placeholder="e.g. Technical Support" className="mini" style={{ width: 240 }} /></label>
-            <label className="fld">Email address<input name="email" type="email" defaultValue={sig.email} maxLength={120} className="mini" style={{ width: 240 }} /></label>
-            <label className="fld">Website<input name="web" defaultValue={sig.web} maxLength={120} placeholder="ohsoed.co.uk" className="mini" style={{ width: 200 }} /></label>
-            <button className="abtn sm" type="submit">Save</button></form>
-          <SigPreview sig={sig} />
-        </div></section>
-      <section className="card"><h2>Inboxes</h2>
-        <p className="cs">Read-only, checked every 15 minutes while the admin is open{box.info.at ? `; last checked ${when(box.info.at)}` : ""}.{box.info.error ? ` Last check had a problem: ${box.info.error}` : ""} An email sent to more than one of these shows once.</p>
-        {box.mailboxes.map((b) => <div className="li" key={b.mailbox}><div className="t"><b>{b.mailbox}</b><span>connected by {b.by}</span></div>
-          <form action={disconnectInboxAction}><input type="hidden" name="mailbox" value={b.mailbox} /><button className="abtn sm" type="submit">Disconnect</button></form></div>)}
-        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginTop: 12 }}>
-          {box.mailboxes.length < 5 && <a className="abtn" href="/admin/meet-api?action=login&what=gmail2">Connect another inbox</a>}
-          <form action={replyFromAction} className="eform" style={{ margin: 0 }}><label className="fld">Reply from<input name="from" type="email" defaultValue={box.replyFrom} className="mini" style={{ width: 260 }} /></label><button className="abtn sm" type="submit">Save</button></form>
-        </div>
-        <p className="note" style={{ marginTop: 8 }}>Reply opens the whole email here and sends your answer through the Reply from address’s Gmail, in the same conversation for the family. That address must be one of the inboxes above. Inboxes connected before sending was added need to be disconnected and connected again (tick the box to send email). To connect another inbox, sign in to Google as that address when asked.</p>
-      </section></>;
+      <p className="muted" style={{ fontSize: 14, marginTop: 12 }}>Your signature, the connected inboxes and who teachers can email are in <Link href="/admin/email-settings">Settings → Email</Link>.</p></>;
   }
   const past = await history("message");
   return <>{head}
