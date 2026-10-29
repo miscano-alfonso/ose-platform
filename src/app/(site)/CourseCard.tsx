@@ -41,7 +41,6 @@ export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }
         : c.slots?.length ? <ul className="slots">{c.slots.map((s, i) => <li key={i}>{DAYS[s.d]} – {s.t}</li>)}</ul> : null}
       {c.is_next && <p className="starts">Starts {monthYear(c.year_start)}</p>}
       <p className="price">{money(c.course_total_pence)}</p>
-      {c.shows_waitlist && <p className="wltag">Waiting list</p>}
       <div className="cbtns">
         {c.label && <span className={`sticky sl-${LABEL_CLASS[c.label] || "few"}`}>{c.label_text ?? c.label}</span>}
         <Link className="btn sm btn-brand cread" href={`/courses/${c.page_slug}`}>Read more</Link>
