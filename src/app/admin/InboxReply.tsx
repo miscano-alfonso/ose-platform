@@ -73,10 +73,11 @@ export function SigPreview({ sig }: { sig: Sig }) {
     {sig.logo && <><img className="sig-l" src={sig.logo} alt="School logo" width={130} /><img className="sig-d" src={sig.logoDark} alt="" width={130} /></>}</div>;
 }
 
-/** In the list: a small dot to mark one email read or unread without opening it. */
+/** In the list: an on/off switch for "unread" (on = unread). Opening the email turns it off by itself. */
 export function ReadToggle({ id, read }: { id: string; read: boolean }) {
   const [r, setR] = useState(read), [busy, start] = useTransition(), router = useRouter();
-  return <button type="button" className={`ibx-dot${r ? " read" : ""}`} disabled={busy} aria-pressed={!r}
-    title={r ? "Mark unread" : "Mark read"} aria-label={r ? "Mark unread" : "Mark read"}
-    onClick={() => start(async () => { await markInboxReadAction(id, !r); setR(!r); router.refresh(); })} />;
+  useEffect(() => { setR(read); }, [read]);   // follows the list when the email is opened (marked read) elsewhere
+  return <button type="button" role="switch" className={`ibx-sw${r ? "" : " on"}`} disabled={busy} aria-checked={!r}
+    title={r ? "Read: switch on to mark unread" : "Unread: switch off to mark read"} aria-label="Unread"
+    onClick={() => start(async () => { await markInboxReadAction(id, !r); setR(!r); router.refresh(); })}><i /></button>;
 }

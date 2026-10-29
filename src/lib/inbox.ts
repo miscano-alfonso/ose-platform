@@ -20,9 +20,9 @@ export async function inboxStatus() {
   const m = list[0];
   // the demo school shows its made-up emails as if an inbox were connected (nothing is read from or sent to Gmail)
   if (!m && (await withSchool((q) => q<{ d: boolean }>(`select is_demo as d from schools where id = current_school()`)).then((r) => r[0]?.d).catch(() => false)))
-    return { connected: true, mailbox: "office@example.com", by: "", info: info ?? {}, mailboxes: [{ mailbox: "office@example.com", by: "the demo" }], replyFrom: "office@example.com" };
+    return { connected: true, mailbox: "office@example.com", by: "", info: info ?? {}, mailboxes: [{ mailbox: "office@example.com", by: "the demo", syncRead: true }], replyFrom: "office@example.com" };
   return { connected: !!m, mailbox: m?.mailbox ?? "", by: m?.by ?? "", info: info ?? {},
-    mailboxes: list.map((x) => ({ mailbox: x.mailbox ?? "", by: x.by ?? "" })), replyFrom: reply || m?.by || m?.mailbox || "" };
+    mailboxes: list.map((x) => ({ mailbox: x.mailbox ?? "", by: x.by ?? "", syncRead: canSyncRead(x) })), replyFrom: reply || m?.by || m?.mailbox || "" };
 }
 /** Disconnect one inbox (or all of them). */
 export async function disconnectInbox(mailbox?: string) {
@@ -52,11 +52,33 @@ export async function inboxList(show: "new" | "all"): Promise<{ rows: InboxRow[]
 export async function unreadInbox(): Promise<number> {
   return withSchool(async (q) => (await q<{ n: number }>(`select count(*)::int as n from inbox_messages where read_at is null`))[0].n).catch(() => 0);
 }
+/** Inboxes connected with permission to change read/unread in Gmail (connected or reconnected since update 199). */
+export const canSyncRead = (b: Mailbox | null | undefined) => !!b?.scopes?.includes("gmail.modify");
+/** Read/unread changed here → the same in Gmail, so Mail on the Mac and phone show it too (best effort). */
+async function pushRead(ids: string[], read: boolean) {
+  const rows = await withSchool((q) => q<{ gmail_id: string; mailbox: string | null }>(`select gmail_id, mailbox::text from inbox_messages
+    where gmail_id not like 'local:%' and id = any($1::uuid[])`, [ids])).catch(() => []);
+  if (!rows.length) return;
+  const list = await boxes();
+  const byBox = new Map<string, string[]>();
+  for (const r of rows) { const k = r.mailbox ?? list[0]?.mailbox ?? ""; byBox.set(k, [...(byBox.get(k) ?? []), r.gmail_id]); }
+  for (const [mb, gids] of byBox) {
+    const i = list.findIndex((b) => b.mailbox === mb); if (i < 0 || !canSyncRead(list[i])) continue;
+    try {
+      const t = i === 0 ? await googleAccess("gmail") : await mailboxAccess(list[i].refreshToken!);
+      for (let k = 0; k < gids.length; k += 900)
+        await fetch(`${GMAIL_URL()}/users/me/messages/batchModify`, { method: "POST", signal: AbortSignal.timeout(20000), headers: { authorization: `Bearer ${t}`, "content-type": "application/json" },
+          body: JSON.stringify({ ids: gids.slice(k, k + 900), ...(read ? { removeLabelIds: ["UNREAD"] } : { addLabelIds: ["UNREAD"] }) }) });
+    } catch (e) { console.error("inbox read sync", mb, e); }
+  }
+}
 export async function markInbox(actorId: string, ids: string[] | "all", read: boolean) {
-  await withSchool((q) => ids === "all"
-    ? q(`update inbox_messages set read_at = now(), read_by = $1 where read_at is null`, [actorId])
+  if (ids === "all") { const unread = (await withSchool((q) => q<{ id: string }>(`select id from inbox_messages where read_at is null`))).map((r) => r.id); await markInbox(actorId, unread, true); return; }
+  await pushRead(ids, read);
+  if (!ids.length) return;
+  await withSchool((q) =>
     // every parameter is used either way (Postgres refuses a query with an unused one, which broke "Mark unread")
-    : q(`update inbox_messages set read_at = case when $3 then now() end, read_by = case when $3 then $1::uuid end where id = any($2::uuid[])`, [actorId, ids, read]));
+    q(`update inbox_messages set read_at = case when $3 then now() end, read_by = case when $3 then $1::uuid end where id = any($2::uuid[])`, [actorId, ids, read]));
 }
 
 const fromOf = (v: string) => { const m = /^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/.exec(v); return m ? { name: m[1].trim() || null, email: m[2].trim().toLowerCase() } : { name: null, email: v.trim().toLowerCase() }; };
@@ -82,6 +104,19 @@ export async function syncInbox(): Promise<InboxInfo> {
       ids.push(...(j.messages ?? [])); if (!j.nextPageToken) break; pageToken = j.nextPageToken;
     }
     if (failed) continue;
+    // read/unread from Gmail (read in Mail on the Mac or phone → read here, and the other way round), last 30 days
+    // (reading which are unread only needs read access, so this works for every connected inbox)
+    try {
+      const unreadIds: string[] = []; let pt = "";
+      for (let i = 0; i < 5; i++) {
+        const u = new URL(`${GMAIL_URL()}/users/me/messages`); u.searchParams.set("q", "is:unread newer_than:30d"); u.searchParams.set("maxResults", "500"); if (pt) u.searchParams.set("pageToken", pt);
+        const r = await fetch(u, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) }); if (!r.ok) throw new Error(String(r.status));
+        const j = (await r.json()) as { messages?: { id: string }[]; nextPageToken?: string }; unreadIds.push(...(j.messages ?? []).map((m) => m.id)); if (!j.nextPageToken) break; pt = j.nextPageToken;
+      }
+      await withSchool((q) => q(`update inbox_messages set read_at = case when gmail_id = any($1::text[]) then null else coalesce(read_at, now()) end
+        where gmail_id not like 'local:%' and received_at > now() - interval '29 days' and (mailbox = $2 or ($3 and mailbox is null))
+          and (read_at is null) <> (gmail_id = any($1::text[]))`, [unreadIds, box.mailbox ?? "", n === 0]));
+    } catch (e) { errors.push(`${box.mailbox}: couldn’t read which emails are read (${e instanceof Error ? e.message : "?"})`); }
     const everyone = (await googleKv<boolean>("inbox_everyone").catch(() => null)) !== false;   // on unless switched off
     await withSchool(async (q) => {
       const have = new Set((await q<{ g: string }>(`select gmail_id as g from inbox_messages where gmail_id = any($1::text[])`, [ids.map((x) => x.id)])).map((x) => x.g));
@@ -89,7 +124,7 @@ export async function syncInbox(): Promise<InboxInfo> {
         if (have.has(id) || seen.has(id)) continue;
         const r = await fetch(`${GMAIL_URL()}/users/me/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Subject&metadataHeaders=Message-ID`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) });
         if (!r.ok) continue;
-        const m = (await r.json()) as { threadId: string; snippet?: string; internalDate?: string; payload?: { headers?: { name: string; value: string }[] } };
+        const m = (await r.json()) as { threadId: string; labelIds?: string[]; snippet?: string; internalDate?: string; payload?: { headers?: { name: string; value: string }[] } };
         const h = Object.fromEntries((m.payload?.headers ?? []).map((x) => [x.name.toLowerCase(), x.value]));
         const to = [...new Set(`${h.to ?? ""},${h.cc ?? ""}`.toLowerCase().match(/[^\s<>,;"']+@[^\s<>,;"']+/g) ?? [])].slice(0, 30);
         const from = fromOf(h.from ?? ""), msgId = (h["message-id"] ?? "").trim().slice(0, 300) || null;
@@ -107,9 +142,9 @@ export async function syncInbox(): Promise<InboxInfo> {
           union all select null, 'enquiry', 5 from enquiries e where e.email = $1
           order by o limit 1`, [from.email]);
         if (!who && !everyone) continue;   // someone the school doesn't know: only kept when "Show emails from everyone" is on
-        const ins = await q(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, received_at, parent_id, kind, mailbox, message_id, to_addrs)
-          values (current_school(), $1, $2, $3, $4, $5, $6, to_timestamp($7::bigint / 1000.0), $8, $9, $10, $11, $12) on conflict (school_id, gmail_id) do nothing returning id`,
-          [id, m.threadId, from.name?.slice(0, 120) ?? null, from.email, (h.subject ?? "").slice(0, 300), decode(m.snippet ?? "").slice(0, 400), m.internalDate ?? String(Date.now()), who?.parent_id ?? null, who?.kind ?? "other", box.mailbox ?? null, msgId, to]);
+        const ins = await q(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, received_at, parent_id, kind, mailbox, message_id, to_addrs, read_at)
+          values (current_school(), $1, $2, $3, $4, $5, $6, to_timestamp($7::bigint / 1000.0), $8, $9, $10, $11, $12, case when $13 then null else now() end) on conflict (school_id, gmail_id) do nothing returning id`,
+          [id, m.threadId, from.name?.slice(0, 120) ?? null, from.email, (h.subject ?? "").slice(0, 300), decode(m.snippet ?? "").slice(0, 400), m.internalDate ?? String(Date.now()), who?.parent_id ?? null, who?.kind ?? "other", box.mailbox ?? null, msgId, to, (m.labelIds ?? ["UNREAD"]).includes("UNREAD")]);
         added += ins.length;
       }
     });

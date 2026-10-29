@@ -18,7 +18,7 @@ const G = "https://www.googleapis.com/auth/";
 export const CLASSROOM_SCOPES = ["classroom.courses.readonly", "classroom.rosters.readonly", "classroom.coursework.students.readonly", "classroom.profile.emails"].map((x) => G + x);
 const SCOPE = [G + "admin.reports.audit.readonly", ...CLASSROOM_SCOPES].join(" ");
 // The school inbox (the mailbox families reply to): read-only, so replies from families show in Admin → Email → Inbox.
-const GMAIL_SCOPE = G + "gmail.readonly " + G + "gmail.send"; // read the inbox; send replies written in the admin
+const GMAIL_SCOPE = G + "gmail.readonly " + G + "gmail.send " + G + "gmail.modify"; // read the inbox; send replies; keep read/unread in step with Gmail (and Mail apps)
 // The recordings account (ose@, which owns the Meet recordings and teaches every Classroom): Drive, and posting recordings to Classroom.
 const REC_SCOPE = ["drive", "classroom.courses.readonly", "classroom.coursework.students", "classroom.courseworkmaterials", "classroom.announcements.readonly",
   "classroom.rosters.readonly", "classroom.rosters", "classroom.profile.emails"].map((x) => G + x).join(" ");

@@ -83,6 +83,8 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
     // one name per sender: the family's name when we know them, else the name on the email, else the address
     const who = (m: (typeof rows)[number]) => m.family || (isAddr(m.from_name) ? null : m.from_name) || m.from_email;
     const sel = rows.find((m) => m.id === sp.m) ?? rows[0] ?? null;
+    // opening an email (picking it in the list) marks it read straight away, so its switch shows off on this same page
+    if (sp.m && sel && sel.id === sp.m && !sel.read) { const { markInbox } = await import("@/lib/inbox"); await markInbox(me.id, [sel.id], true).catch(() => null); sel.read = true; }
     const href = (id: string) => `/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}&m=${id}`;
     const panel = sel && { id: sel.id, name: who(sel), email: sel.from_email, familyHref: sel.parent_id ? `/admin/families/${sel.parent_id}` : null, subject: sel.subject,
       when: fullWhen(sel.received_at), kind: KIND[sel.kind] ?? null, mailbox: many ? sel.mailbox : null, gmail: sel.thread_id.startsWith("local:") ? null : gm(sel.thread_id, sel.mailbox), read: sel.read,

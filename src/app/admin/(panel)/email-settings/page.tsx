@@ -40,7 +40,9 @@ export default async function EmailSettings({ searchParams }: { searchParams: Pr
         <a className="abtn pri" href="/admin/meet-api?action=login&what=gmail">Connect the school inbox</a></>
       : <>
       <p className="cs">Read-only, checked every 15 minutes while the admin is open{box.info.at ? `; last checked ${when(box.info.at)}` : ""}.{box.info.error ? ` Last check had a problem: ${box.info.error}` : ""} An email sent to more than one of these shows once.</p>
-      {box.mailboxes.map((b) => <div className="li" key={b.mailbox}><div className="t"><b>{b.mailbox}</b><span>connected by {b.by}</span></div>
+      {box.mailboxes.some((b) => !b.syncRead) && <p className="note msg" style={{ marginTop: 0 }}>To keep read and unread in step with Gmail (and Mail on your Mac and phone), press <b>Reconnect</b> on each inbox below and allow the site to manage your email when Google asks. Until then, reading an email here doesn’t change it in Mail.</p>}
+      {box.mailboxes.map((b) => <div className="li" key={b.mailbox}><div className="t"><b>{b.mailbox}</b><span>connected by {b.by}{b.syncRead ? " · read and unread stay in step with Gmail" : ""}</span></div>
+        {!b.syncRead && <a className="abtn sm pri" href={`/admin/meet-api?action=login&what=${b.mailbox === box.mailbox ? "gmail" : "gmail2"}`}>Reconnect</a>}
         <form action={disconnectInboxAction}><input type="hidden" name="mailbox" value={b.mailbox} /><button className="abtn sm" type="submit">Disconnect</button></form></div>)}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "flex-end", marginTop: 12 }}>
         {box.mailboxes.length < 5 && <a className="abtn" href="/admin/meet-api?action=login&what=gmail2">Connect another inbox</a>}
