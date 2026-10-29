@@ -201,3 +201,52 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .bh-course:hover .rd{transform:rotate(-8deg) scale(1.05)}
 .bh-course span:last-child{margin-right:-66px}
 @media (prefers-reduced-motion:reduce){.bh-course:hover .rd{transform:none}}
+/* light/dark: just the icon, round like the basket and account buttons */
+.bt .s-theme{width:42px;padding:0;justify-content:center}
+/* home: New to Home Ed? and FAQs tiles */
+.bh-cta{min-height:170px}
+.bh-cta b{font-size:clamp(22px,2vw,28px);line-height:1.15;letter-spacing:-.01em;max-width:30ch}
+.bh-homeed{background:#5fe0e8;border-color:#5fe0e8;color:#0f1747}
+.bh-homeed .k{color:#0f1747}
+.bh-faq .k{color:var(--b-sky)}
+/* ---------- hero, responsive: the desk is the focal point (bottom right), the symbols spread over the whole hero
+   at positions given as % of its width and height, so they follow the window's shape; words sit at the bottom ---------- */
+.bh-home .bh-hero{justify-content:flex-end}
+.bh-home .bh-art{inset:0;width:auto;height:auto;aspect-ratio:auto;transform:none;opacity:1;right:0;top:0;--s:calc(min(40vw,62svh) / 744)}
+.bh-home .bh-art .bha{position:absolute;width:calc(var(--w) * var(--s));height:auto}
+.bh-home .bh-art .fl{left:calc(var(--x) - var(--w) * var(--s) / 2);top:calc(var(--y) - var(--h) * var(--s) / 2);animation-name:bhbob2}
+.bh-home .bh-art .desk{right:max(5vw,calc(50vw - 62svh));bottom:-4px}
+@keyframes bhbob2{0%,100%{transform:translateY(0) rotate(calc(var(--r) * -1))}50%{transform:translateY(calc(var(--yy) * -1)) rotate(var(--r))}}
+@media (max-width:1100px){.bh-home .bh-art{--s:calc(min(52vw,56svh) / 744)}.bh-home .bh-art .desk{right:3vw}}
+@media (max-width:760px){.bh-home .bh-art{--s:calc(min(88vw,44svh) / 744);opacity:.42}
+  .bh-home .bh-art .desk{right:auto;left:50%;bottom:auto;top:calc(var(--navh) + 12px);transform:translateX(-50%)}}
+/* the hero runs a little past the bottom of the window, so its rounded corners come into view as you scroll */
+.bh-home .bh-hero{--peek:64px;min-height:calc(100vh + var(--peek));min-height:calc(100svh + var(--peek));padding-bottom:calc(var(--peek) + clamp(40px,6vh,72px))}
+.bh-home .bh-art .desk{bottom:calc(var(--peek) - 6px)}
+/* tall windows (tablets upright): the desk moves up into the middle, above the words */
+@media (max-aspect-ratio:1/1) and (min-width:761px){.bh-home .bh-art{--s:calc(min(76vw,40svh) / 744)}
+  .bh-home .bh-art .desk{right:auto;left:50%;bottom:auto;top:calc(var(--navh) + 6svh);transform:translateX(-50%)}}
+/* over the hero the menu always looks as it does in dark mode (also in light mode) */
+.bt .s-nav.over .s-links,.bt .s-nav.over .s-theme,.bt .s-nav.over .s-ico{background:#161a33;border-color:rgba(255,255,255,.12);color:#eef0f7}
+.bt .s-nav.over .s-links a{color:#eef0f7}
+.bt .s-nav.over .s-links a[aria-current=page]{background:#eef0f7;color:#0f1747}
+.bt .s-nav.over .s-theme:hover{background:#262c52}
+@media (max-width:1080px){.bt .s-nav.over .s-links{background:#161a33}}
+.bh-home .bh-hero{padding-left:var(--side);padding-right:var(--side)}   /* words line up with the logo */
+/* symbols behind the words are fainter, so the text stays easy to read */
+.bh-home .bh-art .dim{opacity:.32}
+/* a little more room around the desk */
+.bh-home .bh-art{--s:calc(min(36vw,58svh) / 744)}
+@media (max-width:1100px){.bh-home .bh-art{--s:calc(min(48vw,52svh) / 744)}}
+@media (max-width:760px){.bh-home .bh-art{--s:calc(min(84vw,42svh) / 744)}}
+@media (max-aspect-ratio:1/1) and (min-width:761px){.bh-home .bh-art{--s:calc(min(70vw,38svh) / 744)}}
+/* a tint over the drawing that deepens away from the boy at his desk, so the symbols behind the words are quieter */
+.bh-home .bh-art::after{content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 62% 88% at 79% 76%,rgba(15,22,64,0) 30%,rgba(15,22,64,.45) 62%,rgba(15,22,64,.7) 100%)}
+@media (max-aspect-ratio:1/1){.bh-home .bh-art::after{background:radial-gradient(ellipse 90% 55% at 50% 22%,rgba(15,22,64,0) 30%,rgba(15,22,64,.5) 70%,rgba(15,22,64,.72) 100%)}}
+/* the symbols fade the further they are from the boy at his desk, so the ones behind the words are subdued */
+.bh-home .bh-art .dim{opacity:1}
+.bh-home .bh-art{-webkit-mask-image:radial-gradient(ellipse 75% 85% at 79% 74%,#000 32%,rgba(0,0,0,.78) 58%,rgba(0,0,0,.45) 100%);
+  mask-image:radial-gradient(ellipse 75% 85% at 79% 74%,#000 32%,rgba(0,0,0,.78) 58%,rgba(0,0,0,.45) 100%)}
+@media (max-aspect-ratio:1/1){.bh-home .bh-art{-webkit-mask-image:radial-gradient(ellipse 90% 60% at 50% 30%,#000 32%,rgba(0,0,0,.75) 60%,rgba(0,0,0,.42) 100%);
+  mask-image:radial-gradient(ellipse 90% 60% at 50% 30%,#000 32%,rgba(0,0,0,.75) 60%,rgba(0,0,0,.42) 100%)}}

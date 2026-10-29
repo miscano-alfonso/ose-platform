@@ -84,6 +84,10 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
           <span className="lv"><i />{c.level}</span><b>{c.subject}</b>
           <span>{c.slots?.length ? c.slots.map((x) => `${DAYS[x.d]} ${x.t}`).join(" & ") : "Times to be announced"}{c.places_left != null ? ` · ${c.places_left <= 2 ? `last ${c.places_left}` : c.places_left} place${c.places_left === 1 ? "" : "s"}` : ""}</span></Link>)}</div>
       </section>}
+      <Link className="bh-t bh-half bh-cta bh-homeed" href="/home-ed"><p className="k">New to home education?</p>
+        <b>Start here: how home education works in the UK, and how we fit in →</b></Link>
+      <Link className="bh-t bh-half bh-cta bh-faq" href="/faq"><p className="k">FAQs</p>
+        <b>Questions about lessons, payments, exams or Google Classroom? →</b></Link>
       <section className="bh-t bh-half bh-how"><h2 style={{ margin: 0, fontSize: 24 }}>How it works</h2>
         <p>Book online and pay by term or in instalments. Your child gets a Google Classroom invitation, joins lessons live in Google Meet, and finds every recording in Classroom afterwards. You see attendance, work and reports in your account.</p></section>
       <section className="bh-t bh-half bh-facts">

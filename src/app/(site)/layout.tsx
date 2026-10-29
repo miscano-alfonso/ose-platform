@@ -16,7 +16,9 @@ export const dynamic = "force-dynamic";
 
 // same order as the current website's menu
 const NAV = [["Courses", "/courses"], ["Other services", "/other-services"], ["Term dates", "/term-dates"], ["Teachers", "/teachers"],
-  ["Prices", "/pricing"], ["Timetable", "/timetable"], ["FAQs", "/faq"], ["New to Home Ed?", "/home-ed"], ["Contact", "/contact"]];
+  ["Prices", "/pricing"], ["Timetable", "/timetable"], ["Contact", "/contact"]];
+// on the home page as tiles and in the footer, not in the top menu
+const MORE = [["FAQs", "/faq"], ["New to Home Ed?", "/home-ed"]];
 
 const Cart = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 6h15l-1.5 9h-12z" /><path d="M6 6 5 3H2" /><circle cx="9" cy="20" r="1.4" /><circle cx="18" cy="20" r="1.4" /></svg>;
 const Person = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><circle cx="12" cy="8" r="4" /><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6" /></svg>;
@@ -42,7 +44,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           {site.demo ? <div><div className="fl">{site.name}</div><p>A made-up online school, showing what OH-SO EdTech can do.</p></div>
           : <div><div className="fl">OH-SO ED</div><p>Outstanding online education for home-educated students.</p>
             <h2 className="fh fh-follow">Follow us</h2><ul><li>Facebook /ohsoedonline</li><li>LinkedIn /ohsoed</li></ul></div>}
-          <div className="fquick"><h2 className="fh">Quick links</h2><ul className="fcols"><li><Link href="/about">About us</Link></li>{NAV.map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}<li><Link href="/jobs">Jobs</Link></li></ul></div>
+          <div className="fquick"><h2 className="fh">Quick links</h2><ul className="fcols"><li><Link href="/about">About us</Link></li>{[...NAV, ...MORE].map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}<li><Link href="/jobs">Jobs</Link></li></ul></div>
           <NewsletterForm />
         </div><div className="wrap copy"><span>© {new Date().getFullYear()} {site.demo ? `${site.name} (a made-up school)` : "Oh-so Educate Ltd"} <span className="legal-links"> · <Link href="/privacy" className="adminlink">Privacy notice</Link> · <Link href="/cookies" className="adminlink">Cookies</Link></span></span><span style={{ display: "flex", gap: 18, flexWrap: "wrap" }}><span>{site.demo ? "Runs on" : "Teach online yourself?"} <Link href="/osedtech" className="adminlink">OH-SO EdTech</Link></span>{site.demo ? <a href="/osedtech/demo" className="adminlink">Open the dashboard</a> : <Link href="/admin/login" className="adminlink">Admin login</Link>}</span></div></footer>
       </div>);

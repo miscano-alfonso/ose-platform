@@ -17,7 +17,6 @@ export function SiteTheme() {
     document.cookie = `ose_theme=${v}; path=/; max-age=31536000; samesite=lax`;
     setDark(!dark);
   };
-  return <button type="button" className="s-theme" onClick={flip} aria-label={dark ? "Switch to light mode" : "Switch to dark mode"}>
-    <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d={dark ? SUN : MOON} /></svg>
-    <span>{dark ? "Light" : "Dark"}</span></button>;
+  return <button type="button" className="s-theme" onClick={flip} aria-label={dark ? "Switch to light mode" : "Switch to dark mode"} title={dark ? "Light mode" : "Dark mode"}>
+    <svg aria-hidden="true" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d={dark ? SUN : MOON} /></svg></button>;
 }
