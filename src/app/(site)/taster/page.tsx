@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { tasterOptions, TASTER_ACCESS_DAYS, MAX_TASTERS } from "@/lib/tasters-public";
 import { siteInfo } from "@/lib/db";
 import { bookTasterAction } from "./actions";

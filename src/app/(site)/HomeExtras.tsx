@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { ReviewsWidget } from "./ReviewsWidget";
 
 // Bottom of the homepage, as on ohsoed.co.uk: Meet the Headteacher, Facebook reviews and Member Of.

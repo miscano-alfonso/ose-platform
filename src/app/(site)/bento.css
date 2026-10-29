@@ -407,3 +407,11 @@ body:has(.bh-home,.s-phead){background:transparent}
   .bt .s-icons{margin-left:auto;order:3}.bt .s-burger{order:4}
   .s-links.open .s-mob{display:flex;gap:10px;align-items:center}
 }
+/* timetable on phones: the time column stays in place while the days scroll sideways */
+.wk-times{position:sticky;left:-16px;z-index:3;background:var(--b-tile);margin-left:-16px;padding-left:16px;box-shadow:6px 0 8px -6px rgba(0,0,0,.35)}
+@media (min-width:900px){.wk-times{box-shadow:none}}
+.wk-times::before{content:"";position:absolute;left:0;right:0;top:-56px;height:56px;background:var(--b-tile)}
+/* phones and narrow cards: roundel on top, at the left, with the level and course name under it */
+@media (max-width:760px){.bt .course .top{flex-direction:column-reverse;align-items:flex-start;gap:12px}.bt .course .roundel{width:84px;height:84px;font-size:11px}}
+.bt .cgrid{container-type:inline-size}
+@container (max-width:560px){.bt .course .top{flex-direction:column-reverse;align-items:flex-start;gap:12px}.bt .course .roundel{width:84px;height:84px;font-size:11px}}

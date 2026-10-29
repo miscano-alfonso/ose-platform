@@ -1,7 +1,7 @@
 import { ChalkTitles } from "./ChalkTitles";
 import { HeroNav } from "./HeroNav";
 import { SITE_CHALK } from "./chalk-filter";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { SiteNav } from "./SiteNav";
 import { StyleBridge } from "./StyleBridge";
 import { getStyles } from "@/lib/site-content";

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { redirect } from "next/navigation";
 import { currentFamily } from "@/lib/family-auth";
 import { sendLinkAction } from "../../(family)/actions";

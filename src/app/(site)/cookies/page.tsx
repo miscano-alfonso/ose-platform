@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 
 export const metadata: Metadata = { title: "Cookie notice", description: "The cookies our website uses, and why." };
 

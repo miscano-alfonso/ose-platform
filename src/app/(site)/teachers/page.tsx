@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { getTeachers } from "@/lib/data";
 import { siteText } from "@/lib/site-content";
 

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 
 // The public timetable as a week calendar (Option B): Monday to Friday, every level, each lesson placed at its time;
 // lessons at the same time sit side by side. Buttons filter to one level.

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { getFaqs } from "@/lib/site-content";
 
 export const dynamic = "force-dynamic";

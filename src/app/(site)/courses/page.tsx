@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import type { Metadata } from "next";
 import { getCourses } from "@/lib/data";
 import { yearLabel, monthYear } from "@/lib/format";

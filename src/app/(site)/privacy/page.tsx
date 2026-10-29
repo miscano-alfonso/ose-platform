@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { withSchool, siteInfo } from "@/lib/db";
 
 export const metadata: Metadata = { title: "Privacy notice", description: "How we collect, use and look after personal information about families, students and visitors." };

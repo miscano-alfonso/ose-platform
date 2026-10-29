@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { sendMessage } from "./actions";
 
 export const metadata: Metadata = { title: "Contact", description: "Register your interest in OH-SO ED courses, or send us a question." };

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { getPriceRows, getBundles } from "@/lib/data";
 import { KS3Bundles } from "../KS3Bundles";
 

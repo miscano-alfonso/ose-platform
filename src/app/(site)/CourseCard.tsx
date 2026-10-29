@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import type { Course } from "@/lib/data";
 import { money, DAYS, monthYear } from "@/lib/format";
 

@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { useEffect, useRef, useState } from "react";
 import type { SpaceCourse } from "@/lib/data";
 

@@ -1,5 +1,5 @@
 import { HERO_ART } from "./hero-art";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { getFewPlaces, getBundles, getSpaceAvailable, getCourses, getPriceRows, getTeachers, type Course } from "@/lib/data";
 import { CourseCard, roundelSrc } from "./CourseCard";
 import { HeroLessons } from "./HeroLessons";

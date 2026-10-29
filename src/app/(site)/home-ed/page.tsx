@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { getHub, grouped, youtubeId, type HubLink, type HubSection } from "@/lib/hub";
 
 export const dynamic = "force-dynamic";

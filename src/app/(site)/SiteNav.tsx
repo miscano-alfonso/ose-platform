@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/app/(site)/HoverLink";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
