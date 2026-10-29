@@ -375,3 +375,35 @@ body:has(.bh-home,.s-phead){background:transparent}
 @media (prefers-reduced-motion:reduce){.ph-art .bha{animation:none}}
 @media (max-width:760px){.ph-art{opacity:.35}}
 .ph-art{top:var(--navh,136px);inset-inline:0;bottom:0}
+/* home headline in the page-title chalk lettering (Jost, chalk texture, letters slightly tilted), but kept white
+   (and "From home." yellow) */
+.bh-home .bh-hero h1.chalkt{font-family:"Jost","Futura","Century Gothic",sans-serif !important;font-weight:500 !important;letter-spacing:.005em;filter:url(#site-chalk)}
+.bh-home .bh-hero h1.chalkt span{display:inline-block;transform:translateY(var(--dy,0)) rotate(var(--a,0deg));transform-origin:50% 70%}
+.bh-home .bh-hero h1.chalkt span.sp{width:.26em}
+.bh-home .bh-hero h1.chalkt span{color:inherit}
+.bh-home .bh-hero h1.chalkt span.pop{color:var(--b-pop)}
+/* ---------- public timetable: week calendar ---------- */
+.wk-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.wk-filters button{font:600 14px "Space Grotesk",sans-serif;padding:8px 16px;border-radius:999px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);cursor:pointer}
+.wk-filters button[aria-pressed=true]{background:var(--b-ink);color:var(--b-bg);border-color:var(--b-ink)}
+.wk-filters button:hover,.wk-filters button:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+.wk{display:grid;grid-template-columns:56px repeat(var(--days),minmax(140px,1fr));gap:8px;background:var(--b-tile);border:1px solid var(--b-line);border-radius:24px;padding:16px;overflow-x:auto}
+.wk-times{position:relative;margin-top:40px}.wk-times span{position:absolute;transform:translateY(-50%);font-size:13px;color:var(--b-muted)}
+.wk-day h3{margin:0 0 12px;font-size:15px;height:28px;font-weight:600}
+.wk-col{position:relative;border-radius:12px;background-image:linear-gradient(var(--b-line) 1px,transparent 1px)}
+.wk-blk{position:absolute;padding:6px 10px;border-radius:10px;background:color-mix(in srgb,var(--c) 18%,var(--b-inset));border-left:4px solid var(--c);color:var(--b-ink);text-decoration:none;font-size:12.5px;line-height:1.2;overflow:hidden;display:grid;align-content:start;gap:2px}
+.wk-blk b{font-size:13.5px;line-height:1.15}.wk-blk span{color:var(--b-muted)}
+.wk-blk:hover,.wk-blk:focus-visible{background:#5fe0e8;color:#0f1747;z-index:2}.wk-blk:hover span,.wk-blk:focus-visible span{color:#0f1747}
+.wk-col{background-image:none}
+.wk-line{position:absolute;left:0;right:0;border-top:1px dashed var(--b-line)}
+.wk-times span{transform:none}
+/* phones: no drawings in the home hero or the page title panels */
+@media (max-width:760px){.bh-home .bh-art,.ph-art{display:none}}
+/* phones: basket and account move into the menu; the top bar keeps the logo, light/dark and the menu button */
+.s-links .s-mob{display:none}
+@media (max-width:1080px){
+  .bt .s-icons .s-ico{display:none}
+  .bt .s-nav .wrap{flex-wrap:wrap;align-items:center}
+  .bt .s-icons{margin-left:auto;order:3}.bt .s-burger{order:4}
+  .s-links.open .s-mob{display:flex;gap:10px;align-items:center}
+}

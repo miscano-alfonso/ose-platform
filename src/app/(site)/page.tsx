@@ -57,7 +57,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
       <section className="bh-t bh-hero">
         <div className="bh-art" role="img" aria-label="A teenager learning at home at his laptop, with maths, English and science symbols floating around him" dangerouslySetInnerHTML={{ __html: HERO_ART }} />
         <p className="k">{txt.home_eyebrow}</p>
-        <h1>Live lessons.<br />Real teachers.<br /><span>From home.</span></h1>
+        <h1>Live lessons.<br />Real teachers.<br /><span className="pop">From home.</span></h1>
         <p>{txt.home_lead}</p>
         <div className="btns"><Link className="btn btn-accent" href="/taster">Book a free taster →</Link><Link className="btn btn-ghost" href="/courses">See the courses</Link></div>
       </section>
