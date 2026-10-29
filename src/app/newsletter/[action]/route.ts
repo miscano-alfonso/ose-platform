@@ -19,14 +19,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ act
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ action: string }> }) {
   const { action } = await params; const sp = req.nextUrl.searchParams; const b = await base(req);
+  const look = action === "confirm" || action === "unsubscribe" ? await N.schoolLook() : undefined;
   if (action === "confirm") {
     const ok = await N.confirmToken(sp.get("t") || "").catch(() => false);
-    return html(ok ? N.simplePage(b, "You’re subscribed", "Thank you. We’ll email you about space in our classes, new courses and workshops a few times a term. Every email has a link to unsubscribe.", "Back to the website", b + "/")
-      : N.simplePage(b, "That link has expired", "Please sign up again from the bottom of any page on our website.", "Back to the website", b + "/"), ok ? 200 : 404);
+    return html(ok ? N.simplePage(b, "You’re subscribed", "Thank you. We’ll email you about space in our classes, new courses and workshops a few times a term. Every email has a link to unsubscribe.", "Back to the website", b + "/", true, look)
+      : N.simplePage(b, "That link has expired", "Please sign up again from the bottom of any page on our website.", "Back to the website", b + "/", true, look), ok ? 200 : 404);
   }
   if (action === "unsubscribe") {
     await N.unsubscribeToken(sp.get("t") || "").catch(() => {});
-    return html(N.simplePage(b, "You’ve been unsubscribed", "You won’t receive any more newsletters from OH-SO ED. If that was a mistake, you can sign up again at the bottom of any page on our website.", "Back to the website", b + "/"));
+    return html(N.simplePage(b, "You’ve been unsubscribed", `You won’t receive any more newsletters from ${look!.school}. If that was a mistake, you can sign up again at the bottom of any page on our website.`, "Back to the website", b + "/", true, look));
   }
   if (action === "o" || action === "c") {
     const who = ipOf(req) + "|" + (req.headers.get("user-agent") || "");

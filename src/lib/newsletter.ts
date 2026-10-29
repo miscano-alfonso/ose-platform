@@ -27,14 +27,25 @@ async function kvSet(key: string, value: unknown, q?: Q) {
 }
 
 // ---------- branded pages and short emails ----------
-export function simplePage(base: string, title: string, text: string, btn: string, url: string, doc = true): string {
+/** The school's own look for these pages and emails: its name, header colour, logo (when it may have one) and footer line. */
+export type SchoolLook = { school: string; color: string; logoUrl: string; footer: string };
+export async function schoolLook(): Promise<SchoolLook> {
+  const { emailDesign } = await import("./email");
+  const d = await emailDesign().catch(() => null);
+  const school = d?.school || "OH-SO ED";
+  return { school, color: d?.color || "#0F1747", logoUrl: d?.logo === false ? "" : d?.logoUrl ?? "", footer: (d?.footer ?? "").split("\n").map((l) => l.trim()).filter(Boolean).slice(0, 3).join(" · ") || school };
+}
+export function simplePage(base: string, title: string, text: string, btn: string, url: string, doc = true, look?: SchoolLook): string {
   const e = (v: string) => v.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+  const L = look ?? { school: "OH-SO ED", color: "#0F1747", logoUrl: base + "/brand/logo", footer: "OH-SO ED Online School · Oh-so Educate Ltd" };
+  const head = L.logoUrl ? `<img src="${e(L.logoUrl)}" width="150" alt="${e(L.school)}" style="display:block;border:0;width:150px;height:auto">`
+    : `<span style="font:700 18px Helvetica,Arial,sans-serif;letter-spacing:.06em;color:#ffffff">${e(L.school.toUpperCase())}</span>`;
   const body = `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F3F4FA"><tr><td align="center" style="padding:32px 12px"><table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff">`
-    + `<tr><td style="background:#0F1747;padding:22px 32px"><img src="${e(base + "/brand/logo")}" width="150" alt="OH-SO ED" style="display:block;border:0;width:150px;height:auto"></td></tr>`
+    + `<tr><td style="background:${e(L.color)};padding:22px 32px">${head}</td></tr>`
     + `<tr><td style="padding:34px 32px 38px"><h1 style="margin:0 0 14px;font:600 30px/1.15 Jost,Helvetica,Arial,sans-serif;color:#0F1747">${e(title)}</h1><p style="margin:0 0 26px;font:400 16px/1.55 Helvetica,Arial,sans-serif;color:#171B2B">${e(text)}</p>`
     + `<a href="${e(url)}" style="display:inline-block;background:#E3CD4B;color:#0F1747;text-decoration:none;font:700 15px/1 Helvetica,Arial,sans-serif;padding:14px 26px;border-radius:999px">${e(btn)}</a></td></tr>`
-    + `<tr><td style="background:#0A1033;padding:20px 32px;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:#C9CDE4">OH-SO ED Online School · Oh-so Educate Ltd</td></tr></table></td></tr></table>`;
-  return doc ? `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${e(title)} · OH-SO ED</title></head><body style="margin:0">${body}</body></html>` : body;
+    + `<tr><td style="background:#0A1033;padding:20px 32px;font:400 12px/1.5 Helvetica,Arial,sans-serif;color:#C9CDE4">${e(L.footer)}</td></tr></table></td></tr></table>`;
+  return doc ? `<!doctype html><html lang="en-GB"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>${e(title)} · ${e(L.school)}</title></head><body style="margin:0">${body}</body></html>` : body;
 }
 
 // ---------- Brevo ----------
@@ -65,7 +76,7 @@ async function brevoContact(m: { email: string; name: string; status: string }) 
 }
 export async function brevoStatus() {
   const c = await brevoCfg(); const k = keyOf(c);
-  return { connected: brevoOn(c), hasKey: !!k, keyHint: k ? "…" + k.slice(-4) : "", fromEnv: !c.key && !!process.env.BREVO_API_KEY, account: c.account ?? "", senderName: c.senderName ?? "OH-SO ED",
+  return { connected: brevoOn(c), hasKey: !!k, keyHint: k ? "…" + k.slice(-4) : "", fromEnv: !c.key && !!process.env.BREVO_API_KEY, account: c.account ?? "", senderName: c.senderName ?? (await schoolLook()).school,
     senderEmail: c.senderEmail ?? "", replyTo: c.replyTo ?? "", copyTo: c.copyTo ?? "", listId: c.listId ?? null, listName: c.listName ?? "", lastSync: c.lastSync ?? "", canEdit: true };
 }
 export async function brevoSave(b: Record<string, unknown>) {
@@ -83,15 +94,16 @@ export async function brevoSave(b: Record<string, unknown>) {
   if (b.senderEmail !== undefined) { const se = normEmail(b.senderEmail); if (se && !validEmail(se)) fail("Choose a sender email."); c.senderEmail = se; }
   if (b.replyTo !== undefined) { const r = normEmail(b.replyTo); if (r && !validEmail(r)) fail("The reply-to address doesn’t look right."); c.replyTo = r || undefined; }
   if (b.copyTo !== undefined) { const list = [...new Set(String(b.copyTo).split(/[,;\s]+/).map(normEmail).filter(Boolean))]; const bad = list.find((e) => !validEmail(e)); if (bad) fail(`“${bad}” doesn’t look like an email address.`); if (list.length > 5) fail("Up to 5 copy addresses."); c.copyTo = list.join(", ") || undefined; }
-  if (b.senderName !== undefined) c.senderName = String(b.senderName).trim().slice(0, 60) || "OH-SO ED";
+  const schoolName = (await schoolLook()).school;
+  if (b.senderName !== undefined) c.senderName = String(b.senderName).trim().slice(0, 60) || schoolName;
   if (!c.listId) { // our own list in Brevo, created once
-    const name = "OH-SO ED website subscribers";
+    const name = `${schoolName} website subscribers`;
     const lists = await brevo("GET", "contacts/lists?limit=50&offset=0", null, false, key);
     for (const l of lists.lists ?? []) if (l.name === name) { c.listId = Number(l.id); c.listName = name; }
     if (!c.listId) {
       const f = await brevo("GET", "contacts/folders?limit=10&offset=0", null, false, key);
       let fid = Number(f.folders?.[0]?.id ?? 0);
-      if (!fid) fid = Number((await brevo("POST", "contacts/folders", { name: "OH-SO ED" }, false, key)).id ?? 0);
+      if (!fid) fid = Number((await brevo("POST", "contacts/folders", { name: schoolName }, false, key)).id ?? 0);
       const nl = await brevo("POST", "contacts/lists", { name, folderId: fid }, false, key);
       c.listId = Number(nl.id ?? 0); c.listName = name;
     }
@@ -136,7 +148,8 @@ export async function subscribe(body: Record<string, unknown>, ip: string, base:
   });
   if (res.already) return { ok: true, already: true };
   const link = `${base}/newsletter/confirm?t=${res.token}`;
-  const r = await sendHtml("Please confirm your subscription to OH-SO ED", simplePage(base, "Confirm your subscription", "Thanks for signing up to hear about space in our classes, new courses and workshops from OH-SO ED. Please confirm it’s you. If you didn’t sign up, just ignore this email and you won’t hear from us.", "Yes, subscribe me", link), [e], "newsletter-confirm");
+  const look = await schoolLook();
+  const r = await sendHtml(`Please confirm your subscription to ${look.school}`, simplePage(base, "Confirm your subscription", `Thanks for signing up to hear about space in our classes, new courses and workshops from ${look.school}. Please confirm it’s you. If you didn’t sign up, just ignore this email and you won’t hear from us.`, "Yes, subscribe me", link, true, look), [e], "newsletter-confirm");
   if (!r.ok) fail("We couldn’t send the confirmation email just now. Please try again later.", 503);
   return { ok: true };
 }
@@ -256,7 +269,7 @@ export async function sendEmail(b: Record<string, unknown>, by: string) {
   let at: string | null = null;
   if (when && when !== "now") { const ts = Date.parse(when); if (!ts || ts < Date.now() + 300000) fail("Pick a time at least 5 minutes from now."); at = new Date(ts).toISOString(); }
   const day = new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
-  const body: Record<string, unknown> = { name: ((doc.name || doc.subject) + " · " + day).slice(0, 150), subject: doc.subject, sender: { name: c.senderName || "OH-SO ED", email: c.senderEmail }, ...(c.replyTo ? { replyTo: c.replyTo } : {}),
+  const body: Record<string, unknown> = { name: ((doc.name || doc.subject) + " · " + day).slice(0, 150), subject: doc.subject, sender: { name: c.senderName || (await schoolLook()).school, email: c.senderEmail }, ...(c.replyTo ? { replyTo: c.replyTo } : {}),
     htmlContent: html, recipients: { listIds: [Number(c.listId)] }, inlineImageActivation: false };
   if (doc.preheader) body.previewText = doc.preheader.slice(0, 200);
   if (at) body.scheduledAt = at;
