@@ -264,3 +264,11 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 @media (max-width:760px){.bh-home .bh-art{--s:calc(min(92vw,46svh) / 744)}}
 @media (max-aspect-ratio:1/1){.bh-home .bh-art{-webkit-mask-image:radial-gradient(ellipse 90% 60% at 50% 30%,#000 32%,rgba(0,0,0,.85) 60%,rgba(0,0,0,.62) 100%);mask-image:radial-gradient(ellipse 90% 60% at 50% 30%,#000 32%,rgba(0,0,0,.85) 60%,rgba(0,0,0,.62) 100%)}}
 @media (max-aspect-ratio:1/1) and (min-width:761px){.bh-home .bh-art{--s:calc(min(80vw,44svh) / 744)}}
+/* the headline grows with the window (width and height) so it fills its side of the hero */
+.bh-home .bh-hero h1{font-size:clamp(52px,min(8vw,14svh),168px);max-width:none}
+@media (max-aspect-ratio:1/1){.bh-home .bh-hero h1{font-size:clamp(46px,11vw,120px)}}
+/* lighter headline weight; both hero buttons hover cyan */
+.bh-home .bh-hero h1{font-weight:500;letter-spacing:-.035em}
+.bh-home .bh-hero .btn-accent:hover,.bh-home .bh-hero .btn-accent:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+.bh.bh-home .bh-hero>h1{max-width:none;white-space:nowrap}
+@media (max-width:600px){.bh.bh-home .bh-hero>h1{white-space:normal}}
