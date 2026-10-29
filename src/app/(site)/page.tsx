@@ -75,7 +75,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="rd" src={roundelSrc(c.subject)} alt="" width={64} height={64} loading="lazy" />
           <span className="lv"><i />{c.level}</span><b>{c.subject}</b>
-          <span>{c.slots?.length ? c.slots.map((x) => `${DAYS[x.d]} ${x.t}`).join(" & ") : "Times to be announced"}{c.places_left != null ? ` · ${c.places_left <= 2 ? `last ${c.places_left}` : c.places_left} place${c.places_left === 1 ? "" : "s"}` : ""}</span></Link>)}</div>
+          <span>{c.slots?.length ? c.slots.map((x) => `${DAYS[x.d]} ${x.t}`).join(" & ") : "Times to be announced"}</span></Link>)}</div>
       </section>}
       <Link className="bh-t bh-half bh-cta bh-homeed" href="/home-ed"><p className="k">New to home education?</p>
         <b>Start here: how home education works in the UK, and how we fit in →</b></Link>

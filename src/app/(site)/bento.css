@@ -272,3 +272,20 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .bh-home .bh-hero .btn-accent:hover,.bh-home .bh-hero .btn-accent:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
 .bh.bh-home .bh-hero>h1{max-width:none;white-space:nowrap}
 @media (max-width:600px){.bh.bh-home .bh-hero>h1{white-space:normal}}
+/* light cyan hovers for buttons and level tabs across the website */
+.bt .btn-brand:hover,.bt .btn-brand:focus-visible,.bt .btn-line:hover,.bt .btn-line:focus-visible,.bt .btn-accent:hover,.bt .btn-accent:focus-visible,
+.bt .tabs a:hover,.bt .tabs a:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+/* course cards: the "few spaces left" style sticker sits over the buttons, between Read more and Add to cart */
+.cbtns{position:relative}
+.cbtns .sticky{top:50%;right:12px;transform:translateY(-50%) rotate(-3deg);z-index:2;pointer-events:none}
+/* cyan hovers always get navy text (the over-the-hero menu sets white text, so this must be at least as specific) */
+@media (min-width:1081px){.bt .s-nav .s-links a:hover,.bt .s-nav .s-links a:focus-visible,.bt .s-nav.over .s-links a:hover,.bt .s-nav.over .s-links a:focus-visible{background:#5fe0e8;color:#0f1747}}
+.bt .s-nav.over .s-theme:hover,.bt .s-nav.over .s-ico:hover,.bt .s-nav.over .s-ico:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+/* cyan tile: everything in it navy */
+.bt .bh .bh-homeed,.bt .bh .bh-homeed *,.bh .bh-homeed b,.bh .bh-homeed .k{color:#0f1747}
+/* only the symbols behind the words are subdued; everything on the right is full strength */
+.bh-home .bh-art{-webkit-mask-image:linear-gradient(to right,rgba(0,0,0,.6) 0%,rgba(0,0,0,.6) 38%,#000 58%);mask-image:linear-gradient(to right,rgba(0,0,0,.6) 0%,rgba(0,0,0,.6) 38%,#000 58%)}
+@media (max-aspect-ratio:1/1){.bh-home .bh-art{-webkit-mask-image:linear-gradient(to bottom,#000 45%,rgba(0,0,0,.55) 65%);mask-image:linear-gradient(to bottom,#000 45%,rgba(0,0,0,.55) 65%)}}
+.bt .course .when.wl,.bt .course .wltag{color:#7a6200}
+@media (prefers-color-scheme:dark){:root:not([data-theme=light]) .bt .course .when.wl,:root:not([data-theme=light]) .bt .course .wltag{color:#e3cd4b}}
+:root[data-theme=dark] .bt .course .when.wl,:root[data-theme=dark] .bt .course .wltag{color:#e3cd4b}
