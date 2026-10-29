@@ -430,9 +430,9 @@
 .adm .bb-msg{font-size:14px;color:var(--good)}
 .adm .bb-grid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-items:stretch;grid-auto-flow:row dense}
 .adm .bb-cell{min-width:0;display:flex;flex-direction:column;position:relative}
-.adm .bb-cell.s-s{grid-column:span 2}.adm .bb-cell.s-m{grid-column:span 4}.adm .bb-cell.s-l{grid-column:span 6}.adm .bb-cell.s-xl{grid-column:span 8}.adm .bb-cell.s-full{grid-column:span 12}
-@media (max-width:1250px){.adm .bb-cell.s-s{grid-column:span 4}.adm .bb-cell.s-m{grid-column:span 6}.adm .bb-cell.s-l,.adm .bb-cell.s-xl{grid-column:span 12}}
-@media (max-width:700px){.adm .bb-cell.s-s{grid-column:span 6}.adm .bb-cell.s-m{grid-column:span 12}}
+.adm .bb-cell.s-s{grid-column:span 2}.adm .bb-cell.s-q{grid-column:span 3}.adm .bb-cell.s-m{grid-column:span 4}.adm .bb-cell.s-l{grid-column:span 6}.adm .bb-cell.s-xl{grid-column:span 8}.adm .bb-cell.s-full{grid-column:span 12}
+@media (max-width:1250px){.adm .bb-cell.s-s{grid-column:span 4}.adm .bb-cell.s-q{grid-column:span 6}.adm .bb-cell.s-m{grid-column:span 6}.adm .bb-cell.s-l,.adm .bb-cell.s-xl{grid-column:span 12}}
+@media (max-width:700px){.adm .bb-cell.s-s,.adm .bb-cell.s-q{grid-column:span 6}.adm .bb-cell.s-m{grid-column:span 12}}
 .adm .bb-body{flex:1;display:flex;flex-direction:column;min-width:0}
 .adm .bb-body>*{flex:1;margin:0}
 .adm .bb.editing .bb-cell{outline:2px dashed var(--line);outline-offset:4px;border-radius:24px;cursor:grab}
@@ -698,3 +698,10 @@
 .adm .fx .dx-hero .fx-side .fx-att{display:inline-flex;align-items:center;padding:10px 22px;border-radius:999px;border:1.5px solid rgba(255,255,255,.55);color:#fff;font-weight:600;text-decoration:none;white-space:nowrap}
 .adm .fx .dx-hero .fx-side .fx-att:hover{background:rgba(255,255,255,.1)}
 @media (max-width:640px){.adm .fx .dx-hero .fx-side{flex-direction:row;order:-1;justify-content:space-between;width:100%}.adm .fx .dx-hero .fx-side .lclock{margin:0}}
+
+/* teacher, parent and student dashboards inside a BentoBoard: the board does the grid */
+.adm .fx.fx-board{display:block}
+.adm .fx.fx-board .bb-grid{margin-bottom:24px}
+.adm .fx-kids{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,400px),1fr));gap:16px}
+.adm .fx-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:16px}
+.adm .fx .fx-kids>*,.adm .fx .fx-tiles>*{margin:0;grid-column:auto}

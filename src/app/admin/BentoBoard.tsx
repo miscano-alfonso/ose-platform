@@ -1,15 +1,18 @@
 "use client";
 import { useState, useTransition, type ReactNode, useRef } from "react";
 import { saveDashLayoutAction } from "./actions";
+import { saveBoardAction } from "../dash-actions";
 
 // A dashboard made of modules. "Customise" lets the person drag modules around, change their width,
 // take them off and add them back; the arrangement is saved for that person only.
-type Size = "s" | "m" | "l" | "xl" | "full";
-export type BoardModule = { id: string; title: string; node: ReactNode };
+type Size = "s" | "q" | "m" | "l" | "xl" | "full";
+/** size: the width it takes when added back from "Add a module". */
+export type BoardModule = { id: string; title: string; node: ReactNode; size?: Size };
 type Item = { id: string; size: Size };
-const SIZES: [Size, string][] = [["s", "S"], ["m", "M"], ["l", "L"], ["xl", "XL"], ["full", "Full"]];
+const SIZES: [Size, string][] = [["s", "S"], ["q", "S+"], ["m", "M"], ["l", "L"], ["xl", "XL"], ["full", "Full"]];
 
-export function BentoBoard({ page, modules, layout, defaults, saved }: { page: string; modules: BoardModule[]; layout: Item[]; defaults: Item[]; saved: boolean }) {
+/** scope "standard": an admin viewing as a teacher, parent or student arranges the school's standard for all of them (audience, e.g. "teachers"). */
+export function BentoBoard({ page, modules, layout, defaults, saved, scope = "own", audience }: { page: string; modules: BoardModule[]; layout: Item[]; defaults: Item[]; saved: boolean; scope?: "own" | "standard"; audience?: string }) {
   const [items, setItems] = useState<Item[]>(layout);
   const [editing, setEditing] = useState(false);
   const [drag, setDragS] = useState<string | null>(null);
@@ -20,16 +23,20 @@ export function BentoBoard({ page, modules, layout, defaults, saved }: { page: s
   const byId = new Map(modules.map((m) => [m.id, m]));
   const hidden = modules.filter((m) => !items.some((i) => i.id === m.id));
   const move = (id: string, to: number) => setItems((xs) => { const i = xs.findIndex((x) => x.id === id); if (i < 0) return xs; const c = [...xs]; const [it] = c.splice(i, 1); c.splice(Math.max(0, Math.min(c.length, to)), 0, it); return c; });
-  const save = (next: Item[] | null) => start(async () => { await saveDashLayoutAction(page, next); setMsg(next ? "Saved. This is now your dashboard." : "Back to the standard layout."); if (!next) setItems(defaults); setEditing(false); });
+  const std = scope === "standard";
+  const save = (next: Item[] | null) => start(async () => {
+    await (page === "admin-home" ? saveDashLayoutAction : saveBoardAction)(page, next);
+    setMsg(next ? (std ? `Saved as the standard for all ${audience ?? "people"}.` : "Saved. This is now your dashboard.") : (std ? "Back to the built-in layout." : "Back to the standard layout."));
+    if (!next) setItems(defaults); setEditing(false); });
   return <div className={`bb${editing ? " editing" : ""}`}>
     <div className="bb-bar">
       {!editing ? <><button type="button" className="abtn sm" onClick={() => { setEditing(true); setMsg(""); }}>
-        <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" /></svg>Customise</button>
+        <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" /></svg>{std ? `Customise for all ${audience ?? ""}` : "Customise"}</button>
         {msg && <span className="bb-msg" role="status">{msg}</span>}</>
-      : <><span className="bb-help">Drag modules to move them, pick a width, or take them off. Only you see this arrangement.</span>
+      : <><span className="bb-help">{std ? `Drag modules to move them, pick a width, or take them off. This becomes the standard for all ${audience ?? "people"}; each can still change their own.` : "Drag modules to move them, pick a width, or take them off. Only you see this arrangement."}</span>
         <button type="button" className="abtn sm pri" disabled={pending} onClick={() => save(items)}>{pending ? "Saving…" : "Save"}</button>
         <button type="button" className="abtn sm" disabled={pending} onClick={() => { setItems(layout); setEditing(false); }}>Cancel</button>
-        {saved && <button type="button" className="abtn sm" disabled={pending} onClick={() => save(null)}>Reset to standard</button>}</>}
+        {saved && <button type="button" className="abtn sm" disabled={pending} onClick={() => save(null)}>{std ? "Reset to built-in" : "Reset to standard"}</button>}</>}
     </div>
     <div className="bb-grid">
       {items.map((it, i) => { const m = byId.get(it.id); if (!m) return null;
@@ -47,6 +54,6 @@ export function BentoBoard({ page, modules, layout, defaults, saved }: { page: s
         </div>; })}
     </div>
     {editing && <div className="bb-add"><b>Add a module</b>{hidden.length === 0 ? <span className="muted">Every module is on your dashboard.</span>
-      : hidden.map((m) => <button key={m.id} type="button" className="abtn sm" onClick={() => setItems((xs) => [...xs, { id: m.id, size: defaults.find((d) => d.id === m.id)?.size ?? "m" }])}>+ {m.title}</button>)}</div>}
+      : hidden.map((m) => <button key={m.id} type="button" className="abtn sm" onClick={() => setItems((xs) => [...xs, { id: m.id, size: defaults.find((d) => d.id === m.id)?.size ?? m.size ?? "m" }])}>+ {m.title}</button>)}</div>}
   </div>;
 }

@@ -206,3 +206,20 @@ export async function removeMyHours(userId: string, id: string, actorId = userId
     if (r.length) await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'remove', 'tutoring_availability', $2, '{}')`, [actorId, id]);
   });
 }
+
+export type TeacherMail = { id: string; from: string; subject: string; snippet: string; received_at: string; parent_id: string; children: string };
+/** Emails to the school inbox from families whose children this teacher teaches (last 30 days, read-only: the office replies, or the teacher uses Messages). */
+export async function teacherMail(userId: string): Promise<{ connected: boolean; rows: TeacherMail[] }> {
+  return withSchool(async (q) => {
+    const rows = await q<TeacherMail>(`
+      select m.id, coalesce(nullif(m.from_name, ''), p.first_name || ' ' || p.last_name) as "from", m.subject, m.snippet, m.received_at::text, m.parent_id,
+        (select string_agg(distinct coalesce(nullif(s.known_as, ''), s.first_name), ', ') from students s join enrolments e on e.student_id = s.id join course_groups g on g.id = e.group_id
+          where s.parent_id = m.parent_id and e.status in ('pending','active') and g.teacher_id = ${ME}) as children
+      from inbox_messages m join parents p on p.id = m.parent_id
+      where m.received_at > now() - interval '30 days' and exists (select 1 from students s join enrolments e on e.student_id = s.id join course_groups g on g.id = e.group_id
+          where s.parent_id = m.parent_id and e.status in ('pending','active') and g.teacher_id = ${ME})
+      order by m.received_at desc limit 20`, [userId]).catch(() => []);
+    const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_kv where key = 'gmail' and jsonb_typeof(value) = 'object' and value ? 'refreshToken'`).catch(() => [{ n: 0 }]);
+    return { connected: n > 0, rows };
+  });
+}

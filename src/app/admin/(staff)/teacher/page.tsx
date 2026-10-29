@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { LessonClock, LessonCountdown } from "../../../LessonClock";
 import { requireViewer } from "@/lib/auth";
-import { myDay } from "@/lib/teacher-area";
+import { myDay, teacherMail } from "@/lib/teacher-area";
+import { listThreads } from "@/lib/community";
+import { boardLayout } from "@/lib/dashboard-layout";
+import { BOARD_MODULES } from "@/lib/dash-modules";
+import { BentoBoard, type BoardModule } from "../../BentoBoard";
+import { MoreList } from "../../MoreList";
 import { Ring, Ico, IC } from "../../DashBits";
 import { joinLabel } from "@/lib/video";
 
@@ -15,15 +20,15 @@ const gbp = (p: number) => "£" + (p / 100).toLocaleString("en-GB", { minimumFra
 // My day: the teacher's Bento dashboard: next lesson with Join up top, reports in lime, then the week.
 export default async function MyDay() {
   const me = await requireViewer();
-  const d = await myDay(me.id);
+  const [d, threads, mail] = await Promise.all([myDay(me.id), listThreads(me.id, "open").catch(() => []), teacherMail(me.id)]);
   const today = new Date().toISOString().slice(0, 10);
   const next = d.week.find((l) => l.d > today || (l.d === today && l.status === "scheduled")) ?? d.week[0];
   const done = d.reportBars.reduce((a, r) => a + r.done, 0), total = d.reportBars.reduce((a, r) => a + r.total, 0);
   const rpct = total ? Math.round(done / total * 100) : null;
   const isToday = next?.d === today;
-  return <>
-    <div className="fx">
-      <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">
+  const waiting = threads.filter((t) => t.last_sender === "parent").length;
+  const modules: BoardModule[] = [
+    { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">
         <p className="fx-live" style={isToday ? undefined : { color: "#c9cdea" }}>{isToday && <i />}{next ? (isToday ? "Today" : `Next lesson · ${wd(next.d)} ${dm(next.d)}`) : d.term?.name ?? "My day"}</p>
         <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {me.name.split(" ")[0]}</span>{next && <><br />{next.name}</>}</h1>
         <p className="fx-hero-s">{next ? <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>
@@ -32,14 +37,14 @@ export default async function MyDay() {
         <div className="fx-btns">{next?.meet_url && <a className="go" href={next.meet_url} target="_blank" rel="noopener">{joinLabel(next.meet_url)}</a>}
           {next && <LessonCountdown date={next.d} time={next.time} withTime />}
 </div>
-      </div>{next && <div className="fx-side"><LessonClock date={next.d} time={next.time} /><Link className="fx-att" href={`/admin/register/${next.id}`}>Attendance</Link></div>}</section>
-      <Link href="/admin/teacher/reports" className="dx-pop c4"><span>{d.reportCycle ?? "Reports"}</span>
-        <b className="fx-big">{d.reportsLeft}</b><span>{d.reportsLeft ? `comment${d.reportsLeft === 1 ? "" : "s"} to write${d.reportsDue ? ` · due ${dm(d.reportsDue)}` : ""} →` : "Nothing to write right now →"}</span></Link>
-      <div className="dx-kpi ring c3"><div><span className="k">Attendance in my classes</span><span className="v">{d.attendance == null ? "–" : `${d.attendance}%`}</span><span className="h">this term</span></div><Ring pct={d.attendance} tone={d.attendance == null ? "brand" : d.attendance < 50 ? "bad" : d.attendance < 80 ? "warn" : "good"} /></div>
-      <div className="dx-kpi ring c3"><div><span className="k">Reports written</span><span className="v">{rpct == null ? "–" : `${rpct}%`}</span><span className="h">{total ? `${done} of ${total}` : "none open"}</span></div><Ring pct={rpct} /></div>
-      <Link href="/admin/teacher/ones" className="dx-kpi c3"><Ico d={IC.users} /><span className="k">1:1s this week</span><span className="v">{d.onesThisWeek}</span><span className="h">See 1:1s →</span></Link>
-      <Link href="/admin/teacher/pay" className="dx-kpi c3"><Ico d={IC.pound} /><span className="k">My pay this term</span><span className="v">{gbp(d.payThisTerm)}</span><span className="h">{d.term ? `paid ${dm(d.term.pay_date)}` : ""}</span></Link>
-      <section className="dx-card c7 dx-tall"><header><h2>This week</h2><Link className="dx-more" href="/admin/teacher/timetable">Timetable →</Link></header>
+      </div>{next && <div className="fx-side"><LessonClock date={next.d} time={next.time} /><Link className="fx-att" href={`/admin/register/${next.id}`}>Attendance</Link></div>}</section> },
+    { id: "reports-pop", title: "Reports to write", node: <Link href="/admin/teacher/reports" className="dx-pop c4"><span>{d.reportCycle ?? "Reports"}</span>
+        <b className="fx-big">{d.reportsLeft}</b><span>{d.reportsLeft ? `comment${d.reportsLeft === 1 ? "" : "s"} to write${d.reportsDue ? ` · due ${dm(d.reportsDue)}` : ""} →` : "Nothing to write right now →"}</span></Link> },
+    { id: "k-attendance", title: "Attendance in my classes", node: <div className="dx-kpi ring c3"><div><span className="k">Attendance in my classes</span><span className="v">{d.attendance == null ? "–" : `${d.attendance}%`}</span><span className="h">this term</span></div><Ring pct={d.attendance} tone={d.attendance == null ? "brand" : d.attendance < 50 ? "bad" : d.attendance < 80 ? "warn" : "good"} /></div> },
+    { id: "k-reports", title: "Reports written", node: <div className="dx-kpi ring c3"><div><span className="k">Reports written</span><span className="v">{rpct == null ? "–" : `${rpct}%`}</span><span className="h">{total ? `${done} of ${total}` : "none open"}</span></div><Ring pct={rpct} /></div> },
+    { id: "k-ones", title: "1:1s this week", node: <Link href="/admin/teacher/ones" className="dx-kpi c3"><Ico d={IC.users} /><span className="k">1:1s this week</span><span className="v">{d.onesThisWeek}</span><span className="h">See 1:1s →</span></Link> },
+    { id: "k-pay", title: "My pay this term", node: <Link href="/admin/teacher/pay" className="dx-kpi c3"><Ico d={IC.pound} /><span className="k">My pay this term</span><span className="v">{gbp(d.payThisTerm)}</span><span className="h">{d.term ? `paid ${dm(d.term.pay_date)}` : ""}</span></Link> },
+    { id: "week", title: "This week", node: <section className="dx-card c7 dx-tall"><header><h2>This week</h2><Link className="dx-more" href="/admin/teacher/timetable">Timetable →</Link></header>
         {d.week.length === 0 ? <p className="empty">No lessons coming up.</p> : <div className="dx-scroll">{d.week.map((l) => <div className="fx-row" key={l.id}>
           <span className="fx-when">{wd(l.d)} {dm(l.d)}</span>
           <div className="t"><b>{l.time} · {l.name}</b><span>{l.students} student{l.students === 1 ? "" : "s"}
@@ -50,11 +55,35 @@ export default async function MyDay() {
             : l.meet_url ? null // the next lesson's Join button is at the top
             : <span className="pill mute" title="The office adds the Meet link to the class">No Meet link</span>}
         </div>)}</div>}
-      </section>
-      <section className="dx-card c5 dx-tall"><header><h2>{d.reportCycle ?? "Reports"}</h2><Link className="dx-more" href="/admin/teacher/reports">Write →</Link></header>
+      </section> },
+    { id: "reports", title: "Reports progress", node: <section className="dx-card c5 dx-tall"><header><h2>{d.reportCycle ?? "Reports"}</h2><Link className="dx-more" href="/admin/teacher/reports">Write →</Link></header>
         {d.reportBars.length === 0 ? <p className="empty">No reports to write right now.</p> : <div className="bars">{d.reportBars.map((r) => <div className="brow" key={r.group_id}>
           <span className="lbl">{r.name}</span><div className="track"><i style={{ width: `${r.total ? r.done / r.total * 100 : 0}%` }} /></div><span className="num">{r.done}/{r.total}</span></div>)}</div>}
-      </section>
-    </div>
-  </>;
+      </section> },
+    { id: "messages", title: "Messages", size: "l", node: <section className="dx-card dx-tall"><header><h2>Messages</h2>{waiting > 0 && <span className="dx-count">{waiting}</span>}<Link className="dx-more" href="/admin/teacher/messages">All messages →</Link></header>
+      {threads.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No open conversations</b><span>Parents’ messages to you show here.</span></div>
+        : <MoreList className="dx-list" limit={4}>{threads.map((t) => <Link key={t.id} className={`dx-item ${t.last_sender === "parent" ? "warn" : "info"}`} href={`/admin/messages/${t.id}`}>
+          <span className="t">{t.last_sender === "parent" && <span className="pill warn">Waiting for your reply</span>}<b>{t.subject}</b><span>{t.parent} · about {t.student} · {dm(t.last_message_at.slice(0, 10))}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><Link className="abtn sm" href="/admin/messages/new">New message</Link></div>
+    </section> },
+    { id: "email", title: "Families’ emails", size: "l", node: <section className="dx-card dx-tall"><header><h2>Families’ emails</h2><span className="dx-sub">to the school, last 30 days</span></header>
+      {!mail.connected ? <p className="empty">Emails from your students’ families show here once the office connects the school inbox.</p>
+        : mail.rows.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>Nothing new</b><span>No emails from your students’ families this month.</span></div>
+        : <MoreList className="dx-list" limit={4}>{mail.rows.map((e) => <div key={e.id} className="dx-item info">
+          <span className="t"><b>{e.from} · {e.subject || "(no subject)"}</b><span>{e.snippet.length > 110 ? e.snippet.slice(0, 110) + "…" : e.snippet}</span><span style={{ fontSize: 13 }}>{dm(e.received_at.slice(0, 10))}{e.children ? ` · ${e.children}` : ""}</span></span></div>)}</MoreList>}
+      <p className="note" style={{ marginTop: 10 }}>The office replies to emails. To reply yourself, send a message.</p>
+    </section> },
+  ];
+  const known = BOARD_MODULES["teacher-home"];
+  const b = await boardLayout("teacher-home", me.viewing ? null : me.id, known, BUILT_IN);
+  return <div className="fx fx-board">
+    <BentoBoard page="teacher-home" modules={modules} layout={me.viewing ? b.defaults : b.layout} defaults={me.viewing ? BUILT_IN : b.defaults}
+      saved={me.viewing ? b.std : b.saved} scope={me.viewing ? "standard" : "own"} audience="teachers" />
+  </div>;
 }
+
+const BUILT_IN: { id: string; size: "s" | "q" | "m" | "l" | "xl" | "full" }[] = [
+  { id: "hero", size: "xl" }, { id: "reports-pop", size: "m" },
+  { id: "k-attendance", size: "q" }, { id: "k-reports", size: "q" }, { id: "k-ones", size: "q" }, { id: "k-pay", size: "q" },
+  { id: "week", size: "l" }, { id: "reports", size: "l" }, { id: "messages", size: "l" }, { id: "email", size: "l" },
+];
