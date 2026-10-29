@@ -330,3 +330,6 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 html:has(.bh-home){background:#0f1747;overscroll-behavior-y:none}
 body:has(.bh-home){background:transparent}
 .bt:has(.bh-home){background:linear-gradient(#0f1747 0 50vh,var(--b-bg) 50vh)}
+/* course card label: just below the bottom button, on the right, overlapping its edge a little */
+.cbtns .sticky{top:auto;bottom:-14px;right:10px;transform:rotate(-3deg)}
+.cbtns:has(.sticky){margin-bottom:14px}
