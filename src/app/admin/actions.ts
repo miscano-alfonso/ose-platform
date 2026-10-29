@@ -1425,3 +1425,14 @@ export async function clearHeldAction(): Promise<void> {
   await clearHeld();
   redirect("/admin/test-mode?ok=" + encodeURIComponent("The list of held messages is cleared."));
 }
+/** While the Inbox is open: a quick check with Gmail (new emails, and read/unread both ways), at most once a minute. */
+export async function inboxTickAction(): Promise<{ changed: boolean }> {
+  await requireStaff();
+  const { inboxStatus, syncInbox, inboxEvery } = await import("@/lib/inbox");
+  const { googleKvSet } = await import("@/lib/meet");
+  const s = await inboxStatus(); if (!s.connected || !(await inboxEvery())) return { changed: false };
+  if (s.info.at && Date.now() - Date.parse(s.info.at) < 55e3) return { changed: false };
+  await googleKvSet("inbox", { ...s.info, at: new Date().toISOString() });
+  const r = await syncInbox().catch(() => null);
+  return { changed: !!r };
+}

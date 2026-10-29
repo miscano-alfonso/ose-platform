@@ -7,6 +7,7 @@ import { Composer, NotConnected } from "../../Composer";
 import { inboxStatus, inboxList } from "@/lib/inbox";
 import { syncInboxAction, markInboxAction } from "../../actions";
 import { InboxPanel, ReadToggle } from "../../InboxReply";
+import { InboxLive } from "../../InboxLive";
 import { requireStaff } from "@/lib/auth";
 
 const KIND: Record<string, [string, string]> = { family: ["good", "Family"], taster: ["info", "Taster"], waiting: ["warn", "Waiting list"], enquiry: ["mute", "Enquiry"], staff: ["warn", "Teacher"], other: ["mute", "Other"] };
@@ -90,6 +91,8 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
       when: fullWhen(sel.received_at), kind: KIND[sel.kind] ?? null, mailbox: many ? sel.mailbox : null, gmail: sel.thread_id.startsWith("local:") ? null : gm(sel.thread_id, sel.mailbox), read: sel.read,
       replied: !!sel.replied_at, first: (who(sel).includes("@") ? "" : who(sel).split(" ")[0]) || "there" };
     return <>{head}
+      <InboxLive />
+      {box.mailboxes.some((b) => !b.syncRead) && <p className="note msg" style={{ marginTop: 0 }}>Reading emails here doesn’t mark them read in Mail yet. <Link href="/admin/email-settings">Reconnect the inboxes in Settings → Email</Link> (allow the site to manage your email); changes made before then are copied over once you do.</p>}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
         <div className="segl" role="group" aria-label="Show"><Link href="/admin/email?tab=inbox" aria-current={show === "new" ? "true" : undefined}>New{unread ? ` (${unread})` : ""}</Link><Link href="/admin/email?tab=inbox&show=all" aria-current={show === "all" ? "true" : undefined}>All</Link></div>
         <span className="grow" />

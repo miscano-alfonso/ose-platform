@@ -55,30 +55,47 @@ export async function unreadInbox(): Promise<number> {
 /** Inboxes connected with permission to change read/unread in Gmail (connected or reconnected since update 199). */
 export const canSyncRead = (b: Mailbox | null | undefined) => !!b?.scopes?.includes("gmail.modify");
 /** Read/unread changed here → the same in Gmail, so Mail on the Mac and phone show it too (best effort). */
-async function pushRead(ids: string[], read: boolean) {
-  const rows = await withSchool((q) => q<{ gmail_id: string; mailbox: string | null }>(`select gmail_id, mailbox::text from inbox_messages
+async function pushRead(ids: string[], read: boolean): Promise<Set<string>> {
+  const done = new Set<string>();   // the site ids copied to Gmail
+  const rows = await withSchool((q) => q<{ id: string; gmail_id: string; mailbox: string | null }>(`select id, gmail_id, mailbox::text from inbox_messages
     where gmail_id not like 'local:%' and id = any($1::uuid[])`, [ids])).catch(() => []);
-  if (!rows.length) return;
+  if (!rows.length) return done;
   const list = await boxes();
-  const byBox = new Map<string, string[]>();
-  for (const r of rows) { const k = r.mailbox ?? list[0]?.mailbox ?? ""; byBox.set(k, [...(byBox.get(k) ?? []), r.gmail_id]); }
-  for (const [mb, gids] of byBox) {
+  const byBox = new Map<string, typeof rows>();
+  for (const r of rows) { const k = r.mailbox ?? list[0]?.mailbox ?? ""; byBox.set(k, [...(byBox.get(k) ?? []), r]); }
+  for (const [mb, rs] of byBox) {
     const i = list.findIndex((b) => b.mailbox === mb); if (i < 0 || !canSyncRead(list[i])) continue;
     try {
       const t = i === 0 ? await googleAccess("gmail") : await mailboxAccess(list[i].refreshToken!);
-      for (let k = 0; k < gids.length; k += 900)
-        await fetch(`${GMAIL_URL()}/users/me/messages/batchModify`, { method: "POST", signal: AbortSignal.timeout(20000), headers: { authorization: `Bearer ${t}`, "content-type": "application/json" },
-          body: JSON.stringify({ ids: gids.slice(k, k + 900), ...(read ? { removeLabelIds: ["UNREAD"] } : { addLabelIds: ["UNREAD"] }) }) });
+      for (let k = 0; k < rs.length; k += 900) {
+        const part = rs.slice(k, k + 900);
+        const r = await fetch(`${GMAIL_URL()}/users/me/messages/batchModify`, { method: "POST", signal: AbortSignal.timeout(20000), headers: { authorization: `Bearer ${t}`, "content-type": "application/json" },
+          body: JSON.stringify({ ids: part.map((x) => x.gmail_id), ...(read ? { removeLabelIds: ["UNREAD"] } : { addLabelIds: ["UNREAD"] }) }) });
+        if (r.ok) part.forEach((x) => done.add(x.id)); else console.error("inbox read sync", mb, r.status, (await r.text().catch(() => "")).slice(0, 200));
+      }
     } catch (e) { console.error("inbox read sync", mb, e); }
   }
+  return done;
 }
+/** Mark emails read or unread here, and in Gmail (so Mail on the Mac and phone match). If Gmail can't be changed yet,
+ *  the site remembers the change (read_pending) and copies it on a later check, rather than letting Gmail undo it. */
 export async function markInbox(actorId: string, ids: string[] | "all", read: boolean) {
   if (ids === "all") { const unread = (await withSchool((q) => q<{ id: string }>(`select id from inbox_messages where read_at is null`))).map((r) => r.id); await markInbox(actorId, unread, true); return; }
-  await pushRead(ids, read);
   if (!ids.length) return;
   await withSchool((q) =>
-    // every parameter is used either way (Postgres refuses a query with an unused one, which broke "Mark unread")
-    q(`update inbox_messages set read_at = case when $3 then now() end, read_by = case when $3 then $1::uuid end where id = any($2::uuid[])`, [actorId, ids, read]));
+    q(`update inbox_messages set read_at = case when $3 then now() end, read_by = case when $3 then $1::uuid end, read_pending = gmail_id not like 'local:%'
+       where id = any($2::uuid[])`, [actorId, ids, read]));
+  const done = await pushRead(ids, read);
+  if (done.size) await withSchool((q) => q(`update inbox_messages set read_pending = false where id = any($1::uuid[])`, [[...done]]));
+}
+/** Copy read/unread changes made here that Gmail hasn't got yet (e.g. made before the inbox was reconnected). */
+async function pushPending() {
+  const rows = await withSchool((q) => q<{ id: string; read: boolean }>(`select id, read_at is not null as read from inbox_messages where read_pending`)).catch(() => []);
+  for (const read of [true, false]) {
+    const ids = rows.filter((r) => r.read === read).map((r) => r.id); if (!ids.length) continue;
+    const done = await pushRead(ids, read);
+    if (done.size) await withSchool((q) => q(`update inbox_messages set read_pending = false where id = any($1::uuid[])`, [[...done]]));
+  }
 }
 
 const fromOf = (v: string) => { const m = /^\s*"?([^"<]*?)"?\s*<([^>]+)>\s*$/.exec(v); return m ? { name: m[1].trim() || null, email: m[2].trim().toLowerCase() } : { name: null, email: v.trim().toLowerCase() }; };
@@ -90,6 +107,7 @@ export async function syncInbox(): Promise<InboxInfo> {
   const seen = new Set((await googleKv<string[]>("inbox_seen")) ?? []);
   const days = prev.last ? Math.min(30, Math.max(2, Math.ceil((Date.now() - Date.parse(prev.last)) / 86400e3) + 1)) : 30;   // since the last good read
   let added = 0; const errors: string[] = [];
+  await pushPending().catch(() => null);   // site changes Gmail hasn't got yet go first, so Gmail doesn't undo them
   for (const [n, box] of list.entries()) {
     let token: string;
     try { token = n === 0 ? await googleAccess("gmail") : await mailboxAccess(box.refreshToken!); }
@@ -115,7 +133,7 @@ export async function syncInbox(): Promise<InboxInfo> {
       }
       await withSchool((q) => q(`update inbox_messages set read_at = case when gmail_id = any($1::text[]) then null else coalesce(read_at, now()) end
         where gmail_id not like 'local:%' and received_at > now() - interval '29 days' and (mailbox = $2 or ($3 and mailbox is null))
-          and (read_at is null) <> (gmail_id = any($1::text[]))`, [unreadIds, box.mailbox ?? "", n === 0]));
+          and not read_pending and (read_at is null) <> (gmail_id = any($1::text[]))`, [unreadIds, box.mailbox ?? "", n === 0]));
     } catch (e) { errors.push(`${box.mailbox}: couldn’t read which emails are read (${e instanceof Error ? e.message : "?"})`); }
     const everyone = (await googleKv<boolean>("inbox_everyone").catch(() => null)) !== false;   // on unless switched off
     await withSchool(async (q) => {
