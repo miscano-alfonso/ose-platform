@@ -308,3 +308,6 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .bh-home .bh-art .fl g{stroke-width:13}
 .bh-home .bh-art{-webkit-mask-image:linear-gradient(to right,rgba(0,0,0,.6) 0%,rgba(0,0,0,.6) 34%,#000 50%);mask-image:linear-gradient(to right,rgba(0,0,0,.6) 0%,rgba(0,0,0,.6) 34%,#000 50%)}
 @media (max-aspect-ratio:1/1){.bh-home .bh-art{-webkit-mask-image:linear-gradient(to bottom,#000 45%,rgba(0,0,0,.55) 65%);mask-image:linear-gradient(to bottom,#000 45%,rgba(0,0,0,.55) 65%)}}
+/* floating symbols: fuller chalk (less grain) in the same cyan as the boy */
+.bh-home .bh-art .fl{color:#6cf0f7}
+.bh-home .bh-art .fl g{filter:url(#bh-chalk2)}
