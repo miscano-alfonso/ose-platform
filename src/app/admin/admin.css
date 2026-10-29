@@ -746,3 +746,6 @@
 .adm .fx-row .fx-slides>button:not(.add){color:var(--muted)}
 .adm .fx-row .fx-slides-edit{flex-basis:100%}
 .adm .fx-slides .none{font-size:14px;color:#c9cdea;padding:6px 4px;cursor:help;border-bottom:1px dotted rgba(201,205,234,.5)}
+/* packed board: modules placed by bento-pack.ts so they fill the space */
+.adm .bb-grid.packed{display:block;position:relative}
+.adm .bb-grid.packed>.bb-cell{position:absolute}

@@ -1,5 +1,6 @@
 "use client";
-import { useState, useTransition, type ReactNode, useRef } from "react";
+import { useState, useTransition, type ReactNode, useRef, useLayoutEffect } from "react";
+import { pack, spanOf } from "./bento-pack";
 import { saveDashLayoutAction } from "./actions";
 import { saveBoardAction } from "../dash-actions";
 
@@ -26,6 +27,32 @@ export function BentoBoard({ page, modules, layout, defaults, saved, scope = "ow
   const hidden = modules.filter((m) => !items.some((i) => i.id === m.id));
   const move = (id: string, to: number) => setItems((xs) => { const i = xs.findIndex((x) => x.id === id); if (i < 0) return xs; const c = [...xs]; const [it] = c.splice(i, 1); c.splice(Math.max(0, Math.min(c.length, to)), 0, it); return c; });
   const std = scope === "standard";
+  // place the modules so they fill the space (see bento-pack.ts); phones keep the plain flow
+  const gridRef = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const g = gridRef.current; if (!g) return;
+    let raf = 0;
+    const run = () => {
+      const cells = Array.from(g.children).filter((c): c is HTMLElement => c instanceof HTMLElement && c.classList.contains("bb-cell"));
+      const W = g.clientWidth, gap = 16;
+      if (W < 560 || !cells.length) { g.classList.remove("packed"); g.style.height = ""; cells.forEach((c) => { c.style.left = c.style.top = c.style.width = c.style.height = ""; }); return; }
+      const colW = (W - gap * 11) / 12;
+      const ins = cells.map((c) => ({ w: spanOf(c.dataset.size ?? "m", W), fixed: !!c.dataset.h }));
+      g.classList.add("packed");
+      cells.forEach((c, i) => { const w = ins[i].w; c.style.width = `${w * colW + (w - 1) * gap}px`; c.style.height = ""; });
+      const hs = cells.map((c) => c.offsetHeight);
+      const { boxes, height } = pack(ins.map((x, i) => ({ ...x, h: hs[i] })), 12, gap);
+      cells.forEach((c, i) => { const b = boxes[i]; c.style.left = `${b.x * (colW + gap)}px`; c.style.top = `${b.top}px`; c.style.height = `${b.height}px`; });
+      g.style.height = `${height}px`;
+    };
+    const again = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(run); };
+    run();
+    const ro = new ResizeObserver(again); ro.observe(g);
+    const mo = new MutationObserver(again); mo.observe(g, { childList: true, subtree: true, characterData: true });
+    document.fonts?.ready.then(again).catch(() => {});
+    window.addEventListener("load", again);
+    return () => { ro.disconnect(); mo.disconnect(); cancelAnimationFrame(raf); window.removeEventListener("load", again); };
+  }, [items, editing]);
   const save = (next: Item[] | null) => start(async () => {
     await (page === "admin-home" ? saveDashLayoutAction : saveBoardAction)(page, next);
     setMsg(next ? (std ? `Saved as the standard for all ${audience ?? "people"}.` : "Saved. This is now your dashboard.") : (std ? "Back to the built-in layout." : "Back to the standard layout."));
@@ -35,14 +62,14 @@ export function BentoBoard({ page, modules, layout, defaults, saved, scope = "ow
       {!editing ? <><button type="button" className="abtn sm" onClick={() => { setEditing(true); setMsg(""); }}>
         <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" /></svg>{std ? `Customise for all ${audience ?? ""}` : "Customise"}</button>
         {msg && <span className="bb-msg" role="status">{msg}</span>}</>
-      : <><span className="bb-help">{std ? `Drag modules to move them, pick a width, or take them off. This becomes the standard for all ${audience ?? "people"}; each can still change their own.` : "Drag modules to move them, pick a width, or take them off. Only you see this arrangement."}</span>
+      : <><span className="bb-help">{std ? `Drag modules to move them, pick a width, or take them off. This becomes the dashboard for all ${audience ?? "people"}.` : "Drag modules to move them, pick a width, or take them off. Only you see this arrangement."}</span>
         <button type="button" className="abtn sm pri" disabled={pending} onClick={() => save(items)}>{pending ? "Saving…" : "Save"}</button>
         <button type="button" className="abtn sm" disabled={pending} onClick={() => { setItems(layout); setEditing(false); }}>Cancel</button>
         {saved && <button type="button" className="abtn sm" disabled={pending} onClick={() => save(null)}>{std ? "Reset to built-in" : "Reset to standard"}</button>}</>}
     </div>}
-    <div className="bb-grid">
+    <div className="bb-grid" ref={gridRef}>
       {items.map((it, i) => { const m = byId.get(it.id); if (!m) return null;
-        return <div key={it.id} className={`bb-cell s-${it.size}${it.h ? ` h-${it.h}` : ""}${drag === it.id ? " dragging" : ""}`}
+        return <div key={it.id} data-size={it.size} data-h={it.h ?? undefined} className={`bb-cell s-${it.size}${it.h ? ` h-${it.h}` : ""}${drag === it.id ? " dragging" : ""}`}
           draggable={editing} onDragStart={(e) => { setDrag(it.id); e.dataTransfer.effectAllowed = "move"; }} onDragEnd={() => setDrag(null)}
           onDragOver={(e) => { if (editing && dragRef.current) e.preventDefault(); }} onDrop={(e) => { e.preventDefault(); const d = dragRef.current; if (d && d !== it.id) move(d, i); setDrag(null); }}>
           {editing && <div className="bb-tools">
