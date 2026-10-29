@@ -164,3 +164,18 @@ html[data-theme=dark] .bt .tcard .role,html[data-theme=dark] .bt .tmore,html[dat
 html[data-theme=dark] .bt .hub-card b,html[data-theme=dark] .bt .job-req h2,html[data-theme=dark] .bt .job-req h3{color:var(--b-ink)}
 @media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .hub-dates b{color:var(--b-ink)}html:not([data-theme=light]) .bt .hub-dates span{color:var(--b-muted)}html:not([data-theme=light]) .bt .hub-dates li::before{border-color:var(--b-bg)}}
 html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] .bt .hub-dates span{color:var(--b-muted)}html[data-theme=dark] .bt .hub-dates li::before{border-color:var(--b-bg)}
+/* ---------- home hero: full width, chalk illustration floating behind the words ---------- */
+.bh .bh-hero{grid-column:1 / -1;grid-row:auto;position:relative;overflow:hidden;min-height:clamp(560px,46vw,700px);justify-content:center;--chalk:#5fe0e8}
+.bh .bh-hero>*:not(.bh-art){position:relative;z-index:2;max-width:760px}
+.bh .bh-hero .k{color:var(--chalk)}
+.bh .bh-hero h1{font-size:clamp(52px,7vw,112px);line-height:.95;text-shadow:0 0 28px #0f1747,0 0 8px #0f1747}
+.bh .bh-hero p:not(.k){max-width:44ch;color:#e2ecff;text-shadow:0 0 14px #0f1747,0 0 4px #0f1747}
+.bh .bh-hero .btn-ghost{background:rgba(15,23,71,.55)}
+.bh-art{position:absolute;z-index:1;right:-4%;top:50%;height:116%;aspect-ratio:1640/1000;transform:translateY(-50%);color:var(--chalk);pointer-events:none}
+.bh-art .bha{position:absolute;height:auto;overflow:visible}
+.bh-art .bha g{fill:none;stroke:currentColor;stroke-width:11;stroke-linecap:round;stroke-linejoin:round}
+.bh-art .fl{animation:bhbob var(--d) ease-in-out var(--dl) infinite;will-change:transform}
+@keyframes bhbob{0%,100%{transform:translateY(0) rotate(calc(var(--r) * -1))}50%{transform:translateY(calc(var(--y) * -1)) rotate(var(--r))}}
+@media (prefers-reduced-motion:reduce){.bh-art .fl{animation:none}}
+@media (max-width:980px){.bh-art{right:-30%;opacity:.5}}
+@media (max-width:600px){.bh .bh-hero{min-height:620px;justify-content:flex-end}.bh-art{height:58%;top:0;right:-62%;transform:none;opacity:.4}}
