@@ -1,11 +1,11 @@
 "use client";
 import { useEffect } from "react";
 
-// Home page only: the hero runs full screen under the menu bar. While the hero is behind it, the bar is see-through
+// Home page hero and the other pages' title panels: the hero runs full screen under the menu bar. While the hero is behind it, the bar is see-through
 // (class "over"); once the page scrolls past the hero it goes back to normal. Also tells the CSS how tall the bar is.
 export function HeroNav() {
   useEffect(() => {
-    const nav = document.querySelector<HTMLElement>(".s-nav"), hero = document.querySelector<HTMLElement>(".bh-hero");
+    const nav = document.querySelector<HTMLElement>(".s-nav"), hero = document.querySelector<HTMLElement>(".bh-hero, .s-phead > .wrap");
     if (!nav || !hero) return;
     const root = document.documentElement;
     const set = () => {

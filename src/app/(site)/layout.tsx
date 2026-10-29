@@ -1,3 +1,4 @@
+import { HeroNav } from "./HeroNav";
 import { SITE_CHALK } from "./chalk-filter";
 import Link from "next/link";
 import { SiteNav } from "./SiteNav";
@@ -41,7 +42,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <div className="s-icons">{!site.demo && <SiteTheme />}<Link href="/cart" className="s-ico" aria-label="Basket"><Cart /></Link><Link href="/account" className="s-ico" aria-label="My account"><Person /></Link></div>
           <SiteNav items={NAV as [string, string][]} />
         </div></header>
-        <main id="main">{children}</main>
+        <main id="main">{children}</main>{!site.demo && <HeroNav />}
         <footer className="s-foot"><div className="wrap fgrid">
           {site.demo ? <div><div className="fl">{site.name}</div><p>A made-up online school, showing what OH-SO EdTech can do.</p></div>
           : <div><div className="fl">OH-SO ED</div><p>Outstanding online education for home-educated students.</p>
