@@ -1,3 +1,4 @@
+import { labelWords } from "@/lib/course-labels";
 import Link from "next/link";
 import { getGroups, pendingInvites } from "@/lib/admin-data";
 import { classFormOptions } from "@/lib/rules";
@@ -18,6 +19,7 @@ const statusPill = (s: string, full: boolean) => full && (s === "open" || s === 
 export default async function Classes({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; level?: string }> }) {
   const sp = await searchParams;
   const [all, opts, pend, plan, inv, vid] = await Promise.all([getGroups(), classFormOptions(), pendingInvites(), invitePlan(), inviteStatus(), videoSettings()]);
+  const words = await labelWords();
   const tool = toolById(vid.tool);
   const nIn = plan.invite.length + plan.tasterInvite.length, nOut = plan.remove.length + plan.tasterRemove.length;
   const levels = [...new Set(all.map((g) => g.level))];
@@ -88,7 +90,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
                   <input type="hidden" name="id" value={g.id} />
                   <label className="fld">Capacity<input type="number" name="capacity" min={1} max={200} defaultValue={g.capacity ?? ""} style={{ width: 90 }} /></label>
                   <label className="fld">When full<select name="capacity_mode" defaultValue={g.capacity_mode}>{Object.entries(MODE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
-                  <label className="fld">Website label<select name="sticky_label" defaultValue={g.sticky_label}>{Object.entries(LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
+                  <label className="fld">Website label<select name="sticky_label" defaultValue={g.sticky_label}>{Object.entries(LABEL).map(([k, v]) => <option key={k} value={k}>{(words as Record<string, string>)[k] ?? v}</option>)}</select></label>
                   <label className="fld">Status<select name="status" defaultValue={g.status}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
                   <label className="fld">Space Available on homepage<select name="homepage" defaultValue={g.homepage}>{Object.entries(HOME).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
                   <label className="fld">Position<input type="number" name="homepage_order" min={1} max={99} placeholder="Auto" defaultValue={g.homepage_order ?? ""} style={{ width: 80 }} /></label>

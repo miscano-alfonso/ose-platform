@@ -1,10 +1,11 @@
 import "server-only";
 import { withSchool } from "./db";
 import { money } from "./format";
+import { withLabelText } from "./course-labels";
 
 export type Course = {
   code: string; status: string; capacity: number | null; places_left: number | null;
-  is_full: boolean; bookable: boolean; shows_times: boolean; shows_waitlist: boolean; label: string | null;
+  is_full: boolean; bookable: boolean; shows_times: boolean; shows_waitlist: boolean; label: string | null; label_text?: string | null;
   level: string; level_order: number; subject: string; colour: string; total_pence: number;
   lessons_per_week: number; course_years: number; course_total_pence: number; teacher: string | null;
   year_label: string; year_start: string; is_next: boolean; slots: { d: number; t: string }[] | null;
@@ -42,7 +43,7 @@ const COURSE_SQL = `
   where a.status not in ('hidden', 'closed') and a.on_sale and g.continues_group_id is null`;
 
 export async function getCourses(): Promise<Course[]> {
-  return withSchool((q) => q<Course>(`${COURSE_SQL} order by y.starts_on, l.sort_order, sj.name, g.code`));
+  return withLabelText(await withSchool((q) => q<Course>(`${COURSE_SQL} order by y.starts_on, l.sort_order, sj.name, g.code`)));
 }
 
 /** Homepage "Space Available": classes set to show by hand, plus open classes with places left (unless hidden by hand). */
@@ -61,8 +62,8 @@ export async function getSpaceAvailable(): Promise<SpaceCourse[]> {
 
 /** Bookable groups that are nearly full ("Few spaces left" or "Almost full"). */
 export async function getFewPlaces(): Promise<Course[]> {
-  return withSchool((q) => q<Course>(`${COURSE_SQL} and a.bookable and a.label in ('Few spaces left', 'Almost full')
-    order by a.places_left, l.sort_order, sj.name`));
+  return withLabelText(await withSchool((q) => q<Course>(`${COURSE_SQL} and a.bookable and a.label in ('Few spaces left', 'Almost full')
+    order by a.places_left, l.sort_order, sj.name`)));
 }
 
 export async function getTerms(): Promise<Term[]> {
@@ -175,7 +176,7 @@ export async function getCalculator(): Promise<CalcYear[]> {
 export type CoursePage = { level: string; subject: string; colour: string; topics: { title: string; text: string }[]; exam_board: string | null; intro: string | null; video: string | null; video_title: string | null; groups: Course[] };
 export async function getCoursePage(slug: string): Promise<CoursePage | null> {
   return withSchool(async (q) => {
-    const groups = await q<Course>(`select * from (${COURSE_SQL}) c where c.page_slug = $1 order by c.year_start, c.code`, [slug]);
+    const groups = await withLabelText(await q<Course>(`select * from (${COURSE_SQL}) c where c.page_slug = $1 order by c.year_start, c.code`, [slug]));
     const page = (await q<{ level: string; subject: string; colour: string; topics: { title: string; text: string }[]; exam_board: string | null; intro: string | null; video: string | null; video_title: string | null }>(`
       select l.name as level, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour, cp.topics, cp.exam_board, cp.intro, cp.sample_video_url as video, cp.sample_title as video_title
       from course_pages cp join levels l on l.id = cp.level_id join subjects sj on sj.id = cp.subject_id where cp.slug = $1 and cp.published`, [slug]))[0];

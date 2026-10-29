@@ -56,7 +56,7 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
             {c.teacher_photo && <img src={c.teacher_photo} alt="" width={72} height={72} />}
             <div><span>{p.subject} teacher</span>{c.teacher_slug ? <Link href={`/teachers/${c.teacher_slug}`}><b>{c.teacher}</b></Link> : <b>{c.teacher}</b>}</div></div>}
           <div className="cd-btns">
-            {c.label && <span className="sticky sl-few" style={{ position: "static" }}>{c.label}</span>}
+            {c.label && <span className="sticky sl-few" style={{ position: "static" }}>{c.label_text ?? c.label}</span>}
             <span className={`btn ${c.shows_waitlist ? "btn-line" : "btn-brand"}`} aria-disabled="true" title="Booking opens in the next update">{c.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>
           </div>
         </div>)}
