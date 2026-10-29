@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-// While SITE_PASSWORD is set (the private test site), every page asks for it and
-// search engines are told not to index anything. Remove the variable at launch.
+// While SITE_PASSWORD is set (the test period), the dashboards (/admin, /parent, /student) ask for it and search
+// engines are told not to index anything. The public website is open. Remove the variable at launch.
 // OH-SO EdTech (/osedtech) is public, and its demo visitors (a signed "ose_demo" cookie) can open the demo school's
 // dashboard, family pages and public website. The demo website is chosen here with the x-ose-site header, which is
 // always removed from what the browser sends, so it can only come from a valid demo cookie.
@@ -23,7 +23,8 @@ export async function middleware(req: NextRequest) {
   if (!pass) return next();
   // pictures and link previews that Facebook and Instagram fetch for Social posts stay reachable
   if (/^\/api\/cron\/|^\/api\/stripe\/webhook$|^\/(social-img|s|newsletter|teacher-photo|brand|join|cal)\/|^\/teachers\/[\w.-]+\.(webp|jpe?g|png)$|^\/ose-(logo|logo-blue|logo-white|icon)\.(png|svg)$/.test(path)) return next();
-  if (/^\/osedtech(\/|$)/.test(path)) return robots(next());
+  // the public website is open to everyone (still not indexed while SITE_PASSWORD is set); only the dashboards ask for it
+  if (!familyOrAdmin) return robots(next());
   if (familyOrAdmin && demo) return robots(next());
   const auth = req.headers.get("authorization") || "";
   const [scheme, encoded] = auth.split(" ");

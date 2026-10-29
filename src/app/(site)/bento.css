@@ -179,3 +179,13 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 @media (prefers-reduced-motion:reduce){.bh-art .fl{animation:none}}
 @media (max-width:980px){.bh-art{right:-30%;opacity:.5}}
 @media (max-width:600px){.bh .bh-hero{min-height:620px;justify-content:flex-end}.bh-art{height:58%;top:0;right:-62%;transform:none;opacity:.4}}
+/* full-screen hero: from the top of the window (under the menu bar) to the bottom, rounded only at the bottom */
+.bh-home{--navh:136px;--side:clamp(16px,2.5vw,40px)}
+.bh-home .bh-hero{margin:calc(-1 * var(--navh) - 18px) calc(-1 * var(--side)) 8px;border-radius:0 0 44px 44px;
+  min-height:100vh;min-height:100svh;padding:calc(var(--navh) + 32px) calc(var(--side) + clamp(12px,3vw,48px)) clamp(48px,6vh,80px)}
+.bh-home .bh-art{top:calc(50% + var(--navh) / 2);height:min(108%,calc(100svh - var(--navh)))}
+@media (max-width:600px){.bh-home .bh-hero{border-radius:0 0 28px 28px}.bh-home .bh-art{top:var(--navh);height:52%}}
+/* the menu bar while the hero is behind it */
+.bt .s-nav{transition:background-color .25s,border-color .25s}
+.bt .s-nav.over{background:transparent;backdrop-filter:none;border-bottom-color:transparent}
+.bt .s-nav.over .s-logo img{filter:brightness(0) invert(1)}

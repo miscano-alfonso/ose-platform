@@ -1,4 +1,5 @@
 import { HERO_ART } from "./hero-art";
+import { HeroNav } from "./HeroNav";
 import Link from "next/link";
 import { getFewPlaces, getBundles, getSpaceAvailable, getCourses, getNowNext, getPriceRows, getTeachers, type Course, type NowLesson } from "@/lib/data";
 import { CourseCard, roundelSrc } from "./CourseCard";
@@ -56,7 +57,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
   const from = prices[0];
   const live = nn.live, next = nn.next;
   const classes = new Set(courses.filter((c) => c.status !== "hidden" && c.status !== "closed").map((c) => c.code)).size;
-  return <div className="bh">
+  return <div className="bh bh-home"><HeroNav />
     <div className="bh-grid">
       <section className="bh-t bh-hero">
         <div className="bh-art" role="img" aria-label="A teenager learning at home at his laptop, with maths, English and science symbols floating around him" dangerouslySetInnerHTML={{ __html: HERO_ART }} />
