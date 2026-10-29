@@ -16,6 +16,7 @@ export async function resetDemo(me: Staff): Promise<string | null> {
       const [u] = await withSchool((q) => q<{ id: string }>(`select id from users where lower(email::text) = lower($1)`, [me.email]));
       await buildSchedules(u.id);
       await withSchool((q) => q(`select demo_activity()`));
+      await withSchool((q) => q(`select demo_comms()`)).catch((e) => console.error("demo comms", e));
     });
     return null;
   } catch (e) { console.error("demo reset", e); return "Couldn’t make the demo school: " + (e instanceof Error ? e.message : String(e)).slice(0, 200); }

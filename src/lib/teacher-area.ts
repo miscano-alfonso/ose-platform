@@ -220,18 +220,35 @@ export async function removeMyHours(userId: string, id: string, actorId = userId
 // Parents and teachers talk through Messages only. A teacher's Email is for writing to the school (the office):
 // written here it lands in Admin → Email → Inbox (kind 'staff'); emails the teacher sends the school from their own
 // email show too. The office's replies are emailed to the teacher and shown here.
-export type TeacherEmail = { id: string; thread_id: string; subject: string; body: string; at: string; replied_at: string | null; reply_body: string | null; reply_from: string | null; local: boolean; to_name: string | null; to_label: string | null };
+export type TeacherEmail = { id: string; thread_id: string; subject: string; body: string; at: string; replied_at: string | null; reply_body: string | null; reply_from: string | null; local: boolean; to_name: string | null; to_label: string | null; links: string[] | null; files: { id: string; name: string; size: number }[] };
 /** Who teachers can email: the office (the school inbox) plus the people the school lists (e.g. "Principal", "IT support").
  *  Set by an admin (meet_kv teacher_contacts); until then every admin is listed with their signature's job title. */
 export type Contact = { user_id: string; name: string; label: string };
 export async function teacherContacts(): Promise<Contact[]> {
   return withSchool(async (q) => {
+    const box = ((await q<{ value: { mailbox?: string } }>(`select value from meet_kv where key = 'gmail'`))[0]?.value?.mailbox ?? "").toLowerCase();
     const admins = await q<{ id: string; name: string; title: string | null }>(`select u.id, u.name, k.value->>'title' as title from users u left join meet_kv k on k.key = 'sig_' || u.id
-      where u.role = 'school_admin' and u.disabled_at is null order by u.name`);
+      where u.role = 'school_admin' and u.disabled_at is null and lower(u.email::text) <> $1 order by u.name`, [box]);
     const saved = (await q<{ value: { user_id: string; label: string }[] }>(`select value from meet_kv where key = 'teacher_contacts'`))[0]?.value;
     if (!Array.isArray(saved)) return admins.map((a) => ({ user_id: a.id, name: a.name, label: a.title || "Admin" }));
     return saved.map((c) => { const a = admins.find((x) => x.id === c.user_id); return a ? { user_id: a.id, name: a.name, label: String(c.label || "").slice(0, 60) || "Admin" } : null; }).filter((x): x is Contact => !!x);
   });
+}
+/** What teachers see for the school inbox ("Leanne", say). Set on Admin → Teacher email contacts; otherwise the first name of
+ *  the admin whose address the school inbox is, otherwise "the office". Also the inbox address, to leave that person off the list. */
+export async function officeInfo(): Promise<{ label: string; mailbox: string | null }> {
+  return withSchool(async (q) => {
+    const kv = await q<{ key: string; value: unknown }>(`select key, value from meet_kv where key in ('teacher_office_label', 'gmail')`);
+    const box = (kv.find((r) => r.key === "gmail")?.value as { mailbox?: string } | undefined)?.mailbox?.toLowerCase() ?? null;
+    const set = kv.find((r) => r.key === "teacher_office_label")?.value;
+    if (typeof set === "string" && set.trim()) return { label: set.trim().slice(0, 60), mailbox: box };
+    const who = box ? (await q<{ name: string }>(`select name from users where lower(email::text) = $1 and disabled_at is null limit 1`, [box]))[0]?.name : null;
+    return { label: who ? who.split(" ")[0] : "the office", mailbox: box };
+  });
+}
+export async function saveOfficeLabel(label: string) {
+  await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), 'teacher_office_label', $1)
+    on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [JSON.stringify(label.trim().slice(0, 60))]));
 }
 export async function saveTeacherContacts(list: { user_id: string; label: string }[]) {
   const clean = list.filter((c) => /^[0-9a-f-]{36}$/.test(c.user_id)).slice(0, 12).map((c) => ({ user_id: c.user_id, label: c.label.trim().slice(0, 60) }));
@@ -240,13 +257,21 @@ export async function saveTeacherContacts(list: { user_id: string; label: string
 }
 export async function teacherEmails(userId: string, limit = 60): Promise<TeacherEmail[]> {
   return withSchool((q) => q<TeacherEmail>(`
-    select m.id, m.thread_id, m.subject, coalesce(m.body, m.snippet) as body, m.received_at::text as at, m.replied_at::text, m.reply_body, m.reply_from::text, m.gmail_id like 'local:%' as local, tu.name as to_name, null::text as to_label
+    select m.id, m.thread_id, m.subject, coalesce(m.body, m.snippet) as body, m.received_at::text as at, m.replied_at::text, m.reply_body, m.reply_from::text, m.gmail_id like 'local:%' as local, tu.name as to_name, null::text as to_label, m.links,
+      coalesce((select json_agg(json_build_object('id', f.id, 'name', f.name, 'size', f.size) order by f.created_at) from inbox_attachments f where f.message_id = m.id), '[]'::json) as files
     from inbox_messages m left join users tu on tu.id = m.to_user where m.kind = 'staff' and lower(m.from_email::text) = (select lower(email::text) from users where id = $1)
     order by greatest(m.received_at, coalesce(m.replied_at, m.received_at)) desc limit $2`, [userId, limit])).catch(() => []);
 }
-export async function sendTeacherEmail(user: { id: string; name: string; email: string }, subject: string, body: string, thread?: string, to?: string): Promise<string | null> {
+export async function sendTeacherEmail(user: { id: string; name: string; email: string }, subject: string, body: string, thread?: string, to?: string,
+  extra: { links?: string[]; files?: File[] } = {}): Promise<string | null> {
   const sub = subject.trim().slice(0, 200), text = body.replace(/\r\n/g, "\n").trim().slice(0, 20000);
   if (!sub) return "Add a subject."; if (!text) return "Write your email first.";
+  const links = [...new Set((extra.links ?? []).map((l) => l.trim()).filter(Boolean))].slice(0, 10);
+  if (links.some((l) => !/^https:\/\/[^\s]{4,600}$/.test(l))) return "Each link must be a full address starting with https://";
+  const files = (extra.files ?? []).filter((f) => f && f.size > 0).slice(0, 5);
+  if (files.reduce((a, f) => a + f.size, 0) > 3_500_000) return "Attachments can be up to 3.5 MB in total. For bigger files, share a Google Drive link instead.";
+  if (files.some((f) => /\.(exe|bat|cmd|com|scr|js|vbs|msi|sh|ps1|jar)$/i.test(f.name))) return "That type of file can’t be attached.";
+  const blobs = await Promise.all(files.map(async (f) => ({ name: f.name.replace(/[\\/\r\n]/g, "_").slice(0, 200) || "file", mime: (f.type || "application/octet-stream").slice(0, 100), size: f.size, data: Buffer.from(await f.arrayBuffer()) })));
   return withSchool(async (q) => {
     const id = crypto.randomUUID();
     let th = `local:${id}`;
@@ -265,9 +290,10 @@ export async function sendTeacherEmail(user: { id: string; name: string; email: 
     } else if (thread) {
       toUser = (await q<{ t: string | null }>(`select to_user as t from inbox_messages where thread_id = $1 order by received_at limit 1`, [thread]))[0]?.t ?? null;
     }
-    await q(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, body, received_at, parent_id, kind, mailbox, sent_by, to_user)
-      values (current_school(), $1, $2, $3, $4, $5, $6, $7, now(), null, 'staff', $8, $9, $10)`,
-      [`local:${id}`, th, user.name.slice(0, 120), user.email, sub, text.replace(/\s+/g, " ").slice(0, 400), text, box, user.id, toUser]);
+    const [row0] = await q<{ id: string }>(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, body, received_at, parent_id, kind, mailbox, sent_by, to_user, links)
+      values (current_school(), $1, $2, $3, $4, $5, $6, $7, now(), null, 'staff', $8, $9, $10, $11) returning id`,
+      [`local:${id}`, th, user.name.slice(0, 120), user.email, sub, text.replace(/\s+/g, " ").slice(0, 400), text, box, user.id, toUser, links.length ? links : null]);
+    for (const b of blobs) await q(`insert into inbox_attachments (school_id, message_id, name, mime, size, data) values (current_school(), $1, $2, $3, $4, $5)`, [row0.id, b.name, b.mime, b.size, b.data]);
     // the person it's for also gets it by email, with a link to reply from the admin's inbox
     if (toEmail) {
       const { sendOne } = await import("./email");
@@ -275,7 +301,7 @@ export async function sendTeacherEmail(user: { id: string; name: string; email: 
       const site = (process.env.SITE_URL || (await siteBase().catch(() => "")) || "").replace(/\/$/, "");
       const row = (await q<{ id: string }>(`select id from inbox_messages where gmail_id = $1`, [`local:${id}`]))[0];
       await sendOne([{ email: toEmail, name: toName }], `${user.name}: ${sub}`,
-        `${user.name} (teacher) emailed you through the school site:\n\n${text}\n\nReply from the admin: ${site}/admin/email?tab=inbox&show=all&m=${row?.id ?? ""}\n(Replying there emails ${user.name} and keeps the conversation on their Email page.)`,
+        `${user.name} (teacher) emailed you through the school site:\n\n${text}${links.length ? `\n\nLinks:\n${links.join("\n")}` : ""}${blobs.length ? `\n\n${blobs.length} attachment${blobs.length > 1 ? "s" : ""} (open the email in the admin to download): ${blobs.map((b) => b.name).join(", ")}` : ""}\n\nReply from the admin: ${site}/admin/email?tab=inbox&show=all&m=${row?.id ?? ""}\n(Replying there emails ${user.name} and keeps the conversation on their Email page.)`,
         { tag: "teacher-email" }).catch(() => null);
     }
     return null;

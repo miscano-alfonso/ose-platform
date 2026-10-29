@@ -17,6 +17,9 @@ async function boxes(): Promise<Mailbox[]> {
 export async function inboxStatus() {
   const [list, info, reply] = await Promise.all([boxes(), googleKv<InboxInfo>("inbox"), googleKv<string>("inbox_reply_from")]);
   const m = list[0];
+  // the demo school shows its made-up emails as if an inbox were connected (nothing is read from or sent to Gmail)
+  if (!m && (await withSchool((q) => q<{ d: boolean }>(`select is_demo as d from schools where id = current_school()`)).then((r) => r[0]?.d).catch(() => false)))
+    return { connected: true, mailbox: "office@example.com", by: "", info: info ?? {}, mailboxes: [{ mailbox: "office@example.com", by: "the demo" }], replyFrom: "office@example.com" };
   return { connected: !!m, mailbox: m?.mailbox ?? "", by: m?.by ?? "", info: info ?? {},
     mailboxes: list.map((x) => ({ mailbox: x.mailbox ?? "", by: x.by ?? "" })), replyFrom: reply || m?.by || m?.mailbox || "" };
 }
@@ -137,15 +140,18 @@ async function tokenFor(mailbox: string | null): Promise<{ token: string; box: M
   if (i < 0) return null;
   return { token: i === 0 ? await googleAccess("gmail") : await mailboxAccess(list[i].refreshToken!), box: list[i] };
 }
-export type FullEmail = { body: string; to: string; replied: { at: string; from: string; body: string } | null };
+export type FullEmail = { body: string; to: string; replied: { at: string; from: string; body: string } | null; files?: { id: string; name: string; size: number }[]; links?: string[] };
 /** The full text of an email (fetched from Gmail when it's opened; only the preview is stored). */
 export async function inboxMessage(id: string): Promise<FullEmail | { error: string }> {
   const m = (await withSchool((q) => q<{ gmail_id: string; mailbox: string | null; replied_at: string | null; reply_from: string | null; reply_body: string | null }>(
     `select gmail_id, mailbox::text, replied_at::text, reply_from::text, reply_body from inbox_messages where id = $1`, [id])))[0];
   if (!m) return { error: "That email wasn’t found." };
   if (m.gmail_id.startsWith("local:")) {   // written in the site by a teacher
-    const b = (await withSchool((q) => q<{ body: string | null }>(`select body from inbox_messages where id = $1`, [id])))[0]?.body ?? "";
-    return { body: b, to: "the school (sent from the teacher’s Email page)", replied: m.replied_at ? { at: m.replied_at, from: m.reply_from ?? "", body: m.reply_body ?? "" } : null };
+    const r = (await withSchool((q) => q<{ body: string | null; links: string[] | null; files: { id: string; name: string; size: number }[]; to_name: string | null }>(`select m.body, m.links, tu.name as to_name,
+      coalesce((select json_agg(json_build_object('id', f.id, 'name', f.name, 'size', f.size) order by f.created_at) from inbox_attachments f where f.message_id = m.id), '[]'::json) as files
+      from inbox_messages m left join users tu on tu.id = m.to_user where m.id = $1`, [id])))[0];
+    return { body: r?.body ?? "", to: r?.to_name ? `${r.to_name} (sent from the teacher’s Email page)` : "the school (sent from the teacher’s Email page)",
+      replied: m.replied_at ? { at: m.replied_at, from: m.reply_from ?? "", body: m.reply_body ?? "" } : null, files: r?.files ?? [], links: r?.links ?? [] };
   }
   try {
     const t = await tokenFor(m.mailbox); if (!t) return { error: `${m.mailbox} isn’t connected any more.` };

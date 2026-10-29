@@ -3,7 +3,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { inboxMessageAction, replyInboxAction, markInboxReadAction } from "./actions";
 
-type Full = { body: string; to: string; replied: { at: string; from: string; body: string } | null };
+type Full = { body: string; to: string; replied: { at: string; from: string; body: string } | null; files?: { id: string; name: string; size: number }[]; links?: string[] };
 type Sig = { name: string; title: string; email: string; web: string; logo: string; logoDark: string };
 const sigText = (x: Sig) => [x.name, x.title, x.email, x.web].filter(Boolean).join("\n");
 export type PanelMail = { id: string; name: string; email: string; familyHref: string | null; subject: string; when: string; kind: [string, string] | null;
@@ -53,6 +53,9 @@ export function InboxPanel({ m, sig, from, opened }: { m: PanelMail; sig: Sig; f
       {mail.replied && <div className="irp-sent"><b>You replied from {mail.replied.from}</b> · {new Date(mail.replied.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}<div>{mail.replied.body}</div></div>}
       <p className="ibp-orig">{m.name} wrote · {m.when}</p>
       <div className="irp-mail">{mail.body || "(This email has no text.)"}</div>
+      {((mail.files?.length ?? 0) > 0 || (mail.links?.length ?? 0) > 0) && <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginTop: 8 }}>
+        {(mail.files ?? []).map((f) => <a key={f.id} className="abtn sm" href={`/admin/email-file/${f.id}`}>{f.name} · {f.size > 1e6 ? `${(f.size / 1e6).toFixed(1)} MB` : `${Math.max(1, Math.round(f.size / 1e3))} KB`}</a>)}
+        {(mail.links ?? []).map((l) => <a key={l} className="abtn sm" href={l} target="_blank" rel="noopener">{/drive\.google|docs\.google/.test(l) ? "Google Drive link" : l.replace(/^https:\/\//, "").slice(0, 40)}</a>)}</div>}
     </>}
   </div>;
 }

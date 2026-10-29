@@ -82,7 +82,7 @@ export default async function MyDay() {
     { id: "email", title: "Email", size: "l", node: <section className="dx-card dx-tall"><header><h2>Email</h2><span className="dx-sub">with the school</span><Link className="dx-more" href="/admin/teacher/email">All email →</Link></header>
       {mail.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No emails yet</b><span>Email the school (the office) from here. Parents use Messages.</span></div>
         : <MoreList className="dx-list" limit={4}>{mail.map((e) => <Link key={e.id} className={`dx-item ${e.replied_at ? "good" : "info"}`} href={`/admin/teacher/email#e-${e.id}`}>
-          <span className="t">{e.replied_at ? <span className="pill good">The school replied</span> : <span className="pill mute">Sent</span>}<b>{e.subject || "(no subject)"}</b>
+          <span className="t">{e.replied_at ? <span className="pill good">Replied</span> : <span className="pill mute">Sent</span>}<b>{e.subject || "(no subject)"}</b>
             <span>{(e.reply_body ?? e.body).length > 110 ? (e.reply_body ?? e.body).slice(0, 110) + "…" : (e.reply_body ?? e.body)}</span><span style={{ fontSize: 13 }}>{dm((e.replied_at ?? e.at).slice(0, 10))}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
       <div style={{ marginTop: 12 }}><Link className="abtn sm" href="/admin/teacher/email?new=1">Email the school</Link></div>
     </section> },
