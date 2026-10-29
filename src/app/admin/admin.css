@@ -745,3 +745,4 @@
 .adm .fx-row .fx-slides .add{color:var(--muted)}
 .adm .fx-row .fx-slides>button:not(.add){color:var(--muted)}
 .adm .fx-row .fx-slides-edit{flex-basis:100%}
+.adm .fx-slides .none{font-size:14px;color:#c9cdea;padding:6px 4px;cursor:help;border-bottom:1px dotted rgba(201,205,234,.5)}

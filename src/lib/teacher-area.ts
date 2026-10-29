@@ -13,6 +13,9 @@ const YEAR_NOW = `(select id from academic_years where ends_on >= current_date o
 
 export type WeekLesson = { id: string; d: string; time: string; name: string; code: string; status: string; meet_url: string | null; students: number;
   not_in_classroom: number; tasters: string[]; absent: string[]; marked: number; slides_url?: string | null;
+  course_id?: string | null; lesson_no?: number | null; term_start?: string | null;
+  /** slides found in Classroom or Drive (when the teacher hasn't pasted a link) */
+  slides?: { url: string; title: string; from: string } | null;
   /** Students in the class whose birthday is on the lesson day or within 3 days of it (so the teacher can say happy birthday). */
   birthdays?: { name: string; d: string; age: number }[] };
 export type MyDay = {
@@ -41,7 +44,10 @@ export async function myDay(userId: string): Promise<MyDay> {
       and starts_at >= date_trunc('day', now()) and starts_at < date_trunc('day', now()) + interval '8 days'`, [userId]);
     const pay = term ? await myTermPay(q, userId, term.id) : 0;
     const week = await q<WeekLesson>(`
-      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url,
+      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id,
+        (select starts_on::text from terms t where t.id = ev.term_id) as term_start,
+        (select count(*)::int from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.group_id = ev.group_id and e2.term_id = ev.term_id
+          and e2.status <> 'cancelled' and (e2.lesson_date, s2.starts_at) <= (ev.lesson_date, sl.starts_at)) as lesson_no,
         (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students,
         (select count(*)::int from enrolments e join classroom_memberships cm on cm.group_id = e.group_id and cm.student_id = e.student_id where e.group_id = g.id and e.status in ('pending','active') and cm.state = 'invited') as not_in_classroom,
         coalesce((select array_agg(split_part(r.child_name, ' ', 1) order by r.child_name) from taster_bookings tb join taster_requests r on r.id = tb.request_id
@@ -60,7 +66,10 @@ export async function myDay(userId: string): Promise<MyDay> {
         -- the rest of the teaching week (Monday to Sunday) that holds the teacher's next lesson, so a week starting after half term shows in full
         and ev.lesson_date <= (select date_trunc('week', min(e2.lesson_date))::date + 6 from lesson_events e2 where e2.teacher_id = ${ME} and e2.status <> 'cancelled' and e2.lesson_date >= current_date)
       order by ev.lesson_date, sl.starts_at`, [userId]).catch(() => q<WeekLesson>(`
-      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url,
+      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id,
+        (select starts_on::text from terms t where t.id = ev.term_id) as term_start,
+        (select count(*)::int from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.group_id = ev.group_id and e2.term_id = ev.term_id
+          and e2.status <> 'cancelled' and (e2.lesson_date, s2.starts_at) <= (ev.lesson_date, sl.starts_at)) as lesson_no,
         (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students, 0 as not_in_classroom,
         '{}'::text[] as tasters, '{}'::text[] as absent, (select count(*)::int from attendance_marks m where m.lesson_event_id = ev.id) as marked
       from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id
