@@ -674,3 +674,21 @@
 .adm .dx-hero .dx-hi{align-self:stretch;display:flex;flex-direction:column;gap:6px}
 .adm .dx-hero .dx-hi .dx-date{margin:0 0 auto;padding-bottom:22px}
 .adm .dx-hero .dx-hello{color:var(--pop,#e9f56a)}
+/* My day panel (teacher, parent, student): text on the left with the buttons on the bottom edge, the lesson clock on the right */
+.adm .fx .dx-hero.has-clock{grid-template-columns:minmax(0,1fr) auto;align-items:stretch}
+.adm .fx .dx-hero.has-clock::after{display:none}
+.adm .fx .dx-hero .fx-main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.adm .fx .dx-hero .fx-main .fx-btns{margin-top:auto;align-items:center}
+.adm .fx .dx-hero .fx-main .fx-live{margin-bottom:6px}
+.adm .fx-hi{font-size:.55em;font-weight:500}
+.adm .fx-hello{color:var(--pop,#e9f56a)}
+.adm .fx-cd{font:600 17px "Space Grotesk","Jost",sans-serif;color:#fff;padding-left:6px;white-space:nowrap}
+.adm .lclock{width:clamp(130px,14vw,180px);height:auto;align-self:center}
+.adm .lclock-t{fill:#fff;font:600 30px "Space Grotesk","Jost",sans-serif}
+.adm .lclock-l{fill:#c9cdea;font:600 12px "Space Grotesk","Jost",sans-serif;letter-spacing:.14em;text-transform:uppercase}
+@media (max-width:640px){.adm .fx .dx-hero.has-clock{grid-template-columns:1fr}.adm .lclock{width:120px;justify-self:start;order:-1}}
+/* birthday note in the teacher's My day hero */
+.adm .fx-bday{display:flex;gap:10px;align-items:flex-start;margin:0;padding:9px 14px;border-radius:12px;background:rgba(233,245,106,.12);border:1px solid rgba(233,245,106,.35);color:#fff;font-size:15px;line-height:1.4;max-width:60ch}
+.adm .fx-bday svg{width:18px;height:18px;flex:none;margin-top:1px;color:var(--pop,#e9f56a)}
+.adm .fx-bday b{color:var(--pop,#e9f56a);font-weight:600}
+.adm .fx .dx-hero .fx-main .fx-btns .fx-cd{padding:0 6px 0 2px}

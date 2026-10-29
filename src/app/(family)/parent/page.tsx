@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { LessonClock, LessonCountdown } from "../../LessonClock";
 import { requireParent } from "@/lib/family-auth";
 import { kids, parentHome, parentAttendance } from "@/lib/family";
 import { dm, dlong, gbp } from "../fmt";
@@ -14,12 +15,13 @@ export default async function ParentHome() {
   const tone = (p: number | null) => p == null ? "brand" : p < 50 ? "bad" : p < 80 ? "warn" : "good";
   return <>
     <div className="fx">
-      <section className="dx-hero c8">
+      <section className={`dx-hero c8${next ? " has-clock" : ""}`}><div className="fx-main">
         <p className="fx-live" style={next?.date === today ? undefined : { color: "#c9cdea" }}>{next?.date === today && <i />}{next ? (next.date === today ? "Today" : `Next lesson · ${dlong(next.date)}`) : "Your account"}</p>
-        <h1 className="fx-hero-t"><span style={{ fontSize: ".55em", fontWeight: 500 }}>Hello {f.first}</span>{next && <><br />{who?.first ?? ""}: {next.class}</>}</h1>
-        <p className="fx-hero-s">{next ? `${next.time} · ${dlong(next.date)}` : ks.length ? "No lessons in the next four weeks." : "No children on your account yet."}</p>
-        <div className="fx-btns"><Link className="go" href="/parent/attendance">Report an absence</Link><Link href="/parent/messages">Message a teacher</Link></div>
-      </section>
+        <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {f.first}</span>{next && <><br />{who?.first ?? ""}: {next.class}</>}</h1>
+        <p className="fx-hero-s">{next ? `${dlong(next.date)} · ${next.time}` : ks.length ? "No lessons in the next four weeks." : "No children on your account yet."}</p>
+        <div className="fx-btns"><Link className="go" href="/parent/attendance">Report an absence</Link><Link href="/parent/messages">Message a teacher</Link>
+          {next && <LessonCountdown date={next.date} time={next.time} />}</div>
+      </div>{next && <LessonClock date={next.date} time={next.time} />}</section>
       <Link href="/parent/payments" className="dx-pop c4"><span>Next payment</span>
         <b className="fx-big">{h.next ? gbp(h.next.amount) : "£0"}</b><span>{h.next ? `on ${dm(h.next.due)} from your saved card →` : "Nothing due →"}</span></Link>
       {ks.map((st) => <section className="dx-card c6" key={st.id}>

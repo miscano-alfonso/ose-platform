@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { LessonClock, LessonCountdown } from "../../LessonClock";
+const ldate = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Europe/London" });
 import { requireStudent } from "@/lib/family-auth";
 import { studentHome } from "@/lib/family";
 import { dlong, hm } from "../fmt";
@@ -16,14 +18,15 @@ export default async function StudentHome() {
   const chatOff = h.me.chat_access === "none";
   return <>
     <div className="fx">
-      <section className="dx-hero c8" data-lesson={next ? `${next.subject}, ${hm(next.next!)}` : undefined}>
-        {next ? <>
-          <p className="fx-live" style={soon ? undefined : { color: "#c9cdea" }}>{soon && <i />}{soon ? whenText(next.next!, now) : `Next lesson · ${dlong(next.next!)} ${hm(next.next!)}`}</p>
-          <h1 className="fx-hero-t"><span style={{ fontSize: ".55em", fontWeight: 500 }}>Hi {h.me.first} ✦</span><br />{next.subject}</h1>
+      <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.subject}, ${hm(next.next!)}` : undefined}>
+        {next ? <><div className="fx-main">
+          <p className="fx-live" style={soon ? undefined : { color: "#c9cdea" }}>{soon && <i />}{soon ? whenText(next.next!, now) : `Next lesson · ${dlong(next.next!)}`}</p>
+          <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hi</span> {h.me.first} ✦</span><br />{next.subject}</h1>
           <p className="fx-hero-s">{hm(next.next!)}{next.teacher ? ` with ${next.teacher}` : ""} · {next.level}</p>
           {next.invited && <p className="fx-hero-s"><b>Accept the Google Classroom invitation in your email first.</b></p>}
-          <div className="fx-btns">{next.meet && <a className={soon ? "go" : undefined} href={`/join/${next.group_id}`} target="_blank" rel="noopener">{joinLabel(next.meet)}</a>}<Link href={`/student/class/${next.group_id}`}>Open class</Link></div>
-        </> : <><h1 className="fx-hero-t">Hi {h.me.first} ✦</h1><p className="fx-hero-s">{h.classes.length ? "No lessons coming up just now: enjoy the break." : "You’re not in any classes yet."}</p></>}
+          <div className="fx-btns">{next.meet && <a className={soon ? "go" : undefined} href={`/join/${next.group_id}`} target="_blank" rel="noopener">{joinLabel(next.meet)}</a>}<Link href={`/student/class/${next.group_id}`}>Open class</Link>
+            <LessonCountdown date={ldate(next.next!)} time={hm(next.next!)} /></div>
+        </div><LessonClock date={ldate(next.next!)} time={hm(next.next!)} /></> : <><h1 className="fx-hero-t"><span className="fx-hello">Hi</span> {h.me.first} ✦</h1><p className="fx-hero-s">{h.classes.length ? "No lessons coming up just now: enjoy the break." : "You’re not in any classes yet."}</p></>}
       </section>
       <Link href="/student/rewards" className="dx-pop c4"><span>Reward points this term</span><b className="fx-big">{pts}</b>
         <span>{rank && pts ? `${ordinal(rank)} in the school →` : "Earn points for great work →"}</span></Link>

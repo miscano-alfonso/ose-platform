@@ -12,7 +12,9 @@ const TERM_NOW = `(select id from terms where ends_on >= current_date order by s
 const YEAR_NOW = `(select id from academic_years where ends_on >= current_date order by starts_on limit 1)`;
 
 export type WeekLesson = { id: string; d: string; time: string; name: string; code: string; status: string; meet_url: string | null; students: number;
-  not_in_classroom: number; tasters: string[]; absent: string[]; marked: number };
+  not_in_classroom: number; tasters: string[]; absent: string[]; marked: number;
+  /** Students in the class whose birthday is on the lesson day or within 3 days of it (so the teacher can say happy birthday). */
+  birthdays?: { name: string; d: string; age: number }[] };
 export type MyDay = {
   term: { name: string; pay_date: string } | null; classes: number;
   reportsLeft: number; reportsDue: string | null; attendance: number | null; onesThisWeek: number; payThisTerm: number;
@@ -46,7 +48,12 @@ export async function myDay(userId: string): Promise<MyDay> {
           where tb.lesson_event_id = ev.id and tb.status = 'booked'), '{}') as tasters,
         coalesce((select array_agg(s.first_name order by s.first_name) from absence_notices a join students s on s.id = a.student_id
           where a.lesson_event_id = ev.id and a.cancelled_at is null), '{}') as absent,
-        (select count(*)::int from attendance_marks m where m.lesson_event_id = ev.id) as marked
+        (select count(*)::int from attendance_marks m where m.lesson_event_id = ev.id) as marked,
+        coalesce((select json_agg(json_build_object('name', coalesce(nullif(s.known_as, ''), s.first_name), 'd', b.d::text, 'age', b.age) order by abs(b.d - ev.lesson_date), b.d, s.first_name)
+          from enrolments e join students s on s.id = e.student_id
+          cross join lateral (select (s.date_of_birth + make_interval(years => extract(year from ev.lesson_date)::int - extract(year from s.date_of_birth)::int))::date as d,
+            extract(year from ev.lesson_date)::int - extract(year from s.date_of_birth)::int as age) b
+          where e.group_id = g.id and e.status in ('pending','active') and s.date_of_birth is not null and abs(b.d - ev.lesson_date) <= 3), '[]'::json) as birthdays
       from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where ev.teacher_id = ${ME} and ev.status <> 'cancelled' and ev.lesson_date >= current_date
