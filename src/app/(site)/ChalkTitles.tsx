@@ -17,8 +17,8 @@ export function ChalkTitles() {
         const s = document.createElement("span"); s.setAttribute("aria-hidden", "true");
         if (ch === " ") { s.className = "sp"; s.textContent = " "; return s; }
         s.textContent = ch;
-        s.style.setProperty("--a", `${((rnd() - .5) * 7).toFixed(1)}deg`);
-        s.style.setProperty("--dy", `${((rnd() - .5) * .06).toFixed(3)}em`);
+        s.style.setProperty("--a", `${((rnd() - .5) * 3).toFixed(1)}deg`);
+        s.style.setProperty("--dy", `${((rnd() - .5) * .03).toFixed(3)}em`);
         return s;
       }));
     });

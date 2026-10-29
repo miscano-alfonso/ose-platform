@@ -359,3 +359,4 @@ body:has(.bh-home,.s-phead){background:transparent}
 .bt .s-phead h1.chalkt{font-family:"Jost","Futura","Century Gothic",sans-serif !important;font-weight:500 !important;letter-spacing:.01em;font-size:clamp(44px,6.4vw,96px);line-height:1}
 .bt .s-phead h1.chalkt span{display:inline-block;transform:translateY(var(--dy,0)) rotate(var(--a,0deg));transform-origin:50% 70%}
 .bt .s-phead h1.chalkt span.sp{width:.28em}
+.bt .s-phead h1.chalkt{font-size:clamp(57px,8.3vw,125px)}   /* 30% bigger */
