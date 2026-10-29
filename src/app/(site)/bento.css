@@ -355,3 +355,7 @@ body:has(.bh-home,.s-phead){background:transparent}
 /* bigger subject roundels on course cards */
 .bt .course .roundel{width:112px;height:112px;font-size:13px}
 .bt:has(.s-phead){background:linear-gradient(#0f1747 0 30vh,var(--b-bg) 30vh)}
+/* chalk page titles: Jost (Futura-style), each letter tilted a little like hand-written chalk */
+.bt .s-phead h1.chalkt{font-family:"Jost","Futura","Century Gothic",sans-serif !important;font-weight:500 !important;letter-spacing:.01em;font-size:clamp(44px,6.4vw,96px);line-height:1}
+.bt .s-phead h1.chalkt span{display:inline-block;transform:translateY(var(--dy,0)) rotate(var(--a,0deg));transform-origin:50% 70%}
+.bt .s-phead h1.chalkt span.sp{width:.28em}
