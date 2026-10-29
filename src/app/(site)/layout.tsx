@@ -1,3 +1,4 @@
+import { SITE_CHALK } from "./chalk-filter";
 import Link from "next/link";
 import { SiteNav } from "./SiteNav";
 import { StyleBridge } from "./StyleBridge";
@@ -31,6 +32,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         <style id="ose-styles" dangerouslySetInnerHTML={{ __html: css }} />
         <StyleBridge />
         <a className="skip" href="#main">Skip to content</a>
+        {!site.demo && <svg width="0" height="0" style={{ position: "absolute" }} aria-hidden="true" dangerouslySetInnerHTML={{ __html: `<defs>${SITE_CHALK}</defs>` }} />}
         {site.demo && <><style dangerouslySetInnerHTML={{ __html: demoCss(site.primary, site.accent) }} />
           <div className="demo-bar"><div className="wrap"><span><b>Demo website.</b> {site.name} is a made-up school on OH-SO EdTech: browse and try booking, nothing is charged.</span>
             <span className="demo-links"><a href="/osedtech/demo">Its dashboard</a><a href="/osedtech">OH-SO EdTech</a><a href="/osedtech/demo/leave">Leave the demo</a></span></div></div></>}

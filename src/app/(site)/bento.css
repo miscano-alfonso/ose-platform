@@ -333,3 +333,16 @@ body:has(.bh-home){background:transparent}
 /* course card label: just below the bottom button, on the right, overlapping its edge a little */
 .cbtns .sticky{top:auto;bottom:-14px;right:10px;transform:rotate(-3deg)}
 .cbtns:has(.sticky){margin-bottom:14px}
+/* course cards: price and buttons sit at the same height in every card of a row (pushed to the bottom), and the label
+   never adds height of its own */
+.bt .course .price{margin-top:auto}
+.bt .course .cbtns{margin-top:0;padding-top:12px}
+.cbtns:has(.sticky){margin-bottom:0}
+.bt .course{padding-bottom:30px}
+/* one left edge down the page: logo, page heading panel, level tabs and course cards all line up */
+.bt .s-sec>.wrap{max-width:none;width:calc(100% - 2 * clamp(16px,2.5vw,40px));padding-inline:0}
+.bt .s-sec .tabs,.bt .s-sec .yrtabs{justify-content:flex-start}
+.bt .s-phead+.s-sec{padding-top:28px}
+/* page titles in chalk, like the home page drawing: the boy's cyan, with the same grainy texture */
+.bt .s-phead h1{color:#6cf0f7;filter:url(#site-chalk);letter-spacing:-.01em}
+.bt .s-phead>.wrap{background:radial-gradient(circle at 80% 30%,#2c3eb0 0%,#1d2878 40%,#0f1747 85%)}
