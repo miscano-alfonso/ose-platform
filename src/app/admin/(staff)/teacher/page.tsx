@@ -109,7 +109,7 @@ export default async function MyDay() {
   const b = await boardLayout("teacher-home", null, known, BUILT_IN);
   return <div className="fx fx-board">
     <BentoBoard page="teacher-home" modules={modules} layout={b.layout} defaults={BUILT_IN}
-      saved={b.std} scope="standard" locked={!me.viewing} audience="teachers" />
+      saved={b.std} scope="standard" locked={!me.viewing || b.mirrored} audience="teachers" />
   </div>;
 }
 

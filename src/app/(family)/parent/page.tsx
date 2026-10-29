@@ -50,7 +50,7 @@ export default async function ParentHome() {
   const b = await boardLayout("parent-home", null, BOARD_MODULES["parent-home"], BUILT_IN);
   return <div className="fx fx-board">
     <BentoBoard page="parent-home" modules={modules.filter((m) => m.id !== "coming" || a.upcoming.length > 1)} layout={b.layout} defaults={BUILT_IN}
-      saved={b.std} scope="standard" locked={!f.viewer} audience="parents" />
+      saved={b.std} scope="standard" locked={!f.viewer || b.mirrored} audience="parents" />
   </div>;
 }
 

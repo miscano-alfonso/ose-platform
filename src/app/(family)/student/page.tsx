@@ -41,7 +41,7 @@ export default async function StudentHome() {
   const b = await boardLayout("student-home", null, BOARD_MODULES["student-home"], BUILT_IN);
   return <div className="fx fx-board">
     <BentoBoard page="student-home" modules={modules} layout={b.layout} defaults={BUILT_IN}
-      saved={b.std} scope="standard" locked={!f.viewer} audience="students" />
+      saved={b.std} scope="standard" locked={!f.viewer || b.mirrored} audience="students" />
   </div>;
 }
 

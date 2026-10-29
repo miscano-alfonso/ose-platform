@@ -4,7 +4,7 @@ import { getDashboard, getDashboardMore } from "@/lib/admin-data";
 import { requireStaff } from "@/lib/auth";
 import { inboxList, inboxStatus } from "@/lib/inbox";
 import { money, dayMonth, yearLabel } from "@/lib/format";
-import { getLayout } from "@/lib/dashboard-layout";
+import { getLayout, mirrorOf } from "@/lib/dashboard-layout";
 import { MoreList } from "../MoreList";
 import { BentoBoard, type BoardModule } from "../BentoBoard";
 
@@ -155,9 +155,9 @@ export default async function Dashboard() {
     </section> },
   ];
   const known = modules.map((x) => x.id);
-  const saved = await getLayout(me.id, "admin-home", known);
+  const [saved, mirror] = await Promise.all([getLayout(me.id, "admin-home", known), mirrorOf()]);
   void node;
-  return <BentoBoard page="admin-home" modules={modules} layout={saved ?? DEFAULT_LAYOUT} defaults={DEFAULT_LAYOUT} saved={!!saved} />;
+  return <BentoBoard page="admin-home" modules={modules} layout={saved ?? DEFAULT_LAYOUT} defaults={DEFAULT_LAYOUT} saved={!!saved} locked={!!mirror} />;
 }
 
 const DEFAULT_LAYOUT: { id: string; size: "s" | "m" | "l" | "xl" | "full" }[] = [

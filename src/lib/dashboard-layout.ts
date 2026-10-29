@@ -1,5 +1,5 @@
 import "server-only";
-import { withSchool } from "./db";
+import { withSchool, runAsSchool, siteSchool } from "./db";
 
 // A dashboard is a list of modules; each person can choose which show, their order and their width.
 export type ModSize = "s" | "q" | "m" | "l" | "xl" | "full";
@@ -11,7 +11,21 @@ const tidy = (x: LayoutItem): LayoutItem => (x.h && HEIGHTS.includes(x.h) ? { id
 export const SIZES: ModSize[] = ["s", "q", "m", "l", "xl", "full"];
 
 /** The saved layout, cleaned against the modules that exist; null when the person hasn't arranged it. */
+/** In a demo school, the school whose dashboards it copies (this site's own school); null otherwise. */
+export async function mirrorOf(): Promise<string | null> {
+  const r = (await withSchool((q) => q<{ is_demo: boolean; slug: string }>(`select is_demo, slug from schools where id = current_school()`)).catch(() => []))[0];
+  return r?.is_demo && r.slug !== siteSchool() ? siteSchool() : null;
+}
+
 export async function getLayout(userId: string, page: string, known: string[]): Promise<LayoutItem[] | null> {
+  const m = await mirrorOf();
+  if (m) {   // a demo school shows the admin home as the same admin arranged it in the real school
+    const email = (await withSchool((q) => q<{ email: string }>(`select email::text from users where id = $1`, [userId])))[0]?.email;
+    if (!email) return null;
+    const r = (await runAsSchool(m, () => withSchool((q) => q<{ layout: LayoutItem[] }>(`select d.layout from dashboard_layouts d join users u on u.id = d.user_id
+      where lower(u.email::text) = lower($1) and d.page = $2`, [email, page]))))[0];
+    return clean(r?.layout, known);
+  }
   const r = (await withSchool((q) => q<{ layout: LayoutItem[] }>(`select layout from dashboard_layouts where user_id = $1 and page = $2`, [userId, page])))[0];
   if (!r || !Array.isArray(r.layout)) return null;
   const seen = new Set<string>();
@@ -41,12 +55,14 @@ const clean = (layout: unknown, known: string[]): LayoutItem[] | null => {
 const okPage = (p: string) => /^[a-z-]{1,30}$/.test(p), okId = (id: string) => /^[0-9a-f-]{36}$/.test(id);
 
 export async function boardLayout(page: string, personId: string | null, known: string[], builtIn: LayoutItem[]):
-  Promise<{ layout: LayoutItem[]; defaults: LayoutItem[]; saved: boolean; std: boolean }> {
+  Promise<{ layout: LayoutItem[]; defaults: LayoutItem[]; saved: boolean; std: boolean; mirrored: boolean }> {
+  const m = await mirrorOf();
   const keys = [`dash_std:${page}`, ...(personId && okId(personId) ? [`dash:${page}:${personId}`] : [])];
-  const rows = await withSchool((q) => q<{ key: string; value: unknown }>(`select key, value from meet_kv where key = any($1::text[])`, [keys])).catch(() => []);
+  const read = () => withSchool((q) => q<{ key: string; value: unknown }>(`select key, value from meet_kv where key = any($1::text[])`, [keys])).catch(() => []);
+  const rows = m ? await runAsSchool(m, read) : await read();
   const std = clean(rows.find((r) => r.key === keys[0])?.value, known), mine = keys[1] ? clean(rows.find((r) => r.key === keys[1])?.value, known) : null;
   const defaults = std ?? builtIn;
-  return { layout: mine ?? defaults, defaults, saved: !!mine, std: !!std };
+  return { layout: mine ?? defaults, defaults, saved: !!mine, std: !!std, mirrored: !!m };
 }
 
 /** Save (or with null, remove) a person's own arrangement, or the school's standard one when personId is null. */
