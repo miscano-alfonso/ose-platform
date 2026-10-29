@@ -13,7 +13,7 @@ const YEAR_NOW = `(select id from academic_years where ends_on >= current_date o
 
 export type WeekLesson = { id: string; d: string; time: string; name: string; code: string; status: string; meet_url: string | null; students: number;
   not_in_classroom: number; tasters: string[]; absent: string[]; marked: number; slides_url?: string | null;
-  course_id?: string | null; lesson_no?: number | null; term_start?: string | null;
+  course_id?: string | null; lesson_no?: number | null; term_start?: string | null; slides_folder?: string | null; term_no?: number | null;
   /** slides found in Classroom or Drive (when the teacher hasn't pasted a link) */
   slides?: { url: string; title: string; from: string } | null;
   /** Students in the class whose birthday is on the lesson day or within 3 days of it (so the teacher can say happy birthday). */
@@ -44,7 +44,7 @@ export async function myDay(userId: string): Promise<MyDay> {
       and starts_at >= date_trunc('day', now()) and starts_at < date_trunc('day', now()) + interval '8 days'`, [userId]);
     const pay = term ? await myTermPay(q, userId, term.id) : 0;
     const week = await q<WeekLesson>(`
-      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id,
+      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id, g.slides_folder, (select number from terms t where t.id = ev.term_id) as term_no,
         (select starts_on::text from terms t where t.id = ev.term_id) as term_start,
         (select count(*)::int from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.group_id = ev.group_id and e2.term_id = ev.term_id
           and e2.status <> 'cancelled' and (e2.lesson_date, s2.starts_at) <= (ev.lesson_date, sl.starts_at)) as lesson_no,
@@ -66,7 +66,7 @@ export async function myDay(userId: string): Promise<MyDay> {
         -- the rest of the teaching week (Monday to Sunday) that holds the teacher's next lesson, so a week starting after half term shows in full
         and ev.lesson_date <= (select date_trunc('week', min(e2.lesson_date))::date + 6 from lesson_events e2 where e2.teacher_id = ${ME} and e2.status <> 'cancelled' and e2.lesson_date >= current_date)
       order by ev.lesson_date, sl.starts_at`, [userId]).catch(() => q<WeekLesson>(`
-      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id,
+      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id, g.slides_folder, (select number from terms t where t.id = ev.term_id) as term_no,
         (select starts_on::text from terms t where t.id = ev.term_id) as term_start,
         (select count(*)::int from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.group_id = ev.group_id and e2.term_id = ev.term_id
           and e2.status <> 'cancelled' and (e2.lesson_date, s2.starts_at) <= (ev.lesson_date, sl.starts_at)) as lesson_no,
@@ -252,4 +252,27 @@ export async function setLessonSlides(userId: string, eventId: string, url: stri
   if (!/^[0-9a-f-]{36}$/.test(eventId)) return "That lesson isn’t one of yours.";
   const r = await withSchool((q) => q(`update lesson_events set slides_url = nullif($3, '') where id = $2 and teacher_id = ${ME} returning id`, [userId, eventId, u]));
   return r.length ? null : "That lesson isn’t one of yours.";
+}
+
+// ---------- the teacher's Google Drive page: a slides folder for each class ----------
+export async function myClassFolders(userId: string) {
+  return withSchool((q) => q<{ id: string; name: string; code: string; folder: string | null; course: string | null }>(`
+    select g.id, l.name || ' ' || sj.name as name, g.code, g.slides_folder as folder, g.google_course_id as course
+    from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+    where g.teacher_id = ${ME} and g.academic_year_id = ${YEAR_NOW} and g.status <> 'hidden' order by l.sort_order, sj.name`, [userId]));
+}
+/** A folder link or id → the folder id, or null. */
+export function folderId(v: string): string | null {
+  const t = v.trim(); if (!t) return null;
+  const m = t.match(/\/folders\/([A-Za-z0-9_-]{10,100})/) ?? t.match(/[?&]id=([A-Za-z0-9_-]{10,100})/) ?? t.match(/^([A-Za-z0-9_-]{10,100})$/);
+  return m ? m[1] : null;
+}
+export async function setClassFolder(userId: string, groupId: string, value: string): Promise<string | null> {
+  const id = value.trim() ? folderId(value) : null;
+  if (value.trim() && !id) return "That doesn’t look like a Google Drive folder link. Open the folder in Drive and copy the address.";
+  if (!/^[0-9a-f-]{36}$/.test(groupId)) return "That class isn’t one of yours.";
+  const r = await withSchool((q) => q(`update course_groups set slides_folder = $3 where id = $2 and teacher_id = ${ME} returning id`, [userId, groupId, id]));
+  if (!r.length) return "That class isn’t one of yours.";
+  await withSchool((q) => q(`delete from meet_kv where key like 'slidesdir:%'`)).catch(() => null);
+  return null;
 }

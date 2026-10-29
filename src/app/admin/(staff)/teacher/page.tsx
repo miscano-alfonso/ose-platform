@@ -27,7 +27,7 @@ export default async function MyDay() {
   const [d, threads, mail, chats, given, pclasses] = await Promise.all([myDay(me.id), listThreads(me.id, "open").catch(() => []), teacherEmails(me.id, 8),
     myChats(me.id).catch(() => []), pointsGiven(me.id).catch(() => []), classesForPoints(me.id, false).catch(() => [])]);
   const [stream, found] = await Promise.all([teacherStream(me.id).catch(() => ({ connected: false, linked: 0, items: [] })),
-    findSlides(d.week.map((l) => ({ id: l.id, course: l.course_id ?? null, n: l.lesson_no ?? null, termStart: l.term_start ?? null }))).catch(() => new Map())]);
+    findSlides(d.week.map((l) => ({ id: l.id, course: l.course_id ?? null, n: l.lesson_no ?? null, termStart: l.term_start ?? null, folder: l.slides_folder ?? null, term: l.term_no ?? null }))).catch(() => new Map())]);
   const top = [...new Map(pclasses.flatMap((c) => c.students.map((st) => [st.id, { name: st.name, pts: st.term_points }] as const))).values()].filter((x) => x.pts > 0).sort((a, b) => b.pts - a.pts).slice(0, 3);
   const today = new Date().toISOString().slice(0, 10);
   const next = d.week.find((l) => l.d > today || (l.d === today && l.status === "scheduled")) ?? d.week[0];

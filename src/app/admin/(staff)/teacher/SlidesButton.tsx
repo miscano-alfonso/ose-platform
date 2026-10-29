@@ -8,7 +8,7 @@ export function SlidesButton({ eventId, url, found, n, compact }: { eventId: str
   const [edit, setEdit] = useState(false), [v, setV] = useState(url ?? ""), [err, setErr] = useState(""), [pending, start] = useTransition();
   const save = (next: string) => start(async () => { const e = await lessonSlidesAction(eventId, next); setErr(e ?? ""); if (!e) setEdit(false); });
   const href = url || found?.url || null;
-  const tip = url ? "Link set by hand" : found ? `${found.title} (found in ${found.from === "drive" ? "the class’s Drive folder" : "Google Classroom"})` : "";
+  const tip = url ? "Link set by hand" : found ? `${found.title} (found in ${found.from === "folder" ? "your slides folder" : found.from === "drive" ? "the class’s Classroom Drive folder" : "Google Classroom"})` : "";
   if (edit) return <form className="fx-slides-edit" onSubmit={(e) => { e.preventDefault(); save(v); }}>
     <input type="url" value={v} onChange={(e) => setV(e.target.value)} placeholder="https://docs.google.com/presentation/…" aria-label="Link to the lesson slides" autoFocus required={!url} />
     <button type="submit" className="abtn sm pri" disabled={pending}>{pending ? "Saving…" : "Save"}</button>
@@ -21,7 +21,7 @@ export function SlidesButton({ eventId, url, found, n, compact }: { eventId: str
     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg></button>;
   return <span className={`fx-slides${compact ? " compact" : ""}`}>
     {href ? <a href={href} target="_blank" rel="noopener" title={tip}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v12H3zM12 17v4M8 21h8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>{compact ? "Slides" : "Lesson slides"}</a>
-      : <span className="none" title={n ? `Post the slides in Classroom with “Lesson ${n}” in the title, or name the Slides file “Lesson ${n}” in the class’s Drive folder.` : undefined}>No slides found{n ? ` for Lesson ${n}` : ""}</span>}
+      : <span className="none" title={n ? `Name the file “Lesson ${n}” in this class’s slides folder (set it on your Google Drive page).` : undefined}>No slides found{n ? ` for Lesson ${n}` : ""}</span>}
     {!compact && pencil}
   </span>;
 }
