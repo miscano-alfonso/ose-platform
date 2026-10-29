@@ -22,6 +22,14 @@ export const brandSrc = cache(async (): Promise<Record<BrandKind, string> & { cu
   } catch { return { ...DEFAULT_SRC, custom: { logo: false, icon: false } }; }
 });
 
+/** Whether emails may show a logo for the current school: its own uploaded logo, or OH-SO ED's built-in one on
+ *  OH-SO ED's own site. Any other school without an upload gets its name in text instead, never another school's logo. */
+export async function emailLogoAllowed(): Promise<boolean> {
+  const { activeSchool, siteSchool } = await import("./db");
+  if ((await activeSchool()) === siteSchool()) return true;
+  return !!(await getBrandAsset("logo").catch(() => null));
+}
+
 export async function getBrandAsset(kind: BrandKind) {
   const r = await withSchool((q) => q<{ mime: string; data: Buffer }>(`select mime, data from brand_assets where kind = $1`, [kind]));
   return r[0] ?? null;

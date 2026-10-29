@@ -106,14 +106,14 @@ export async function recipients(audience: string): Promise<Recipient[]> {
 const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 /** The school's email design (logo, colour, footer), with defaults from the school and its website. */
 export async function emailDesign(): Promise<EmailDesign & { saved: boolean }> {
-  const [row, sc, base] = await Promise.all([
+  const [row, sc, base, ownLogo] = await Promise.all([
     withSchool((q) => q<{ value: Partial<EmailDesign> }>(`select value from meet_kv where key = 'email_design'`)).then((r) => r[0]?.value ?? null).catch(() => null),
     withSchool((q) => q<{ name: string; brand: { primary?: string } }>(`select name, brand from schools where id = current_school()`)).then((r) => r[0]),
-    siteBase(),
+    siteBase(), import("./brand").then((b) => b.emailLogoAllowed()).catch(() => false),
   ]);
   const school = sc?.name ?? "OH-SO ED", site = (process.env.SITE_URL || base || "").replace(/\/$/, "");
   return { school, logo: row?.logo ?? true, color: row?.color || sc?.brand?.primary || "#0f1747", footer: row?.footer ?? defaultFooter(school, site),
-    logoUrl: site ? `${site}/brand/logo` : "", saved: !!row };
+    logoUrl: site && ownLogo ? `${site}/brand/logo` : "", saved: !!row };   // no upload (and not OH-SO ED): the school's name in text
 }
 export async function saveEmailDesign(d: { logo: boolean; color: string; footer: string }) {
   await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), 'email_design', $1) on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`,

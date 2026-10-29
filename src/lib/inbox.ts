@@ -164,7 +164,12 @@ export async function signatureFor(user: { id: string; name: string; email?: str
   const site = (process.env.SITE_URL || base || "").replace(/\/$/, "");
   const at = (f: string) => site ? `${site}/${f}` : `/${f}`;
   const email = v?.email ?? user.email ?? "";
-  return { name: user.name, title: v?.title ?? "", email, web: v?.web ?? (email.split("@")[1] ?? ""), logo: at("ose-logo-blue.png"), logoDark: at("ose-logo-white.png") };
+  // OH-SO ED's own logo; another school gets its uploaded logo, or none (never OH-SO ED's)
+  const { activeSchool, siteSchool } = await import("./db");
+  const own = (await activeSchool().catch(() => siteSchool())) === siteSchool();
+  const custom = own ? false : !!(await import("./brand").then((b) => b.getBrandAsset("logo")).catch(() => null));
+  const logo = own ? at("ose-logo-blue.png") : custom ? at("brand/logo") : "", logoDark = own ? at("ose-logo-white.png") : logo;
+  return { name: user.name, title: v?.title ?? "", email, web: v?.web ?? (email.split("@")[1] ?? ""), logo, logoDark };
 }
 export async function saveSignature(userId: string, d: { title: string; email: string; web: string }) {
   const email = d.email.trim().toLowerCase();
@@ -186,7 +191,7 @@ export function replyHtml(body: string, sig: Signature): string {
     + `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top:18px"><tr><td style="font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.4">`
     + `<b>${sigEsc(sig.name)}</b>${sig.title ? `<br>${sigEsc(sig.title)}` : ""}`
     + `${sig.email || sig.web ? `<div style="margin-top:8px">${sig.email ? `<a href="mailto:${sigEsc(sig.email)}" style="color:inherit;text-decoration:none">${sigEsc(sig.email)}</a>` : ""}${sig.email && sig.web ? "<br>" : ""}${sig.web ? `<a href="https://${sigEsc(sig.web)}" style="color:inherit;text-decoration:none">${sigEsc(sig.web)}</a>` : ""}</div>` : ""}</td></tr>`
-    + `<tr><td style="padding-top:16px">${img(sig.logo, "ose-l", false)}${img(sig.logoDark, "ose-d", true)}</td></tr></table></div></body></html>`;
+    + (sig.logo ? `<tr><td style="padding-top:16px">${img(sig.logo, "ose-l", false)}${sig.logoDark !== sig.logo ? img(sig.logoDark, "ose-d", true) : ""}</td></tr>` : "") + `</table></div></body></html>`;
 }
 
 export async function replyInbox(actor: { id: string; name: string; email?: string }, id: string, text: string): Promise<string | null> {

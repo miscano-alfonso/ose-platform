@@ -61,5 +61,5 @@ export function InboxPanel({ m, sig, from, opened }: { m: PanelMail; sig: Sig; f
 export function SigPreview({ sig }: { sig: Sig }) {
   return <div className="irp-sig" aria-label="Your signature, added under the reply"><b>{sig.name}</b>{sig.title && <span>{sig.title}</span>}
     {(sig.email || sig.web) && <span className="sig-c">{sig.email}{sig.email && sig.web && <br />}{sig.web}</span>}
-    <img className="sig-l" src={sig.logo} alt="OH-SO ED Online School" width={130} /><img className="sig-d" src={sig.logoDark} alt="" width={130} /></div>;
+    {sig.logo && <><img className="sig-l" src={sig.logo} alt="School logo" width={130} /><img className="sig-d" src={sig.logoDark} alt="" width={130} /></>}</div>;
 }
