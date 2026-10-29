@@ -1,6 +1,7 @@
 "use client";
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
+import { HEADER_ART } from "./header-art";
 
 // Page titles drawn like chalk on a board: each letter is tilted and nudged a touch (the same way every time for the
 // same title), in Jost (the site's Futura-style face) with the drawing's chalk texture (bento.css .chalkt).
@@ -8,6 +9,11 @@ const hash = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; 
 export function ChalkTitles() {
   const path = usePathname();
   useEffect(() => {
+    // a few floating chalk symbols on the right of each title panel, like the home page
+    document.querySelectorAll<HTMLElement>(".s-phead > .wrap").forEach((w) => {
+      if (w.querySelector(".ph-art")) return;
+      const d = document.createElement("div"); d.className = "ph-art"; d.setAttribute("aria-hidden", "true"); d.innerHTML = HEADER_ART; w.prepend(d);
+    });
     document.querySelectorAll<HTMLElement>(".s-phead h1:not([data-chalk])").forEach((h) => {
       const text = h.textContent ?? ""; if (!text.trim()) return;
       let seed = hash(text);

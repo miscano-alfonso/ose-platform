@@ -360,3 +360,18 @@ body:has(.bh-home,.s-phead){background:transparent}
 .bt .s-phead h1.chalkt span{display:inline-block;transform:translateY(var(--dy,0)) rotate(var(--a,0deg));transform-origin:50% 70%}
 .bt .s-phead h1.chalkt span.sp{width:.28em}
 .bt .s-phead h1.chalkt{font-size:clamp(57px,8.3vw,125px)}   /* 30% bigger */
+/* footer: the same logo as the header, in white (the footer is always dark) */
+.bt .s-foot .f-logo{display:inline-block;line-height:0;margin-bottom:14px}
+.bt .s-foot .f-logo img{height:64px;width:auto;filter:brightness(0) invert(1)}
+/* course cards: "Read more" is a soft tint of the card (light grey on white, a lighter navy on dark), not a solid block */
+.bt .course .btn-brand{background:var(--b-inset);color:var(--b-ink);border-color:var(--b-inset)}
+.bt .course .btn-brand:hover,.bt .course .btn-brand:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+/* floating chalk symbols on page title panels (right side, behind the words) */
+.bt .s-phead>.wrap{position:relative;overflow:hidden}
+.bt .s-phead>.wrap>*:not(.ph-art){position:relative;z-index:1}
+.ph-art{position:absolute;inset:0;color:#6cf0f7;pointer-events:none;--s:calc(min(22vw,30svh) / 744)}
+.ph-art .bha{position:absolute;width:calc(var(--w) * var(--s) * 2.2);height:auto;overflow:visible;left:calc(var(--x) - var(--w) * var(--s) * 1.1);top:calc(var(--y) - var(--h) * var(--s) * 1.1);animation:bhbob2 var(--d) ease-in-out var(--dl) infinite}
+.ph-art .bha g{fill:none;stroke:currentColor;stroke-width:11;stroke-linecap:round;stroke-linejoin:round}
+@media (prefers-reduced-motion:reduce){.ph-art .bha{animation:none}}
+@media (max-width:760px){.ph-art{opacity:.35}}
+.ph-art{top:var(--navh,136px);inset-inline:0;bottom:0}

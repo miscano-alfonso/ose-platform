@@ -46,7 +46,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         <main id="main">{children}</main>{!site.demo && <HeroNav />}{!site.demo && <ChalkTitles />}
         <footer className="s-foot"><div className="wrap fgrid">
           {site.demo ? <div><div className="fl">{site.name}</div><p>A made-up online school, showing what OH-SO EdTech can do.</p></div>
-          : <div><div className="fl">OH-SO ED</div><p>Outstanding online education for home-educated students.</p>
+          : <div><Link href="/" className="f-logo" aria-label="OH-SO ED: home"><img src={logo} alt="OH-SO ED" width={773} height={224} /></Link><p>Outstanding online education for home-educated students.</p>
             <h2 className="fh fh-follow">Follow us</h2><ul><li>Facebook /ohsoedonline</li><li>LinkedIn /ohsoed</li></ul></div>}
           <div className="fquick"><h2 className="fh">Quick links</h2><ul className="fcols"><li><Link href="/about">About us</Link></li>{[...NAV, ...MORE].map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}<li><Link href="/jobs">Jobs</Link></li></ul></div>
           <NewsletterForm />
