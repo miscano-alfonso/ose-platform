@@ -317,3 +317,6 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .bh-home .bh-art .desk{color:#6cf0f7}
 .bh-home .bh-art .desk g{filter:url(#bh-chalk2)}
 @media (max-aspect-ratio:1/1){.bh-home .bh-hero{background:radial-gradient(ellipse 80% 45% at 50% 28%,#2b3cab 0%,#1a2470 45%,#0f1747 80%)}}
+/* glow centred on the boy as marked (round, a little higher and further right) */
+.bh-home .bh-hero{background:radial-gradient(circle min(34vw,62svh) at 76% 50%,#2c3eb0 0%,#1d2878 55%,#0f1747 100%)}
+@media (max-aspect-ratio:1/1){.bh-home .bh-hero{background:radial-gradient(circle min(60vw,40svh) at 50% 28%,#2c3eb0 0%,#1d2878 55%,#0f1747 100%)}}
