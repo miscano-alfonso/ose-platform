@@ -51,7 +51,7 @@ export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }
       <p className="price">{money(c.course_total_pence)}</p>
       <div className="cbtns">
         {c.label && <span className={`sticky sl-${LABEL_CLASS[c.label] || "few"}`}>{c.label_text ?? c.label}</span>}
-        <Link className="btn sm btn-brand cread" href={`/courses/${c.page_slug}`}>Read more</Link>
+        <Link className="btn sm btn-line cread" href={`/courses/${c.page_slug}`}>Read more</Link>
         <span className={`btn sm ${c.shows_waitlist ? "btn-line" : "btn-line"}`} aria-disabled="true" title="Booking opens in the next update">
           {c.shows_waitlist ? "Join waiting list" : "Add to cart"}
         </span>
