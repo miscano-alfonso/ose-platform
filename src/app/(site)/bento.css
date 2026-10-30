@@ -1053,3 +1053,9 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 .bt .bh-pair .home-head2 .hh-side .hh-photo img,.bt .ab-photo img{transform:none!important;object-position:50% 35%}
 @media (max-width:820px){.bt .bh-pair .home-head2 .hh-side .hh-photo{aspect-ratio:4/3}}
 @media (max-width:640px){.bt .ab-photo{aspect-ratio:4/3}}
+/* More page card buttons: transparent with a white outline, light blue on hover */
+.bt .mc-foot .btn{background:transparent}
+html:not([data-theme=dark]) .bt .mc-foot .btn{color:var(--b-ink);border-color:var(--b-ink)}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .mc-foot .btn{color:#eef0f7;border-color:rgba(255,255,255,.85)}}
+html[data-theme=dark] .bt .mc-foot .btn{color:#eef0f7;border-color:rgba(255,255,255,.85)}
+.bt .mc-foot .btn:hover,.bt .mc-foot .btn:focus-visible{background:#68bbe4!important;border-color:#68bbe4!important;color:#050f2d!important}

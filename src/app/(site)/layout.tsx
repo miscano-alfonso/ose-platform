@@ -1,3 +1,4 @@
+import { isPlatformSchool } from "@/lib/db";
 import { ChalkTitles } from "./ChalkTitles";
 import { Reveal } from "./Reveal";
 import { TiltTiles } from "./TiltTiles";
@@ -30,7 +31,9 @@ const Person = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [styles, { logo }, site] = await Promise.all([getStyles(), brandSrc(), siteInfo()]);
-  const duo = logo.startsWith("/ose-logo.svg");   // our own logo: white with ONLINE SCHOOL in the light blue (the bar and footer are always dark blue)
+  // OH-SO ED's own site always shows its logo white with ONLINE SCHOOL in the light blue (the bar and footer are always dark blue),
+  // even if a logo has been uploaded in Admin → Website; other schools keep their own logo
+  const duo = !site.demo && (logo.startsWith("/ose-logo.svg") || await isPlatformSchool());
   const css = stylesCss(styles), fonts = fontsHref(styles);
   return (<div className={site.demo ? undefined : "bt"}>
       {!site.demo && <script dangerouslySetInnerHTML={{ __html: "if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('rv')" }} />}
