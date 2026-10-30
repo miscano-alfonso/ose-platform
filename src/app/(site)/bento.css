@@ -711,3 +711,6 @@ html:has(.bh-home,.s-phead){background:#03102f}
 .ph-art .mk.mki{width:calc(var(--w,48px) * var(--s,1));display:block}
 .ph-art .mk.mki img{display:block;width:100%;height:auto;transform-origin:center;animation:bhmark var(--d,12s) ease-in-out var(--dl,0s) infinite}
 @media (prefers-reduced-motion:reduce){.ph-art .mk.mki img{animation:none}}
+/* menu bar once scrolled: a deep blue-green tint (the site's blue-green, darkened so the white menu text stays clear) */
+.bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(14,78,92,.9);border-bottom-color:rgba(131,221,230,.18)}
+.bt .s-nav.over:not(.top) :is(.s-links,.s-theme,.s-ico),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top) :is(.s-links,.s-theme,.s-ico){background:rgba(3,16,47,.55);border-color:rgba(131,221,230,.22)}
