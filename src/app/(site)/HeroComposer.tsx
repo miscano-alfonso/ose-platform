@@ -40,7 +40,7 @@ export function HeroComposer({ initial }: { initial: Mark[] }) {
   return <>
     <div ref={box} className="bh-marks edit">
       {list.map((k, i) => { const t = timing(i);
-        return <svg key={i} className={`mk${sel === i ? " on" : ""}`} viewBox="-30 -30 60 60" role="button" aria-label={`${SYMBOL_NAMES[k.k]}, drag to move`}
+        return <svg key={i} className={`mk${sel === i ? " on" : ""}`} data-k={k.k} viewBox="-30 -30 60 60" role="button" aria-label={`${SYMBOL_NAMES[k.k]}, drag to move`}
           style={{ ["--x" as string]: `${k.x}%`, ["--y" as string]: `${k.y}%`, ["--s" as string]: k.s, ["--d" as string]: `${t.d}s`, ["--dl" as string]: `${t.dl}s` }}
           onPointerDown={(e) => { e.preventDefault(); window.getSelection()?.removeAllRanges(); document.body.style.userSelect = "none"; drag.current = { i, moved: false }; setSel(i); }}><g dangerouslySetInnerHTML={{ __html: SYMBOLS[k.k] }} /></svg>; })}
     </div>

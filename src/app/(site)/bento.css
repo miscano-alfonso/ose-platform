@@ -658,3 +658,13 @@ html.rv .bt .bh-home :is(.bh-grid > .bh-t,.bh-three > .bh-t).rv-in{animation-fil
 .bt .faq.faq2{max-width:none;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:14px 20px}
 .bt .faq-col{display:grid;gap:14px;min-width:0}
 @media (max-width:820px){.bt .faq.faq2{grid-template-columns:minmax(0,1fr)}}
+
+/* home hero (30 Oct): the sketch without its circle, with a soft floor shadow; no doodle icons. The floating symbols are drawn in the
+   same sketch style: light blue line with an inked navy edge, a little wobble and glow (filter #mk-sketch in hero-marks.ts) */
+.bh-scene .hero-solo{position:relative;aspect-ratio:496/444;width:100%}
+.bh-scene .hero-solo::before{content:"";position:absolute;left:23%;top:85%;width:58%;height:8%;border-radius:50%;background:radial-gradient(closest-side,rgba(4,7,28,.8),rgba(4,7,28,0))}
+.bh-home .bh-marks .mk{color:#4ab3e6}
+.bh-home .bh-marks .mk g{stroke-width:3.2;filter:url(#mk-sketch)}
+.bh-home .bh-marks .mk:is([data-k=star],[data-k=tri],[data-k=book],[data-k=flask]) g{fill:#42afdf}
+.bh-home .bh-marks .mk[data-k=atom] g circle{fill:#42afdf}
+.bh-home .bh-marks .mk[data-k=flask] g{fill:#42afdf}

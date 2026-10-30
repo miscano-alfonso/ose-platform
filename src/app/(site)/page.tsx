@@ -1,4 +1,4 @@
-import { marksHtml } from "./hero-marks";
+import { marksHtml, SKETCH_FILTER } from "./hero-marks";
 import { heroMarks, arranger } from "@/lib/hero-marks-store";
 import { HeroComposer } from "./HeroComposer";
 import Link from "@/app/(site)/HoverLink";
@@ -59,7 +59,10 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
     <div className="bh-grid">
       <section className="bh-t bh-hero">
         {arr ? <HeroComposer initial={marks} /> : <div className="bh-marks" aria-hidden="true" dangerouslySetInnerHTML={{ __html: marksHtml(marks) }} />}
-        <div className="bh-scene" role="img" aria-label="A drawing of a student working at a laptop at a desk, with pencils, books and light bulbs around"><HeroArt /></div>
+        <div dangerouslySetInnerHTML={{ __html: SKETCH_FILTER }} style={{ display: "contents" }} />
+        <div className="bh-scene" role="img" aria-label="A sketch of a student working at a laptop at a desk, with books flying round"><div className="hero-art hero-solo">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img className="hero-banner" src="/hero/boy.webp" alt="" width={880} height={863} fetchPriority="high" /></div></div>
         <p className="k">{txt.home_eyebrow}</p>
         <h1>Live lessons.<br />Real teachers.<br /><span className="pop">From home.</span></h1>
         <p>{txt.home_lead}</p>
