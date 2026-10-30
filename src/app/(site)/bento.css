@@ -714,3 +714,6 @@ html:has(.bh-home,.s-phead){background:#03102f}
 /* menu bar once scrolled: a deep blue-green tint (the site's blue-green, darkened so the white menu text stays clear) */
 .bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(14,78,92,.9);border-bottom-color:rgba(131,221,230,.18)}
 .bt .s-nav.over:not(.top) :is(.s-links,.s-theme,.s-ico),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top) :is(.s-links,.s-theme,.s-ico){background:rgba(3,16,47,.55);border-color:rgba(131,221,230,.22)}
+/* title-panel buttons not chosen: the same dark as the menu pill; the title panels a little darker */
+.bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible),.bt .s-phead .ph-tabs .ph-soon:not(:hover):not(:focus-visible){background:#161a33}
+.bt .s-phead>.wrap{background:radial-gradient(circle at 80% 30%,#0c4652 0%,#072840 40%,#020b26 85%)}
