@@ -64,3 +64,9 @@ c0=np.array([44,62,176]);c1=np.array([29,40,120]);c2=np.array([15,23,71])
 t=np.clip(d/0.85,0,1)[...,None]
 gp=np.where(t<0.47,c0+(c1-c0)*(t/0.47),c1+(c2-c1)*((t-0.47)/0.53))
 prev=Image.fromarray(gp.astype(np.uint8)).convert('RGBA'); prev.alpha_composite(Image.fromarray(out)); prev.convert('RGB').save('cut/prev.png')
+
+# Update 248: the two flying books (separate pieces above the boy) are dropped as well
+lab3,n3=nd.label(out[...,3]>0); sz3=nd.sum(out[...,3]>0,lab3,range(1,n3+1)); main=int(np.argmax(sz3))+1
+cs3=nd.center_of_mass(out[...,3]>0,lab3,range(1,n3+1))
+out[np.isin(lab3,[i+1 for i,(y,x) in enumerate(cs3) if i+1!=main and y<300]),3]=0
+Image.fromarray(out).save('cut/boy-nobooks.png')
