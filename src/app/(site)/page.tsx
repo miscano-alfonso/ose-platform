@@ -1,6 +1,4 @@
-import { marksHtml, SKETCH_FILTER } from "./hero-marks";
-import { heroMarks, arranger } from "@/lib/hero-marks-store";
-import { HeroComposer } from "./HeroComposer";
+import { PLATE, BOX, EXTRA } from "./hero-girl";
 import Link from "@/app/(site)/HoverLink";
 import { getFewPlaces, getBundles, getSpaceAvailable, getCourses, getPriceRows, getTeachers, type Course } from "@/lib/data";
 import { CourseCard, roundelSrc } from "./CourseCard";
@@ -48,7 +46,6 @@ const DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const COLOURS = ["#8fd6f0", "#e9a6ff", "#ffb38a", "#7fe0aa", "#f5c84b"];
 
 async function BentoHome({ txt }: { txt: Record<string, string> }) {
-  const [marks, arr] = await Promise.all([heroMarks(), arranger()]);
   const [courses, prices, teachers] = await Promise.all([getCourses(), getPriceRows().catch(() => []), getTeachers().catch(() => [])]);
   const open = courses.filter((c: Course) => c.bookable && !c.is_full);
   const seen = new Set<string>(); const withSpace: Course[] = [];
@@ -58,11 +55,15 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
   return <div className="bh bh-home"><TiltTiles />
     <div className="bh-grid">
       <section className="bh-t bh-hero">
-        {arr ? <HeroComposer initial={marks} /> : <div className="bh-marks" aria-hidden="true" dangerouslySetInnerHTML={{ __html: marksHtml(marks) }} />}
-        <div dangerouslySetInnerHTML={{ __html: SKETCH_FILTER }} style={{ display: "contents" }} />
-        <div className="bh-scene" role="img" aria-label="A sketch of a student working at a laptop at a desk, with books flying round"><div className="hero-art hero-solo">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img className="hero-banner" src="/hero/boy.webp" alt="" width={880} height={863} fetchPriority="high" /></div></div>
+        {/* the illustration: the girl at her laptop on the right, her symbols floating round her, more across the hero */}
+        <div className="bh-girl" role="img" aria-label="A sketch of a student working at her laptop, with maths and science symbols floating round her">
+          <div className="bg-box">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="bg-plate" src={PLATE.src} alt="" width={PLATE.w} height={PLATE.h} fetchPriority="high" />
+            {BOX.map((m, i) => <img key={i} className="bg-sym" src={`/hero/girl/${m.f}.webp`} alt="" style={{ left: `${m.x}%`, top: `${m.y}%`, width: `${m.w}%`, ["--d" as string]: `${m.d}s`, ["--dl" as string]: `${m.dl}s` }} />)}
+          </div>
+          {EXTRA.map((m, i) => <img key={i} className="bg-sym bg-extra" src={`/hero/girl/${m.f}.webp`} alt="" style={{ left: `${m.x}%`, top: `${m.y}%`, width: `${m.w}px`, ["--d" as string]: `${m.d}s`, ["--dl" as string]: `${m.dl}s` }} />)}
+        </div>
         <p className="k">{txt.home_eyebrow}</p>
         <h1>Live lessons.<br />Real teachers.<br /><span className="pop">From home.</span></h1>
         <p>{txt.home_lead}</p>
