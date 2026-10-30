@@ -593,3 +593,10 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
 .bh-three.bh-two>.bh-t b{font-size:clamp(24px,2.3vw,34px);line-height:1.15;max-width:24ch}
 .bt .bh>.s-sec>.wrap{width:100%}
 .bt .bh>.home-head2{padding-top:0}
+
+/* home: deeper top tiles (taster, prices, teachers); "Courses with space" cards are deeper with a bigger roundel above the level */
+.bh-home .bh-grid>a.bh-t{min-height:clamp(220px,19vw,320px)}
+.bh-home .bh-course{padding:22px;min-height:clamp(240px,19vw,290px);gap:8px}
+.bh-home .bh-course .rd{position:static;width:clamp(76px,6.5vw,96px);height:clamp(76px,6.5vw,96px);margin-bottom:10px}
+.bh-home .bh-course span:last-child{margin-right:0}
+.bh-home .bh-course b{font-size:clamp(20px,1.6vw,24px)}
