@@ -1,9 +1,8 @@
 "use client";
-import { useState } from "react";
 import Link from "@/app/(site)/HoverLink";
 
 // The public timetable as a week calendar (Option B): Monday to Friday, every level, each lesson placed at its time;
-// lessons at the same time sit side by side. Buttons filter to one level.
+// lessons at the same time sit side by side. The level buttons sit in the page title panel (page.tsx).
 export type Lesson = { d: number; t: string; mins: number; subject: string; level: string; colour: string; href: string; teacher: string | null };
 const DAYS = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const PX = 1.75;   // pixels per minute
@@ -11,7 +10,7 @@ const m = (t: string) => { const [h, mm] = t.split(":").map(Number); return h * 
 const short = (s: string) => s.replace("English ", "Eng. ").replace("Literature", "Lit.").replace("Business Studies", "Business").replace("Science Double Award", "Science DA").replace("Maths Foundation", "Maths Found.");
 
 export function WeekCalendar({ lessons, levels, initial }: { lessons: Lesson[]; levels: string[]; initial: string | null }) {
-  const [lv, setLv] = useState<string | null>(initial);
+  const lv = initial;   // the level chosen with the buttons in the title panel (?level=)
   const shown = lessons.filter((l) => !lv || l.level === lv);
   if (!lessons.length) return <p className="empty">No lesson times published yet.</p>;
   const start = Math.min(...lessons.map((l) => m(l.t)));
@@ -20,10 +19,6 @@ export function WeekCalendar({ lessons, levels, initial }: { lessons: Lesson[]; 
   const hours = [...new Set(lessons.map((l) => m(l.t)))].sort((a, b) => a - b);   // a line and label at each lesson start
   const H = (end - start) * PX;
   return <>
-    <div className="wk-filters" role="group" aria-label="Level">
-      <button type="button" aria-pressed={!lv} onClick={() => setLv(null)}>All levels</button>
-      {levels.map((l) => <button key={l} type="button" aria-pressed={lv === l} onClick={() => setLv(l)}>{l}</button>)}
-    </div>
     <div className="wk" style={{ ["--days" as string]: days.length }}>
       <div className="wk-times" style={{ height: H }} aria-hidden="true">{hours.map((h) => <span key={h} style={{ top: (h - start) * PX }}>{String(Math.floor(h / 60)).padStart(2, "0")}:{String(h % 60).padStart(2, "0")}</span>)}</div>
       {days.map((d) => {
