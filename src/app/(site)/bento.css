@@ -990,3 +990,14 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 /* course page topics: titles in the light blue, descriptions in the main text colour (white on dark) */
 .bt .cd-topic h3{color:var(--b-sky)}
 .bt .cd-topic p,.bt .cd-topic li,.bt .cd-grid>div>p{color:var(--b-ink);opacity:1}
+.bt .s-logo img.duo,.bt .f-logo img.duo{filter:none!important}
+/* course details: row names in the light blue; "Sample lesson" the same size and colour as them; more room above the teacher */
+.bt .cd-table th{color:var(--b-sky)}
+.bt .cd-video .cd-h{font-size:18px;font-weight:600;color:var(--b-sky);margin:0 0 12px}
+.bt .cd-video{margin-top:40px}
+.bt .cd-teacher{margin-top:40px}
+/* course band: more room between the title and the buttons, and under the buttons (24px, as on the level-button band) */
+.bt .cd-sticky{--cdh:142px;gap:16px;padding-top:14px;padding-bottom:24px;justify-content:flex-end}
+.bt .cd-badge{top:calc(var(--navh,96px) + 142px)}
+@media (max-width:600px){.bt .cd-sticky{--cdh:118px;gap:12px;padding-top:10px;padding-bottom:18px}.bt .cd-badge{top:calc(var(--navh,73px) + 118px)}}
+.bt .cd-h+.cd-topics{padding-top:15px}   /* first topic starts level with the first course-details row */

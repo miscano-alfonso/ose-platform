@@ -30,6 +30,7 @@ const Person = () => <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
   const [styles, { logo }, site] = await Promise.all([getStyles(), brandSrc(), siteInfo()]);
+  const duo = logo.startsWith("/ose-logo.svg");   // our own logo: white with ONLINE SCHOOL in the light blue (the bar and footer are always dark blue)
   const css = stylesCss(styles), fonts = fontsHref(styles);
   return (<div className={site.demo ? undefined : "bt"}>
       {!site.demo && <script dangerouslySetInnerHTML={{ __html: "if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('rv')" }} />}
@@ -42,14 +43,14 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <div className="demo-bar"><div className="wrap"><span><b>Demo website.</b> {site.name} is a made-up school on OH-SO EdTech: browse and try booking, nothing is charged.</span>
             <span className="demo-links"><a href="/osedtech/demo">Its dashboard</a><a href="/osedtech">OH-SO EdTech</a><a href="/osedtech/demo/leave">Leave the demo</a></span></div></div></>}
         <header className="s-nav"><div className="wrap">
-          <Link href="/" className="s-logo"><img src={logo} alt={`${site.name}: home`} width={773} height={224} /></Link>
+          <Link href="/" className="s-logo"><img src={duo ? "/ose-logo-duo.svg" : logo} className={duo ? "duo" : undefined} alt={`${site.name}: home`} width={773} height={224} /></Link>
           <div className="s-icons">{!site.demo && <SiteTheme />}<Link href="/cart" className="s-ico" aria-label="Basket"><Cart /></Link><Link href="/account" className="s-ico" aria-label="My account"><Person /></Link></div>
           <SiteNav items={NAV as [string, string][]} />
         </div></header>
         <main id="main">{children}</main>{!site.demo && <HeroNav />}{!site.demo && <ChalkTitles />}{!site.demo && <Reveal />}{!site.demo && <TiltTiles />}
         <footer className="s-foot"><div className="wrap fgrid">
           {site.demo ? <div><div className="fl">{site.name}</div><p>A made-up online school, showing what OH-SO EdTech can do.</p></div>
-          : <div><Link href="/" className="f-logo" aria-label="OH-SO ED: home"><img src={logo} alt="OH-SO ED" width={773} height={224} /></Link><p>Outstanding online education for home-educated students.</p>
+          : <div><Link href="/" className="f-logo" aria-label="OH-SO ED: home"><img src={duo ? "/ose-logo-duo.svg" : logo} className={duo ? "duo" : undefined} alt="OH-SO ED" width={773} height={224} /></Link><p>Outstanding online education for home-educated students.</p>
             <h2 className="fh fh-follow">Follow us</h2><ul><li>Facebook /ohsoedonline</li><li>LinkedIn /ohsoed</li></ul></div>}
           <div className="fquick"><h2 className="fh">Quick links</h2><ul className="fcols"><li><Link href="/about">About us</Link></li>{[...NAV, ...MORE].map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}<li><Link href="/jobs">Work with us</Link></li></ul></div>
           <NewsletterForm />
