@@ -695,3 +695,19 @@ html.rv .bt .bh-home :is(.bh-grid > .bh-t,.bh-three > .bh-t).rv-in{animation-fil
 .bt .s-phead .ph-tabs .ph-soon:hover>span+span,.bt .s-phead .ph-tabs .ph-soon:focus-visible>span+span{opacity:1}
 .bt .tyh:not(:has(.tynow,.tynew)){display:none}
 @media (max-width:600px){.bt .s-phead .ph-tabs .ph-soon{padding:10px 18px;font-size:17px}}
+/* title-panel buttons: right edge lines up with the account button, and sit as close to the bottom of the panel */
+@media (min-width:900px){.bt .s-phead .ph-tabs{right:clamp(16px,2.5vw,40px);bottom:clamp(16px,2.5vw,40px)}}
+@media (min-width:1200px){.bt .s-phead>.wrap>nav.ph-tabs{position:absolute;z-index:2;right:clamp(16px,2.5vw,40px);bottom:clamp(16px,2.5vw,40px);margin:0;justify-content:flex-end}}
+/* the corner place needs room beside the intro text: below 1200px the buttons sit under it, and the intro stops short of them above */
+@media (max-width:1199px){.bt .s-phead>.wrap>nav.ph-tabs{position:static;justify-content:flex-start;margin-top:24px}}
+@media (min-width:1200px){.bt .s-phead>.wrap:has(>nav.ph-tabs)>p{max-width:min(60ch,calc(100% - 560px))}}
+
+/* 30 Oct: every page's title panel matches the home hero: deep navy with a blue-green glow (instead of the bright blue), and the
+   symbols drawn in the home illustration's style (HEADER_SPRITES) */
+.bt .s-phead>.wrap{background:radial-gradient(circle at 80% 30%,#13616f 0%,#0a3550 40%,#03102f 85%)}
+html:has(.bh-home,.s-phead){background:#03102f}
+.bt:has(.s-phead){background:linear-gradient(#03102f 0 30vh,var(--b-bg) 30vh)}
+.bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(3,16,47,.88)}
+.ph-art .mk.mki{width:calc(var(--w,48px) * var(--s,1));display:block}
+.ph-art .mk.mki img{display:block;width:100%;height:auto;transform-origin:center;animation:bhmark var(--d,12s) ease-in-out var(--dl,0s) infinite}
+@media (prefers-reduced-motion:reduce){.ph-art .mk.mki img{animation:none}}
