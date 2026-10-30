@@ -717,3 +717,9 @@ html:has(.bh-home,.s-phead){background:#03102f}
 /* title-panel buttons not chosen: the same dark as the menu pill; the title panels a little darker */
 .bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible),.bt .s-phead .ph-tabs .ph-soon:not(:hover):not(:focus-visible){background:#161a33}
 .bt .s-phead>.wrap{background:radial-gradient(circle at 80% 30%,#0c4652 0%,#072840 40%,#020b26 85%)}
+/* 30 Oct: the intro under each page title runs on one line where there's room; the level/year buttons sit on the left, under it,
+   and are 20% smaller */
+.bt .s-phead>.wrap>p:not(.eyebrow),.bt .s-phead>.wrap:has(>nav.ph-tabs)>p{max-width:none}
+.bt .s-phead>.wrap>nav.ph-tabs{position:static;justify-content:flex-start;margin:22px 0 0;gap:10px}
+.bt .s-phead .ph-tabs a,.bt .s-phead .ph-tabs .ph-soon{font-size:clamp(14px,1.28vw,17.5px);padding:10px 22px}
+@media (max-width:600px){.bt .s-phead .ph-tabs a,.bt .s-phead .ph-tabs .ph-soon{padding:8px 15px;font-size:14px}}
