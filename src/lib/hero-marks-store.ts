@@ -4,6 +4,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { runAsSchool, siteSchool, withSchool } from "./db";
 import { HOME_DEFAULT, SYMBOLS, type Mark } from "@/app/(site)/hero-marks";
+import { BOX, EXTRA, SPRITES, type GirlMarks, type Sym } from "@/app/(site)/hero-girl";
 
 // The home page hero's floating symbols: where each sits, which symbol and how big. Arranged on the home page itself by an
 // OH-SO ED admin (Admin → Website → Home page symbols sets a signed "ose_hero" cookie for 4 hours, then opens "/").
@@ -39,3 +40,21 @@ export const arranger = cache(async (): Promise<{ id: string; name: string } | n
   const u = await runAsSchool(siteSchool(), () => withSchool((q) => q<{ id: string; name: string }>(`select id, name from users where id = $1 and role = 'school_admin' and disabled_at is null`, [m[1]]))).catch(() => []);
   return u[0] ?? null;
 });
+
+// ---- the drawn symbols round the illustration (since update 249): "box" ones move with the picture (x, y, w in % of it),
+// "extra" ones sit across the hero (x, y in % of the hero, w in px). Saved in meet_kv "hero_girl_marks".
+const GKEY = "hero_girl_marks";
+export const girlMarks = cache(async (): Promise<GirlMarks> => {
+  const v = await runAsSchool(siteSchool(), () => withSchool((q) => q<{ value: GirlMarks }>(`select value from meet_kv where key = $1`, [GKEY]))).then((r) => r[0]?.value).catch(() => null);
+  return v && Array.isArray(v.box) && Array.isArray(v.extra) ? cleanGirl(v) : { box: BOX, extra: EXTRA };
+});
+export function cleanGirl(v: unknown): GirlMarks {
+  const n = (x: unknown, lo: number, hi: number, d: number) => { const f = Number(x); return Number.isFinite(f) ? Math.round(Math.min(hi, Math.max(lo, f)) * 100) / 100 : d; };
+  const one = (m: Sym, px: boolean): Sym => ({ f: m.f, x: n(m.x, -10, 110, 50), y: n(m.y, -10, 110, 50), w: px ? n(m.w, 12, 240, 50) : n(m.w, 1, 30, 6), d: n(m.d, 6, 20, 12), dl: n(m.dl, -20, 0, 0) });
+  const o = (v ?? {}) as GirlMarks, ok = (m: unknown) => !!m && typeof (m as Sym).f === "string" && !!SPRITES[(m as Sym).f];
+  return { box: (Array.isArray(o.box) ? o.box : []).filter(ok).slice(0, 60).map((m) => one(m, false)), extra: (Array.isArray(o.extra) ? o.extra : []).filter(ok).slice(0, 60).map((m) => one(m, true)) };
+}
+export async function saveGirlMarks(v: GirlMarks | null) {
+  await runAsSchool(siteSchool(), () => withSchool((q) => v == null ? q(`delete from meet_kv where key = $1`, [GKEY])
+    : q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2) on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [GKEY, JSON.stringify(cleanGirl(v))])));
+}

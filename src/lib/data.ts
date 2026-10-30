@@ -100,7 +100,7 @@ export async function getBundles(): Promise<{ ks3Pence: number; bundles: Bundle[
 
 export type PriceRow = { level: string; years: number; lessons: string; per: string; total: string };
 export type Workshop = { title: string; slug: string; starts_at: string; minutes: number; price_pence: number; enrolled_price_pence: number | null;
-  summary: string | null; level: string | null; subject: string | null; teacher: string | null; places_left: number | null };
+  summary: string | null; level: string | null; subject: string | null; teacher: string | null; places_left: number | null; card_size: string; image: string | null; colour: string | null };
 
 /** The price table: one row per level and course length, from this year's price plans. */
 export async function getPriceRows(): Promise<PriceRow[]> {
@@ -124,7 +124,8 @@ export async function getPriceRows(): Promise<PriceRow[]> {
 /** Published workshops that haven't happened yet. */
 export async function getWorkshops(): Promise<Workshop[]> {
   return withSchool((q) => q<Workshop>(`
-    select w.title, w.slug, w.starts_at::text, w.minutes, w.price_pence, w.enrolled_price_pence, w.summary,
+    select w.title, w.slug, w.starts_at::text, w.minutes, w.price_pence, w.enrolled_price_pence, w.summary, w.card_size, sj.colour,
+           case when w.image is not null then '/workshop-image/' || w.slug || '?v=' || extract(epoch from w.image_updated_at)::bigint else w.image_url end as image,
            l.name as level, sj.name as subject, u.name as teacher,
            case when w.capacity is null then null else greatest(w.capacity - (select count(*) from workshop_bookings b where b.workshop_id = w.id and b.status <> 'cancelled'), 0)::int end as places_left
     from workshops w left join levels l on l.id = w.level_id left join subjects sj on sj.id = w.subject_id

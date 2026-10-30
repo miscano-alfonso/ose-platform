@@ -8,7 +8,9 @@ import Script from "next/script";
  * - its "Review us on Facebook" button becomes our "Read our reviews on Facebook" button.
  * If the widget doesn't appear (blocked, or no widget ID), a plain button to the Facebook reviews shows instead.
  */
-export function ReviewsWidget({ widget, url }: { widget: string; url: string }) {
+type Rev = { name: string; date: string; text: string };
+export function ReviewsWidget({ widget, url, rating, count }: { widget: string; url: string; rating?: string; count?: string }) {
+  const [revs, setRevs] = useState<Rev[]>([]);
   const box = useRef<HTMLDivElement>(null);
   const [shown, setShown] = useState(false);
   const [gaveUp, setGaveUp] = useState(!widget);
@@ -22,6 +24,12 @@ export function ReviewsWidget({ widget, url }: { widget: string; url: string }) 
       return out;
     };
     const tidy = () => {
+      // once the widget has drawn its reviews, read them and show them as our own sliding row (the widget itself is then hidden)
+      const items = [...el.querySelectorAll<HTMLElement>('[class*="ReviewContainer__Inner"]')].map((n) => {
+        const lines = (n.innerText || "").split("\n").map((x) => x.trim()).filter(Boolean);
+        return { name: lines[0] ?? "", date: lines[1] ?? "", text: lines[2] ?? "" };
+      }).filter((r) => r.name && r.text.length > 20);
+      if (items.length >= 2) setRevs((old) => old.length >= items.length ? old : items);
       const all = leaves(el);
       if (all.length > 5) setShown(true);
       for (const n of all) {
@@ -50,8 +58,15 @@ export function ReviewsWidget({ widget, url }: { widget: string; url: string }) 
     return () => { mo.disconnect(); clearTimeout(t); };
   }, [widget, url]);
 
+  const row = revs.map((r, i) => <figure className="rv-card" key={i}><blockquote>{r.text}</blockquote>
+    <figcaption><b>{r.name}</b><span>{r.date} · Facebook</span></figcaption></figure>);
   return <>
-    {widget && <><Script src="https://elfsightcdn.com/platform.js" strategy="lazyOnload" /><div ref={box} className={`elfsight-app-${widget} rev-widget`} data-elfsight-app-lazy /></>}
+    {revs.length > 0 && <div className="rv-own">
+      <div className="rv-head"><span className="rv-score"><b>{rating ?? "4.8"}</b><span className="rv-stars" aria-hidden="true">★★★★★</span><span>{count ? `${count} reviews` : "Reviews"} on Facebook</span></span>
+        <a className="btn btn-line sm" href={url} target="_blank" rel="noopener noreferrer">Read them all</a></div>
+      <div className="rv-marquee" aria-label="Reviews from families" tabIndex={0}><div className="rv-track" style={{ ["--n" as string]: revs.length }}>{row}<div className="rv-dup" aria-hidden="true">{row}</div></div></div>
+    </div>}
+    {widget && <><Script src="https://elfsightcdn.com/platform.js" strategy="lazyOnload" /><div ref={box} className={`elfsight-app-${widget} rev-widget${revs.length ? " rev-done" : ""}`} data-elfsight-app-lazy /></>}
     {gaveUp && !shown && <div className="rev-fallback"><a className="btn btn-brand" href={url} target="_blank" rel="noopener noreferrer">Read our reviews on Facebook</a></div>}
   </>;
 }

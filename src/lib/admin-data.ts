@@ -86,11 +86,12 @@ export async function getWorkshopsAdmin(): Promise<AdminWorkshop[]> {
     order by w.starts_at desc`));
 }
 
-export type Enquiry = { id: string; kind: string; name: string; email: string; levels: string[]; heard_about: string | null; message: string | null; created_at: string; handled_at: string | null };
+export type Enquiry = { id: string; kind: string; name: string; email: string; levels: string[]; heard_about: string | null; message: string | null; created_at: string; handled_at: string | null;
+  child_name: string | null; subject: string | null; has_file: boolean };
 export type WaitEntry = { id: string; parent_name: string; child_name: string; email: string; created_at: string; emailed_at: string | null; class: string };
 export async function getEnquiries(): Promise<{ enquiries: Enquiry[]; waiting: WaitEntry[] }> {
   return withSchool(async (q) => ({
-    enquiries: await q<Enquiry>(`select id, kind, name, email::text, levels, heard_about, message, created_at::text, handled_at::text
+    enquiries: await q<Enquiry>(`select id, kind, name, email::text, levels, heard_about, message, created_at::text, handled_at::text, child_name, subject, file is not null as has_file
       from enquiries order by handled_at is not null, created_at desc limit 200`),
     waiting: await q<WaitEntry>(`select w.id, w.parent_name, w.child_name, w.email::text, w.created_at::text, w.emailed_at::text,
         coalesce(l.name || ' ' || sj.name || ' (' || g.code || ')', l2.name || ' ' || sj2.name, 'Any class') as class

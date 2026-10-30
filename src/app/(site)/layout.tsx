@@ -1,5 +1,6 @@
 import { ChalkTitles } from "./ChalkTitles";
 import { Reveal } from "./Reveal";
+import { TiltTiles } from "./TiltTiles";
 import { HeroNav } from "./HeroNav";
 import { SITE_CHALK } from "./chalk-filter";
 import Link from "@/app/(site)/HoverLink";
@@ -19,7 +20,7 @@ import "./bento.css";
 export const dynamic = "force-dynamic";
 
 // same order as the current website's menu
-const NAV = [["Courses", "/courses"], ["Other services", "/other-services"], ["Term dates", "/term-dates"], ["Teachers", "/teachers"],
+const NAV = [["Courses", "/courses"], ["More", "/other-services"], ["Term dates", "/term-dates"], ["Teachers", "/teachers"],
   ["Prices", "/pricing"], ["Timetable", "/timetable"], ["Contact", "/contact"]];
 // on the home page as tiles and in the footer, not in the top menu
 const MORE = [["FAQs", "/faq"], ["New to Home Ed?", "/home-ed"]];
@@ -45,12 +46,12 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <div className="s-icons">{!site.demo && <SiteTheme />}<Link href="/cart" className="s-ico" aria-label="Basket"><Cart /></Link><Link href="/account" className="s-ico" aria-label="My account"><Person /></Link></div>
           <SiteNav items={NAV as [string, string][]} />
         </div></header>
-        <main id="main">{children}</main>{!site.demo && <HeroNav />}{!site.demo && <ChalkTitles />}{!site.demo && <Reveal />}
+        <main id="main">{children}</main>{!site.demo && <HeroNav />}{!site.demo && <ChalkTitles />}{!site.demo && <Reveal />}{!site.demo && <TiltTiles />}
         <footer className="s-foot"><div className="wrap fgrid">
           {site.demo ? <div><div className="fl">{site.name}</div><p>A made-up online school, showing what OH-SO EdTech can do.</p></div>
           : <div><Link href="/" className="f-logo" aria-label="OH-SO ED: home"><img src={logo} alt="OH-SO ED" width={773} height={224} /></Link><p>Outstanding online education for home-educated students.</p>
             <h2 className="fh fh-follow">Follow us</h2><ul><li>Facebook /ohsoedonline</li><li>LinkedIn /ohsoed</li></ul></div>}
-          <div className="fquick"><h2 className="fh">Quick links</h2><ul className="fcols"><li><Link href="/about">About us</Link></li>{[...NAV, ...MORE].map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}<li><Link href="/jobs">Jobs</Link></li></ul></div>
+          <div className="fquick"><h2 className="fh">Quick links</h2><ul className="fcols"><li><Link href="/about">About us</Link></li>{[...NAV, ...MORE].map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}<li><Link href="/jobs">Work with us</Link></li></ul></div>
           <NewsletterForm />
         </div><div className="wrap copy"><span>© {new Date().getFullYear()} {site.demo ? `${site.name} (a made-up school)` : "Oh-so Educate Ltd"} <span className="legal-links"> · <Link href="/privacy" className="adminlink">Privacy notice</Link> · <Link href="/cookies" className="adminlink">Cookies</Link></span></span><span style={{ display: "flex", gap: 18, flexWrap: "wrap" }}><span>{site.demo ? "Runs on" : "Teach online yourself?"} <Link href="/osedtech" className="adminlink">OH-SO EdTech</Link></span>{site.demo ? <a href="/osedtech/demo" className="adminlink">Open the dashboard</a> : <Link href="/admin/login" className="adminlink">Admin login</Link>}</span></div></footer>
       </div>);

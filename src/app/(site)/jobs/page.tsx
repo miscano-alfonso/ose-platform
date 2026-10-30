@@ -3,14 +3,14 @@ import Link from "@/app/(site)/HoverLink";
 import { listOpenJobs } from "@/lib/jobs";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Jobs", description: "Teaching vacancies at OH-SO ED, an online school for home-educated students." };
+export const metadata: Metadata = { title: "Work with us", description: "Teaching vacancies at OH-SO ED, an online school for home-educated students." };
 
 const date = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" });
 
 export default async function Jobs() {
   const jobs = await listOpenJobs();
   return <>
-    <section className="s-phead"><div className="wrap"><p className="eyebrow">Join our team</p><h1>Jobs</h1>
+    <section className="s-phead"><div className="wrap"><h1>Work with us</h1>
       <p>We’re a small online school for home-educated students. Our teachers are experienced secondary subject specialists who teach small live classes from home.</p></div></section>
     <section className="s-sec"><div className="wrap jobs">
       <div className="job-req" role="note"><h2>Before you apply</h2>

@@ -18,6 +18,7 @@ export default async function Teachers() {
           : <div className="tav" aria-hidden="true">{t.name.split(" ").map((p) => p[0]).join("")}</div>}
         <h2>{t.name}</h2><p className="role">{t.designation}</p>{t.subjects?.length ? <p className="subs">{t.subjects.join(" · ")}</p> : null}
         <span className="tmore">Read more →</span></Link>)}</div>
-      <p className="tjoin">Want to teach with us? <Link href="/jobs">See our current vacancies</Link>.</p></div></section>
+      <div className="tjoin-tile"><div><p className="k">Join our team</p><h2>{txt.teach_title}</h2>{txt.teach_text && <p>{txt.teach_text}</p>}</div>
+        <Link className="btn btn-brand" href="/jobs">{txt.teach_button} →</Link></div></div></section>
   </>);
 }

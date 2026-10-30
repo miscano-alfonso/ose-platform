@@ -23,10 +23,10 @@ export function MeetHead({ title, text, photo = true, bento = false }: { title: 
 }
 
 /** The Facebook reviews widget the current site uses (Elfsight), with a plain link if it can't load. */
-export function Reviews({ url, widget }: { rating?: string; count?: string; url: string; widget: string }) {
+export function Reviews({ url, widget, rating, count }: { rating?: string; count?: string; url: string; widget: string }) {
   return <section className="s-sec home-reviews"><div className="wrap">
     <div className="sec-head"><h2>What our customers say</h2></div>
-    <ReviewsWidget widget={widget} url={url} />
+    <ReviewsWidget widget={widget} url={url} rating={rating} count={count} />
   </div></section>;
 }
 

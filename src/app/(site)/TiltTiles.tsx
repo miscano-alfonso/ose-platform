@@ -1,8 +1,8 @@
 "use client";
 import { useEffect } from "react";
 
-// Home page: tiles and course cards tip towards the mouse in 3D while it's over them (up to about 6°). Mouse only; off with reduced motion.
-const SEL = ".bh-home a.bh-t, .bh-home .bh-course";
+// Home page tiles and course cards, and the teacher cards, tip towards the mouse in 3D while it's over them (up to about 6°). Mouse only; off with reduced motion.
+const SEL = ".bh-home a.bh-t, .bh-home .bh-course, .tgrid .tcard";
 export function TiltTiles() {
   useEffect(() => {
     if (!matchMedia("(hover: hover) and (pointer: fine)").matches || matchMedia("(prefers-reduced-motion: reduce)").matches) return;

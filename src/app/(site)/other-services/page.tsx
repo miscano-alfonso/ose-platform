@@ -1,40 +1,59 @@
 import type { Metadata } from "next";
 import Link from "@/app/(site)/HoverLink";
-import { getWorkshops } from "@/lib/data";
+import { getWorkshops, type Workshop } from "@/lib/data";
 import { money } from "@/lib/format";
+import { MARKING_SUBJECTS, MARKING_PRICE_PENCE } from "./past-paper-marking/subjects";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Other services", description: "Past paper marking with written feedback, and one-off workshops for home-educated students." };
+export const metadata: Metadata = { title: "More", description: "One-off workshops and past paper marking with written feedback, open to every family." };
 
-const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", timeZone: "Europe/London" }).replace(" at ", " · ");
+const TAGS = [["all", "All"], ["workshops", "Workshops"], ["marking", "Past paper marking"]] as const;
 
-export default async function OtherServices() {
+// The "More" page (Other services): one card per thing on offer, each with its tag. Workshops come from Admin → Workshops
+// (title, words, date, price, picture and card size: single = one column, double = two columns with the picture beside the words).
+export default async function More({ searchParams }: { searchParams: Promise<{ tag?: string }> }) {
+  const sp = await searchParams;
+  const tag = TAGS.some(([k]) => k === sp.tag) ? sp.tag! : "all";
   const workshops = await getWorkshops();
+  const showW = tag !== "marking", showM = tag !== "workshops";
   return (<>
-    <section className="s-phead"><div className="wrap"><h1>Other Services</h1><p>Exam paper marking and one-off workshops, open to every family.</p></div></section>
+    <section className="s-phead"><div className="wrap"><h1>More</h1><p>Live one-off workshops and exam paper marking, open to every family.</p>
+      <nav className="tabs ph-tabs" aria-label="Show">{TAGS.map(([k, l]) =>
+        <Link key={k} href={k === "all" ? "/other-services" : `/other-services?tag=${k}`} scroll={false} className={k === tag ? "on" : ""} aria-current={k === tag ? "page" : undefined}>{l}</Link>)}</nav></div></section>
     <section className="s-sec"><div className="wrap">
-      <div className="sec-head"><h2>Past Paper Marking</h2></div>
-      <div className="svc">
-        <div className="svc-body">
-          <h3>IGCSE English Language and Literature</h3>
-          <p>We mark past papers from all exam boards and return them within 48 hours, with written feedback and targets for improvement.</p>
-        </div>
-        <div className="svc-buy"><span className="price">{money(2000)}</span><small>per paper</small>
-          <Link className="btn btn-brand" href="/contact?about=past-paper-marking">Submit form</Link></div>
+      <div className="mgrid">
+        {showW && workshops.map((w) => <WorkshopCard key={w.slug} w={w} />)}
+        {showM && <article className="mcard">
+          <div className="mc-body">
+            <p className="mc-tags"><span className="mc-tag t-mark">Past paper marking</span></p>
+            <h2>Past Paper Marking</h2>
+            <p className="mc-sub">iGCSE English Language and Literature · all exam boards</p>
+            <p>Papers are returned within 48 hours of receipt, with detailed feedback in line with the mark scheme and targets for improvement.</p>
+            <div className="mc-foot"><p className="mc-price">{money(MARKING_PRICE_PENCE)}<small> a paper</small></p>
+              <Link className="btn btn-brand" href="/other-services/past-paper-marking">Send a paper</Link></div>
+            <p className="mc-quick">{MARKING_SUBJECTS.map((s) => <Link key={s} href={`/other-services/past-paper-marking?subject=${encodeURIComponent(s)}`}>{s.replace("iGCSE ", "")} →</Link>)}</p>
+          </div></article>}
       </div>
-    </div></section>
-    <section className="s-sec" style={{ background: "var(--mist)" }}><div className="wrap">
-      <div className="sec-head"><h2>Workshops</h2><p>One-off live sessions. Places are limited.</p></div>
-      {workshops.length === 0 ? <p className="empty">There are no workshops booked in at the moment. Check back soon, or <Link href="/contact">ask us</Link> to let you know when the next one opens.</p> :
-        <div className="cgrid">{workshops.map((w) => <article className="course" key={w.slug}>
-          {w.places_left !== null && w.places_left <= 3 && <span className={`sticky ${w.places_left === 0 ? "sl-almost" : "sl-few"}`}>{w.places_left === 0 ? "Full" : "Few spaces left"}</span>}
-          <div><div className="lvl">{[w.level, w.subject].filter(Boolean).join(" · ") || "Workshop"}</div><h3>{w.title}</h3></div>
-          {w.summary && <p className="when">{w.summary}</p>}
-          <ul className="slots"><li>{when(w.starts_at)}</li><li className="dur">{w.minutes} minutes{w.teacher ? ` · ${w.teacher}` : ""}</li></ul>
-          <div className="price">{w.price_pence === 0 ? "Free" : money(w.price_pence)}
-            {w.enrolled_price_pence !== null && w.enrolled_price_pence < w.price_pence && <small> · {w.enrolled_price_pence === 0 ? "free" : money(w.enrolled_price_pence)} for enrolled students</small>}</div>
-          <div className="cbtns"><span className="btn btn-brand sm" aria-disabled="true" title="Online booking opens soon">Book now</span></div>
-        </article>)}</div>}
+      {showW && workshops.length === 0 && <p className="empty" style={{ marginTop: 20 }}>There are no workshops booked in at the moment. Check back soon, or <Link href="/contact">ask us</Link> to let you know when the next one opens.</p>}
     </div></section>
   </>);
+}
+
+function WorkshopCard({ w }: { w: Workshop }) {
+  const dbl = w.card_size === "double" && !!w.image;
+  const full = w.places_left === 0;
+  return <article className={`mcard${dbl ? " dbl" : ""}`} style={w.colour ? { ["--c" as string]: w.colour } : undefined}>
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    {w.image && <div className="mc-pic"><img src={w.image} alt="" loading="lazy" width={1280} height={720} /></div>}
+    <div className="mc-body">
+      <p className="mc-tags"><span className="mc-tag t-work">Workshop</span>{w.level && <span className="mc-tag">{w.level}</span>}{w.subject && <span className="mc-tag">{w.subject}</span>}
+        {w.places_left !== null && w.places_left <= 3 && <span className="mc-tag t-few">{full ? "Full" : "Few places left"}</span>}</p>
+      <h2>{w.title}</h2>
+      <p className="mc-sub">{when(w.starts_at)} · {w.minutes} minutes{w.teacher ? ` · ${w.teacher}` : ""}</p>
+      {w.summary && <p>{w.summary}</p>}
+      <div className="mc-foot"><p className="mc-price">{w.price_pence === 0 ? "Free" : money(w.price_pence)}
+        {w.enrolled_price_pence !== null && w.enrolled_price_pence < w.price_pence && <small> · {w.enrolled_price_pence === 0 ? "free" : money(w.enrolled_price_pence)} for our students</small>}</p>
+        {full ? <span className="btn btn-line" aria-disabled="true">Full</span> : <span className="btn btn-brand" aria-disabled="true" title="Online booking opens soon">Book now</span>}</div>
+    </div></article>;
 }

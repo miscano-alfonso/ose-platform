@@ -474,10 +474,18 @@ export async function saveWorkshopAction(f: FormData): Promise<void> {
   const cap = parseInt(str(f, "capacity", 4), 10);
   if (!str(f, "title", 120) || !/^\d{4}-\d{2}-\d{2}$/.test(date) || !/^\d{2}:\d{2}$/.test(time)) return back("Give the workshop a title, a date and a start time.");
   if (!(price >= 0) || !(pay >= 0) || (enrolledPrice != null && !(enrolledPrice >= 0))) return back("Enter prices in pounds, e.g. 15 or 0 for free.");
+  const file = f.get("image");
+  let image: { data: Buffer; type: string } | null = null;
+  if (file instanceof File && file.size > 0) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return back("The picture must be a JPG, PNG or WebP.");
+    if (file.size > 3 * 1024 * 1024) return back("The picture must be under 3 MB.");
+    image = { data: Buffer.from(await file.arrayBuffer()), type: file.type };
+  }
   const r = await saveWorkshop(me.id, id, { title: str(f, "title", 120), levelId: str(f, "level", 40) || null, subjectId: str(f, "subject", 40) || null,
     teacherId: str(f, "teacher", 40) || null, date, time, minutes: Math.max(15, Math.min(240, parseInt(str(f, "minutes", 3), 10) || 45)),
-    capacity: cap > 0 ? Math.min(cap, 500) : null, price, enrolledPrice, teacherPay: pay, summary: str(f, "summary", 1000) || null, publish: f.get("publish") === "on" });
-  revalidatePath("/admin/workshops"); revalidatePath("/other-services");
+    capacity: cap > 0 ? Math.min(cap, 500) : null, price, enrolledPrice, teacherPay: pay, summary: str(f, "summary", 1000) || null, publish: f.get("publish") === "on",
+    size: str(f, "size") === "double" ? "double" : "single", image, removeImage: f.get("remove_image") === "on" });
+  revalidatePath("/admin/workshops"); revalidatePath("/other-services"); revalidatePath("/more");
   if (r.error) return back(r.error);
   redirect(`/admin/workshops/${r.id}?ok=${encodeURIComponent("Workshop saved.")}`);
 }

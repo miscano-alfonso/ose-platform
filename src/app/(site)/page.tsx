@@ -1,11 +1,11 @@
-import { PLATE, BOX, EXTRA } from "./hero-girl";
+import { GirlHero } from "./GirlHero";
+import { girlMarks, arranger } from "@/lib/hero-marks-store";
 import Link from "@/app/(site)/HoverLink";
 import { getFewPlaces, getBundles, getSpaceAvailable, getCourses, getPriceRows, getTeachers, type Course } from "@/lib/data";
 import { CourseCard, roundelSrc } from "./CourseCard";
 import { HeroLessons } from "./HeroLessons";
 import { MeetHead, Reviews, MemberOf } from "./HomeExtras";
 import { HeroArt, Ticker } from "./HeroArt";
-import { TiltTiles } from "./TiltTiles";
 import { SpaceAvailable } from "./SpaceAvailable";
 import { siteText } from "@/lib/site-content";
 import { siteInfo } from "@/lib/db";
@@ -46,24 +46,17 @@ const DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const COLOURS = ["#8fd6f0", "#e9a6ff", "#ffb38a", "#7fe0aa", "#f5c84b"];
 
 async function BentoHome({ txt }: { txt: Record<string, string> }) {
+  const [girl, arr] = await Promise.all([girlMarks(), arranger()]);
   const [courses, prices, teachers] = await Promise.all([getCourses(), getPriceRows().catch(() => []), getTeachers().catch(() => [])]);
   const open = courses.filter((c: Course) => c.bookable && !c.is_full);
   const seen = new Set<string>(); const withSpace: Course[] = [];
   for (const c of [...open].sort((a, b) => (a.places_left ?? 99) - (b.places_left ?? 99))) { const k = `${c.level}|${c.subject}`; if (!seen.has(k)) { seen.add(k); withSpace.push(c); } }
   const show = withSpace.slice(0, 16).sort((a, b) => a.level_order - b.level_order || a.subject.localeCompare(b.subject));
   const from = prices[0];
-  return <div className="bh bh-home"><TiltTiles />
+  return <div className="bh bh-home">
     <div className="bh-grid">
       <section className="bh-t bh-hero">
-        {/* the illustration: the girl at her laptop on the right, her symbols floating round her, more across the hero */}
-        <div className="bh-girl" role="img" aria-label="A sketch of a student working at her laptop, with maths and science symbols floating round her">
-          <div className="bg-box">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="bg-plate" src={PLATE.src} alt="" width={PLATE.w} height={PLATE.h} fetchPriority="high" />
-            {BOX.map((m, i) => <img key={i} className="bg-sym" src={`/hero/girl/${m.f}.webp`} alt="" style={{ left: `${m.x}%`, top: `${m.y}%`, width: `${m.w}%`, ["--d" as string]: `${m.d}s`, ["--dl" as string]: `${m.dl}s` }} />)}
-          </div>
-          {EXTRA.map((m, i) => <img key={i} className="bg-sym bg-extra" src={`/hero/girl/${m.f}.webp`} alt="" style={{ left: `${m.x}%`, top: `${m.y}%`, width: `${m.w}px`, ["--d" as string]: `${m.d}s`, ["--dl" as string]: `${m.dl}s` }} />)}
-        </div>
+        <GirlHero marks={girl} edit={!!arr} />
         <p className="k">{txt.home_eyebrow}</p>
         <h1>Live lessons.<br />Real teachers.<br /><span className="pop">From home.</span></h1>
         <p>{txt.home_lead}</p>
@@ -92,8 +85,10 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
         <b>Questions about lessons, payments, exams or Google Classroom? →</b></Link>
       </div>
     </div>
+    <div className="bh-pair">
     <MeetHead title={txt.head_title} text={txt.head_text} photo bento />
     <Reviews rating={txt.reviews_rating} count={txt.reviews_count} url={txt.reviews_url} widget={txt.reviews_widget.replace(/[^\w-]/g, "")} />
+    </div>
     <MemberOf />
   </div>;
 }
