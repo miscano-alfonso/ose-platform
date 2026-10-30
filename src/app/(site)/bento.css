@@ -732,3 +732,16 @@ html:has(.bh-home,.s-phead){background:#050f2d}
 .bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(5,15,45,.94);border-bottom-color:rgba(104,187,228,.18)}
 .bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible),.bt .s-phead .ph-tabs .ph-soon:not(:hover):not(:focus-visible){background:#050f2d}
 @media (max-width:1080px){.bt .s-nav.over .s-links,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links{background:#050f2d}}
+/* menu bar once scrolled: the dark blue, a little see-through, with the page blurred behind it */
+.bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(5,15,45,.78);-webkit-backdrop-filter:blur(16px) saturate(1.2);backdrop-filter:blur(16px) saturate(1.2)}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .s-nav.past{background:rgba(5,15,45,.78);-webkit-backdrop-filter:blur(16px) saturate(1.2);backdrop-filter:blur(16px) saturate(1.2)}}
+html[data-theme=dark] .bt .s-nav.past{background:rgba(5,15,45,.78);-webkit-backdrop-filter:blur(16px) saturate(1.2);backdrop-filter:blur(16px) saturate(1.2)}
+/* timetable: lessons turn their subject colour on hover; on computers the day names stay at the top while the week scrolls */
+.wk-blk:hover,.wk-blk:focus-visible{background:var(--c);border-left-color:var(--c);color:var(--ct,#fff)}
+.wk-blk:hover span,.wk-blk:focus-visible span{color:var(--ct,#fff);opacity:.85}
+@media (min-width:900px){
+  .wk{overflow:visible}
+  .wk-day h3{position:sticky;top:calc(var(--navh,96px) - 1px);z-index:4;background:var(--b-tile);margin:-16px -4px 12px;padding:16px 4px 0;height:44px;box-sizing:border-box}
+}
+@media (min-width:900px){.wk-day h3::before{content:"";position:absolute;top:0;bottom:0;left:-12px;width:12px;background:var(--b-tile)}
+  .wk-times+.wk-day h3::before{left:-80px;width:80px}}

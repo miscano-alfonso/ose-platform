@@ -6,6 +6,8 @@ import Link from "@/app/(site)/HoverLink";
 export type Lesson = { d: number; t: string; mins: number; subject: string; level: string; colour: string; href: string; teacher: string | null };
 const DAYS = ["", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 const PX = 1.75;   // pixels per minute
+/** Dark or light text on a subject colour (#rrggbb), for the hover. */
+const ink = (hex: string) => { const n = parseInt(hex.replace("#", ""), 16); if (Number.isNaN(n)) return "#ffffff"; const l = (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255; return l > 0.6 ? "#050f2d" : "#ffffff"; };
 const m = (t: string) => { const [h, mm] = t.split(":").map(Number); return h * 60 + mm; };
 const short = (s: string) => s.replace("English ", "Eng. ").replace("Literature", "Lit.").replace("Business Studies", "Business").replace("Science Double Award", "Science DA").replace("Maths Foundation", "Maths Found.");
 
@@ -29,7 +31,7 @@ export function WeekCalendar({ lessons, levels, initial }: { lessons: Lesson[]; 
             {hours.map((h) => <i key={h} className="wk-line" style={{ top: (h - start) * PX }} />)}
             {[...bySlot.values()].flatMap((g) => g.map((l, k) => <Link key={`${l.href}${l.t}${k}`} href={l.href} className="wk-blk"
               title={`${l.level} ${l.subject} · ${DAYS[l.d]} ${l.t}${l.teacher ? ` · ${l.teacher}` : ""}`}
-              style={{ ["--c" as string]: l.colour, top: (m(l.t) - start) * PX, height: l.mins * PX - 3, left: `calc(${k} * 100% / ${g.length})`, width: `calc(100% / ${g.length} - 3px)` }}>
+              style={{ ["--c" as string]: l.colour, ["--ct" as string]: ink(l.colour), top: (m(l.t) - start) * PX, height: l.mins * PX - 3, left: `calc(${k} * 100% / ${g.length})`, width: `calc(100% / ${g.length} - 3px)` }}>
               <b>{g.length > 1 ? short(l.subject) : l.subject}</b><span>{l.t}{lv ? "" : ` · ${l.level}`}</span></Link>))}
           </div></div>;
       })}
