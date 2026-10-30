@@ -34,7 +34,9 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
           {g && <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>}</div></div>
     </div></section>
     {/* once the title panel scrolls up, a slim band with the title stays under the menu, the roundel sticking on its edge */}
-    <div className="cd-sticky" aria-hidden="true"><b>{p.subject}</b><span>{p.level}{g ? ` · ${g.course_years} year course` : ""}</span></div>
+    <div className="cd-sticky"><div className="cd-stitle"><b>{p.subject}</b>{g?.label && <span className="sticky sl-few">{g.label_text ?? g.label}</span>}</div>
+      <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`} tabIndex={-1}>← Back to courses</Link>
+        {g && <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>}</div></div>
     <div className="cd-badge"><div className="wrap">
       {site.demo ? <div className="roundel cd-roundel" style={{ ["--c" as string]: p.colour }} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -59,7 +61,7 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
           {c.teacher && <div className="cd-teacher">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {c.teacher_photo && <img src={c.teacher_photo} alt="" width={72} height={72} />}
-            <div><span>{p.subject} teacher</span>{c.teacher_slug ? <Link href={`/teachers/${c.teacher_slug}`}><b>{c.teacher}</b></Link> : <b>{c.teacher}</b>}</div></div>}
+            <div>{c.teacher_slug ? <Link href={`/teachers/${c.teacher_slug}`}><b>{c.teacher}</b></Link> : <b>{c.teacher}</b>}</div></div>}
           {gi > 0 && <div className="cd-btns">
             {c.label && <span className="sticky sl-few" style={{ position: "static" }}>{c.label_text ?? c.label}</span>}
             <span className={`btn ${c.shows_waitlist ? "btn-line" : "btn-brand"}`} aria-disabled="true" title="Booking opens in the next update">{c.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>

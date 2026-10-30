@@ -973,3 +973,20 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 /* course card hover (31 Oct): the subject colour fades from the top to nothing, so the buttons sit on the card's usual blue */
 .bt .course:hover,.bt .course:focus-within{background:var(--b-tile) linear-gradient(180deg,color-mix(in srgb,var(--c,#68bbe4) 26%,transparent) 0%,transparent 62%)}
 .bt .bh-course:hover{background:var(--b-inset) linear-gradient(180deg,color-mix(in srgb,var(--c,#68bbe4) 26%,transparent) 0%,transparent 70%)}
+/* course page (31 Oct): the slim band carries the label and the two buttons too, in place of the level line */
+.bt .cd-sticky{--cdh:124px;gap:10px;padding-top:10px;padding-bottom:16px}
+.bt .cd-stitle{display:flex;align-items:center;gap:14px;min-width:0;max-width:calc(100% - 240px)}
+.bt .cd-stitle b{max-width:none;min-width:0}
+.bt .cd-stitle .sticky{position:static;transform:rotate(-3deg);font-size:12px;padding:4px 11px;flex:none}
+.bt .cd-sticky .cd-hbtns{margin-top:0;gap:8px}
+.bt .cd-sticky .cd-hbtns>*{font-size:14.5px;padding:7px 16px}
+.bt .cd-badge{top:calc(var(--navh,96px) + 124px)}
+@media (max-width:600px){.bt .cd-sticky{--cdh:104px;gap:8px;padding-top:8px;padding-bottom:12px}.bt .cd-stitle{max-width:calc(100% - 100px)}.bt .cd-stitle .sticky{font-size:10.5px;padding:3px 8px}.bt .cd-sticky .cd-hbtns>*{font-size:13px;padding:6px 12px}.bt .cd-badge{top:calc(var(--navh,73px) + 104px)}}
+.bt .cd-sticky.stuck{pointer-events:auto}
+/* course page teacher: bigger photo, name without underline, light blue on hover */
+.bt .cd-teacher img{width:96px;height:96px}
+.bt .cd-teacher a{text-decoration:none;color:var(--b-ink);transition:color .2s}
+.bt .cd-teacher a:hover,.bt .cd-teacher a:focus-visible{color:var(--b-sky)}
+/* course page topics: titles in the light blue, descriptions in the main text colour (white on dark) */
+.bt .cd-topic h3{color:var(--b-sky)}
+.bt .cd-topic p,.bt .cd-topic li,.bt .cd-grid>div>p{color:var(--b-ink);opacity:1}
