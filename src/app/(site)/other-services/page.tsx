@@ -18,9 +18,9 @@ export default async function More({ searchParams }: { searchParams: Promise<{ t
   const workshops = await getWorkshops();
   const showW = tag !== "marking", showM = tag !== "workshops";
   return (<>
-    <section className="s-phead"><div className="wrap"><h1>More</h1><p>Live one-off workshops and exam paper marking, open to every family.</p>
-      <nav className="tabs ph-tabs" aria-label="Show">{TAGS.map(([k, l]) =>
-        <Link key={k} href={k === "all" ? "/other-services" : `/other-services?tag=${k}`} scroll={false} className={k === tag ? "on" : ""} aria-current={k === tag ? "page" : undefined}>{l}</Link>)}</nav></div></section>
+    <section className="s-phead"><div className="wrap"><h1>More</h1><p>Live one-off workshops and exam paper marking, open to every family.</p></div></section>
+    <div className="ph-sticky"><nav className="tabs ph-tabs" aria-label="Show">{TAGS.map(([k, l]) =>
+        <Link key={k} href={k === "all" ? "/other-services" : `/other-services?tag=${k}`} scroll={false} className={k === tag ? "on" : ""} aria-current={k === tag ? "page" : undefined}>{l}</Link>)}</nav></div>
     <section className="s-sec"><div className="wrap">
       <div className="mgrid">
         {showW && workshops.map((w) => <WorkshopCard key={w.slug} w={w} />)}

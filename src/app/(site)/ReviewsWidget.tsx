@@ -62,9 +62,9 @@ export function ReviewsWidget({ widget, url, rating, count }: { widget: string; 
     <figcaption><b>{r.name}</b><span>{r.date} · Facebook</span></figcaption></figure>);
   return <>
     {revs.length > 0 && <div className="rv-own">
-      <div className="rv-head"><span className="rv-score"><b>{rating ?? "4.8"}</b><span className="rv-stars" aria-hidden="true">★★★★★</span><span>{count ? `${count} reviews` : "Reviews"} on Facebook</span></span>
-        <a className="btn btn-line sm" href={url} target="_blank" rel="noopener noreferrer">Read them all</a></div>
+      <div className="rv-head"><span className="rv-score"><b>{rating ?? "4.8"}</b><span className="rv-stars" aria-hidden="true">★★★★★</span><span>{count ? `${count} reviews` : "Reviews"} on Facebook</span></span></div>
       <div className="rv-marquee" aria-label="Reviews from families" tabIndex={0}><div className="rv-track" style={{ ["--n" as string]: revs.length }}>{row}<div className="rv-dup" aria-hidden="true">{row}</div></div></div>
+      <div className="rv-foot"><a className="btn btn-line sm" href={url} target="_blank" rel="noopener noreferrer">Read them all</a></div>
     </div>}
     {widget && <><Script src="https://elfsightcdn.com/platform.js" strategy="lazyOnload" /><div ref={box} className={`elfsight-app-${widget} rev-widget${revs.length ? " rev-done" : ""}`} data-elfsight-app-lazy /></>}
     {gaveUp && !shown && <div className="rev-fallback"><a className="btn btn-brand" href={url} target="_blank" rel="noopener noreferrer">Read our reviews on Facebook</a></div>}

@@ -21,10 +21,10 @@ export default async function TermDates({ searchParams }: { searchParams: Promis
   const yr = years.find((y) => slash(y) === slash(sp.year ?? "")) ?? current;
   const coming = years.length ? after(slash(years[years.length - 1])) : "";
   return (<>
-    <section className="s-phead"><div className="wrap"><h1>Term Dates</h1><p>Six terms each school year, with a break after each one. There are no lessons or payments in the breaks.</p>
-      <nav className="tabs ph-tabs" aria-label="School year">
+    <section className="s-phead"><div className="wrap"><h1>Term Dates</h1><p>Six terms each school year, with a break after each one. There are no lessons or payments in the breaks.</p></div></section>
+    <div className="ph-sticky"><nav className="tabs ph-tabs" aria-label="School year">
         {years.map((y) => <Link key={y} href={`/term-dates?year=${encodeURIComponent(slash(y))}`} scroll={false} className={y === yr ? "on" : ""} aria-current={y === yr ? "page" : undefined}>{slash(y)}</Link>)}
-        {coming && <span className="ph-soon" tabIndex={0} aria-label={`${coming}: coming soon`}><span>{coming}</span><span>Coming soon</span></span>}</nav></div></section>
+        {coming && <span className="ph-soon" tabIndex={0} aria-label={`${coming}: coming soon`}><span>{coming}</span><span>Coming soon</span></span>}</nav></div>
     <section className="s-sec"><div className="wrap">
       {years.filter((y) => y === yr).map((y) => { const ts = terms.filter((t) => t.year_label === y);
         return <div className="tyear" key={y}>

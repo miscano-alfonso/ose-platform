@@ -859,3 +859,43 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 @media (max-width:900px){.ct-grid{grid-template-columns:minmax(0,1fr)}}
 /* no vacancies: full width like the box above */
 .bt .jobs>.notice{max-width:none;margin:0}
+
+/* title-panel buttons (Courses, More, Timetable, Term dates): they sit at the bottom of the title panel, then stay under the
+   menu as the page scrolls; the ones not chosen have a thin white outline */
+.bt .s-phead:has(+ .ph-sticky)>.wrap{padding-bottom:calc(clamp(36px,6vh,64px) + 68px)}
+.bt .ph-sticky{position:sticky;top:calc(var(--navh,96px) + 10px);z-index:40;margin-top:-68px;margin-bottom:6px;padding-inline:clamp(16px,2.5vw,40px);pointer-events:none}
+.bt .ph-sticky .ph-tabs{display:flex;flex-wrap:wrap;gap:10px;margin:0;padding:0;border:0;background:none;justify-content:flex-start;pointer-events:auto;width:max-content;max-width:100%}
+.bt .ph-sticky .ph-tabs a,.bt .ph-sticky .ph-tabs .ph-soon{font-size:clamp(14px,1.28vw,17.5px);font-weight:500;letter-spacing:0;text-transform:none;padding:10px 22px;border-radius:999px;border:1px solid rgba(255,255,255,.85);background:#050f2d;color:#eef0f7;text-decoration:none;transition:background-color .2s,color .2s,border-color .2s;box-shadow:0 8px 20px -10px rgba(0,0,0,.6)}
+.bt .ph-sticky .ph-tabs a:hover,.bt .ph-sticky .ph-tabs a:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.bt .ph-sticky .ph-tabs a.on{background:#eef0f7;border-color:#eef0f7;color:#050f2d}
+.bt .ph-sticky .ph-tabs .ph-soon{display:inline-grid;cursor:default;color:rgba(238,240,247,.75)}
+.bt .ph-sticky .ph-tabs .ph-soon>span{grid-area:1/1;text-align:center;transition:opacity .2s}
+.bt .ph-sticky .ph-tabs .ph-soon>span+span{opacity:0}
+.bt .ph-sticky .ph-tabs .ph-soon:hover,.bt .ph-sticky .ph-tabs .ph-soon:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.bt .ph-sticky .ph-tabs .ph-soon:hover>span:first-child,.bt .ph-sticky .ph-tabs .ph-soon:focus-visible>span:first-child{opacity:0}
+.bt .ph-sticky .ph-tabs .ph-soon:hover>span+span,.bt .ph-sticky .ph-tabs .ph-soon:focus-visible>span+span{opacity:1}
+.bt .ph-sticky+.s-sec{padding-top:22px}
+@media (max-width:600px){.bt .ph-sticky{margin-top:-58px}.bt .ph-sticky .ph-tabs a,.bt .ph-sticky .ph-tabs .ph-soon{padding:8px 15px;font-size:14px}.bt .ph-sticky .ph-tabs{gap:8px}}
+/* timetable: the day names stick just under the level buttons, so the two never overlap */
+@media (min-width:900px){.bt:has(.ph-sticky) .wk-day h3{top:calc(var(--navh,96px) + 64px)}}
+/* home, Meet the principal (31 Oct): name and role at the top of the left column, Leanne's photo beneath; words and buttons on the right */
+.bt .home-head2 .hh-side{display:flex;flex-direction:column;min-width:0}
+.bt .home-head2 .hh-name{padding:clamp(22px,2.6vw,36px) clamp(22px,2.6vw,36px) 18px}
+.bt .home-head2 .hh-name h2{margin:0;line-height:1.08}
+.bt .home-head2 .hh-name .hh-role{margin:8px 0 0}
+.bt .home-head2 .hh-side .hh-photo{flex:1;min-height:clamp(260px,24vw,420px);height:auto}
+.bt .bh-pair .home-head2 .hh-tile{grid-template-columns:minmax(0,.8fr) minmax(0,1fr)}
+.bt .bh-pair .home-head2 .hh-body{align-self:center}
+@media (max-width:820px){.bt .home-head2 .hh-side .hh-photo{flex:none;aspect-ratio:4/3;min-height:0}.bt .home-head2 .hh-name{padding-bottom:16px}}
+/* reviews: the score centred under the heading, "Read them all" at the foot of the tile */
+.bt .bh-pair .home-reviews .sec-head,.bt .bh-pair .home-reviews .sec-head h2{text-align:center}
+.bt .bh-pair .home-reviews .rv-own{flex:1;display:flex;flex-direction:column;gap:18px}
+.rv-head{justify-content:center}
+.rv-foot{display:flex;justify-content:center;margin-top:auto;padding-top:6px}
+.rv-score{justify-content:center}
+.bt .bh-pair .home-head2 .hh-name{padding:clamp(20px,2vw,32px) clamp(18px,2vw,30px) 16px}
+.bt .bh-pair .home-head2 .hh-name h2{font-size:clamp(24px,2vw,34px);white-space:nowrap}
+.bt .bh-pair .home-head2 .hh-name .hh-role{font-size:clamp(14.5px,1.08vw,17px)}
+.bt .bh-pair .home-head2 .hh-name .hh-k{white-space:nowrap}
+@media (max-width:1000px){.bt .bh-pair .home-head2 .hh-name h2{font-size:clamp(28px,6vw,38px)}.bt .bh-pair .home-head2 .hh-name .hh-role{font-size:17px}}
+@media (max-width:820px){.bt .bh-pair .home-head2 .hh-tile{grid-template-columns:minmax(0,1fr)}.bt .bh-pair .home-head2 .hh-name .hh-k,.bt .bh-pair .home-head2 .hh-name h2{white-space:normal}.bt .bh-pair .home-head2 .hh-side .hh-photo{aspect-ratio:4/3;height:auto}}
