@@ -1048,3 +1048,8 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 .bt .mc-foot .btn{background:#050f2d;color:#eef0f7;border:1px solid rgba(255,255,255,.85)}
 .bt .mc-foot .btn:hover,.bt .mc-foot .btn:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
 .bt .tp-others{padding-top:clamp(24px,3vw,40px)}   /* other teachers sit closer under the profile */
+/* Leanne's photo (home and About): no zoom, show more of the picture */
+.bt .bh-pair .home-head2 .hh-side .hh-photo,.bt .ab-photo{aspect-ratio:1/1}
+.bt .bh-pair .home-head2 .hh-side .hh-photo img,.bt .ab-photo img{transform:none!important;object-position:50% 35%}
+@media (max-width:820px){.bt .bh-pair .home-head2 .hh-side .hh-photo{aspect-ratio:4/3}}
+@media (max-width:640px){.bt .ab-photo{aspect-ratio:4/3}}
