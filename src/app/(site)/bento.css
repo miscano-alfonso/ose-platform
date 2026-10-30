@@ -680,3 +680,5 @@ html.rv .bt .bh-home :is(.bh-grid > .bh-t,.bh-three > .bh-t).rv-in{animation-fil
 @media (max-width:1100px){.bh-girl .bg-extra{display:none}}
 @media (max-width:760px){.bh-girl{display:none}}
 @media (prefers-reduced-motion:reduce){.bh-girl .bg-sym,.bh-girl .bg-plate{animation:none}}
+/* "From home." in the site's light blue-green (30 Oct) */
+.bh-home .bh-hero h1 .pop,.bh-home .bh-hero h1 span{color:#83dde6}

@@ -804,3 +804,6 @@
 .adm .gs-step{display:grid;gap:2px;padding:12px 14px;border:1px solid var(--line, #e3e5ee);border-radius:12px;text-decoration:none;color:inherit;height:100%}
 .adm .gs-step span{font-size:14px;opacity:.8}
 .adm .gs-step:hover{background:#5fe0e8;border-color:#5fe0e8;color:#0f1747}
+
+/* dashboard welcome tile: no decorative ring (30 Oct) */
+.adm .dx-hero::after{display:none!important}

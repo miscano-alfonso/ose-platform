@@ -1,7 +1,8 @@
 import numpy as np, json, math
 from PIL import Image
 from scipy import ndimage as nd
-rec=np.load('recol.npy').astype(float); H,W=rec.shape[:2]
+import sys
+rec=np.load(sys.argv[1] if len(sys.argv)>1 else 'recol.npy').astype(float); H,W=rec.shape[:2]
 rbg=np.array([3,16,47.])
 lab=np.load('lab.npy'); big=int(open('big.txt').read())
 fig=lab==big; sym=(lab>0)&~fig
@@ -21,7 +22,7 @@ for i,s in enumerate(nd.find_objects(grp),1):
     c=rec[y0:y1,x0:x1]; mm=nd.binary_dilation(m,iterations=3)[y0:y1,x0:x1]
     d=np.abs(c-rbg).max(-1); al=np.clip(d/70,0,1)*mm
     un=rbg+(c-rbg)/np.maximum(al[...,None],1e-3)
-    un=rbg+(un-rbg)*1.25                      # a touch brighter so every symbol reads
+    un=rbg+(un-rbg)*1.15                      # a touch brighter so every symbol reads
     sp=np.dstack([np.clip(un,0,255),al*255]).astype(np.uint8)
     im=Image.fromarray(sp); im=im.resize((max(1,round(im.width*.6)),max(1,round(im.height*.6))),Image.LANCZOS)
     im.save(f'web/s{k}.webp','WEBP',quality=88,method=6)
