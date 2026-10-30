@@ -917,3 +917,6 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 /* more room under the level buttons on the stuck band */
 .bt .ph-sticky{margin-top:-80px;margin-bottom:-18px;padding-top:12px;padding-bottom:24px}
 @media (max-width:600px){.bt .ph-sticky{margin-top:-70px;padding-bottom:18px;margin-bottom:-12px}}
+/* menu pill (31 Oct): no gap between the pill's ends and a highlighted item; the room comes from the items themselves instead */
+@media (min-width:1081px){.bt .s-nav .s-links{padding-inline:5px}}
+@media (min-width:1361px){.bt .s-nav .s-links a{padding-inline:14px}}
