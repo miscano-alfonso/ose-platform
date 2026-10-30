@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Shot, TrialCta, RecordingVisual, GoogleDots } from "../bits";
 
-export const metadata = { title: "Features", description: "What OH-SO EdTech does: your website and bookings, card payments, classes and 1:1s, Google Meet attendance, recordings to Classroom, reports, teacher logins, payroll and marketing." };
+export const metadata = { title: "Features", description: "What OH-SO EdTech does: your website and bookings, card payments, classes and 1:1s, lessons in Google Meet, Zoom or any video tool, attendance, recordings to Classroom, reports, teacher logins, payroll and marketing." };
 
 type Row = { id: string; eyebrow: string; title: string; text: string; points: string[]; shot: string; alt: string; url: string; plan: string; visual?: "recordings" };
 const ROWS: Row[] = [
@@ -18,11 +18,11 @@ const ROWS: Row[] = [
     points: ["Terms and holidays set once for the year", "A lesson link for every class: Google Meet, Zoom, Teams or any video tool", "Students invited to the right Google Classroom when they book, and taken out if they leave", "Lessons, 1:1s and term dates in each teacher’s, parent’s and student’s own calendar (Google, Apple or Outlook)", "Class lists that update themselves as families book or leave", "Tasters that turn into bookings"],
     shot: "/osedtech/shots/timetable.png", alt: "Demo Academy’s weekly timetable", url: "admin.demoacademy.co.uk/timetable" },
   { id: "attendance", eyebrow: "Attendance", title: "Registers that take themselves", plan: "All plans",
-    text: "Attendance comes from who actually joined each Google Meet, matched to the right student, even when they join from a parent’s account. Teaching on Zoom, Teams or another tool? It comes from each student’s Join check-in instead. You see who’s slipping before it becomes a problem.",
+    text: "Attendance comes from who actually joined each Google Meet or Zoom lesson, matched to the right student, even when they join from a parent’s account. Teaching on Teams or another tool? It comes from each student’s Join check-in instead. You see who’s slipping before it becomes a problem.",
     points: ["Present, late and absent, per lesson and per term", "Students below 50% flagged on the dashboard", "A weekly email listing who’s slipping"],
     shot: "/osedtech/shots/attendance.png", alt: "Attendance for a class at Demo Academy", url: "admin.demoacademy.co.uk/attendance" },
   { id: "recordings", eyebrow: "Lesson recordings", title: "Recordings that file and post themselves", plan: "All plans", visual: "recordings", shot: "", alt: "", url: "",
-    text: "Record the lesson in Google Meet and that’s it. The recording is renamed, filed in the right subject folder and posted to the class’s Google Classroom under the same topic as the teacher’s lesson post, with a title card added to the start of the video.",
+    text: "Record the lesson in Google Meet and that’s it. The recording is renamed, filed in the right subject folder and posted to the class’s Google Classroom under the same topic as the teacher’s lesson post, with a title card added to the start of the video. Teaching on Zoom? Its cloud recordings are posted to the class’s Classroom as a link, with the passcode.",
     points: ["Named by class, term and lesson number, e.g. “GCSE Biology - T1 Lesson 12”", "A title card at the start: subject roundel, lesson title, teacher and date", "Posted to Google Classroom once the teacher has posted the lesson, never twice", "Accidental short recordings and duplicates set aside for you to check", "Chat transcripts archived; 1:1 lessons filed in their own folders"] },
   { id: "email", eyebrow: "Email", title: "Every email to and from families in one place", plan: "All plans",
     text: "Emails from families arrive in the dashboard, linked to the family, and you reply from there with your signature. Reminders, payment emails and reports go out on their own, in your school’s design. Before you go live, test mode lets you run everything on real data while nothing reaches families.",
@@ -52,7 +52,7 @@ export default function Features() {
       <p className="edt-eyebrow">Features</p>
       <h1 className="edt-h1">How it works</h1>
       <p className="edt-lead">The admin side runs your school; the website side brings families in. They’re one system, so a booking on your website is instantly a place on a register, a payment plan and a reminder email.</p>
-      <p className="edt-google"><GoogleDots /> Built around Google Meet, Classroom and Drive. Your school will need Google Workspace: <Link href="/osedtech#google" style={{ color: "var(--teal-d)" }}>what you’ll need</Link>.</p>
+      <p className="edt-google"><GoogleDots /> <span>Built around Google Classroom and Drive, with live lessons in Google Meet, Zoom, Teams or any video tool. Your school will need Google Workspace: <Link href="/osedtech#google" style={{ color: "var(--teal-d)" }}>what you’ll need</Link>.</span></p>
       <p className="edt-note" style={{ marginTop: 14 }}>Pictures show Demo Academy, a made-up school we use for training, so no real families appear here.</p>
       <nav aria-label="On this page" className="edt-btns" style={{ marginTop: 22 }}>{ROWS.map((r) => <a key={r.id} href={`#${r.id}`} className="edt-btn line sm">{r.eyebrow}</a>)}</nav>
       {ROWS.map((r, i) => <div key={r.id} id={r.id} className={`edt-row${i % 2 ? " flip" : ""}`} style={{ scrollMarginTop: 90 }}>

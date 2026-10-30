@@ -34,7 +34,7 @@ function mail(title: string, lines: string[], button: [string, string], small: s
     <p style="margin:0;font-size:13.5px;color:#5b6078">${small}</p></div></div>`;
 }
 
-export type TrialAsk = { name: string; email: string; business: string; plan: "solo" | "growth"; google: string; teachers: string; students: string; subjects: string };
+export type TrialAsk = { name: string; email: string; business: string; plan: "solo" | "growth"; google: string; teachers: string; students: string; subjects: string; video: string };
 /** Step 1: save the request and email the one-time link. Returns an error for the form, or null. */
 export async function requestTrialAccount(t: TrialAsk): Promise<string | null> {
   if (!t.name || !EMAIL.test(t.email) || !t.business) return "Fill in your name, email and school name.";
@@ -43,9 +43,9 @@ export async function requestTrialAccount(t: TrialAsk): Promise<string | null> {
   if (n >= 3) return "We’ve already sent you a link today. Check your inbox (and junk folder), or sign in if you’ve set up your school.";
   if (total >= 60) return "Lots of people are starting trials today. Please try again tomorrow, or email us and we’ll set you up.";
   const token = randomBytes(24).toString("base64url");
-  const [{ id }] = await withSchool((q) => q<{ id: string }>(`insert into edtech_trials (school_id, name, email, business, plan, google, teachers, students, subjects, self_serve, token_hash, token_kind, token_expires)
-    values (current_school(), $1, $2, $3, $4, $5, $6, $7, $8, true, $9, 'confirm', now() + make_interval(hours => $10)) returning id`,
-    [t.name, t.email, t.business, t.plan, t.google, t.teachers, t.students, t.subjects, sha(token), CONFIRM_HOURS]));
+  const [{ id }] = await withSchool((q) => q<{ id: string }>(`insert into edtech_trials (school_id, name, email, business, plan, google, teachers, students, subjects, self_serve, token_hash, token_kind, token_expires, video)
+    values (current_school(), $1, $2, $3, $4, $5, $6, $7, $8, true, $9, 'confirm', now() + make_interval(hours => $10), $11) returning id`,
+    [t.name, t.email, t.business, t.plan, t.google, t.teachers, t.students, t.subjects, sha(token), CONFIRM_HOURS, t.video]));
   const link = `${await origin()}/osedtech/start?t=${token}`;
   const r = await sendHtml("Confirm your email to open your OH-SO EdTech trial", mail(`Your ${t.business} trial is nearly ready`,
     [`Hi ${esc(t.name.split(" ")[0])},`, `Confirm your email and choose a password, and your school opens straight away on the ${t.plan === "solo" ? "Solo" : "Growth"} plan. It’s free for ${TRIAL_DAYS} days, with no card needed.`],
@@ -55,15 +55,15 @@ export async function requestTrialAccount(t: TrialAsk): Promise<string | null> {
     return "We couldn’t send the email just now. Please try again in a few minutes.";
   }
   await sendHtml(`OH-SO EdTech: ${t.business} is starting a ${t.plan} trial`, `<div style="font:15px/1.5 Arial,sans-serif;color:#12162f"><p><b>${esc(t.name)}</b> (${esc(t.email)}) asked for a ${t.plan} trial for <b>${esc(t.business)}</b>. They’ve been sent the link to open it.</p>
-    <p>${[t.teachers && `Teachers: ${esc(t.teachers)}`, t.students && `Students: ${esc(t.students)}`, t.google && `Google: ${esc(t.google)}`, t.subjects && `Teaches: ${esc(t.subjects)}`].filter(Boolean).join("<br>")}</p>
+    <p>${[t.teachers && `Teachers: ${esc(t.teachers)}`, t.students && `Students: ${esc(t.students)}`, t.google && `Google: ${esc(t.google)}`, t.subjects && `Teaches: ${esc(t.subjects)}`, t.video && `Video: ${esc(t.video)}`].filter(Boolean).join("<br>")}</p>
     <p>It’s in Admin → Settings → EdTech trials.</p></div>`, [NOTIFY()], "edtech-trial").catch(() => undefined);
   return null;
 }
 
-type Row = { id: string; name: string; email: string; business: string; plan: string; school_slug: string | null };
+type Row = { id: string; name: string; email: string; business: string; plan: string; school_slug: string | null; video: string };
 async function byToken(token: string, kind: "confirm" | "reset"): Promise<Row | null> {
   if (!/^[\w-]{20,64}$/.test(token)) return null;
-  return (await withSchool((q) => q<Row>(`select id, name, email::text, business, plan, school_slug from edtech_trials
+  return (await withSchool((q) => q<Row>(`select id, name, email::text, business, plan, school_slug, video from edtech_trials
     where token_hash = $1 and token_kind = $2 and token_expires > now()`, [sha(token), kind])))[0] ?? null;
 }
 export async function confirmInfo(token: string) { const r = await byToken(token, "confirm"); return r && { name: r.name, email: r.email, business: r.business, plan: r.plan as "solo" | "growth", done: !!r.school_slug }; }
@@ -123,6 +123,10 @@ export async function openTrialSchool(token: string, password: string): Promise<
     }
   }
   if (!made) return "Your school couldn’t be made just now. Please try again in a minute.";
+  // the video tool they teach with: Join buttons and reminders use each class's link; attendance from Meet, Zoom or check-ins
+  const { VIDEO_TOOLS } = await import("./video"), { saveVideoSettings } = await import("./checkins");
+  const tool = VIDEO_TOOLS.find((v) => v.id === r.video)?.id ?? "meet";
+  await runAsSchool(slug, () => saveVideoSettings({ tool, checkins: tool !== "meet" && tool !== "zoom" })).catch((e) => console.error("trial video", e));
   await withSchool((q) => q(`update edtech_trials set status = 'trial', school_slug = $2, token_hash = null, token_kind = null, token_expires = null,
     note = trim(note || ' Opened ' || to_char(now() at time zone 'Europe/London', 'DD Mon YYYY HH24:MI') || '.') where id = $1`, [r.id, slug]));
   await sendHtml(`OH-SO EdTech: ${r.business} opened its ${r.plan} trial`, `<div style="font:15px/1.5 Arial,sans-serif;color:#12162f"><p><b>${esc(r.name)}</b> (${esc(r.email)}) has opened <b>${esc(r.business)}</b> on the ${r.plan} plan. The trial ends in ${TRIAL_DAYS} days.</p></div>`, [NOTIFY()], "edtech-trial").catch(() => undefined);

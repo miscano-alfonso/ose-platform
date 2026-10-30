@@ -240,3 +240,10 @@
 .edt-fs legend{font-weight:500;font-size:15.5px;margin-bottom:6px}
 .edt-fs legend small{font-weight:400;color:var(--muted)}
 .edt-form .edt-pw{display:grid;gap:4px}
+/* page titles: the title in the logo's blue, the eyebrow above it in white (the home headline keeps its own highlight) */
+.edt-h1:not(:has(.edt-hl)){color:var(--teal-d)}
+.edt-eyebrow:has(+ .edt-h1):not(:has(+ .edt-h1 .edt-hl)){color:var(--ink)}
+/* more room between an eyebrow and its title */
+.edt .edt-eyebrow{margin-bottom:22px}
+.edt .edt-eyebrow:has(+ .edt-h1){margin-bottom:28px}
+.edt-google .edt-gdots{flex:none}

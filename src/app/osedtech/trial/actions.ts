@@ -2,6 +2,7 @@
 import { redirect } from "next/navigation";
 import { saveTrial, TEACHERS, STUDENTS, GOOGLE } from "@/lib/edtech";
 import { requestTrialAccount } from "@/lib/edtech-account";
+import { VIDEO_TOOLS } from "@/lib/video";
 
 /** Solo and Growth: the visitor opens their own trial school (we email a link to confirm their address first).
  *  School: a request, and we set it up with them. */
@@ -17,12 +18,12 @@ export async function startTrial(form: FormData) {
   if (!form.get("agree")) back(plan === "school" ? "Tick the box to say we can contact you about your trial." : "Tick the box to agree to the trial terms.");
   const pick = (k: string, list: string[]) => list.includes(v(k)) ? v(k) : "";
   if (plan !== "school") {
-    const err = await requestTrialAccount({ name, email, business, plan, google: pick("google", GOOGLE), teachers: pick("teachers", TEACHERS), students: pick("students", STUDENTS), subjects: v("subjects", 300) });
+    const err = await requestTrialAccount({ name, email, business, plan, google: pick("google", GOOGLE), teachers: pick("teachers", TEACHERS), students: pick("students", STUDENTS), subjects: v("subjects", 300), video: VIDEO_TOOLS.some((x) => x.id === v("video")) ? v("video") : "" });
     if (err) back(err);
     redirect(`/osedtech/trial?plan=${plan}&check=1&to=${encodeURIComponent(email)}`);
   }
   let site = v("site", 200); if (site && !/^https?:\/\//i.test(site)) site = "https://" + site;
   await saveTrial({ name, email, business, website: site, teachers: pick("teachers", TEACHERS), students: pick("students", STUDENTS),
-    plan, subjects: v("subjects", 300), tools: v("tools", 300), google: pick("google", GOOGLE), message: v("message", 3000) });
+    plan, subjects: v("subjects", 300), tools: [v("tools", 300), VIDEO_TOOLS.find((x) => x.id === v("video")) ? `Video: ${VIDEO_TOOLS.find((x) => x.id === v("video"))!.name}` : ""].filter(Boolean).join(" · "), google: pick("google", GOOGLE), message: v("message", 3000) });
   redirect("/osedtech/trial?plan=school&sent=1");
 }

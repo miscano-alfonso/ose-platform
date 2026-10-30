@@ -29,7 +29,7 @@ export default function EdTechHome() {
           <li>Start on your own, grow into a team, no switching systems</li>
         </ul>
         <div className="edt-btns"><Link href="/osedtech/trial" className="edt-btn">Start a free trial</Link><Link href="/osedtech/demo" className="edt-btn line">Look round the demo</Link></div>
-        <p className="edt-google"><GoogleDots /> Built for online teachers and schools using Google Meet and Classroom</p>
+        <p className="edt-google"><GoogleDots /> Built for online teachers using Google Classroom, with live lessons in Google Meet, Zoom, Teams or any video tool</p>
         <p className="edt-note" style={{ marginTop: 12 }}>{TRIAL_DAYS} days free. No card needed. Or <Link href="/osedtech/features" style={{ color: "var(--teal-d)" }}>see how it works</Link>.</p>
       </div>
       <div className="edt-stack">
@@ -52,14 +52,14 @@ export default function EdTechHome() {
     <section className="edt-sec"><div className="edt-wrap">
       <p className="edt-eyebrow">One place for all of it</p>
       <h2 className="edt-h2">Everything a teaching business runs on</h2>
-      <p className="edt-lead">Stop stitching together a booking tool, a payment link, a spreadsheet and your inbox. It’s all connected: when a family books, they’re on the register, getting reminders and has the class’s Meet link.</p>
+      <p className="edt-lead">Stop stitching together a booking tool, a payment link, a spreadsheet and your inbox. It’s all connected: when a family books, they’re on the register, getting reminders and has the class’s lesson link.</p>
       <div className="edt-grid">
         <div className="edt-card"><Ico n="site" /><h3>Your website</h3><p>Course pages, timetable, term dates and prices, all kept up to date from your dashboard.</p></div>
         <div className="edt-card"><Ico n="card" /><h3>Bookings and payments</h3><p>Families book and pay by card, in full or in instalments. Failed payments are followed up for you.</p></div>
         <div className="edt-card"><Ico n="cal" /><h3>Classes, 1:1s and workshops</h3><p>Weekly classes across your terms, private lessons and one-off workshops, with tasters and a waiting list.</p></div>
-        <div className="edt-card"><Ico n="meet" /><h3>Attendance, whatever you teach on</h3><p>Use Google Meet, Zoom, Teams or any video tool. Attendance comes from who joined the Meet, or from each student’s Join check-in.</p></div>
+        <div className="edt-card"><Ico n="meet" /><h3>Attendance, whatever you teach on</h3><p>Use Google Meet, Zoom, Teams or any video tool. Attendance comes from who joined in Google Meet or Zoom, or from each student’s Join check-in on any other tool.</p></div>
         <div className="edt-card"><Ico n="mail" /><h3>Emails that send themselves</h3><p>Lesson reminders, receipts and follow-ups, sent at the right time, from your school’s address.</p></div>
-        <div className="edt-card"><Ico n="video" /><h3>Recordings that post themselves</h3><p>Every Meet recording renamed, filed and posted to the right Google Classroom, with a title card at the start. <a href="/osedtech/features#recordings" style={{ color: "var(--teal-d)" }}>See how</a></p></div>
+        <div className="edt-card"><Ico n="video" /><h3>Recordings that post themselves</h3><p>Google Meet recordings renamed, filed and posted to the right Google Classroom, with a title card at the start. Zoom cloud recordings are posted too. <a href="/osedtech/features#recordings" style={{ color: "var(--teal-d)" }}>See how</a></p></div>
         <div className="edt-card"><Ico n="report" /><h3>Reports and portals</h3><p>Reports to families, and accounts for parents and students with chats and reward points.</p></div>
         <div className="edt-card"><Ico n="spark" /><h3>Marketing with Claude</h3><p>Newsletters, and social posts in your style that Claude drafts and illustrates, posted to Facebook and Instagram.</p></div>
       </div>
@@ -98,10 +98,10 @@ export default function EdTechHome() {
 
     <section className="edt-sec" id="google"><div className="edt-wrap">
       <p className="edt-eyebrow">Made for Google classrooms</p>
-      <h2 className="edt-h2">If your lessons live in Google Meet and Classroom, you’re halfway there</h2>
-      <p className="edt-lead">OH-SO EdTech is built around the Google tools teachers already know. It does the joining-up: inviting each student to the right Google Classroom when their place is confirmed, taking the register from Meet, and filing and posting every recording, so you can teach.</p>
+      <h2 className="edt-h2">If your classes live in Google Classroom, you’re halfway there</h2>
+      <p className="edt-lead">OH-SO EdTech is built around the Google tools teachers already know. It does the joining-up: inviting each student to the right Google Classroom when their place is confirmed, taking the register from Google Meet or Zoom, and filing and posting every recording, so you can teach.</p>
       <div className="edt-grid">
-        <div className="edt-card"><h3>Google Meet, or your own video tool</h3><p>Every class has its own lesson link. With Meet, attendance comes from who actually joined and lessons can be recorded; with Zoom, Teams or others, from students’ Join check-ins.</p></div>
+        <div className="edt-card"><h3>Google Meet, Zoom, or your own video tool</h3><p>Every class has its own lesson link, in whichever tool you teach with. With Meet or Zoom, attendance comes from who actually joined and recordings are posted for you; with Teams or anything else, from students’ Join check-ins.</p></div>
         <div className="edt-card"><h3>Google Classroom</h3><p>Students get their class invitation as soon as they book. Classes, assignments and recordings live in Classroom, and we check assessments are marked before reports go out.</p></div>
         <div className="edt-card"><h3>Google Drive</h3><p>Recordings are renamed and filed by subject, with transcripts archived, all in your school’s own Drive.</p></div>
       </div>
@@ -109,7 +109,7 @@ export default function EdTechHome() {
         <h3>What you’ll need</h3>
         <ul>
           <li><b>Google Workspace for your school</b>, with you as its administrator. Your teachers and students sign in with Google accounts from your school.</li>
-          <li><b>An edition that records Meet lessons</b> if you want recordings: Business Standard or above, or Education Plus or the Teaching and Learning Upgrade on Workspace for Education.</li>
+          <li><b>If you teach in Google Meet and want recordings,</b> an edition that records Meet lessons: Business Standard or above, or Education Plus or the Teaching and Learning Upgrade on Workspace for Education.</li>
           <li><b>Not on Google yet?</b> That’s fine. We’ll help you set up Workspace and Classroom as part of your trial. Google’s own subscription is separate from ours.</li>
         </ul>
       </div>

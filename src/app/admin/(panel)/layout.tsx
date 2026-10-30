@@ -102,13 +102,14 @@ function GettingStarted({ name }: { name: string }) {
   const steps: [string, string, string][] = [
     ["/admin/school", "Your school", "Check the name and pick your colours."],
     ["/admin/website", "Your logo", "Upload your logo and browser icon."],
+    ["/admin/school#live", "Live lessons", "Choose Google Meet, Zoom, Teams or any video tool, and connect Zoom if you use it."],
     ["/admin/term-dates", "Term dates", "UK term dates are in already. Change them to yours."],
     ["/admin/prices", "Prices", "Set your price per lesson for each level."],
     ["/admin/classes", "Classes", "Add your first class, then its weekly time in Timetable setup."],
     ["/admin/families", "Families", "Add families and their children, or import a spreadsheet."],
   ];
   return <div className="card" style={{ marginBottom: 18 }}><h2 style={{ marginTop: 0 }}>Welcome to {name}</h2>
-    <p className="muted" style={{ marginTop: -4 }}>Six steps to see your school running. This goes once your first class is added.</p>
+    <p className="muted" style={{ marginTop: -4 }}>Seven steps to see your school running. This goes once your first class is added.</p>
     <ol style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill,minmax(230px,1fr))", gap: 10, padding: 0, margin: 0, listStyle: "none", counterReset: "s" }}>
       {steps.map(([href, t, d], i) => <li key={href}><a href={href} className="gs-step"><b>{i + 1}. {t}</b><span>{d}</span></a></li>)}</ol></div>;
 }

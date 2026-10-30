@@ -20,7 +20,7 @@ export default function Pricing() {
       <Plans />
       <div className="edt-fine" style={{ textAlign: "left" }}>
         <div><b>No commission on fees</b>Families pay into your own Stripe account. Stripe charges its usual card fees; we take nothing.</div>
-        <div><b>Works with Google</b>Your school needs Google Workspace for Meet, Classroom and Drive (Google’s subscription is separate). <Link href="/osedtech#google">What you’ll need</Link></div>
+        <div><b>Works with Google</b>Your school needs Google Workspace for Classroom and Drive (Google’s subscription is separate). Teach live in Google Meet, Zoom, Teams or any video tool. <Link href="/osedtech#google">What you’ll need</Link></div>
         <div><b>No contract</b>Monthly or yearly. Change plan or cancel whenever you like.</div>
         <div><b>Your data stays yours</b>Export it any time. If you leave, we hand it over and then delete it.</div>
         <div><b>Growing past your plan</b>Each plan includes a number of students. Above that it’s {gbp(EXTRA_STUDENT)} a month for each extra student, counted from your active students each month, or move up a plan when the extras add up.</div>
@@ -55,7 +55,7 @@ export default function Pricing() {
       <p className="edt-note" style={{ marginTop: 12 }}>From each company’s published pricing and feature lists, and their listings on GetApp and Capterra, checked 27 October 2026. “Some” means offered in a limited form or through another tool; “–” means we couldn’t find it listed. Dollar prices are their US prices, excluding tax. Products change, so check their websites. Card processing fees (for example Stripe’s) apply on top for every product, including ours.</p>
       <div className="edt-grid">
         <div className="edt-card"><h3>Built for a school</h3><p>Terms and holidays, families with more than one child, instalments, tasters that turn into bookings, and teachers paid by the lesson.</p></div>
-        <div className="edt-card"><h3>Google Meet and Classroom, done for you</h3><p>Attendance from who actually joined each lesson, and recordings named, filed and posted to the right Classroom.</p></div>
+        <div className="edt-card"><h3>Google Classroom, with any video tool</h3><p>Attendance from who actually joined in Google Meet or Zoom (or check-ins on any other tool), and recordings named, filed and posted to the right Classroom.</p></div>
         <div className="edt-card"><h3>No cut of your fees</h3><p>Families pay into your own Stripe account. We never take a percentage, however much you grow.</p></div>
         <div className="edt-card"><h3>A real school runs on it</h3><p>We built it for OH-SO ED, so it’s been shaped by a working online school, not a guess at what teachers need.</p></div>
       </div>

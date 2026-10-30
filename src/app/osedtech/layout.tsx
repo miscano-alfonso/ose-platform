@@ -6,7 +6,7 @@ import { Mark } from "./Mark";
 // OH-SO EdTech: the software business selling the OH-SO ED platform to other teachers. Its own look, separate from the school's site.
 export const metadata: Metadata = {
   title: { default: "OH-SO EdTech | Run your online school under your own name", template: "%s | OH-SO EdTech" },
-  description: "The platform behind OH-SO ED, a real online school, for teachers running their own classes: your website, bookings, payments, Google Meet attendance, reports and marketing, under your own brand.",
+  description: "The platform behind OH-SO ED, a real online school, for teachers running their own classes: your website, bookings, payments, live lessons in Google Meet, Zoom or any video tool, attendance, reports and marketing, under your own brand.",
   icons: { icon: "/osedtech/icon.svg" },
 };
 
