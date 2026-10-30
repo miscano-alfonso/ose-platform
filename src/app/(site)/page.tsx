@@ -1,5 +1,7 @@
 import { HERO_DAY } from "./hero-day";
-import { HOME_MARKS } from "./hero-marks";
+import { marksHtml } from "./hero-marks";
+import { heroMarks, arranger } from "@/lib/hero-marks-store";
+import { HeroComposer } from "./HeroComposer";
 import Link from "@/app/(site)/HoverLink";
 import { getFewPlaces, getBundles, getSpaceAvailable, getCourses, getPriceRows, getTeachers, type Course } from "@/lib/data";
 import { CourseCard, roundelSrc } from "./CourseCard";
@@ -46,6 +48,7 @@ const DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const COLOURS = ["#8fd6f0", "#e9a6ff", "#ffb38a", "#7fe0aa", "#f5c84b"];
 
 async function BentoHome({ txt }: { txt: Record<string, string> }) {
+  const [marks, arr] = await Promise.all([heroMarks(), arranger()]);
   const [courses, prices, teachers] = await Promise.all([getCourses(), getPriceRows().catch(() => []), getTeachers().catch(() => [])]);
   const open = courses.filter((c: Course) => c.bookable && !c.is_full);
   const seen = new Set<string>(); const withSpace: Course[] = [];
@@ -56,7 +59,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
   return <div className="bh bh-home">
     <div className="bh-grid">
       <section className="bh-t bh-hero">
-        <div className="bh-marks" aria-hidden="true" dangerouslySetInnerHTML={{ __html: HOME_MARKS }} />
+        {arr ? <HeroComposer initial={marks} /> : <div className="bh-marks" aria-hidden="true" dangerouslySetInnerHTML={{ __html: marksHtml(marks) }} />}
         <div className="bh-scene" role="img" aria-label="A teenager with headphones studying at a laptop by a sunny window" dangerouslySetInnerHTML={{ __html: HERO_DAY }} />
         <p className="k">{txt.home_eyebrow}</p>
         <h1>Live lessons.<br />Real teachers.<br /><span className="pop">From home.</span></h1>
