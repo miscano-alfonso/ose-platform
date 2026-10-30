@@ -425,9 +425,9 @@ html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-ra
 .bh .bh-hero>.bh-scene{position:absolute;z-index:1;right:var(--side);top:calc(var(--navh) + (100svh - var(--navh) - min(calc(100svh - var(--navh) - 10svh),calc(46vw / 1.154))) / 2);
   width:min(46vw,calc((100svh - var(--navh) - 10svh) * 1.154));max-width:none;pointer-events:none}
 .bh-scene svg{display:block;width:100%;height:auto}
-.bh-scene svg .m{transform-box:fill-box;transform-origin:center;animation:bhmark 6s ease-in-out infinite}
-.bh-scene svg g:nth-child(2n) > .m{animation-duration:7.5s;animation-direction:reverse}
-.bh-scene svg g:nth-child(3n) > .m{animation-duration:5.2s}
+.bh-scene svg .m{transform-box:fill-box;transform-origin:center;animation:bhmark 12s ease-in-out infinite}
+.bh-scene svg g:nth-child(2n) > .m{animation-duration:14.5s;animation-direction:reverse}
+.bh-scene svg g:nth-child(3n) > .m{animation-duration:10.5s}
 .bh-scene svg g:nth-child(1) > .m{animation-delay:-1s}.bh-scene svg g:nth-child(4) > .m{animation-delay:-2.4s}.bh-scene svg g:nth-child(5) > .m{animation-delay:-3.1s}
 .bh-scene svg g:nth-child(7) > .m{animation-delay:-4.2s}.bh-scene svg g:nth-child(8) > .m{animation-delay:-.6s}.bh-scene svg g:nth-child(10) > .m{animation-delay:-3.7s}
 @keyframes bhmark{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-14px) rotate(-7deg)}50%{transform:translateY(-4px) rotate(4deg)}75%{transform:translateY(-18px) rotate(8deg)}}
@@ -444,3 +444,7 @@ html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-ra
 .ph-art .mk{width:calc(48px * var(--s,1))}
 @media (prefers-reduced-motion:reduce){.bh-marks .mk g,.ph-art .mk g{animation:none}}
 @media (max-width:760px){.bh .bh-hero>.bh-marks{display:none}}
+.bt .s-phead>.wrap>.ph-art{top:0}   /* title-panel symbols spread over the whole panel, behind the menu too (update 226) */
+/* course cards: a tint of the subject's colour on hover, like the home page "Courses with space" tiles (update 226) */
+.bt .course{transition:background-color .15s}
+.bt .course:hover,.bt .course:focus-within{background:color-mix(in srgb,var(--c,#5fe0e8) 18%,var(--b-tile))}

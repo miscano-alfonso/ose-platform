@@ -22,7 +22,7 @@ export const roundelSrc = (subject: string, demo = false) => demo ? "/osedtech/d
 export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }) {
   const lessons = `${c.lessons_per_week} lesson${c.lessons_per_week > 1 ? "s" : ""} per week`;
   return (
-    <article className={`course${c.is_full ? " is-full" : ""}`}>
+    <article className={`course${c.is_full ? " is-full" : ""}`} style={{ ["--c" as string]: c.colour }}>
       <div className="top">
         <div><div className="lvl">{c.level}</div><h3>{c.subject}</h3></div>
         <div className="roundel" style={{ ["--c" as string]: c.colour }} aria-hidden="true">
