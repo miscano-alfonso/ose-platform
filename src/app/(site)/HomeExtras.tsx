@@ -2,7 +2,15 @@ import Link from "@/app/(site)/HoverLink";
 import { ReviewsWidget } from "./ReviewsWidget";
 
 // Bottom of the homepage, as on ohsoed.co.uk: Meet the Headteacher, Facebook reviews and Member Of.
-export function MeetHead({ title, text, photo = true }: { title: string; text: string; photo?: boolean }) {
+export function MeetHead({ title, text, photo = true, bento = false }: { title: string; text: string; photo?: boolean; bento?: boolean }) {
+  // the school website (update 230): one tile, photo on the left, name and role, then Leanne's words
+  if (bento) return <section className="s-sec home-head2"><div className="wrap"><div className="hh-tile">
+    {/* eslint-disable-next-line @next/next/no-img-element */}
+    {photo && <div className="hh-photo"><img src="/teachers/leanne-iacurci.webp" alt="Leanne Iacurci, Principal and English Teacher" width={640} height={345} loading="lazy" /></div>}
+    <div className="hh-body"><p className="hh-k">{title}</p><h2>Leanne Iacurci</h2><p className="hh-role">Principal and English Teacher</p>
+      <div className="hh-text">{text.split("\n").filter((p) => p.trim()).map((p, i) => <p key={i}>{p}</p>)}</div>
+      <div className="btns"><Link className="btn btn-brand" href="/about">More about us</Link><Link className="btn btn-ghost hub-ghost" href="/teachers">Meet the team</Link></div></div>
+  </div></div></section>;
   return <section className="s-sec home-head"><div className="wrap">
     <div className="sec-head"><h2>{title}</h2></div>
     <div className="head-grid">

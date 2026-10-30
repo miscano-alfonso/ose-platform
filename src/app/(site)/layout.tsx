@@ -1,4 +1,5 @@
 import { ChalkTitles } from "./ChalkTitles";
+import { Reveal } from "./Reveal";
 import { HeroNav } from "./HeroNav";
 import { SITE_CHALK } from "./chalk-filter";
 import Link from "@/app/(site)/HoverLink";
@@ -30,6 +31,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   const [styles, { logo }, site] = await Promise.all([getStyles(), brandSrc(), siteInfo()]);
   const css = stylesCss(styles), fonts = fontsHref(styles);
   return (<div className={site.demo ? undefined : "bt"}>
+      {!site.demo && <script dangerouslySetInnerHTML={{ __html: "if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('rv')" }} />}
         {fonts && <link id="ose-fonts" rel="stylesheet" href={fonts} />}
         <style id="ose-styles" dangerouslySetInnerHTML={{ __html: css }} />
         <StyleBridge />
@@ -43,7 +45,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
           <div className="s-icons">{!site.demo && <SiteTheme />}<Link href="/cart" className="s-ico" aria-label="Basket"><Cart /></Link><Link href="/account" className="s-ico" aria-label="My account"><Person /></Link></div>
           <SiteNav items={NAV as [string, string][]} />
         </div></header>
-        <main id="main">{children}</main>{!site.demo && <HeroNav />}{!site.demo && <ChalkTitles />}
+        <main id="main">{children}</main>{!site.demo && <HeroNav />}{!site.demo && <ChalkTitles />}{!site.demo && <Reveal />}
         <footer className="s-foot"><div className="wrap fgrid">
           {site.demo ? <div><div className="fl">{site.name}</div><p>A made-up online school, showing what OH-SO EdTech can do.</p></div>
           : <div><Link href="/" className="f-logo" aria-label="OH-SO ED: home"><img src={logo} alt="OH-SO ED" width={773} height={224} /></Link><p>Outstanding online education for home-educated students.</p>

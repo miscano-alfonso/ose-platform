@@ -55,7 +55,6 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
   for (const c of [...open].sort((a, b) => (a.places_left ?? 99) - (b.places_left ?? 99))) { const k = `${c.level}|${c.subject}`; if (!seen.has(k)) { seen.add(k); withSpace.push(c); } }
   const show = withSpace.slice(0, 16).sort((a, b) => a.level_order - b.level_order || a.subject.localeCompare(b.subject));
   const from = prices[0];
-  const classes = new Set(courses.filter((c) => c.status !== "hidden" && c.status !== "closed").map((c) => c.code)).size;
   return <div className="bh bh-home">
     <div className="bh-grid">
       <section className="bh-t bh-hero">
@@ -82,19 +81,16 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
           <span className="lv">{c.level}</span><b>{c.subject}</b>
           <span>{c.slots?.length ? c.slots.map((x) => `${DAYS[x.d]} ${x.t}`).join(" & ") : "Times to be announced"}</span></Link>; })}</div></div>
       </section>}
-      <Link className="bh-t bh-half bh-cta bh-homeed" href="/home-ed"><p className="k">New to home education?</p>
+      <div className="bh-three">
+      <Link className="bh-t bh-cta bh-homeed" href="/home-ed"><p className="k">New to home education?</p>
         <b>Start here: how home education works in the UK, and how we fit in →</b></Link>
-      <Link className="bh-t bh-half bh-cta bh-faq" href="/faq"><p className="k">FAQs</p>
+      <Link className="bh-t bh-cta bh-faq" href="/faq"><p className="k">FAQs</p>
         <b>Questions about lessons, payments, exams or Google Classroom? →</b></Link>
-      <section className="bh-t bh-half bh-how"><h2 style={{ margin: 0, fontSize: 24 }}>How it works</h2>
-        <p>Book online and pay by term or in instalments. Your child gets a Google Classroom invitation, joins lessons live in Google Meet, and finds every recording in Classroom afterwards. You see attendance, work and reports in your account.</p></section>
-      <section className="bh-t bh-half bh-facts">
-        <div><p className="n">98%</p><p className="l">GCSE pass rate</p></div>
-        <div><p className="n">{classes || 18}</p><p className="l">classes this year</p></div>
-        <div><p className="n sky">Free</p><p className="l">taster lessons</p></div>
-      </section>
+      <section className="bh-t bh-how"><h2 style={{ margin: 0, fontSize: 24 }}>How it works</h2>
+        <p>Your child gets a Google Classroom invitation, joins lessons live in Google Meet, and finds every recording in Classroom afterwards. You see attendance, work and reports in your account.</p></section>
+      </div>
     </div>
-    <MeetHead title={txt.head_title} text={txt.head_text} photo />
+    <MeetHead title={txt.head_title} text={txt.head_text} photo bento />
     <Reviews rating={txt.reviews_rating} count={txt.reviews_count} url={txt.reviews_url} widget={txt.reviews_widget.replace(/[^\w-]/g, "")} />
     <MemberOf />
   </div>;
