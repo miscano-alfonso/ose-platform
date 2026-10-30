@@ -1,4 +1,3 @@
-import { HERO_DAY } from "./hero-day";
 import { marksHtml } from "./hero-marks";
 import { heroMarks, arranger } from "@/lib/hero-marks-store";
 import { HeroComposer } from "./HeroComposer";
@@ -59,7 +58,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
     <div className="bh-grid">
       <section className="bh-t bh-hero">
         {arr ? <HeroComposer initial={marks} /> : <div className="bh-marks" aria-hidden="true" dangerouslySetInnerHTML={{ __html: marksHtml(marks) }} />}
-        <div className="bh-scene" role="img" aria-label="A pencil sketch of a teenager with headphones working at a laptop by a tall window" dangerouslySetInnerHTML={{ __html: HERO_DAY }} />
+        <div className="bh-scene" role="img" aria-label="A drawing of a student working at a laptop at a desk, with pencils, books and light bulbs around"><HeroArt /></div>
         <p className="k">{txt.home_eyebrow}</p>
         <h1>Live lessons.<br />Real teachers.<br /><span className="pop">From home.</span></h1>
         <p>{txt.home_lead}</p>

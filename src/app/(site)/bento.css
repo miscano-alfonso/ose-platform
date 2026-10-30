@@ -624,3 +624,7 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
 /* room inside the sliding row so a lifted card and its shadow aren't cut off */
 .bh-home .bh-marquee{padding-top:12px;margin-top:-12px;padding-bottom:30px;margin-bottom:-24px}
 @media (prefers-reduced-motion:reduce){.bh-home a.bh-t:hover,.bh-home .bh-course:hover{transform:none}}
+
+/* home hero: the illustration from ohsoed.co.uk (the banner with its eight sketched icons, HeroArt.tsx) instead of the drawn scene; the floating symbols stay */
+.bh .bh-scene .hero-art{position:relative;top:auto;right:auto;left:auto;width:100%;max-width:none;margin:0;justify-self:auto}
+@media (prefers-reduced-motion:reduce){.bh-scene .hero-banner,.bh-scene .hero-ic,.bh-scene .hero-ic img{animation:none}}
