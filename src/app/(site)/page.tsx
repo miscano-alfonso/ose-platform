@@ -7,6 +7,7 @@ import { CourseCard, roundelSrc } from "./CourseCard";
 import { HeroLessons } from "./HeroLessons";
 import { MeetHead, Reviews, MemberOf } from "./HomeExtras";
 import { HeroArt, Ticker } from "./HeroArt";
+import { TiltTiles } from "./TiltTiles";
 import { SpaceAvailable } from "./SpaceAvailable";
 import { siteText } from "@/lib/site-content";
 import { siteInfo } from "@/lib/db";
@@ -54,7 +55,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
   for (const c of [...open].sort((a, b) => (a.places_left ?? 99) - (b.places_left ?? 99))) { const k = `${c.level}|${c.subject}`; if (!seen.has(k)) { seen.add(k); withSpace.push(c); } }
   const show = withSpace.slice(0, 16).sort((a, b) => a.level_order - b.level_order || a.subject.localeCompare(b.subject));
   const from = prices[0];
-  return <div className="bh bh-home">
+  return <div className="bh bh-home"><TiltTiles />
     <div className="bh-grid">
       <section className="bh-t bh-hero">
         {arr ? <HeroComposer initial={marks} /> : <div className="bh-marks" aria-hidden="true" dangerouslySetInnerHTML={{ __html: marksHtml(marks) }} />}
@@ -78,7 +79,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="rd" src={roundelSrc(c.subject)} alt="" width={64} height={64} loading="lazy" />
           <span className="lv">{c.level}</span><b>{c.subject}</b>
-          <span>{c.slots?.length ? c.slots.map((x) => `${DAYS[x.d]} ${x.t}`).join(" & ") : "Times to be announced"}</span></Link>; })}</div></div>
+          <span className="bh-times">{c.slots?.length ? c.slots.map((x, j) => <i key={j}>{DAYS[x.d]} {x.t}</i>) : "Times to be announced"}</span></Link>; })}</div></div>
       </section>}
       <div className="bh-three bh-two">
       <Link className="bh-t bh-cta bh-homeed" href="/home-ed"><p className="k">New to home education?</p>

@@ -630,3 +630,26 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
 @media (prefers-reduced-motion:reduce){.bh-scene .hero-banner,.bh-scene .hero-ic,.bh-scene .hero-ic img{animation:none}}
 /* phone menu: bigger text, half the space between rows (30 Oct) */
 @media (max-width:1080px){.bt .s-nav .s-links{--nav-gap:6px;font-size:22px}.bt .s-nav .s-links a{line-height:1.25}}
+
+/* home: tiles and course cards tilt towards the mouse (TiltTiles.tsx sets --rx/--ry) as well as lifting */
+@media (hover:hover) and (pointer:fine){
+  .bh-home a.bh-t,.bh-home .bh-course{transform:perspective(1100px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(0);transition:transform .45s cubic-bezier(.2,.7,.2,1),box-shadow .35s,background-color .25s}
+  .bh-home a.bh-t.tilt-on,.bh-home .bh-course.tilt-on{transform:perspective(1100px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-8px);transition:transform .12s ease-out,box-shadow .35s,background-color .25s}
+  .bh-home a.bh-t:hover,.bh-home .bh-course:hover{transform:perspective(1100px) rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateY(-8px)}
+}
+@media (prefers-reduced-motion:reduce){.bh-home a.bh-t,.bh-home .bh-course,.bh-home a.bh-t:hover,.bh-home .bh-course:hover{transform:none}}
+/* the reveal animation kept holding transform:none on the home tiles, so the lift and tilt never showed on them: let go once it has played */
+html.rv .bt .bh-home :is(.bh-grid > .bh-t,.bh-three > .bh-t).rv-in{animation-fill-mode:backwards!important}
+/* home course cards: each lesson day and time on its own line, sitting on the bottom of the card */
+.bh-home .bh-course .bh-times{margin-top:auto;display:grid;gap:2px}
+.bh-home .bh-course .bh-times i{font-style:normal;display:block}
+/* courses page: the level choice sits in the title panel, bottom right, as big pills */
+.bt .s-phead .ph-tabs{display:flex;flex-wrap:wrap;gap:12px;margin:24px 0 0;padding:0;border:0;background:none}
+.bt .s-phead .ph-tabs a{font-size:clamp(17px,1.6vw,22px);font-weight:500;letter-spacing:0;text-transform:none;padding:12px 28px;border-radius:999px;border:1.5px solid rgba(238,240,247,.55);background:transparent;color:#eef0f7;text-decoration:none;transition:background-color .2s,color .2s,border-color .2s}
+.bt .s-phead .ph-tabs a:hover,.bt .s-phead .ph-tabs a:focus-visible{background:#5fe0e8;border-color:#5fe0e8;color:#0f1747}
+.bt .s-phead .ph-tabs a.on{background:#eef0f7;border-color:#eef0f7;color:#0f1747}
+@media (min-width:900px){.bt .s-phead .ph-tabs{position:absolute;right:clamp(28px,4vw,52px);bottom:clamp(28px,4vw,52px);margin:0;justify-content:flex-end}}
+.bt .s-phead .ph-tabs{justify-content:flex-start;position:relative;z-index:2}
+.bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible){background:rgba(15,23,71,.6);backdrop-filter:blur(4px)}
+@media (max-width:600px){.bt .s-phead .ph-tabs{gap:8px}.bt .s-phead .ph-tabs a{padding:10px 18px;font-size:17px}}
+@media (min-width:900px){.bt .s-phead .ph-tabs{position:absolute;justify-content:flex-end}}

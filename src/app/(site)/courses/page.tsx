@@ -19,13 +19,13 @@ export default async function Courses({ searchParams }: { searchParams: Promise<
   const list = inYear.filter((c) => c.level === lv);
   const href = (y: string, l?: string) => `/courses?year=${encodeURIComponent(y)}${l ? `&level=${encodeURIComponent(l)}` : ""}`;
   return (<>
-    <section className="s-phead"><div className="wrap"><h1>Courses</h1><p>Choose a level to see subjects, lesson times and prices.</p></div></section>
+    <section className="s-phead"><div className="wrap"><h1>Courses</h1><p>Choose a level to see subjects, lesson times and prices.</p>
+      <nav className="tabs ph-tabs" aria-label="Level">{levels.map((l) =>
+        <Link key={l} href={href(yr.year_label, l)} className={l === lv ? "on" : ""} aria-current={l === lv ? "page" : undefined}>{l}</Link>)}</nav></div></section>
     <section className="s-sec"><div className="wrap">
       {years.length > 1 && <nav className="yrtabs" aria-label="School year">{years.map((y) =>
         <Link key={y.year_label} href={href(y.year_label)} className={y.year_label === yr.year_label ? "on" : ""} aria-current={y.year_label === yr.year_label ? "page" : undefined}>
           <b>{yearLabel(y.year_label)}</b><span>{y.is_next ? `Starts ${monthYear(y.year_start)}` : "This year · join now"}</span></Link>)}</nav>}
-      <nav className="tabs" aria-label="Level">{levels.map((l) =>
-        <Link key={l} href={href(yr.year_label, l)} className={l === lv ? "on" : ""} aria-current={l === lv ? "page" : undefined}>{l}</Link>)}</nav>
       <div className="cgrid">{list.map((c) => <CourseCard key={c.code} c={c} mark={site.demo ? "DEMO" : undefined} />)}</div>
       {!list.length && <p>No courses to show yet.</p>}
     </div></section>
