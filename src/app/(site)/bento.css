@@ -1059,3 +1059,20 @@ html:not([data-theme=dark]) .bt .mc-foot .btn{color:var(--b-ink);border-color:va
 @media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .mc-foot .btn{color:#eef0f7;border-color:rgba(255,255,255,.85)}}
 html[data-theme=dark] .bt .mc-foot .btn{color:#eef0f7;border-color:rgba(255,255,255,.85)}
 .bt .mc-foot .btn:hover,.bt .mc-foot .btn:focus-visible{background:#68bbe4!important;border-color:#68bbe4!important;color:#050f2d!important}
+/* workshop page (31 Oct): details tile on the left, booking form tile on the right (stays in view while scrolling) */
+.bt .wk-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;align-items:start}
+.bt .wk-tile{background:var(--b-tile);border:1px solid var(--b-line);border-radius:28px;padding:clamp(18px,2vw,28px);display:flex;flex-direction:column;gap:16px;min-width:0}
+.bt .wk-pic{border-radius:20px;overflow:hidden;background:#050f2d}.bt .wk-pic img{display:block;width:100%;height:auto;aspect-ratio:16/9;object-fit:cover}
+.bt .wk-tile .mc-tags,.bt .wk-sum,.bt .wk-facts{margin-inline:clamp(4px,1vw,12px)}
+.bt .wk-sum{margin-top:0;margin-bottom:0;font-size:clamp(17px,1.35vw,19px);line-height:1.65}
+.bt .wk-facts{width:auto}.bt .wk-facts th{color:var(--b-sky)}
+.bt .wk-book{position:sticky;top:calc(var(--navh,96px) + 20px)}
+.bt .wk-book .ct-form{display:flex;flex-direction:column}
+.bt .wk-book h2{margin:0 0 4px}
+.bt .wk-fs{border:0;margin:0;padding:0;display:grid;gap:10px}
+.bt .wk-fs legend{padding:0;margin-bottom:10px;font-weight:500}
+.bt .wk-go{align-self:flex-start;font:inherit;font-weight:500;font-size:17px;padding:13px 28px;border-radius:999px;background:#68bbe4;color:#050f2d;border:2px solid #68bbe4;cursor:pointer;transition:background-color .2s,border-color .2s}
+.bt .wk-go:hover,.bt .wk-go:focus-visible{background:#eef0f7;border-color:#eef0f7}
+.bt .wk-done p:not(.ab-k){margin:0;line-height:1.6}
+.bt .mc-link{color:inherit;text-decoration:none}.bt .mc-link:hover{color:var(--b-sky)}
+@media (max-width:900px){.bt .wk-grid{grid-template-columns:minmax(0,1fr)}.bt .wk-book{position:static}}

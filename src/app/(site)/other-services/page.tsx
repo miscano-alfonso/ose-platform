@@ -48,11 +48,11 @@ function WorkshopCard({ w }: { w: Workshop }) {
     <div className="mc-body">
       <p className="mc-tags"><span className="mc-tag t-work">Workshop</span>{w.level && <span className="mc-tag">{w.level}</span>}{w.subject && <span className="mc-tag">{w.subject}</span>}
         {w.places_left !== null && w.places_left <= 3 && <span className="mc-tag t-few">{full ? "Full" : "Few places left"}</span>}</p>
-      <h2>{w.title}</h2>
+      <h2><Link className="mc-link" href={`/other-services/workshop/${w.slug}`}>{w.title}</Link></h2>
       <p className="mc-sub">{when(w.starts_at)} · {w.minutes} minutes{w.teacher ? ` · ${w.teacher}` : ""}</p>
       {w.summary && <p>{w.summary}</p>}
       <div className="mc-foot"><p className="mc-price">{w.price_pence === 0 ? "Free" : money(w.price_pence)}
         {w.enrolled_price_pence !== null && w.enrolled_price_pence < w.price_pence && <small> · {w.enrolled_price_pence === 0 ? "free" : money(w.enrolled_price_pence)} for our students</small>}</p>
-        {full ? <span className="btn btn-line" aria-disabled="true">Full</span> : <span className="btn btn-brand" aria-disabled="true" title="Online booking opens soon">Book now</span>}</div>
+        {full ? <span className="btn btn-line" aria-disabled="true">Full</span> : <Link className="btn btn-brand" href={`/other-services/workshop/${w.slug}`}>Book now</Link>}</div>
     </div></article>;
 }

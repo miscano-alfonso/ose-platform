@@ -29,11 +29,11 @@ export default async function Enquiries() {
             <td>{w.booked ? <span className="pill good">Booked</span> : w.emailed ? <span className="pill info">Invited {d(w.emailed)}</span> : <span className="muted">Waiting</span>}</td></tr>)}
         </tbody></table></div></section>; })}
     <section className="card"><h2>Taster lessons</h2><p className="cs">They have their own page.</p><Link className="abtn sm" href="/admin/tasters">Open Tasters</Link></section>
-    <section className="card"><h2>Enquiries</h2><p className="cs">Messages from the contact form and past paper marking requests. Reply by email, then mark it replied.</p>
+    <section className="card"><h2>Enquiries</h2><p className="cs">Messages from the contact form, past paper marking requests and workshop bookings. Reply by email, then mark it replied.</p>
       {enquiries.length === 0 ? <p className="empty">No enquiries.</p> : enquiries.map((e) => <div className="li" key={e.id} style={{ alignItems: "flex-start" }}>
         <span className={`pill ${e.handled_at ? "mute" : "info"}`}>{e.handled_at ? "Replied" : e.kind}</span>
         <div className="t"><b>{e.name}{e.levels.length ? ` · ${e.levels.join(", ")}` : ""} · <a href={`mailto:${e.email}`}>{e.email}</a></b>
-          <span>{e.kind === "marking" ? `${e.subject ?? "Past paper"}${e.child_name ? ` for ${e.child_name}` : ""} · ` : ""}{e.message ? `${e.message} · ` : ""}{d(e.created_at)}{e.heard_about ? ` · heard via ${e.heard_about}` : ""}</span>
+          <span>{e.kind === "marking" || e.kind === "workshop" ? `${e.subject ?? "Past paper"}${e.child_name ? ` for ${e.child_name}` : ""} · ` : ""}{e.message ? `${e.message} · ` : ""}{d(e.created_at)}{e.heard_about ? ` · heard via ${e.heard_about}` : ""}</span>
           {e.has_file && <a className="abtn sm" style={{ justifySelf: "start", marginTop: 6 }} href={`/admin/enquiry-file/${e.id}`}>Download the paper</a>}</div>
         <form action={setEnquiryHandledAction}><input type="hidden" name="id" value={e.id} /><input type="hidden" name="handled" value={e.handled_at ? "0" : "1"} />
           <button className="abtn sm" type="submit">{e.handled_at ? "Reopen" : "Mark replied"}</button></form></div>)}
