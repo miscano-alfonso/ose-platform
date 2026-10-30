@@ -425,11 +425,22 @@ html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-ra
 .bh .bh-hero>.bh-scene{position:absolute;z-index:1;right:var(--side);top:calc(var(--navh) + (100svh - var(--navh) - min(calc(100svh - var(--navh) - 10svh),calc(46vw / 1.154))) / 2);
   width:min(46vw,calc((100svh - var(--navh) - 10svh) * 1.154));max-width:none;pointer-events:none}
 .bh-scene svg{display:block;width:100%;height:auto}
-.bh-scene svg .marks{animation:bhfloat 9s ease-in-out infinite}
-@keyframes bhfloat{50%{transform:translateY(-6px)}}
-@media (prefers-reduced-motion:reduce){.bh-scene svg .marks{animation:none}}
+.bh-scene svg .m{transform-box:fill-box;transform-origin:center;animation:bhmark 6s ease-in-out infinite}
+.bh-scene svg g:nth-child(2n) > .m{animation-duration:7.5s;animation-direction:reverse}
+.bh-scene svg g:nth-child(3n) > .m{animation-duration:5.2s}
+.bh-scene svg g:nth-child(1) > .m{animation-delay:-1s}.bh-scene svg g:nth-child(4) > .m{animation-delay:-2.4s}.bh-scene svg g:nth-child(5) > .m{animation-delay:-3.1s}
+.bh-scene svg g:nth-child(7) > .m{animation-delay:-4.2s}.bh-scene svg g:nth-child(8) > .m{animation-delay:-.6s}.bh-scene svg g:nth-child(10) > .m{animation-delay:-3.7s}
+@keyframes bhmark{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-14px) rotate(-7deg)}50%{transform:translateY(-4px) rotate(4deg)}75%{transform:translateY(-18px) rotate(8deg)}}
+@media (prefers-reduced-motion:reduce){.bh-scene svg .m{animation:none}}
 @media (max-aspect-ratio:1/1) and (min-width:761px){.bh .bh-hero>.bh-scene{right:auto;left:50%;transform:translateX(-50%);top:calc(var(--navh) + 2svh);width:min(62vw,calc(36svh * 1.154))}}
 @media (max-width:760px){.bh .bh-hero>.bh-scene{display:none}}
 /* lighter headlines and subheadings (Leanne, 30 Oct) */
 .bt h1,.bt h2,.bt h3{font-weight:500}
 .bh-home .bh-hero h1{font-weight:400;letter-spacing:-.02em}
+/* floating subject symbols (update 225): home hero (.bh-marks) and title panels (.ph-art), behind the words */
+.bh .bh-hero>.bh-marks{position:absolute;inset:0;z-index:1;max-width:none;pointer-events:none}
+.bh-marks .mk,.ph-art .mk{position:absolute;left:var(--x);top:var(--y);width:calc(54px * var(--s,1));height:auto;overflow:visible;color:#9ff4f8;transform:translate(-50%,-50%);pointer-events:none}
+.bh-marks .mk g,.ph-art .mk g{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;transform-box:fill-box;transform-origin:center;animation:bhmark var(--d,6s) ease-in-out var(--dl,0s) infinite}
+.ph-art .mk{width:calc(48px * var(--s,1))}
+@media (prefers-reduced-motion:reduce){.bh-marks .mk g,.ph-art .mk g{animation:none}}
+@media (max-width:760px){.bh .bh-hero>.bh-marks{display:none}}

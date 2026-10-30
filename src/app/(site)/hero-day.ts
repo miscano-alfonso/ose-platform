@@ -39,10 +39,5 @@ export const HERO_DAY = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60
   <path d="M200 196 c-10 -4 -14 12 -4 18 c4 2 8 -2 6 -6" fill="#e7b99a" stroke="#c98e6e" stroke-width="2"/>
   <path d="M150 190 C150 150 196 128 236 160" fill="none" stroke="#e3cd4b" stroke-width="6" stroke-linecap="round"/>
   <rect x="190" y="186" width="18" height="30" rx="8" fill="#e3cd4b"/>
-  <g class="marks" fill="none" stroke="#9ff4f8" stroke-width="2" stroke-linecap="round" opacity=".7">
-    <path d="M60 120 h24 M66 120 v20 M78 120 v16 c0 4 3 5 6 3"/>
-    <path d="M140 70 l14 -22 l14 22 z"/>
-    <path d="M520 120 q10 -18 20 0 t20 0"/>
-    <circle cx="536" cy="200" r="4"/><ellipse cx="536" cy="200" rx="16" ry="6"/><ellipse cx="536" cy="200" rx="16" ry="6" transform="rotate(60 536 200)"/>
-  </g>
+  <g class="marks" fill="none" stroke="#9ff4f8" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><g transform="translate(64 128)"><g class="m"><path d="M-14 -8 h28 M-7 -8 v22 M6 -8 v18 c0 4 4 6 8 3"/></g></g><g transform="translate(160 64)"><g class="m"><path d="M-14 12 l14 -24 l14 24 z"/></g></g><g transform="translate(540 120)"><g class="m"><path d="M-22 0 q11 -18 22 0 t22 0"/></g></g><g transform="translate(546 210)"><g class="m"><circle r="4"/><ellipse rx="18" ry="7"/><ellipse rx="18" ry="7" transform="rotate(60)"/><ellipse rx="18" ry="7" transform="rotate(-60)"/></g></g><g transform="translate(40 300)"><g class="m"><path d="M-10 0 h20 M0 -10 v20"/></g></g><g transform="translate(120 40)"><g class="m"><path d="M-16 2 l6 -2 l6 14 l10 -30 h18"/></g></g><g transform="translate(560 300)"><g class="m"><path d="M-14 -6 l14 18 M0 -6 l-14 18 M4 -14 c0 -6 10 -6 10 0 c0 4 -10 8 -10 12 h11"/></g></g><g transform="translate(232 40)"><g class="m"><path d="M0 -12 l3.5 7.5 l8 1 l-6 5.5 l1.6 8 l-7.1 -4 l-7.1 4 l1.6 -8 l-6 -5.5 l8 -1 z"/></g></g><g transform="translate(60 420)"><g class="m"><path d="M-18 -10 c8 -3 14 -2 18 2 c4 -4 10 -5 18 -2 v20 c-8 -3 -14 -2 -18 2 c-4 -4 -10 -5 -18 -2 z M0 -8 v20"/></g></g><g transform="translate(560 440)"><g class="m"><path d="M-10 0 h20 M0 -10 v20"/></g></g></g>
 </svg>`;
