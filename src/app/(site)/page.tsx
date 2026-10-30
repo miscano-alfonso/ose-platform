@@ -2,7 +2,7 @@ import { GirlHero } from "./GirlHero";
 import { girlMarks, arranger } from "@/lib/hero-marks-store";
 import Link from "@/app/(site)/HoverLink";
 import { getFewPlaces, getBundles, getSpaceAvailable, getCourses, getPriceRows, getTeachers, type Course } from "@/lib/data";
-import { CourseCard, roundelSrc } from "./CourseCard";
+import { CourseCard, roundelSrc, subjectColour } from "./CourseCard";
 import { HeroLessons } from "./HeroLessons";
 import { MeetHead, Reviews, MemberOf } from "./HomeExtras";
 import { HeroArt, Ticker } from "./HeroArt";
@@ -72,7 +72,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
       {show.length > 0 && <section className="bh-t bh-wide">
         <div className="bh-head"><h2>Courses with space</h2><Link className="go" href="/courses">All courses →</Link></div>
         <div className="bh-marquee"><div className="bh-track" style={{ ["--n" as string]: show.length }}>{[...show, ...show].map((c, i) => { const dup = i >= show.length;
-          return <Link key={i} className="bh-course" href={`/courses/${c.page_slug}`} style={{ ["--c" as string]: c.colour }} aria-hidden={dup || undefined} tabIndex={dup ? -1 : undefined}>
+          return <Link key={i} className="bh-course" href={`/courses/${c.page_slug}`} style={{ ["--c" as string]: subjectColour(c.subject, c.colour) }} aria-hidden={dup || undefined} tabIndex={dup ? -1 : undefined}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="rd" src={roundelSrc(c.subject)} alt="" width={64} height={64} loading="lazy" />
           <span className="lv">{c.level}</span><b>{c.subject}</b>

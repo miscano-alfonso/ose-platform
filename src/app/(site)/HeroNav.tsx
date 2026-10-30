@@ -19,9 +19,11 @@ export function HeroNav() {
       nav.classList.toggle("over", over); nav.classList.toggle("past", !!hero && !over);
       nav.classList.toggle("top", window.scrollY < 8);
       // the level buttons under some title panels: once stuck under the bar they get a solid band with a line beneath (and the bar loses its own line)
-      const ph = document.querySelector<HTMLElement>(".ph-sticky");
+      // (course pages: the slim title band works the same way, and its roundel grows a "stuck" class too)
+      const ph = document.querySelector<HTMLElement>(".ph-sticky, .cd-sticky");
       const stuck = !!ph && window.scrollY > 8 && Math.abs(ph.getBoundingClientRect().top - nav.offsetHeight) < 1.5;
       ph?.classList.toggle("stuck", stuck); nav.classList.toggle("ph-on", stuck);
+      document.querySelector(".cd-badge")?.classList.toggle("stuck", stuck);
       if (ph) root.style.setProperty("--phh", `${ph.offsetHeight}px`);
     };
     set(); requestAnimationFrame(set); const t = window.setTimeout(set, 300);   // after the new page has laid out

@@ -5,7 +5,6 @@ import { getCoursePage } from "@/lib/data";
 import { money, DAYS, monthYear } from "@/lib/format";
 import { roundelSrc, roundelFace } from "../../../CourseCard";
 import { siteInfo } from "@/lib/db";
-import { PrintButton } from "./PrintButton";
 
 export const dynamic = "force-dynamic";
 
@@ -33,13 +32,15 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
       <div><p className="eyebrow"><Link href={`/courses?level=${encodeURIComponent(p.level)}`}>← Back to courses</Link></p>
         <div className="cd-title"><h1>{p.subject}</h1>{g?.label && <span className="sticky sl-few cd-hlabel">{g.label_text ?? g.label}</span>}</div><p>{p.level}{g ? ` · ${g.course_years} year course` : ""}</p></div>
     </div></section>
+    {/* once the title panel scrolls up, a slim band with the title stays under the menu, the roundel sticking on its edge */}
+    <div className="cd-sticky" aria-hidden="true"><b>{p.subject}</b><span>{p.level}{g ? ` · ${g.course_years} year course` : ""}</span></div>
     <div className="cd-badge"><div className="wrap">
       {site.demo ? <div className="roundel cd-roundel" style={{ ["--c" as string]: p.colour }} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={roundelSrc(p.subject, site.demo)} alt="" width={140} height={140} /></div>
         : <div className="cd-roundel cd-rtext" style={{ ["--rbg" as string]: roundelFace(p.subject).bg }} aria-hidden="true"><span>OH–SO</span><span>{roundelFace(p.subject).word}</span></div>}
-      {g && <span className={`btn ${g.shows_waitlist ? "btn-line" : "btn-brand"} cd-hcart`} aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>}
     </div></div>
+    {g && <div className="cd-cartrow"><div className="wrap"><span className={`btn ${g.shows_waitlist ? "btn-line" : "btn-brand"} cd-hcart`} aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Add to cart"}</span></div></div>}
     <section className="s-sec"><div className="wrap cd-grid">
       <div>
         <h2 className="cd-h">Course details</h2>
@@ -66,7 +67,6 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
         </div>)}
         {p.video && <div className="cd-video"><h2 className="cd-h">Sample lesson</h2><Video url={p.video} title={p.video_title ?? `${p.level} ${p.subject} sample lesson`} />
           {p.video_title && <p className="muted">{p.video_title}</p>}</div>}
-        <div className="cd-tools"><Link className="btn btn-line sm" href="/courses">Back to courses</Link><PrintButton /></div>
       </div>
       <div>
         <h2 className="cd-h">Topics</h2>

@@ -26,11 +26,13 @@ const FACE: [RegExp, string, string][] = [
   [/business/i, "#9fb4cd", "Business"], [/economics/i, "#506fa6", "Economics"], [/media/i, "#cf65a6", "Media"], [/religio/i, "#cf65a6", "Religion"],
 ];
 export const roundelFace = (subject: string) => { const f = FACE.find(([re]) => re.test(subject)); return f ? { bg: f[1], word: f[2] } : { bg: "#000c4a", word: "Ed" }; };
+/** The subject's roundel colour (so Biology and Chemistry hover in the Science yellow), or the course's own colour for subjects without a roundel. */
+export const subjectColour = (subject: string, fallback: string) => FACE.find(([re]) => re.test(subject))?.[1] ?? fallback;
 
 export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }) {
   const lessons = `${c.lessons_per_week} lesson${c.lessons_per_week > 1 ? "s" : ""} per week`;
   return (
-    <article className={`course${c.is_full ? " is-full" : ""}`} style={{ ["--c" as string]: c.colour }}>
+    <article className={`course${c.is_full ? " is-full" : ""}`} style={{ ["--c" as string]: mark === "OH–SO" ? subjectColour(c.subject, c.colour) : c.colour }}>
       <div className="top">
         <div><div className="lvl">{c.level}</div><h3>{c.subject}</h3></div>
         <div className="roundel" style={{ ["--c" as string]: c.colour }} aria-hidden="true">
