@@ -587,3 +587,9 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
   html.menu-open,html.menu-open body{overflow:hidden}
 }
 @media (max-width:1080px){.bt .s-nav.over .s-links a,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links a{border-bottom-color:rgba(255,255,255,.1)}}
+
+/* home: the Home ed and FAQs tiles are deeper; the headteacher, reviews and Member Of sections line up with the tiles' edges */
+.bh-three.bh-two>.bh-t{min-height:clamp(220px,21vw,360px)}
+.bh-three.bh-two>.bh-t b{font-size:clamp(24px,2.3vw,34px);line-height:1.15;max-width:24ch}
+.bt .bh>.s-sec>.wrap{width:100%}
+.bt .bh>.home-head2{padding-top:0}
