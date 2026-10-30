@@ -34,7 +34,7 @@ export async function signInAction(_: unknown, f: FormData): Promise<{ error?: s
   if (!EMAIL.test(email) || !password) return { error: "Enter your email and password.", email };
   const err = await signIn(email, password);
   if (err) return { error: err, email };
-  redirect("/admin");
+  redirect(f.get("cms") === "1" ? "/admin/cms" : "/admin");   // from "Admin" on the OH-SO EdTech site: straight into its editor
 }
 
 export async function setupAction(_: unknown, f: FormData): Promise<{ error?: string; name?: string; email?: string }> {

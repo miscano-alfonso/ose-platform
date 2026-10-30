@@ -1,3 +1,4 @@
+import { cms } from "@/app/osedtech/cms";
 import Link from "next/link";
 import { openDemo } from "./actions";
 import { Shot } from "../bits";
@@ -6,7 +7,7 @@ export const metadata = { title: "Try the demo", description: "Look round a work
 
 export default async function Demo({ searchParams }: { searchParams: Promise<{ error?: string }> }) {
   const sp = await searchParams;
-  return <section className="edt-sec tight"><div className="edt-wrap edt-hero-grid" style={{ alignItems: "start" }}>
+  return cms("demo", <section className="edt-sec tight"><div className="edt-wrap edt-hero-grid" style={{ alignItems: "start" }}>
     <div>
       <p className="edt-eyebrow">No sign-up needed</p>
       <h1 className="edt-h1">Look round a demo school</h1>
@@ -22,5 +23,5 @@ export default async function Demo({ searchParams }: { searchParams: Promise<{ e
       <p className="edt-note" style={{ marginTop: 14 }}>Everything is made up, and nothing is ever emailed, charged or posted from the demo. Other visitors may be looking round at the same time, and the demo is made fresh every day. The first visit of the day can take up to a minute while it’s prepared.</p>
     </div>
     <Shot src="/osedtech/shots/dashboard.png" alt="Demo Academy’s dashboard" url="admin.demoacademy.co.uk" />
-  </div></section>;
+  </div></section>);
 }

@@ -247,3 +247,5 @@
 .edt .edt-eyebrow{margin-bottom:22px}
 .edt .edt-eyebrow:has(+ .edt-h1){margin-bottom:28px}
 .edt-google .edt-gdots{flex:none}
+.edt-foot .edt-admin{color:inherit;opacity:.7;margin-left:10px}
+.edt-foot .edt-admin:hover{opacity:1;color:var(--teal-d)}

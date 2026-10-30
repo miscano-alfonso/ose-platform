@@ -17,12 +17,12 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ h
   const [few, { ks3Pence, bundles }, space, txt, site] = await Promise.all([getFewPlaces(), getBundles(), getSpaceAvailable(), siteText(), siteInfo()]);
   if (!site.demo) return <BentoHome txt={txt} />;
   return (<>
-    <section className="s-hero home"><div className="wrap hero-grid"><div>
+    <section className="s-hero home"><div className="wrap hero-grid" style={heroMode ? undefined : { gridTemplateColumns: "minmax(0, 760px)" }}><div>
       <p className="eyebrow">{txt.home_eyebrow}</p>
       <h1>{txt.home_title}</h1>
       <p className="lead">{txt.home_lead}</p>
       <div className="btns"><Link className="btn btn-accent" href="/taster">Book a taster!</Link><Link className="btn btn-ghost" href="/courses">Our courses</Link></div>
-    </div>{heroMode === "lessons" ? <HeroLessons mode="alone" /> : <HeroArt>{heroMode === "both" && <HeroLessons mode="around" />}</HeroArt>}</div></section>
+    </div>{heroMode === "lessons" ? <HeroLessons mode="alone" /> : heroMode === "both" ? <HeroArt><HeroLessons mode="around" /></HeroArt> : null}</div></section>
     <Ticker items={txt.ticker.split("\n").map((t) => t.trim()).filter(Boolean)} />
 
     {space.length > 0 && <SpaceAvailable items={space} roundels={space.map((c) => roundelSrc(c.subject, site.demo))} />}

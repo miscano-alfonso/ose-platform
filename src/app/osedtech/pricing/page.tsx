@@ -1,5 +1,7 @@
+import { cms } from "@/app/osedtech/cms";
 import Link from "next/link";
-import { Plans } from "./Plans";
+import { Plans, type PlanText } from "./Plans";
+import { cmsText } from "../cms";
 import { COMPARE, PLANS, TRIAL_DAYS, EXTRA_STUDENT, gbp, RIVALS, VERSUS, NAMED_COLS, NAMED_ROWS } from "../plans";
 
 export const metadata = { title: "Pricing", description: "OH-SO EdTech plans for one teacher, a small team or a whole online school. Try any plan free for 30 days." };
@@ -11,13 +13,21 @@ function TrialCtaInline() {
   return <div className="edt-btns"><Link href="/osedtech/trial" className="edt-btn">Start a free trial</Link><Link href="/osedtech/demo" className="edt-btn line">Look round the demo</Link></div>;
 }
 
-export default function Pricing() {
-  return <>
+/** The plan cards' words, through the website editor. */
+async function planTexts(): Promise<PlanText[]> {
+  const w = (s: string) => cmsText("pricing", s);
+  return Promise.all(PLANS.map(async (p) => ({ name: await w(p.name), for: await w(p.for), teachers: await w(p.teachers), students: await w(p.students), cta: await w(p.cta),
+    adds: p.adds ? await w(p.adds) : null, features: await Promise.all(p.features.map(w)), tag: await w("Most popular"), billed: await w("Billed monthly, cancel any time"),
+    monthly: await w("Monthly"), yearly: await w("Yearly · 2 months free"), extra: await w("a month for each extra student") })));
+}
+
+export default async function Pricing() {
+  return cms("pricing", <>
     <section className="edt-sec tight"><div className="edt-wrap edt-center">
       <p className="edt-eyebrow">Pricing</p>
       <h1 className="edt-h1">Pay for the school you run today</h1>
       <p className="edt-lead">Start on your own and move up when you take on teachers or staff. Every plan is free for {TRIAL_DAYS} days, with no card needed.</p>
-      <Plans />
+      <Plans t={await planTexts()} />
       <div className="edt-fine" style={{ textAlign: "left" }}>
         <div><b>No commission on fees</b>Families pay into your own Stripe account. Stripe charges its usual card fees; we take nothing.</div>
         <div><b>Works with Google</b>Your school needs Google Workspace for Classroom and Drive (Google’s subscription is separate). Teach live in Google Meet, Zoom, Teams or any video tool. <Link href="/osedtech#google">What you’ll need</Link></div>
@@ -61,5 +71,5 @@ export default function Pricing() {
       </div>
       <TrialCtaInline />
     </div></section>
-  </>;
+  </>);
 }

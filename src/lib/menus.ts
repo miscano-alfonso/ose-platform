@@ -39,7 +39,7 @@ export const CATALOGUE: Record<MenuArea, MenuItem[]> = {
     it("Tasters", "/admin/tasters", "att"), it("Waiting list & enquiries", "/admin/enquiries", "wait"), it("Messages", "/admin/messages", "mail"), it("Student chat", "/admin/student-chat", "chat"),
     it("Data protection", "/admin/privacy", "set"), it("Rewards", "/admin/rewards", "star"), it("Email", "/admin/email", "mail"), it("Automations", "/admin/automations", "auto"), it("Jobs", "/admin/jobs", "job"),
     it("Overview", "/admin/marketing", "mkt"), it("Newsletter", "/admin/newsletter", "mail"), it("Subscribers", "/admin/subscribers", "fam"), it("Email stats", "/admin/email-stats", "rep"), it("Social", "/admin/social", "mkt"),
-    it("Website", "/admin/website", "web"), it("Home Ed hub", "/admin/home-ed", "web"), it("Page styles", "/admin/styles", "set"),
+    it("Website", "/admin/website", "web"), it("EdTech website", "/admin/cms", "web"), it("Home Ed hub", "/admin/home-ed", "web"), it("Page styles", "/admin/styles", "set"),
     it("School settings", "/admin/school", "set"), it("Teachers", "/admin/teachers", "fam"), it("Staff & access", "/admin/staff", "set"), it("Account", "/admin/account", "set"),
     it("EdTech trials", "/admin/edtech", "set"), it("Solo dashboard", "/admin/solo-dashboard", "home"), it("Menus", "/admin/menus", "menu"), it("Timetable setup", "/admin/timetable-setup", "cal"), it("1:1 tutoring setup", "/admin/tutoring-setup", "fam"), it("Test mode", "/admin/test-mode", "set"), it("Notifications", "/admin/notifications", "set"), it("Email", "/admin/email-settings", "mail"), it("Course labels", "/admin/course-labels", "set"),
   ],
@@ -59,7 +59,7 @@ const hrefs = (a: MenuArea, ...ls: string[]) => ls.map((l) => l.startsWith("/") 
 export const DEFAULT_MENUS: Record<MenuArea, MenuConfig> = {
   admin: { hidden: [], groups: [
     { title: "Marketing", items: hrefs("admin", "Overview", "Newsletter", "Subscribers", "Email stats", "Social") },
-    { title: "Website", items: hrefs("admin", "Website", "Home Ed hub", "Page styles") },
+    { title: "Website", items: hrefs("admin", "Website", "Home Ed hub", "Page styles", "EdTech website") },
     { title: "Main menu", items: CATALOGUE.admin.slice(0, 22).map((x) => x.href) }, // Dashboard first, then the daily pages
     { title: "Settings", items: hrefs("admin", "School settings", "/admin/email-settings", "Notifications", "Course labels", "Test mode", "Timetable setup", "1:1 tutoring setup", "Teachers", "Staff & access", "Account", "EdTech trials", "Solo dashboard", "Menus") },
   ] },

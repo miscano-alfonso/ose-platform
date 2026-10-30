@@ -1,3 +1,4 @@
+import { cms } from "@/app/osedtech/cms";
 import Link from "next/link";
 import { startTrial } from "./actions";
 import { PLANS, TRIAL_DAYS, gbp } from "../plans";
@@ -17,7 +18,7 @@ export default async function Trial({ searchParams }: { searchParams: Promise<Sp
     <p className="edt-lead">We’ve sent a link to <b>{(sp.to ?? "your inbox").slice(0, 200)}</b>. Open it to choose a password, and your {p.name} school opens straight away.</p>
     <p className="edt-note">The link works for 48 hours. Nothing there? Check your junk folder, or <Link href={`/osedtech/trial?plan=${plan}`} style={{ color: "var(--teal-d)" }}>try again</Link>.</p></Done>;
   const self = plan !== "school";
-  return <section className="edt-sec tight"><div className="edt-wrap" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 28 }}>
+  return cms("trial", <section className="edt-sec tight"><div className="edt-wrap" style={{ display: "grid", gridTemplateColumns: "minmax(0,1fr)", gap: 28 }}>
     <div style={{ maxWidth: 760 }}>
       <p className="edt-eyebrow">Free for {TRIAL_DAYS} days · no card needed</p>
       <h1 className="edt-h1">Start your free trial</h1>
@@ -65,7 +66,7 @@ export default async function Trial({ searchParams }: { searchParams: Promise<Sp
         </>}
       </aside>
     </div>
-  </div></section>;
+  </div></section>);
 }
 
 function Done({ eyebrow, title, children }: { eyebrow: string; title: string; children: React.ReactNode }) {

@@ -2,10 +2,11 @@
 import { useActionState, useState } from "react";
 import { signInAction, setupAction, changePasswordAction, inviteAction, acceptInviteAction, importAction, resetPasswordAction } from "./actions";
 
-export function LoginForm() {
+export function LoginForm({ cms }: { cms?: boolean } = {}) {
   const [st, act, busy] = useActionState(signInAction, {});
   return <form action={act} className="box-form" style={{ display: "grid", gap: 14 }}>
     {st.error && <p className="err" role="alert">{st.error}</p>}
+    {cms && <input type="hidden" name="cms" value="1" />}
     <label>Email<input type="email" name="email" autoComplete="username" required defaultValue={st.email} key={"e" + st.email} /></label>
     <label>Password<input type="password" name="password" autoComplete="current-password" required /></label>
     <button type="submit" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>

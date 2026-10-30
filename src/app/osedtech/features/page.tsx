@@ -1,3 +1,4 @@
+import { cms } from "@/app/osedtech/cms";
 import Link from "next/link";
 import { Shot, TrialCta, RecordingVisual, GoogleDots } from "../bits";
 
@@ -46,8 +47,8 @@ const ROWS: Row[] = [
     shot: "/osedtech/shots/social.png", alt: "Building a social post at Demo Academy", url: "admin.demoacademy.co.uk/social" },
 ];
 
-export default function Features() {
-  return <>
+export default async function Features() {
+  return cms("features", <>
     <section className="edt-sec tight"><div className="edt-wrap">
       <p className="edt-eyebrow">Features</p>
       <h1 className="edt-h1">How it works</h1>
@@ -69,5 +70,5 @@ export default function Features() {
       <p className="edt-lead">Start a free trial and we’ll set up your school with your logo and colours. <Link href="/osedtech/pricing" style={{ color: "var(--sun)" }}>Compare the plans</Link>.</p>
       <TrialCta dark />
     </div></section>
-  </>;
+  </>);
 }

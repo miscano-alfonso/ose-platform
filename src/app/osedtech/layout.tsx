@@ -2,6 +2,10 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import "./edtech.css";
 import { Mark } from "./Mark";
+import { siteCms, editor } from "@/lib/edt-cms";
+import { cmsLayout } from "./cms";
+import { CmsStyles } from "./CmsStyles";
+import { CmsEditor } from "./CmsEditor";
 
 // OH-SO EdTech: the software business selling the OH-SO ED platform to other teachers. Its own look, separate from the school's site.
 export const metadata: Metadata = {
@@ -10,8 +14,10 @@ export const metadata: Metadata = {
   icons: { icon: "/osedtech/icon.svg" },
 };
 
-export default function EdTechLayout({ children }: { children: React.ReactNode }) {
-  return <div className="edt">
+export default async function EdTechLayout({ children }: { children: React.ReactNode }) {
+  const { cms, edit, hasDraft, publishedAt } = await siteCms();
+  const ed = edit ? await editor() : null;
+  const tree = <div className="edt">
     <a className="edt-skip" href="#main">Skip to content</a>
     <header className="edt-head"><div className="edt-wrap">
       <Link href="/osedtech" className="edt-logo" aria-label="OH-SO EdTech home"><Mark /></Link>
@@ -29,7 +35,8 @@ export default function EdTechLayout({ children }: { children: React.ReactNode }
     <footer className="edt-foot"><div className="edt-wrap">
       <div><Mark small dark /><p>The platform behind OH-SO ED, for teachers running their own online classes under their own name.</p></div>
       <nav aria-label="Footer"><Link href="/osedtech/features">Features</Link><Link href="/osedtech/pricing">Pricing</Link><Link href="/osedtech/pricing#compare">How we compare</Link><Link href="/osedtech/demo">Demo</Link><Link href="/osedtech/trial">Free trial</Link><a href="/">OH-SO ED, the school</a></nav>
-      <p className="edt-small">© {new Date().getFullYear()} OH-SO EdTech. Prices exclude VAT where it applies.</p>
+      <p className="edt-small">© {new Date().getFullYear()} OH-SO EdTech. Prices exclude VAT where it applies. <a href="/admin/cms" className="edt-admin" rel="nofollow">Admin</a></p>
     </div></footer>
   </div>;
+  return <><CmsStyles s={cms.style} />{await cmsLayout(tree, children)}{ed && <CmsEditor hasDraft={hasDraft} publishedAt={publishedAt} sec={cms.sec} style={cms.style} by={ed.name} />}</>;
 }

@@ -1,3 +1,4 @@
+import { cms } from "@/app/osedtech/cms";
 import Link from "next/link";
 import { Shot, Ico, TrialCta, GoogleDots } from "./bits";
 import { PLANS, TRIAL_DAYS, gbp } from "./plans";
@@ -16,8 +17,8 @@ const FAQ: [string, string][] = [
   ["Is there a contract?", "No. Plans are monthly, or yearly with two months free. You can change plan or cancel at any time."],
 ];
 
-export default function EdTechHome() {
-  return <>
+export default async function EdTechHome() {
+  return cms("home", <>
     <section className="edt-hero"><div className="edt-wrap edt-hero-grid">
       <div>
         <p className="edt-eyebrow">From the team behind OH-SO ED</p>
@@ -151,5 +152,5 @@ export default function EdTechHome() {
       <p className="edt-lead">Try the whole platform free for {TRIAL_DAYS} days, with your own name on it.</p>
       <TrialCta dark />
     </div></section>
-  </>;
+  </>);
 }
