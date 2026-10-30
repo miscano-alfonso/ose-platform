@@ -25,8 +25,10 @@ export default async function Faq() {
   const faqs = await getFaqs();
   return (<>
     <section className="s-phead"><div className="wrap"><h1>FAQs</h1><p>If your question isn’t answered here, please <Link href="/contact">get in touch</Link>.</p></div></section>
-    <section className="s-sec"><div className="wrap faq">
-      {faqs.map((f) => <details key={f.id} id={slug(f.question)}><summary>{f.question}</summary><div className="ans"><Answer text={f.answer} /></div></details>)}
+    <section className="s-sec"><div className="wrap faq faq2">
+      {/* two columns on wider screens: the first half of the questions on the left, the rest on the right (each column grows on its own) */}
+      {[faqs.slice(0, Math.ceil(faqs.length / 2)), faqs.slice(Math.ceil(faqs.length / 2))].map((col, c) => <div key={c} className="faq-col">
+        {col.map((f) => <details key={f.id} id={slug(f.question)}><summary>{f.question}</summary><div className="ans"><Answer text={f.answer} /></div></details>)}</div>)}
     </div></section>
     <FaqAccordion />
   </>);
