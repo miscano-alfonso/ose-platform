@@ -15,6 +15,11 @@ export async function saveBoardAction(page: string, layout: { id: string; size: 
     person = null;
     await saveBoard(page, person, layout as never, known); revalidatePath("/admin/teacher"); return;
   }
+  if (page === "solo-home") {   // Settings → Solo dashboard, in OH-SO ED only: the board every Solo school shows
+    const { requireStaff } = await import("@/lib/auth"), { isPlatformSchool } = await import("@/lib/db");
+    const me = await requireStaff(); if (me.role !== "school_admin" || !(await isPlatformSchool())) return;
+    await saveBoard(page, null, layout as never, known); revalidatePath("/admin/solo-dashboard"); return;
+  }
   const { requireParent, requireStudent } = await import("@/lib/family-auth");
   const f = page === "parent-home" ? await requireParent() : await requireStudent();
   if (!f.viewer) return;   // only an admin viewing as a parent or student

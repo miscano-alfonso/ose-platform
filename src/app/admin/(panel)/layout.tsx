@@ -56,6 +56,11 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const chatAlerts = (await withSchool((q) => q<{ n: number }>(`select (select count(*)::int from student_chat_flags where status = 'open') + (select count(*)::int from student_chat_reports where status = 'open') as n`)).catch(() => [{ n: 0 }]))[0]?.n ?? 0;
   const pl = await schoolPlan();
   const menu = (await menuFor("admin")).map((g) => ({ ...g, items: g.items.filter((i) => !notInPlan(pl.plan, i.href)) })).filter((g) => g.items.length);
+  if (pl.plan === "solo") {   // Solo: the one person is also the teacher, so the teacher's own pages sit in the same menu
+    const { CATALOGUE } = await import("@/lib/menus");
+    const want = ["/admin/teacher/timetable", "/admin/teacher/ones", "/admin/teacher/drive", "/admin/teacher/calendar"];
+    menu.splice(1, 0, { title: "Teaching", items: CATALOGUE.teacher.filter((i) => want.includes(i.href)) });
+  }
   const path = (await headers()).get("x-ose-path") ?? "";
   const testOn = await import("@/lib/test-mode").then((t) => t.isTestMode()).catch(() => false);
   const jar = await cookies();

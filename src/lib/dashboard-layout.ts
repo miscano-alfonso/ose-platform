@@ -65,6 +65,13 @@ export async function boardLayout(page: string, personId: string | null, known: 
   return { layout: mine ?? defaults, defaults, saved: !!mine, std: !!std, mirrored: !!m };
 }
 
+/** The Solo plan's board: the standard arranged in this site's own school (OH-SO ED), shown in every Solo school. */
+export async function soloLayout(known: string[], builtIn: LayoutItem[]): Promise<{ layout: LayoutItem[]; std: boolean }> {
+  const rows = await runAsSchool(siteSchool(), () => withSchool((q) => q<{ value: unknown }>(`select value from meet_kv where key = 'dash_std:solo-home'`))).catch(() => []);
+  const std = clean(rows[0]?.value, known);
+  return { layout: std ?? builtIn, std: !!std };
+}
+
 /** Save (or with null, remove) a person's own arrangement, or the school's standard one when personId is null. */
 export async function saveBoard(page: string, personId: string | null, layout: LayoutItem[] | null, known: string[]) {
   if (!okPage(page) || (personId !== null && !okId(personId))) return;

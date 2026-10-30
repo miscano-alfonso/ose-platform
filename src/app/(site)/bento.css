@@ -412,3 +412,9 @@ body:has(.bh-home,.s-phead){background:transparent}
 .wk-times::before{content:"";position:absolute;left:0;right:0;top:-56px;height:56px;background:var(--b-tile)}
 /* phones: on the home page "Courses with space" tiles the roundel sits on top, at the left, with the level and course name under it */
 @media (max-width:760px){.bh-course{padding-right:18px}.bh-course .rd{position:static;width:56px;height:56px;margin-bottom:2px}.bh-course span:last-child{margin-right:0}}
+/* every button on the school website, in light and dark: hover and keyboard focus are light cyan with navy text */
+.bt .btn:hover,.bt .btn:focus-visible,.bt .rev-widget .rev-ose-btn:hover{background:#5fe0e8!important;color:#0f1747!important;border-color:#5fe0e8!important}
+.bt .btn:hover *,.bt .btn:focus-visible *{color:inherit!important}
+/* the Facebook reviews widget (Elfsight) only has dark text: in dark mode it sits on a light panel so it can be read */
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .rev-widget{background:#eef0f7;color:#0f1747;border-radius:28px;padding:clamp(14px,3vw,30px);color-scheme:light}}
+html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-radius:28px;padding:clamp(14px,3vw,30px);color-scheme:light}
