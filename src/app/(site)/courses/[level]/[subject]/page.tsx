@@ -29,8 +29,9 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
   const g = p.groups[0];
   return (<>
     <section className="s-phead"><div className="wrap cd-head">
-      <div><p className="eyebrow"><Link href={`/courses?level=${encodeURIComponent(p.level)}`}>← Back to courses</Link></p>
-        <div className="cd-title"><h1>{p.subject}</h1>{g?.label && <span className="sticky sl-few cd-hlabel">{g.label_text ?? g.label}</span>}</div><p>{p.level}{g ? ` · ${g.course_years} year course` : ""}</p></div>
+      <div><div className="cd-title"><h1>{p.subject}</h1>{g?.label && <span className="sticky sl-few cd-hlabel">{g.label_text ?? g.label}</span>}</div>
+        <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`}>← Back to courses</Link>
+          {g && <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>}</div></div>
     </div></section>
     {/* once the title panel scrolls up, a slim band with the title stays under the menu, the roundel sticking on its edge */}
     <div className="cd-sticky" aria-hidden="true"><b>{p.subject}</b><span>{p.level}{g ? ` · ${g.course_years} year course` : ""}</span></div>
@@ -40,7 +41,6 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
         <img src={roundelSrc(p.subject, site.demo)} alt="" width={140} height={140} /></div>
         : <div className="cd-roundel cd-rtext" style={{ ["--rbg" as string]: roundelFace(p.subject).bg }} aria-hidden="true"><span>OH–SO</span><span>{roundelFace(p.subject).word}</span></div>}
     </div></div>
-    {g && <div className="cd-cartrow"><div className="wrap"><span className={`btn ${g.shows_waitlist ? "btn-line" : "btn-brand"} cd-hcart`} aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Add to cart"}</span></div></div>}
     <section className="s-sec"><div className="wrap cd-grid">
       <div>
         <h2 className="cd-h">Course details</h2>
