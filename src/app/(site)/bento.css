@@ -914,3 +914,6 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 @media (max-width:600px){.bt .ph-sticky{margin-top:-68px}}
 @media (min-width:900px){.bt:has(.ph-sticky) .wk-day h3{top:calc(var(--navh,96px) + var(--phh,70px) - 1px)}}
 .bt .ph-sticky+.s-sec{padding-top:clamp(44px,4vw,58px)}   /* more room between the title panel and the cards */
+/* more room under the level buttons on the stuck band */
+.bt .ph-sticky{margin-top:-80px;margin-bottom:-18px;padding-top:12px;padding-bottom:24px}
+@media (max-width:600px){.bt .ph-sticky{margin-top:-70px;padding-bottom:18px;margin-bottom:-12px}}
