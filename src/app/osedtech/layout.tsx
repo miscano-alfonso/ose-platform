@@ -17,7 +17,7 @@ export const metadata: Metadata = {
 export default async function EdTechLayout({ children }: { children: React.ReactNode }) {
   const { cms, edit, hasDraft, publishedAt } = await siteCms();
   const ed = edit ? await editor() : null;
-  const tree = <div className="edt">
+  const tree = <div className="edt"><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@600&display=swap" />
     <a className="edt-skip" href="#main">Skip to content</a>
     <header className="edt-head"><div className="edt-wrap">
       <Link href="/osedtech" className="edt-logo" aria-label="OH-SO EdTech home"><Mark /></Link>

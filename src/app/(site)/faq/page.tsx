@@ -1,3 +1,4 @@
+import { FaqAccordion } from "../FaqAccordion";
 import type { Metadata } from "next";
 import Link from "@/app/(site)/HoverLink";
 import { getFaqs } from "@/lib/site-content";
@@ -27,5 +28,6 @@ export default async function Faq() {
     <section className="s-sec"><div className="wrap faq">
       {faqs.map((f) => <details key={f.id} id={slug(f.question)}><summary>{f.question}</summary><div className="ans"><Answer text={f.answer} /></div></details>)}
     </div></section>
+    <FaqAccordion />
   </>);
 }

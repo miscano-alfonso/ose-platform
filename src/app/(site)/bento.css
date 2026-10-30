@@ -1,3 +1,7 @@
+/* Futura without its heavy Bold (Leanne, 30 Oct): every weight on the school website uses Futura Medium where the device has it
+   (Macs, iPhones, iPads). Elsewhere it's Jost, and no bold is made up from it. */
+@font-face{font-family:"OSE Futura";src:local("Futura Medium"),local("Futura-Medium"),local("Futura PT Medium"),local("FuturaPT-Medium");font-weight:100 900;font-style:normal}
+.bt{font-synthesis:none}
 /* ---------- Bento: the school website's look (Oct 2026), light and dark ----------
    Everything is scoped to .bt (the site wrapper, not used on the demo school), so the admin's Page styles
    and the demo theme keep working. Dark follows the device unless the visitor picks light or dark
@@ -11,9 +15,9 @@
 html[data-theme=dark] .bt{--b-bg:#0d0f1c;--b-tile:#171a2e;--b-inset:#1e2238;--b-line:#2a2e4a;--b-ink:#eef0f7;--b-muted:#b9c0e4;--b-faint:#8d93b8;--b-sky:#8fd6f0;--b-good:#5bd393;--b-deep:#080a14;
   --b-hero:radial-gradient(circle at 85% 12%,#24318a 0%,#131633 60%);color-scheme:dark}
 
-.bt{background:var(--b-bg);color:var(--b-ink);font-family:Futura,"Futura PT","Jost","Century Gothic",system-ui,sans-serif;min-height:100vh;transition:background-color .2s}
+.bt{background:var(--b-bg);color:var(--b-ink);font-family:"OSE Futura","Futura PT","Jost","Century Gothic",system-ui,sans-serif;min-height:100vh;transition:background-color .2s}
 html:has(.bt){background:var(--b-bg,#f3f4f8)}
-.bt h1,.bt h2,.bt h3{font-family:Futura,"Futura PT","Jost","Century Gothic",system-ui,sans-serif;font-weight:700;letter-spacing:-.02em}
+.bt h1,.bt h2,.bt h3{font-family:"OSE Futura","Futura PT","Jost","Century Gothic",system-ui,sans-serif;font-weight:700;letter-spacing:-.02em}
 .bt #main{background:transparent}
 .bt a{color:inherit}
 
@@ -33,7 +37,7 @@ html[data-theme=dark] .bt .s-logo img{filter:none}
 .bt .s-ico:hover,.bt .s-ico:focus-visible{background:var(--b-pop);color:var(--b-pop-ink);border-color:var(--b-pop)}
 .bt .s-burger{border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);border-radius:21px}
 .bt .s-burger:hover,.bt .s-burger[aria-expanded=true]{background:var(--b-ink);color:var(--b-bg)}
-.bt .s-theme{height:42px;padding:0 14px;border-radius:21px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);font:500 14.5px Futura,"Futura PT","Jost","Century Gothic",system-ui,sans-serif;display:inline-flex;gap:7px;align-items:center;cursor:pointer}
+.bt .s-theme{height:42px;padding:0 14px;border-radius:21px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);font:500 14.5px "OSE Futura","Futura PT","Jost","Century Gothic",system-ui,sans-serif;display:inline-flex;gap:7px;align-items:center;cursor:pointer}
 .bt .s-theme:hover{background:var(--b-inset)}
 @media (max-width:1080px){
   .bt .s-nav .s-links{background:var(--b-tile);border-radius:20px;padding:6px}
@@ -383,7 +387,7 @@ body:has(.bh-home,.s-phead){background:transparent}
 .bh-home .bh-hero h1.chalkt span.pop{color:var(--b-pop)}
 /* ---------- public timetable: week calendar ---------- */
 .wk-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.wk-filters button{font:600 14px Futura,"Futura PT","Jost","Century Gothic",system-ui,sans-serif;padding:8px 16px;border-radius:999px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);cursor:pointer}
+.wk-filters button{font:600 14px "OSE Futura","Futura PT","Jost","Century Gothic",system-ui,sans-serif;padding:8px 16px;border-radius:999px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);cursor:pointer}
 .wk-filters button[aria-pressed=true]{background:var(--b-ink);color:var(--b-bg);border-color:var(--b-ink)}
 .wk-filters button:hover,.wk-filters button:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
 .wk{display:grid;grid-template-columns:56px repeat(var(--days),minmax(140px,1fr));gap:8px;background:var(--b-tile);border:1px solid var(--b-line);border-radius:24px;padding:16px;overflow-x:auto}
@@ -466,3 +470,19 @@ html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-ra
 .hc-bar button:disabled{opacity:.45;cursor:default}
 .hc-bar .hc-phone{display:none;font-size:13px;color:#c5c9de}
 @media (max-width:760px){.hc-bar .hc-phone{display:block}}
+/* FAQs (update 229): answers slide open (FaqAccordion), clipped while they move; a clear + / – in both themes */
+.bt .faq .ans{overflow:hidden}
+.bt .faq summary::after{color:var(--b-ink);opacity:.75;transition:transform .3s}
+.bt .faq details[open] summary::after{transform:rotate(180deg)}
+.bt .faq summary:hover::after{opacity:1}
+/* option D (update 229): the page title rises from behind a line, the line under it fades up, then the course cards fade up
+   in turn with a slight lean that straightens. Pure CSS, so it plays on every page as it opens, with no flash. */
+@keyframes rvUp{from{transform:translateY(55%);clip-path:inset(0 0 100% 0);opacity:0}to{transform:none;clip-path:inset(0 0 -20% 0);opacity:1}}
+@keyframes rvFade{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes rvLean{from{opacity:0;transform:translateY(16px) rotate(-1deg)}to{opacity:1;transform:none}}
+.bt .s-phead h1{animation:rvUp 1.15s cubic-bezier(.2,.75,.2,1) both}
+.bt .s-phead h1+p{animation:rvFade 1.1s .25s cubic-bezier(.2,.75,.2,1) both}
+.bt .cgrid>.course{animation:rvLean 1.1s cubic-bezier(.2,.75,.2,1) both;animation-delay:.35s;transform-origin:50% 100%}
+.bt .cgrid>.course:nth-child(2){animation-delay:0.47s}.bt .cgrid>.course:nth-child(3){animation-delay:0.59s}.bt .cgrid>.course:nth-child(4){animation-delay:0.71s}.bt .cgrid>.course:nth-child(5){animation-delay:0.83s}.bt .cgrid>.course:nth-child(6){animation-delay:0.95s}.bt .cgrid>.course:nth-child(7){animation-delay:1.07s}.bt .cgrid>.course:nth-child(8){animation-delay:1.19s}.bt .cgrid>.course:nth-child(9){animation-delay:1.31s}.bt .cgrid>.course:nth-child(10){animation-delay:1.43s}
+.bt .cgrid>.course:nth-child(n+11){animation-delay:1.45s}
+@media (prefers-reduced-motion:reduce){.bt .s-phead h1,.bt .s-phead h1+p,.bt .cgrid>.course{animation:none}}
