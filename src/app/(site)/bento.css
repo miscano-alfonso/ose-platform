@@ -612,3 +612,15 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
 .bt .tp3 .tp-body p.tp-lead{font-size:23px;line-height:1.5}
 .bt .tp3 .tp-quals li{font-size:17px}
 @media (max-width:760px){.bt .tp3 .tp-body p{font-size:18px}.bt .tp3 .tp-body p.tp-lead{font-size:21px}}
+
+/* home: more space between the tiles (28px), and every tile and course card lifts on hover ("A · Lift", chosen 30 Oct) */
+.bh,.bh-grid,.bh-three{gap:28px}
+@media (max-width:600px){.bh,.bh-grid,.bh-three{gap:20px}}
+.bh-home a.bh-t,.bh-home .bh-course{transition:transform .35s cubic-bezier(.2,.7,.2,1),box-shadow .35s,background-color .25s}
+@media (hover:hover){
+  .bh-home a.bh-t:hover,.bh-home a.bh-t:focus-visible,.bh-home .bh-course:hover,.bh-home .bh-course:focus-visible{transform:translateY(-8px);box-shadow:0 22px 40px -22px rgba(0,0,0,.7)}
+  html:not([data-theme=dark]) .bh-home a.bh-t:hover,html:not([data-theme=dark]) .bh-home .bh-course:hover{box-shadow:0 22px 40px -22px rgba(15,23,71,.45)}}
+@media (hover:hover) and (prefers-color-scheme:dark){html:not([data-theme=light]) .bh-home a.bh-t:hover,html:not([data-theme=light]) .bh-home .bh-course:hover{box-shadow:0 22px 40px -22px rgba(0,0,0,.7)}}
+/* room inside the sliding row so a lifted card and its shadow aren't cut off */
+.bh-home .bh-marquee{padding-top:12px;margin-top:-12px;padding-bottom:30px;margin-bottom:-24px}
+@media (prefers-reduced-motion:reduce){.bh-home a.bh-t:hover,.bh-home .bh-course:hover{transform:none}}
