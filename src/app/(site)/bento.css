@@ -970,3 +970,6 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 @media (max-width:820px){.bt .s-phead>.wrap.cd-head{padding-bottom:calc(clamp(36px,6vh,64px) + 56px)}}
 /* course page: Course details and Topics in narrower columns, leaving the right-hand strip for the roundel as it follows the page */
 @media (min-width:1000px){.bt .s-sec>.wrap.cd-grid{padding-right:calc(clamp(170px,15vw,220px) + 56px)}}
+/* course card hover (31 Oct): the subject colour fades from the top to nothing, so the buttons sit on the card's usual blue */
+.bt .course:hover,.bt .course:focus-within{background:var(--b-tile) linear-gradient(180deg,color-mix(in srgb,var(--c,#68bbe4) 26%,transparent) 0%,transparent 62%)}
+.bt .bh-course:hover{background:var(--b-inset) linear-gradient(180deg,color-mix(in srgb,var(--c,#68bbe4) 26%,transparent) 0%,transparent 70%)}
