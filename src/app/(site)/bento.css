@@ -1040,3 +1040,11 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 .bt .tp3 .tp-body p:last-child,.bt .home-head2 .hh-text p:last-child{margin-bottom:0}
 /* term dates: the small labels and the weeks line in the light blue */
 .bt .term .lab,.bt .term .tn span{color:var(--b-sky)}
+/* More page (31 Oct): the picture sits in its own rounded box with padding inside the card; card buttons dark blue with a white outline, light blue on hover */
+.bt .mc-pic{background:transparent;padding:clamp(14px,1.6vw,22px);padding-right:0}
+.bt .mc-pic img{border-radius:20px}
+.bt .mcard:not(.dbl) .mc-pic{padding:clamp(14px,1.6vw,22px) clamp(14px,1.6vw,22px) 0}
+@media (max-width:900px){.bt .mcard.dbl .mc-pic{padding:clamp(14px,1.6vw,22px) clamp(14px,1.6vw,22px) 0}}
+.bt .mc-foot .btn{background:#050f2d;color:#eef0f7;border:1px solid rgba(255,255,255,.85)}
+.bt .mc-foot .btn:hover,.bt .mc-foot .btn:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.bt .tp-others{padding-top:clamp(24px,3vw,40px)}   /* other teachers sit closer under the profile */

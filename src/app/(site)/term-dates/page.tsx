@@ -34,7 +34,7 @@ export default async function TermDates({ searchParams }: { searchParams: Promis
               <div className="tn"><b>{t.name}</b><span>{weeks(t.starts_on, t.ends_on)} weeks{now ? " · this term" : t === next ? " · next" : ""}</span></div>
               <div className="td"><span className="lab">Lessons</span><b>{dayMonth(t.starts_on)} – {dayMonth(t.ends_on)}</b></div>
               <div className="td"><span className="lab">Payment</span><b>{t.number === 1 ? "On enrolment" : `Taken ${dayMonth(t.bills_on)}`}</b></div>
-              <div className="td brk"><span className="lab">Break</span><span>{t.break_start ? `${dayMonth(t.break_start)} – ${dayMonth(t.break_end!)}` : "Summer holiday"}</span></div>
+              <div className="td brk"><span className="lab">Break</span><b>{t.break_start ? `${dayMonth(t.break_start)} – ${dayMonth(t.break_end!)}` : "Summer holiday"}</b></div>
             </div>; })}</div></div>; })}
       <p className="ttnote">Termly payments are taken 2 weeks before each new term starts. Term 1 is paid when you enrol.</p>
     </div></section>

@@ -30,8 +30,8 @@ export default async function TeacherProfile({ params }: { params: Promise<{ slu
       </div>
       {t.qualifications.length > 0 && <aside className="tp-side"><div className="tp-tile"><h2>Qualifications</h2><ul className="tp-quals">{t.qualifications.map((q) => <li key={q}>{q}</li>)}</ul></div></aside>}
     </div></section>
-    <section className="s-sec tp-others"><div className="wrap"><h2>Our Teachers</h2><div className="tp-strip">{all.map((o) =>
-      <Link key={o.slug} href={`/teachers/${o.slug}`} className="tp-mini" aria-current={o.slug === t.slug ? "page" : undefined}>
+    <section className="s-sec tp-others"><div className="wrap"><h2>Our Teachers</h2><div className="tp-strip">{all.filter((o) => o.slug !== t.slug).map((o) =>
+      <Link key={o.slug} href={`/teachers/${o.slug}`} className="tp-mini">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {o.photo ? <img src={o.photo} alt="" width={120} height={120} loading="lazy" /> : <span className="tav">{o.name[0]}</span>}
         <b>{o.name}</b><span>{o.designation}</span></Link>)}</div></div></section>
