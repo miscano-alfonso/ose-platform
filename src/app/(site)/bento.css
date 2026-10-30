@@ -905,3 +905,12 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 /* menu bar: more room inside the pill at either end */
 @media (min-width:1081px){.bt .s-nav .s-links{padding-inline:12px}}
 @media (min-width:1361px){.bt .s-nav .s-links{padding-inline:20px}}
+@media (min-width:900px){.wk-times+.wk-day h3::before{left:-76px;width:76px}}
+/* level buttons (31 Oct): they stick straight under the menu bar; once stuck they sit on a solid band, full width, with a line beneath, and the timetable's day names stick below that */
+.bt .ph-sticky{top:var(--navh,96px);margin-top:-78px;margin-bottom:-4px;padding-block:10px;transition:background-color .2s,border-color .2s;border-bottom:1px solid transparent}
+.bt .ph-sticky.stuck{background:var(--b-bg);border-bottom-color:var(--b-line);pointer-events:auto}
+.bt .s-nav:not(.past)~main .ph-sticky.stuck{background:#050f2d;border-bottom-color:#1f3463}
+.bt .s-nav.ph-on{border-bottom-color:transparent}
+@media (max-width:600px){.bt .ph-sticky{margin-top:-68px}}
+@media (min-width:900px){.bt:has(.ph-sticky) .wk-day h3{top:calc(var(--navh,96px) + var(--phh,70px) - 1px)}}
+.bt .ph-sticky+.s-sec{padding-top:clamp(44px,4vw,58px)}   /* more room between the title panel and the cards */
