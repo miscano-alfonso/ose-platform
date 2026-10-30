@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "@/app/(site)/HoverLink";
 import { getWorkshops, type Workshop } from "@/lib/data";
 import { money } from "@/lib/format";
-import { MARKING_SUBJECTS, MARKING_PRICE_PENCE } from "./past-paper-marking/subjects";
+import { MARKING_PRICE_PENCE } from "./past-paper-marking/subjects";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "More", description: "One-off workshops and past paper marking with written feedback, open to every family." };
@@ -23,7 +23,6 @@ export default async function More({ searchParams }: { searchParams: Promise<{ t
         <Link key={k} href={k === "all" ? "/other-services" : `/other-services?tag=${k}`} scroll={false} className={k === tag ? "on" : ""} aria-current={k === tag ? "page" : undefined}>{l}</Link>)}</nav></div>
     <section className="s-sec"><div className="wrap">
       <div className="mgrid">
-        {showW && workshops.map((w) => <WorkshopCard key={w.slug} w={w} />)}
         {showM && <article className="mcard">
           <div className="mc-body">
             <p className="mc-tags"><span className="mc-tag t-mark">Past paper marking</span></p>
@@ -32,8 +31,8 @@ export default async function More({ searchParams }: { searchParams: Promise<{ t
             <p>Papers are returned within 48 hours of receipt, with detailed feedback in line with the mark scheme and targets for improvement.</p>
             <div className="mc-foot"><p className="mc-price">{money(MARKING_PRICE_PENCE)}<small> a paper</small></p>
               <Link className="btn btn-brand" href="/other-services/past-paper-marking">Send a paper</Link></div>
-            <p className="mc-quick">{MARKING_SUBJECTS.map((s) => <Link key={s} href={`/other-services/past-paper-marking?subject=${encodeURIComponent(s)}`}>{s.replace("iGCSE ", "")} →</Link>)}</p>
           </div></article>}
+        {showW && workshops.map((w) => <WorkshopCard key={w.slug} w={w} />)}
       </div>
       {showW && workshops.length === 0 && <p className="empty" style={{ marginTop: 20 }}>There are no workshops booked in at the moment. Check back soon, or <Link href="/contact">ask us</Link> to let you know when the next one opens.</p>}
     </div></section>
