@@ -19,6 +19,14 @@ const ROUNDEL: [RegExp, string][] = [
 ];
 export const roundelSrc = (subject: string, demo = false) => demo ? "/osedtech/demo-roundel.svg" : "/roundels/" + encodeURIComponent((ROUNDEL.find(([re]) => re.test(subject)) || [, "OSE Roundel.png"])[1]!);
 
+/** The same roundel drawn as text in the site font, for large sizes where the 240px image would look soft (colours from the image files). */
+const FACE: [RegExp, string, string][] = [
+  [/english/i, "#008cdb", "English"], [/french|spanish|german|italian|latin|language/i, "#a7dd63", "Languages"], [/math/i, "#14af7c", "Maths"],
+  [/science|biology|chemistry|physics/i, "#cdc100", "Science"], [/geography/i, "#ff914d", "Geography"], [/history/i, "#804ac2", "History"],
+  [/business/i, "#9fb4cd", "Business"], [/economics/i, "#506fa6", "Economics"], [/media/i, "#cf65a6", "Media"], [/religio/i, "#cf65a6", "Religion"],
+];
+export const roundelFace = (subject: string) => { const f = FACE.find(([re]) => re.test(subject)); return f ? { bg: f[1], word: f[2] } : { bg: "#000c4a", word: "Ed" }; };
+
 export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }) {
   const lessons = `${c.lessons_per_week} lesson${c.lessons_per_week > 1 ? "s" : ""} per week`;
   return (

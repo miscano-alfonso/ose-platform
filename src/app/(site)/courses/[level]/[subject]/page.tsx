@@ -3,7 +3,7 @@ import Link from "@/app/(site)/HoverLink";
 import { notFound } from "next/navigation";
 import { getCoursePage } from "@/lib/data";
 import { money, DAYS, monthYear } from "@/lib/format";
-import { roundelSrc } from "../../../CourseCard";
+import { roundelSrc, roundelFace } from "../../../CourseCard";
 import { siteInfo } from "@/lib/db";
 import { PrintButton } from "./PrintButton";
 
@@ -34,9 +34,10 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
         <h1>{p.subject}</h1><p>{p.level}{g ? ` · ${g.course_years} year course` : ""}</p></div>
     </div></section>
     <section className="s-sec"><div className="wrap cd-grid">
-      <div className="roundel cd-roundel" style={{ ["--c" as string]: p.colour }} aria-hidden="true">
+      {site.demo ? <div className="roundel cd-roundel" style={{ ["--c" as string]: p.colour }} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={roundelSrc(p.subject, site.demo)} alt="" width={140} height={140} /></div>
+        : <div className="cd-roundel cd-rtext" style={{ ["--rbg" as string]: roundelFace(p.subject).bg }} aria-hidden="true"><span>OH–SO</span><span>{roundelFace(p.subject).word}</span></div>}
       <div>
         <h2 className="cd-h">Course details</h2>
         {p.groups.length === 0 ? <p>This course isn’t running at the moment. <Link href="/contact">Get in touch</Link> to hear when it opens.</p> : p.groups.map((c) => <div key={c.code} className="cd-card">
