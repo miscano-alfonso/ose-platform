@@ -421,3 +421,15 @@ html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-ra
 /* Futura for headlines and text (Leanne, 30 Oct): real Futura where the device has it (Mac, iPhone, iPad), otherwise Jost,
    the free Futura-style face. Futura runs wide, so headlines are a touch less tight. */
 .bt h1,.bt h2,.bt h3{letter-spacing:-.01em}
+/* home hero illustration "D1" (30 Oct): one picture on the right of the hero, sized to the screen, gently floating marks */
+.bh .bh-hero>.bh-scene{position:absolute;z-index:1;right:var(--side);top:calc(var(--navh) + (100svh - var(--navh) - min(calc(100svh - var(--navh) - 10svh),calc(46vw / 1.154))) / 2);
+  width:min(46vw,calc((100svh - var(--navh) - 10svh) * 1.154));max-width:none;pointer-events:none}
+.bh-scene svg{display:block;width:100%;height:auto}
+.bh-scene svg .marks{animation:bhfloat 9s ease-in-out infinite}
+@keyframes bhfloat{50%{transform:translateY(-6px)}}
+@media (prefers-reduced-motion:reduce){.bh-scene svg .marks{animation:none}}
+@media (max-aspect-ratio:1/1) and (min-width:761px){.bh .bh-hero>.bh-scene{right:auto;left:50%;transform:translateX(-50%);top:calc(var(--navh) + 2svh);width:min(62vw,calc(36svh * 1.154))}}
+@media (max-width:760px){.bh .bh-hero>.bh-scene{display:none}}
+/* lighter headlines and subheadings (Leanne, 30 Oct) */
+.bt h1,.bt h2,.bt h3{font-weight:500}
+.bh-home .bh-hero h1{font-weight:400;letter-spacing:-.02em}

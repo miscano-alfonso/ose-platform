@@ -1,4 +1,4 @@
-import { HERO_ART } from "./hero-art";
+import { HERO_DAY } from "./hero-day";
 import Link from "@/app/(site)/HoverLink";
 import { getFewPlaces, getBundles, getSpaceAvailable, getCourses, getPriceRows, getTeachers, type Course } from "@/lib/data";
 import { CourseCard, roundelSrc } from "./CourseCard";
@@ -55,7 +55,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
   return <div className="bh bh-home">
     <div className="bh-grid">
       <section className="bh-t bh-hero">
-        <div className="bh-art" role="img" aria-label="A teenager learning at home at his laptop, with maths, English and science symbols floating around him" dangerouslySetInnerHTML={{ __html: HERO_ART }} />
+        <div className="bh-scene" role="img" aria-label="A teenager with headphones studying at a laptop by a sunny window" dangerouslySetInnerHTML={{ __html: HERO_DAY }} />
         <p className="k">{txt.home_eyebrow}</p>
         <h1>Live lessons.<br />Real teachers.<br /><span className="pop">From home.</span></h1>
         <p>{txt.home_lead}</p>
