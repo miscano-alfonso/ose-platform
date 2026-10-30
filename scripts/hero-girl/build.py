@@ -3,7 +3,8 @@ from PIL import Image
 from scipy import ndimage as nd
 import sys
 rec=np.load(sys.argv[1] if len(sys.argv)>1 else 'recol.npy').astype(float); H,W=rec.shape[:2]
-rbg=np.array([3,16,47.])
+import os
+rbg=np.array([5,15,45.]) if 'blue' in (sys.argv[1] if len(sys.argv)>1 else '') else np.array([3,16,47.])
 lab=np.load('lab.npy'); big=int(open('big.txt').read())
 fig=lab==big; sym=(lab>0)&~fig
 CX=1030   # the plate starts here: the girl and the symbols around her

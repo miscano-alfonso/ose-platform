@@ -6,14 +6,14 @@
    Everything is scoped to .bt (the site wrapper, not used on the demo school), so the admin's Page styles
    and the demo theme keep working. Dark follows the device unless the visitor picks light or dark
    (html[data-theme], remembered in the ose_theme cookie). */
-.bt{--b-bg:#f3f4f8;--b-tile:#ffffff;--b-inset:#eef0f6;--b-line:#e2e4ee;--b-ink:#0f1747;--b-muted:#4b5274;--b-faint:#5c6378;--b-sky:#1f6f96;
-  --b-pop:#e9f56a;--b-pop-ink:#0d0f1c;--b-good:#177a46;--b-deep:#0f1747;
-  --b-hero:radial-gradient(circle at 85% 12%,#2a3aa0 0%,#0f1747 60%);
+.bt{--b-bg:#f3f4f8;--b-tile:#ffffff;--b-inset:#eef0f6;--b-line:#e2e4ee;--b-ink:#050f2d;--b-muted:#4b5274;--b-faint:#5c6378;--b-sky:#1f6f96;
+  --b-pop:#cad26d;--b-pop-ink:#050f2d;--b-good:#177a46;--b-deep:#050f2d;
+  --b-hero:radial-gradient(circle at 85% 12%,#16386a 0%,#050f2d 60%);
   --ink:var(--b-ink);--muted:var(--b-muted);--line:var(--b-line);--mist:var(--b-inset);--soft:var(--b-inset)}
-@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt{--b-bg:#0d0f1c;--b-tile:#171a2e;--b-inset:#1e2238;--b-line:#2a2e4a;--b-ink:#eef0f7;--b-muted:#b9c0e4;--b-faint:#8d93b8;--b-sky:#8fd6f0;--b-good:#5bd393;--b-deep:#080a14;
-  --b-hero:radial-gradient(circle at 85% 12%,#24318a 0%,#131633 60%);color-scheme:dark}}
-html[data-theme=dark] .bt{--b-bg:#0d0f1c;--b-tile:#171a2e;--b-inset:#1e2238;--b-line:#2a2e4a;--b-ink:#eef0f7;--b-muted:#b9c0e4;--b-faint:#8d93b8;--b-sky:#8fd6f0;--b-good:#5bd393;--b-deep:#080a14;
-  --b-hero:radial-gradient(circle at 85% 12%,#24318a 0%,#131633 60%);color-scheme:dark}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt{--b-bg:#050f2d;--b-tile:#0e1c42;--b-inset:#14254f;--b-line:#1f3463;--b-ink:#eef0f7;--b-muted:#b9c0e4;--b-faint:#8d93b8;--b-sky:#68bbe4;--b-good:#5bd393;--b-deep:#030a1f;
+  --b-hero:radial-gradient(circle at 85% 12%,#16386a 0%,#0b1d45 60%);color-scheme:dark}}
+html[data-theme=dark] .bt{--b-bg:#050f2d;--b-tile:#0e1c42;--b-inset:#14254f;--b-line:#1f3463;--b-ink:#eef0f7;--b-muted:#b9c0e4;--b-faint:#8d93b8;--b-sky:#68bbe4;--b-good:#5bd393;--b-deep:#030a1f;
+  --b-hero:radial-gradient(circle at 85% 12%,#16386a 0%,#0b1d45 60%);color-scheme:dark}
 
 .bt{background:var(--b-bg);color:var(--b-ink);font-family:"OSE Futura","Futura PT","Jost","Century Gothic",system-ui,sans-serif;min-height:100vh;transition:background-color .2s}
 html:has(.bt){background:var(--b-bg,#f3f4f8)}
@@ -42,7 +42,7 @@ html[data-theme=dark] .bt .s-logo img{filter:none}
 @media (max-width:1080px){
   .bt .s-nav .s-links{background:var(--b-tile);border-radius:20px;padding:6px}
   .bt .s-nav .s-links a{border-bottom:1px solid var(--b-line);border-radius:0;padding:13px 10px}
-  .bt .s-nav .s-links a[aria-current=page]{background:transparent;color:var(--b-ink);font-weight:500;box-shadow:inset 3px 0 0 #5fe0e8}
+  .bt .s-nav .s-links a[aria-current=page]{background:transparent;color:var(--b-ink);font-weight:500;box-shadow:inset 3px 0 0 #68bbe4}
   .bt .s-theme span{display:none}
 }
 
@@ -61,7 +61,7 @@ html[data-theme=dark] .bt .s-logo img{filter:none}
 .bt .s-phead>.wrap,.bt .s-hero>.wrap{background:var(--b-hero);border-radius:28px;padding:clamp(28px,4vw,52px);max-width:1268px;width:calc(100% - 32px)}
 .bt .s-phead h1{font-size:clamp(34px,5vw,60px);letter-spacing:-.03em}
 .bt .s-phead p{color:#c9cdea;opacity:1}
-.bt .eyebrow{color:#8fd6f0}
+.bt .eyebrow{color:#68bbe4}
 .bt .s-sec{background:transparent}
 .bt .sec-head p{color:var(--b-muted)}
 
@@ -93,13 +93,13 @@ html[data-theme=dark] .bt .s-logo img{filter:none}
 .bh-t{background:var(--b-tile);border:1px solid var(--b-line);border-radius:28px;padding:26px;display:flex;flex-direction:column;justify-content:space-between;gap:14px;min-width:0;text-decoration:none;color:var(--b-ink)}
 a.bh-t{transition:transform .15s,box-shadow .15s}a.bh-t:hover{transform:translateY(-3px);box-shadow:0 16px 32px -20px rgba(0,0,0,.45)}
 .bh-hero{grid-column:span 2;grid-row:span 2;background:var(--b-hero);border:0;color:#eef0f7;padding:clamp(28px,4vw,44px);gap:24px}
-.bh-hero .k{color:#8fd6f0}
+.bh-hero .k{color:#68bbe4}
 .bh-hero h1{margin:0;font-size:clamp(40px,5.2vw,72px);line-height:.98;letter-spacing:-.045em}
 .bh-hero h1 span{color:var(--b-pop)}
 .bh-hero p{margin:0;font-size:18px;line-height:1.55;color:#c9cdea;max-width:52ch}
 .bh-hero .btns{margin:0}
 .bh-hero .btn-ghost{color:#eef0f7;border-color:rgba(255,255,255,.6)}
-.bh-hero .btn-ghost:hover{background:#eef0f7;color:#0f1747}
+.bh-hero .btn-ghost:hover{background:#eef0f7;color:#050f2d}
 .bh .k{margin:0;font-size:13px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--b-muted)}
 .bh .v{margin:0;font-size:clamp(44px,5vw,60px);font-weight:700;line-height:1;letter-spacing:-.04em}
 .bh .v small{font-size:18px;font-weight:500;letter-spacing:0;color:var(--b-muted)}
@@ -116,7 +116,7 @@ a.bh-t{transition:transform .15s,box-shadow .15s}a.bh-t:hover{transform:translat
 .bh-pop .k{color:var(--b-pop-ink)}
 .bh-pop b{font-size:30px;line-height:1.05;letter-spacing:-.02em}
 .bh-faces{display:flex}
-.bh-faces span{width:52px;height:52px;border-radius:26px;display:grid;place-items:center;font-weight:700;color:#0d0f1c;border:3px solid var(--b-tile);margin-left:-10px;overflow:hidden;background:#8fd6f0}
+.bh-faces span{width:52px;height:52px;border-radius:26px;display:grid;place-items:center;font-weight:700;color:#050f2d;border:3px solid var(--b-tile);margin-left:-10px;overflow:hidden;background:#68bbe4}
 .bh-faces span:first-child{margin-left:0}
 .bh-faces img{width:100%;height:100%;object-fit:cover}
 .bh-wide{grid-column:span 4}
@@ -139,7 +139,7 @@ a.bh-t{transition:transform .15s,box-shadow .15s}a.bh-t:hover{transform:translat
 .bt .bh-t{color:var(--b-ink)}
 .bt .bh-hero{color:#eef0f7}
 .bt .bh-pop,.bt .bh-pop .k{color:var(--b-pop-ink)}
-.bh .bh-hero .k{color:#8fd6f0}
+.bh .bh-hero .k{color:#68bbe4}
 .bh .bh-live .k{color:var(--b-good)}
 .bh .bh-next .k{color:var(--b-sky)}
 @media (min-width:1081px){.bt .s-nav .wrap{flex-wrap:nowrap}.bt .s-nav .s-links{margin-left:auto;order:2}.bt .s-icons{order:3;flex:none}}
@@ -168,12 +168,12 @@ html[data-theme=dark] .bt .hub-card b,html[data-theme=dark] .bt .job-req h2,html
 @media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .hub-dates b{color:var(--b-ink)}html:not([data-theme=light]) .bt .hub-dates span{color:var(--b-muted)}html:not([data-theme=light]) .bt .hub-dates li::before{border-color:var(--b-bg)}}
 html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] .bt .hub-dates span{color:var(--b-muted)}html[data-theme=dark] .bt .hub-dates li::before{border-color:var(--b-bg)}
 /* ---------- home hero: full width, chalk illustration floating behind the words ---------- */
-.bh .bh-hero{grid-column:1 / -1;grid-row:auto;position:relative;overflow:hidden;min-height:clamp(560px,46vw,700px);justify-content:center;--chalk:#5fe0e8}
+.bh .bh-hero{grid-column:1 / -1;grid-row:auto;position:relative;overflow:hidden;min-height:clamp(560px,46vw,700px);justify-content:center;--chalk:#68bbe4}
 .bh .bh-hero>*:not(.bh-art){position:relative;z-index:2;max-width:760px}
 .bh .bh-hero .k{color:var(--chalk)}
-.bh .bh-hero h1{font-size:clamp(52px,7vw,112px);line-height:.95;text-shadow:0 0 28px #0f1747,0 0 8px #0f1747}
-.bh .bh-hero p:not(.k){max-width:44ch;color:#e2ecff;text-shadow:0 0 14px #0f1747,0 0 4px #0f1747}
-.bh .bh-hero .btn-ghost{background:rgba(15,23,71,.55)}
+.bh .bh-hero h1{font-size:clamp(52px,7vw,112px);line-height:.95;text-shadow:0 0 28px #050f2d,0 0 8px #050f2d}
+.bh .bh-hero p:not(.k){max-width:44ch;color:#e2ecff;text-shadow:0 0 14px #050f2d,0 0 4px #050f2d}
+.bh .bh-hero .btn-ghost{background:rgba(5,15,45,.55)}
 .bh-art{position:absolute;z-index:1;right:-4%;top:50%;height:116%;aspect-ratio:1640/1000;transform:translateY(-50%);color:var(--chalk);pointer-events:none}
 .bh-art .bha{position:absolute;height:auto;overflow:visible}
 .bh-art .bha g{fill:none;stroke:currentColor;stroke-width:11;stroke-linecap:round;stroke-linejoin:round}
@@ -197,7 +197,7 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 @media (max-width:980px){.bh-home .bh-art{width:115vw;right:-38%}}
 @media (max-width:600px){.bh-home .bh-art{width:150vw;height:auto;right:-62%}}
 /* menu links: light cyan on hover (the chalk colour) */
-@media (min-width:1081px){.bt .s-links a:hover,.bt .s-links a:focus-visible{background:#5fe0e8;color:#0f1747}}
+@media (min-width:1081px){.bt .s-links a:hover,.bt .s-links a:focus-visible{background:#68bbe4;color:#050f2d}}
 /* Courses with space: each tile carries the subject's roundel, top right */
 .bh-course{position:relative;padding-right:84px}
 .bh-course .rd{position:absolute;top:14px;right:14px;width:58px;height:58px;border-radius:50%;object-fit:cover;transition:transform .2s}
@@ -209,8 +209,8 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 /* home: New to Home Ed? and FAQs tiles */
 .bh-cta{min-height:170px}
 .bh-cta b{font-size:clamp(22px,2vw,28px);line-height:1.15;letter-spacing:-.01em;max-width:30ch}
-.bh-homeed{background:#5fe0e8;border-color:#5fe0e8;color:#0f1747}
-.bh-homeed .k{color:#0f1747}
+.bh-homeed{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.bh-homeed .k{color:#050f2d}
 .bh-faq .k{color:var(--b-sky)}
 /* ---------- hero, responsive: the desk is the focal point (bottom right), the symbols spread over the whole hero
    at positions given as % of its width and height, so they follow the window's shape; words sit at the bottom ---------- */
@@ -230,11 +230,11 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 @media (max-aspect-ratio:1/1) and (min-width:761px){.bh-home .bh-art{--s:calc(min(76vw,40svh) / 744)}
   .bh-home .bh-art .desk{right:auto;left:50%;bottom:auto;top:calc(var(--navh) + 6svh);transform:translateX(-50%)}}
 /* over the hero the menu always looks as it does in dark mode (also in light mode) */
-.bt .s-nav.over .s-links,.bt .s-nav.over .s-theme,.bt .s-nav.over .s-ico,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-theme,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-ico{background:#161a33;border-color:rgba(255,255,255,.12);color:#eef0f7}
+.bt .s-nav.over .s-links,.bt .s-nav.over .s-theme,.bt .s-nav.over .s-ico,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-theme,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-ico{background:#0c1a40;border-color:rgba(255,255,255,.12);color:#eef0f7}
 .bt .s-nav.over .s-links a,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links a{color:#eef0f7}
-.bt .s-nav.over .s-links a[aria-current=page],.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links a[aria-current=page]{background:#eef0f7;color:#0f1747}
-.bt .s-nav.over .s-theme:hover,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-theme:hover{background:#262c52}
-@media (max-width:1080px){.bt .s-nav.over .s-links,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links{background:#161a33}}
+.bt .s-nav.over .s-links a[aria-current=page],.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links a[aria-current=page]{background:#eef0f7;color:#050f2d}
+.bt .s-nav.over .s-theme:hover,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-theme:hover{background:#16386a}
+@media (max-width:1080px){.bt .s-nav.over .s-links,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links{background:#0c1a40}}
 .bh-home .bh-hero{padding-left:var(--side);padding-right:var(--side)}   /* words line up with the logo */
 /* symbols behind the words are fainter, so the text stays easy to read */
 .bh-home .bh-art .dim{opacity:.32}
@@ -254,10 +254,10 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 @media (max-aspect-ratio:1/1){.bh-home .bh-art{-webkit-mask-image:radial-gradient(ellipse 90% 60% at 50% 30%,#000 32%,rgba(0,0,0,.75) 60%,rgba(0,0,0,.42) 100%);
   mask-image:radial-gradient(ellipse 90% 60% at 50% 30%,#000 32%,rgba(0,0,0,.75) 60%,rgba(0,0,0,.42) 100%)}}
 /* hero buttons: hovers that read well on the navy */
-.bh-home .bh-hero .btn-accent:hover,.bh-home .bh-hero .btn-accent:focus-visible{background:#f4fa9e;color:#0f1747;border-color:#f4fa9e}
-.bh-home .bh-hero .btn-ghost:hover,.bh-home .bh-hero .btn-ghost:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+.bh-home .bh-hero .btn-accent:hover,.bh-home .bh-hero .btn-accent:focus-visible{background:#dde39a;color:#050f2d;border-color:#dde39a}
+.bh-home .bh-hero .btn-ghost:hover,.bh-home .bh-hero .btn-ghost:focus-visible{background:#68bbe4;color:#050f2d;border-color:#68bbe4}
 /* menu over the hero: see-through only at the very top; once scrolled it gets a dark bar so the words don't show through */
-.bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(15,23,71,.88);backdrop-filter:blur(10px);border-bottom-color:rgba(255,255,255,.08)}
+.bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(5,15,45,.88);backdrop-filter:blur(10px);border-bottom-color:rgba(255,255,255,.08)}
 /* bigger boy at his desk; symbols away from him less faded */
 .bh-home .bh-art{--s:calc(min(46vw,72svh) / 744);
   -webkit-mask-image:radial-gradient(ellipse 80% 90% at 79% 74%,#000 34%,rgba(0,0,0,.88) 58%,rgba(0,0,0,.66) 100%);
@@ -272,20 +272,20 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 @media (max-aspect-ratio:1/1){.bh-home .bh-hero h1{font-size:clamp(46px,11vw,120px)}}
 /* lighter headline weight; both hero buttons hover cyan */
 .bh-home .bh-hero h1{font-weight:500;letter-spacing:-.035em}
-.bh-home .bh-hero .btn-accent:hover,.bh-home .bh-hero .btn-accent:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+.bh-home .bh-hero .btn-accent:hover,.bh-home .bh-hero .btn-accent:focus-visible{background:#68bbe4;color:#050f2d;border-color:#68bbe4}
 .bh.bh-home .bh-hero>h1{max-width:none;white-space:nowrap}
 @media (max-width:600px){.bh.bh-home .bh-hero>h1{white-space:normal}}
 /* light cyan hovers for buttons and level tabs across the website */
 .bt .btn-brand:hover,.bt .btn-brand:focus-visible,.bt .btn-line:hover,.bt .btn-line:focus-visible,.bt .btn-accent:hover,.bt .btn-accent:focus-visible,
-.bt .tabs a:hover,.bt .tabs a:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+.bt .tabs a:hover,.bt .tabs a:focus-visible{background:#68bbe4;color:#050f2d;border-color:#68bbe4}
 /* course cards: the "few spaces left" style sticker sits over the buttons, between Read more and Add to cart */
 .cbtns{position:relative}
 .cbtns .sticky{top:50%;right:12px;transform:translateY(-50%) rotate(-3deg);z-index:2;pointer-events:none}
 /* cyan hovers always get navy text (the over-the-hero menu sets white text, so this must be at least as specific) */
-@media (min-width:1081px){.bt .s-nav .s-links a:hover,.bt .s-nav .s-links a:focus-visible,.bt .s-nav.over .s-links a:hover,.bt .s-nav.over .s-links a:focus-visible,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links a:hover,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links a:focus-visible{background:#5fe0e8;color:#0f1747}}
-.bt .s-nav.over .s-theme:hover,.bt .s-nav.over .s-ico:hover,.bt .s-nav.over .s-ico:focus-visible,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-theme:hover,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-ico:hover,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-ico:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+@media (min-width:1081px){.bt .s-nav .s-links a:hover,.bt .s-nav .s-links a:focus-visible,.bt .s-nav.over .s-links a:hover,.bt .s-nav.over .s-links a:focus-visible,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links a:hover,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links a:focus-visible{background:#68bbe4;color:#050f2d}}
+.bt .s-nav.over .s-theme:hover,.bt .s-nav.over .s-ico:hover,.bt .s-nav.over .s-ico:focus-visible,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-theme:hover,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-ico:hover,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-ico:focus-visible{background:#68bbe4;color:#050f2d;border-color:#68bbe4}
 /* cyan tile: everything in it navy */
-.bt .bh .bh-homeed,.bt .bh .bh-homeed *,.bh .bh-homeed b,.bh .bh-homeed .k{color:#0f1747}
+.bt .bh .bh-homeed,.bt .bh .bh-homeed *,.bh .bh-homeed b,.bh .bh-homeed .k{color:#050f2d}
 /* only the symbols behind the words are subdued; everything on the right is full strength */
 .bh-home .bh-art{-webkit-mask-image:linear-gradient(to right,rgba(0,0,0,.6) 0%,rgba(0,0,0,.6) 38%,#000 58%);mask-image:linear-gradient(to right,rgba(0,0,0,.6) 0%,rgba(0,0,0,.6) 38%,#000 58%)}
 @media (max-aspect-ratio:1/1){.bh-home .bh-art{-webkit-mask-image:linear-gradient(to bottom,#000 45%,rgba(0,0,0,.55) 65%);mask-image:linear-gradient(to bottom,#000 45%,rgba(0,0,0,.55) 65%)}}
@@ -312,17 +312,17 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .bh-home .bh-art{-webkit-mask-image:linear-gradient(to right,rgba(0,0,0,.6) 0%,rgba(0,0,0,.6) 34%,#000 50%);mask-image:linear-gradient(to right,rgba(0,0,0,.6) 0%,rgba(0,0,0,.6) 34%,#000 50%)}
 @media (max-aspect-ratio:1/1){.bh-home .bh-art{-webkit-mask-image:linear-gradient(to bottom,#000 45%,rgba(0,0,0,.55) 65%);mask-image:linear-gradient(to bottom,#000 45%,rgba(0,0,0,.55) 65%)}}
 /* floating symbols: fuller chalk (less grain) in the same cyan as the boy */
-.bh-home .bh-art .fl{color:#6cf0f7}
+.bh-home .bh-art .fl{color:#68bbe4}
 .bh-home .bh-art .fl g{filter:url(#bh-chalk2)}
 /* the light in the hero now comes from the boy at his desk (not the top-right corner), and he is drawn in the same
    full, vivid chalk as the atom */
-.bh-home .bh-hero{background:radial-gradient(ellipse 55% 70% at 72% 64%,#2b3cab 0%,#1a2470 45%,#0f1747 80%)}
-.bh-home .bh-art .desk{color:#6cf0f7}
+.bh-home .bh-hero{background:radial-gradient(ellipse 55% 70% at 72% 64%,#16386a 0%,#0b1d45 45%,#050f2d 80%)}
+.bh-home .bh-art .desk{color:#68bbe4}
 .bh-home .bh-art .desk g{filter:url(#bh-chalk2)}
-@media (max-aspect-ratio:1/1){.bh-home .bh-hero{background:radial-gradient(ellipse 80% 45% at 50% 28%,#2b3cab 0%,#1a2470 45%,#0f1747 80%)}}
+@media (max-aspect-ratio:1/1){.bh-home .bh-hero{background:radial-gradient(ellipse 80% 45% at 50% 28%,#16386a 0%,#0b1d45 45%,#050f2d 80%)}}
 /* glow centred on the boy as marked (round, a little higher and further right) */
-.bh-home .bh-hero{background:radial-gradient(circle min(34vw,62svh) at 76% 50%,#2c3eb0 0%,#1d2878 55%,#0f1747 100%)}
-@media (max-aspect-ratio:1/1){.bh-home .bh-hero{background:radial-gradient(circle min(60vw,40svh) at 50% 28%,#2c3eb0 0%,#1d2878 55%,#0f1747 100%)}}
+.bh-home .bh-hero{background:radial-gradient(circle min(34vw,62svh) at 76% 50%,#16386a 0%,#0b1d45 55%,#050f2d 100%)}
+@media (max-aspect-ratio:1/1){.bh-home .bh-hero{background:radial-gradient(circle min(60vw,40svh) at 50% 28%,#16386a 0%,#0b1d45 55%,#050f2d 100%)}}
 /* the big headline's letters sit a little in from its edge (the "L" has side space), so the small lines above and
    below are nudged in to start where the letters start, in line with the logo */
 .bh-home .bh-hero{--h1:clamp(52px,min(8vw,14svh),168px)}
@@ -330,9 +330,9 @@ html[data-theme=dark] .bt .hub-dates b{color:var(--b-ink)}html[data-theme=dark] 
 .bh-home .bh-hero>.k,.bh-home .bh-hero>p:not(.k){margin-left:calc(var(--h1) * .072)}
 @media (max-aspect-ratio:1/1){.bh-home .bh-hero{--h1:clamp(46px,11vw,120px)}}
 /* home page: no white strip above the hero when the page is pulled down (overscroll shows navy, and the bounce is off) */
-html:has(.bh-home,.s-phead){background:#0f1747;overscroll-behavior-y:none}
+html:has(.bh-home,.s-phead){background:#050f2d;overscroll-behavior-y:none}
 body:has(.bh-home,.s-phead){background:transparent}
-.bt:has(.bh-home){background:linear-gradient(#0f1747 0 50vh,var(--b-bg) 50vh)}
+.bt:has(.bh-home){background:linear-gradient(#050f2d 0 50vh,var(--b-bg) 50vh)}
 /* course card label: just below the bottom button, on the right, overlapping its edge a little */
 .cbtns .sticky{top:auto;bottom:-14px;right:10px;transform:rotate(-3deg)}
 .cbtns:has(.sticky){margin-bottom:14px}
@@ -347,8 +347,8 @@ body:has(.bh-home,.s-phead){background:transparent}
 .bt .s-sec .tabs,.bt .s-sec .yrtabs{justify-content:flex-start}
 .bt .s-phead+.s-sec{padding-top:28px}
 /* page titles in chalk, like the home page drawing: the boy's cyan, with the same grainy texture */
-.bt .s-phead h1{color:#6cf0f7;letter-spacing:-.02em}
-.bt .s-phead>.wrap{background:radial-gradient(circle at 80% 30%,#2c3eb0 0%,#1d2878 40%,#0f1747 85%)}
+.bt .s-phead h1{color:#68bbe4;letter-spacing:-.02em}
+.bt .s-phead>.wrap{background:radial-gradient(circle at 80% 30%,#16386a 0%,#0b1d45 40%,#050f2d 85%)}
 /* page title panels like the home page: full width, from the top of the window (under the menu bar), rounded only at
    the bottom; the words start on the logo's line */
 .bt .s-phead{padding-block:0;margin-top:calc(-1 * var(--navh,136px))}
@@ -357,7 +357,7 @@ body:has(.bh-home,.s-phead){background:transparent}
 @media (max-width:600px){.bt .s-phead>.wrap{border-radius:0 0 28px 28px}}
 /* bigger subject roundels on course cards */
 .bt .course .roundel{width:112px;height:112px;font-size:13px}
-.bt:has(.s-phead){background:linear-gradient(#0f1747 0 30vh,var(--b-bg) 30vh)}
+.bt:has(.s-phead){background:linear-gradient(#050f2d 0 30vh,var(--b-bg) 30vh)}
 /* chalk page titles: Jost (Futura-style), each letter tilted a little like hand-written chalk */
 .bt .s-phead h1.chalkt{font-family:"Jost","Futura","Century Gothic",sans-serif !important;font-weight:500 !important;letter-spacing:.01em;font-size:clamp(44px,6.4vw,96px);line-height:1}
 .bt .s-phead h1.chalkt span{display:inline-block;transform:translateY(var(--dy,0)) rotate(var(--a,0deg));transform-origin:50% 70%}
@@ -368,11 +368,11 @@ body:has(.bh-home,.s-phead){background:transparent}
 .bt .s-foot .f-logo img{height:64px;width:auto;filter:brightness(0) invert(1)}
 /* course cards: "Read more" is a soft tint of the card (light grey on white, a lighter navy on dark), not a solid block */
 .bt .course .btn-brand{background:var(--b-inset);color:var(--b-ink);border-color:var(--b-inset)}
-.bt .course .btn-brand:hover,.bt .course .btn-brand:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+.bt .course .btn-brand:hover,.bt .course .btn-brand:focus-visible{background:#68bbe4;color:#050f2d;border-color:#68bbe4}
 /* floating chalk symbols on page title panels (right side, behind the words) */
 .bt .s-phead>.wrap{position:relative;overflow:hidden}
 .bt .s-phead>.wrap>*:not(.ph-art){position:relative;z-index:1}
-.ph-art{position:absolute;inset:0;color:#6cf0f7;pointer-events:none;--s:calc(min(22vw,30svh) / 744)}
+.ph-art{position:absolute;inset:0;color:#68bbe4;pointer-events:none;--s:calc(min(22vw,30svh) / 744)}
 .ph-art .bha{position:absolute;width:calc(var(--w) * var(--s) * 2.2);height:auto;overflow:visible;left:calc(var(--x) - var(--w) * var(--s) * 1.1);top:calc(var(--y) - var(--h) * var(--s) * 1.1);animation:bhbob2 var(--d) ease-in-out var(--dl) infinite}
 .ph-art .bha g{fill:none;stroke:currentColor;stroke-width:11;stroke-linecap:round;stroke-linejoin:round}
 @media (prefers-reduced-motion:reduce){.ph-art .bha{animation:none}}
@@ -389,14 +389,14 @@ body:has(.bh-home,.s-phead){background:transparent}
 .wk-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .wk-filters button{font:600 14px "OSE Futura","Futura PT","Jost","Century Gothic",system-ui,sans-serif;padding:8px 16px;border-radius:999px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);cursor:pointer}
 .wk-filters button[aria-pressed=true]{background:var(--b-ink);color:var(--b-bg);border-color:var(--b-ink)}
-.wk-filters button:hover,.wk-filters button:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
+.wk-filters button:hover,.wk-filters button:focus-visible{background:#68bbe4;color:#050f2d;border-color:#68bbe4}
 .wk{display:grid;grid-template-columns:56px repeat(var(--days),minmax(min(140px,100%),1fr));gap:8px;background:var(--b-tile);border:1px solid var(--b-line);border-radius:24px;padding:16px;overflow-x:auto}
 .wk-times{position:relative;margin-top:40px}.wk-times span{position:absolute;transform:translateY(-50%);font-size:13px;color:var(--b-muted)}
 .wk-day h3{margin:0 0 12px;font-size:15px;height:28px;font-weight:600}
 .wk-col{position:relative;border-radius:12px;background-image:linear-gradient(var(--b-line) 1px,transparent 1px)}
 .wk-blk{position:absolute;padding:6px 10px;border-radius:10px;background:color-mix(in srgb,var(--c) 18%,var(--b-inset));border-left:4px solid var(--c);color:var(--b-ink);text-decoration:none;font-size:12.5px;line-height:1.2;overflow:hidden;display:grid;align-content:start;gap:2px}
 .wk-blk b{font-size:13.5px;line-height:1.15}.wk-blk span{color:var(--b-muted)}
-.wk-blk:hover,.wk-blk:focus-visible{background:#5fe0e8;color:#0f1747;z-index:2}.wk-blk:hover span,.wk-blk:focus-visible span{color:#0f1747}
+.wk-blk:hover,.wk-blk:focus-visible{background:#68bbe4;color:#050f2d;z-index:2}.wk-blk:hover span,.wk-blk:focus-visible span{color:#050f2d}
 .wk-col{background-image:none}
 .wk-line{position:absolute;left:0;right:0;border-top:1px dashed var(--b-line)}
 .wk-times span{transform:none}
@@ -417,11 +417,11 @@ body:has(.bh-home,.s-phead){background:transparent}
 /* phones: on the home page "Courses with space" tiles the roundel sits on top, at the left, with the level and course name under it */
 @media (max-width:760px){.bh-course{padding-right:18px}.bh-course .rd{position:static;width:56px;height:56px;margin-bottom:2px}.bh-course span:last-child{margin-right:0}}
 /* every button on the school website, in light and dark: hover and keyboard focus are light cyan with navy text */
-.bt .btn:hover,.bt .btn:focus-visible,.bt .rev-widget .rev-ose-btn:hover{background:#5fe0e8!important;color:#0f1747!important;border-color:#5fe0e8!important}
+.bt .btn:hover,.bt .btn:focus-visible,.bt .rev-widget .rev-ose-btn:hover{background:#68bbe4!important;color:#050f2d!important;border-color:#68bbe4!important}
 .bt .btn:hover *,.bt .btn:focus-visible *{color:inherit!important}
 /* the Facebook reviews widget (Elfsight) only has dark text: in dark mode it sits on a light panel so it can be read */
-@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .rev-widget{background:#eef0f7;color:#0f1747;border-radius:28px;padding:clamp(14px,3vw,30px);color-scheme:light}}
-html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-radius:28px;padding:clamp(14px,3vw,30px);color-scheme:light}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .rev-widget{background:#eef0f7;color:#050f2d;border-radius:28px;padding:clamp(14px,3vw,30px);color-scheme:light}}
+html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#050f2d;border-radius:28px;padding:clamp(14px,3vw,30px);color-scheme:light}
 /* Futura for headlines and text (Leanne, 30 Oct): real Futura where the device has it (Mac, iPhone, iPad), otherwise Jost,
    the free Futura-style face. Futura runs wide, so headlines are a touch less tight. */
 .bt h1,.bt h2,.bt h3{letter-spacing:-.01em}
@@ -443,7 +443,7 @@ html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-ra
 .bh-home .bh-hero h1{font-weight:400;letter-spacing:-.02em}
 /* floating subject symbols (update 225): home hero (.bh-marks) and title panels (.ph-art), behind the words */
 .bh .bh-hero>.bh-marks{position:absolute;inset:0;z-index:1;max-width:none;pointer-events:none}
-.bh-marks .mk,.ph-art .mk{position:absolute;left:var(--x);top:var(--y);width:calc(54px * var(--s,1));height:auto;overflow:visible;color:#9ff4f8;transform:translate(-50%,-50%);pointer-events:none}
+.bh-marks .mk,.ph-art .mk{position:absolute;left:var(--x);top:var(--y);width:calc(54px * var(--s,1));height:auto;overflow:visible;color:#68bbe4;transform:translate(-50%,-50%);pointer-events:none}
 .bh-marks .mk g,.ph-art .mk g{fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round;transform-box:fill-box;transform-origin:center;animation:bhmark var(--d,6s) ease-in-out var(--dl,0s) infinite}
 .ph-art .mk{width:calc(48px * var(--s,1))}
 @media (prefers-reduced-motion:reduce){.bh-marks .mk g,.ph-art .mk g{animation:none}}
@@ -451,7 +451,7 @@ html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-ra
 .bt .s-phead>.wrap>.ph-art{top:0}   /* title-panel symbols spread over the whole panel, behind the menu too (update 226) */
 /* course cards: a tint of the subject's colour on hover, like the home page "Courses with space" tiles (update 226) */
 .bt .course{transition:background-color .15s}
-.bt .course:hover,.bt .course:focus-within{background:color-mix(in srgb,var(--c,#5fe0e8) 18%,var(--b-tile))}
+.bt .course:hover,.bt .course:focus-within{background:color-mix(in srgb,var(--c,#68bbe4) 18%,var(--b-tile))}
 /* arranging the home page symbols (HeroComposer, update 228) */
 .bh .bh-hero>.bh-marks.edit{z-index:200}   /* above the menu too, so symbols up there can be dragged */
 .bh-marks.edit .mk{pointer-events:auto;cursor:grab;touch-action:none;outline:1.5px dashed transparent;outline-offset:4px;border-radius:8px}
@@ -462,11 +462,11 @@ html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-ra
   background:#12162f;color:#fff;border:1px solid #3a3f66;border-radius:18px;padding:10px 14px;box-shadow:0 18px 40px -12px rgba(0,0,0,.6);font:15px/1.3 Futura,"Jost",system-ui,sans-serif}
 .hc-bar .hc-t{display:grid}.hc-bar small{color:#c5c9de;font-size:13px}
 .hc-bar label{display:inline-flex;gap:6px;align-items:center}
-.hc-bar select{font:inherit;font-size:14px;padding:6px 8px;border-radius:10px;border:1px solid #4a507a;background:#1b2045;color:#fff}
-.hc-bar .hc-sel{display:inline-flex;gap:8px;align-items:center;padding:4px 8px;border-radius:12px;background:#1b2045}
+.hc-bar select{font:inherit;font-size:14px;padding:6px 8px;border-radius:10px;border:1px solid #4a507a;background:#0c1a40;color:#fff}
+.hc-bar .hc-sel{display:inline-flex;gap:8px;align-items:center;padding:4px 8px;border-radius:12px;background:#0c1a40}
 .hc-bar button{font:inherit;font-weight:500;border-radius:999px;border:1px solid #4a507a;background:transparent;color:#fff;padding:7px 14px;cursor:pointer}
-.hc-bar button:hover:not(:disabled){background:#5fe0e8;border-color:#5fe0e8;color:#0f1747}
-.hc-bar button.pri{background:#5fe0e8;border-color:#5fe0e8;color:#0f1747}
+.hc-bar button:hover:not(:disabled){background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.hc-bar button.pri{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
 .hc-bar button:disabled{opacity:.45;cursor:default}
 .hc-bar .hc-phone{display:none;font-size:13px;color:#c5c9de}
 @media (max-width:760px){.hc-bar .hc-phone{display:block}}
@@ -496,7 +496,7 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
 /* Meet the headteacher (update 230): a bento tile, photo on the left in a rounded frame with a cyan edge */
 .bt .home-head2 .hh-tile{display:grid;grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr);gap:clamp(20px,4vw,48px);align-items:center;background:var(--b-tile);border:1px solid var(--b-line);border-radius:32px;padding:clamp(18px,3vw,32px)}
 .bt .home-head2 .hh-photo{position:relative;border-radius:24px;overflow:hidden;aspect-ratio:1/1;background:var(--b-inset)}
-.bt .home-head2 .hh-photo::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 3px #5fe0e8;opacity:.9;pointer-events:none}
+.bt .home-head2 .hh-photo::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 3px #68bbe4;opacity:.9;pointer-events:none}
 .bt .home-head2 .hh-photo img{width:100%;height:100%;object-fit:cover;object-position:62% 40%;display:block}
 .bt .home-head2 .hh-k{margin:0 0 10px;font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--b-sky)}
 .bt .home-head2 h2{margin:0;font-size:clamp(32px,4vw,52px);line-height:1.02;letter-spacing:-.01em}
@@ -526,7 +526,7 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
 @media (max-width:760px){.bh-three.bh-two{grid-template-columns:minmax(0,1fr)}}
 
 /* house-style eyebrow on every page title, matching the home hero */
-.bt .s-phead p.eyebrow{font-size:13px;font-weight:600;letter-spacing:.16em;color:#5fe0e8;margin:0 0 22px;max-width:none}
+.bt .s-phead p.eyebrow{font-size:13px;font-weight:600;letter-spacing:.16em;color:#68bbe4;margin:0 0 22px;max-width:none}
 .bt .s-phead .eyebrow a{color:inherit;text-decoration:none;transition:color .2s}
 .bt .s-phead .eyebrow a:hover,.bt .s-phead .eyebrow a:focus-visible{color:#eef0f7}
 
@@ -550,8 +550,8 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
 .bt .tp-courses a{display:grid;gap:2px;padding:10px 12px 10px 14px;border-radius:14px;background:var(--b-inset);border-left:4px solid var(--c);text-decoration:none;color:var(--b-ink);transition:background .2s,color .2s}
 .bt .tp-courses a b{font-weight:500}
 .bt .tp-courses a span{font-size:13.5px;color:var(--b-muted)}
-.bt .tp-courses a:hover,.bt .tp-courses a:focus-visible{background:#5fe0e8;color:#0f1747}
-.bt .tp-courses a:hover span,.bt .tp-courses a:focus-visible span{color:#0f1747}
+.bt .tp-courses a:hover,.bt .tp-courses a:focus-visible{background:#68bbe4;color:#050f2d}
+.bt .tp-courses a:hover span,.bt .tp-courses a:focus-visible span{color:#050f2d}
 .bt .tp3 .tp-side .btn{justify-self:start}
 @media (max-width:1100px){.bt .tprofile.tp3{grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr)}.bt .tp3 .tp-left{grid-row:span 2}.bt .tp3 .tp-side{grid-column:2}}
 @media (max-width:760px){.bt .tprofile.tp3{grid-template-columns:1fr}.bt .tp3 .tp-left{grid-row:auto}.bt .tp3 .tp-side{grid-column:auto}.bt .tp3 .tp-photo{aspect-ratio:4/3}
@@ -619,7 +619,7 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
 .bh-home a.bh-t,.bh-home .bh-course{transition:transform .35s cubic-bezier(.2,.7,.2,1),box-shadow .35s,background-color .25s}
 @media (hover:hover){
   .bh-home a.bh-t:hover,.bh-home a.bh-t:focus-visible,.bh-home .bh-course:hover,.bh-home .bh-course:focus-visible{transform:translateY(-8px);box-shadow:0 22px 40px -22px rgba(0,0,0,.7)}
-  html:not([data-theme=dark]) .bh-home a.bh-t:hover,html:not([data-theme=dark]) .bh-home .bh-course:hover{box-shadow:0 22px 40px -22px rgba(15,23,71,.45)}}
+  html:not([data-theme=dark]) .bh-home a.bh-t:hover,html:not([data-theme=dark]) .bh-home .bh-course:hover{box-shadow:0 22px 40px -22px rgba(5,15,45,.45)}}
 @media (hover:hover) and (prefers-color-scheme:dark){html:not([data-theme=light]) .bh-home a.bh-t:hover,html:not([data-theme=light]) .bh-home .bh-course:hover{box-shadow:0 22px 40px -22px rgba(0,0,0,.7)}}
 /* room inside the sliding row so a lifted card and its shadow aren't cut off */
 .bh-home .bh-marquee{padding-top:12px;margin-top:-12px;padding-bottom:30px;margin-bottom:-24px}
@@ -646,11 +646,11 @@ html.rv .bt .bh-home :is(.bh-grid > .bh-t,.bh-three > .bh-t).rv-in{animation-fil
 /* courses page: the level choice sits in the title panel, bottom right, as big pills */
 .bt .s-phead .ph-tabs{display:flex;flex-wrap:wrap;gap:12px;margin:24px 0 0;padding:0;border:0;background:none}
 .bt .s-phead .ph-tabs a{font-size:clamp(17px,1.6vw,22px);font-weight:500;letter-spacing:0;text-transform:none;padding:12px 28px;border-radius:999px;border:1.5px solid rgba(238,240,247,.55);background:transparent;color:#eef0f7;text-decoration:none;transition:background-color .2s,color .2s,border-color .2s}
-.bt .s-phead .ph-tabs a:hover,.bt .s-phead .ph-tabs a:focus-visible{background:#5fe0e8;border-color:#5fe0e8;color:#0f1747}
-.bt .s-phead .ph-tabs a.on{background:#eef0f7;border-color:#eef0f7;color:#0f1747}
+.bt .s-phead .ph-tabs a:hover,.bt .s-phead .ph-tabs a:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.bt .s-phead .ph-tabs a.on{background:#eef0f7;border-color:#eef0f7;color:#050f2d}
 @media (min-width:900px){.bt .s-phead .ph-tabs{position:absolute;right:clamp(28px,4vw,52px);bottom:clamp(28px,4vw,52px);margin:0;justify-content:flex-end}}
 .bt .s-phead .ph-tabs{justify-content:flex-start;position:relative;z-index:2}
-.bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible){background:rgba(15,23,71,.6);backdrop-filter:blur(4px)}
+.bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible){background:rgba(5,15,45,.6);backdrop-filter:blur(4px)}
 @media (max-width:600px){.bt .s-phead .ph-tabs{gap:8px}.bt .s-phead .ph-tabs a{padding:10px 18px;font-size:17px}}
 @media (min-width:900px){.bt .s-phead .ph-tabs{position:absolute;justify-content:flex-end}}
 
@@ -662,16 +662,16 @@ html.rv .bt .bh-home :is(.bh-grid > .bh-t,.bh-three > .bh-t).rv-in{animation-fil
 /* home hero (30 Oct): the sketch without its circle, with a soft floor shadow; no doodle icons. The floating symbols are drawn in the
    same sketch style: light blue line with an inked navy edge, a little wobble and glow (filter #mk-sketch in hero-marks.ts) */
 .bh-scene .hero-solo{position:relative;aspect-ratio:496/444;width:100%}
-.bh-scene .hero-solo::before{content:"";position:absolute;left:23%;top:85%;width:58%;height:8%;border-radius:50%;background:radial-gradient(closest-side,rgba(4,7,28,.8),rgba(4,7,28,0))}
-.bh-home .bh-marks .mk{color:#4ab3e6}
+.bh-scene .hero-solo::before{content:"";position:absolute;left:23%;top:85%;width:58%;height:8%;border-radius:50%;background:radial-gradient(closest-side,rgba(2,7,22,.8),rgba(2,7,22,0))}
+.bh-home .bh-marks .mk{color:#68bbe4}
 .bh-home .bh-marks .mk g{stroke-width:3.2;filter:url(#mk-sketch)}
-.bh-home .bh-marks .mk:is([data-k=star],[data-k=tri],[data-k=book],[data-k=flask]) g{fill:#42afdf}
-.bh-home .bh-marks .mk[data-k=atom] g circle{fill:#42afdf}
-.bh-home .bh-marks .mk[data-k=flask] g{fill:#42afdf}
+.bh-home .bh-marks .mk:is([data-k=star],[data-k=tri],[data-k=book],[data-k=flask]) g{fill:#68bbe4}
+.bh-home .bh-marks .mk[data-k=atom] g circle{fill:#68bbe4}
+.bh-home .bh-marks .mk[data-k=flask] g{fill:#68bbe4}
 
 /* home hero (30 Oct, Alfonso's illustration): dark navy to match the drawing; the girl on the right, her symbols floating,
    more symbols across the top of the hero (hero-girl.ts). The arranged symbols layer is not used on the home page now. */
-.bh-home .bh-hero{background:#03102f}
+.bh-home .bh-hero{background:#050f2d}
 .bh-home .bh-hero>.bh-scene,.bh-home .bh-hero>.bh-marks{display:none}
 .bh .bh-hero>.bh-girl{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden;max-width:none;margin:0}
 .bh-girl .bg-box{position:absolute;right:0;bottom:0;height:min(94%,calc(56vw * 1438 / 1546));aspect-ratio:1546/1438}
@@ -681,16 +681,16 @@ html.rv .bt .bh-home :is(.bh-grid > .bh-t,.bh-three > .bh-t).rv-in{animation-fil
 @media (max-width:760px){.bh-girl{display:none}}
 @media (prefers-reduced-motion:reduce){.bh-girl .bg-sym,.bh-girl .bg-plate{animation:none}}
 /* "From home." in the site's light blue-green (30 Oct) */
-.bh-home .bh-hero h1 .pop,.bh-home .bh-hero h1 span{color:#83dde6}
+.bh-home .bh-hero h1 .pop,.bh-home .bh-hero h1 span{color:#68bbe4}
 /* courses page level pills: tucked into the bottom-right corner of the title panel; no outline on the ones not chosen */
 @media (min-width:900px){.bt .s-phead .ph-tabs{right:clamp(28px,2.4vw,40px);bottom:clamp(24px,2.2vw,36px)}}
 .bt .s-phead .ph-tabs a{border-color:transparent}
-.bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible){background:rgba(8,14,52,.55)}
+.bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible){background:rgba(5,15,45,.55)}
 /* term dates: the year buttons in the title panel; the next year not yet set up reads "Coming soon" on hover */
-.bt .s-phead .ph-tabs .ph-soon{display:inline-grid;font-size:clamp(17px,1.6vw,22px);font-weight:500;padding:12px 28px;border-radius:999px;background:rgba(8,14,52,.55);color:rgba(238,240,247,.75);cursor:default;transition:background-color .2s,color .2s}
+.bt .s-phead .ph-tabs .ph-soon{display:inline-grid;font-size:clamp(17px,1.6vw,22px);font-weight:500;padding:12px 28px;border-radius:999px;background:rgba(5,15,45,.55);color:rgba(238,240,247,.75);cursor:default;transition:background-color .2s,color .2s}
 .bt .s-phead .ph-tabs .ph-soon>span{grid-area:1/1;text-align:center;transition:opacity .2s}
 .bt .s-phead .ph-tabs .ph-soon>span+span{opacity:0}
-.bt .s-phead .ph-tabs .ph-soon:hover,.bt .s-phead .ph-tabs .ph-soon:focus-visible{background:#5fe0e8;color:#0f1747}
+.bt .s-phead .ph-tabs .ph-soon:hover,.bt .s-phead .ph-tabs .ph-soon:focus-visible{background:#68bbe4;color:#050f2d}
 .bt .s-phead .ph-tabs .ph-soon:hover>span:first-child,.bt .s-phead .ph-tabs .ph-soon:focus-visible>span:first-child{opacity:0}
 .bt .s-phead .ph-tabs .ph-soon:hover>span+span,.bt .s-phead .ph-tabs .ph-soon:focus-visible>span+span{opacity:1}
 .bt .tyh:not(:has(.tynow,.tynew)){display:none}
@@ -704,22 +704,31 @@ html.rv .bt .bh-home :is(.bh-grid > .bh-t,.bh-three > .bh-t).rv-in{animation-fil
 
 /* 30 Oct: every page's title panel matches the home hero: deep navy with a blue-green glow (instead of the bright blue), and the
    symbols drawn in the home illustration's style (HEADER_SPRITES) */
-.bt .s-phead>.wrap{background:radial-gradient(circle at 80% 30%,#13616f 0%,#0a3550 40%,#03102f 85%)}
-html:has(.bh-home,.s-phead){background:#03102f}
-.bt:has(.s-phead){background:linear-gradient(#03102f 0 30vh,var(--b-bg) 30vh)}
-.bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(3,16,47,.88)}
+.bt .s-phead>.wrap{background:radial-gradient(circle at 80% 30%,#16386a 0%,#0b1d45 40%,#050f2d 85%)}
+html:has(.bh-home,.s-phead){background:#050f2d}
+.bt:has(.s-phead){background:linear-gradient(#050f2d 0 30vh,var(--b-bg) 30vh)}
+.bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(5,15,45,.88)}
 .ph-art .mk.mki{width:calc(var(--w,48px) * var(--s,1));display:block}
 .ph-art .mk.mki img{display:block;width:100%;height:auto;transform-origin:center;animation:bhmark var(--d,12s) ease-in-out var(--dl,0s) infinite}
 @media (prefers-reduced-motion:reduce){.ph-art .mk.mki img{animation:none}}
 /* menu bar once scrolled: a deep blue-green tint (the site's blue-green, darkened so the white menu text stays clear) */
-.bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(14,78,92,.9);border-bottom-color:rgba(131,221,230,.18)}
-.bt .s-nav.over:not(.top) :is(.s-links,.s-theme,.s-ico),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top) :is(.s-links,.s-theme,.s-ico){background:rgba(3,16,47,.55);border-color:rgba(131,221,230,.22)}
+.bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(18,48,88,.92);border-bottom-color:rgba(104,187,228,.18)}
+.bt .s-nav.over:not(.top) :is(.s-links,.s-theme,.s-ico),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top) :is(.s-links,.s-theme,.s-ico){background:rgba(5,15,45,.55);border-color:rgba(104,187,228,.22)}
 /* title-panel buttons not chosen: the same dark as the menu pill; the title panels a little darker */
-.bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible),.bt .s-phead .ph-tabs .ph-soon:not(:hover):not(:focus-visible){background:#161a33}
-.bt .s-phead>.wrap{background:radial-gradient(circle at 80% 30%,#0c4652 0%,#072840 40%,#020b26 85%)}
+.bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible),.bt .s-phead .ph-tabs .ph-soon:not(:hover):not(:focus-visible){background:#0c1a40}
+.bt .s-phead>.wrap{background:radial-gradient(circle at 80% 30%,#16386a 0%,#0b1d45 40%,#050f2d 85%)}
 /* 30 Oct: the intro under each page title runs on one line where there's room; the level/year buttons sit on the left, under it,
    and are 20% smaller */
 .bt .s-phead>.wrap>p:not(.eyebrow),.bt .s-phead>.wrap:has(>nav.ph-tabs)>p{max-width:none}
 .bt .s-phead>.wrap>nav.ph-tabs{position:static;justify-content:flex-start;margin:22px 0 0;gap:10px}
 .bt .s-phead .ph-tabs a,.bt .s-phead .ph-tabs .ph-soon{font-size:clamp(14px,1.28vw,17.5px);padding:10px 22px}
 @media (max-width:600px){.bt .s-phead .ph-tabs a,.bt .s-phead .ph-tabs .ph-soon{padding:8px 15px;font-size:14px}}
+
+/* 30 Oct: the site's palette is four colours: light blue #68BBE4, dark blue #050F2D, yellow #CAD26D and white
+   (every other blue, cyan and lime in this file was mapped onto them; the shades used for glows and tiles are mixes of the two blues) */
+.bt{--c-light:#68bbe4;--c-dark:#050f2d;--c-yellow:#cad26d;--c-white:#ffffff}
+/* the menu over the hero and title panels: the same dark blue as the hero (#050F2D), with a fine light edge so the pill still shows */
+.bt .s-nav.over :is(.s-links,.s-theme,.s-ico),.bt:has(.bh-home,.s-phead) .s-nav:not(.past) :is(.s-links,.s-theme,.s-ico){background:#050f2d;border-color:rgba(104,187,228,.25)}
+.bt .s-nav.over:not(.top),.bt:has(.bh-home,.s-phead) .s-nav:not(.past):not(.top){background:rgba(5,15,45,.94);border-bottom-color:rgba(104,187,228,.18)}
+.bt .s-phead .ph-tabs a:not(.on):not(:hover):not(:focus-visible),.bt .s-phead .ph-tabs .ph-soon:not(:hover):not(:focus-visible){background:#050f2d}
+@media (max-width:1080px){.bt .s-nav.over .s-links,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links{background:#050f2d}}
