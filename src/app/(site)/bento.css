@@ -1027,3 +1027,16 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 .bt .ab-go:hover,.bt .ab-go:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
 @media (max-width:1000px){.bt .ab-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bt .ab-tile{grid-column:span 2}.bt .ab-lead{grid-column:span 1;grid-row:span 1}.bt .ab-taster{grid-column:span 1}}
 @media (max-width:640px){.bt .ab-grid{grid-template-columns:minmax(0,1fr)}.bt .ab-tile,.bt .ab-lead,.bt .ab-taster{grid-column:span 1}.bt .ab-photo{aspect-ratio:4/3}.bt .ab-photo img{transform:scale(1.2);transform-origin:45% 15%}}
+/* course band: title 20% bigger, with room so its tall letters aren't cut off */
+.bt .cd-sticky{--cdh:162px;padding-top:18px}
+.bt .cd-sticky b{font-size:clamp(29px,2.64vw,38px);line-height:1.3;padding-top:2px}
+.bt .cd-badge{top:calc(var(--navh,96px) + 162px)}
+@media (max-width:600px){.bt .cd-sticky{--cdh:130px;padding-top:12px}.bt .cd-sticky b{font-size:25px}.bt .cd-badge{top:calc(var(--navh,73px) + 130px)}}
+/* body copy across the site (31 Oct): lighter (Jost Light), with the same space between paragraphs everywhere */
+:where(.bt) :where(main,.s-foot) :where(p,li,blockquote,td,dd){font-family:"Jost","Futura PT","Century Gothic",system-ui,sans-serif;font-weight:300}
+.bt .tp3 .tp-body p,.bt .tp3 .tp-quals li{font-weight:300}
+:where(.bt main) :where(p:not(:last-child)){margin-bottom:1.1em}
+.bt .tp3 .tp-body p,.bt .home-head2 .hh-text p,.bt .about-text p,.bt .faq p,.bt .jobs p{margin:0 0 1.1em}
+.bt .tp3 .tp-body p:last-child,.bt .home-head2 .hh-text p:last-child{margin-bottom:0}
+/* term dates: the small labels and the weeks line in the light blue */
+.bt .term .lab,.bt .term .tn span{color:var(--b-sky)}
