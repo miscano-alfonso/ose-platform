@@ -16,6 +16,7 @@ export function StyleBridge() {
       let live = document.getElementById("ose-live") as HTMLStyleElement | null;
       if (!live) { live = document.createElement("style"); live.id = "ose-live"; document.body.appendChild(live); }
       live.textContent = String(e.data.css ?? "");
+      document.documentElement.classList.toggle("ose-menu-preview", e.data.menu === true);
       const href = typeof e.data.fonts === "string" && e.data.fonts.startsWith("https://fonts.googleapis.com/") ? e.data.fonts : "";
       let fl = document.getElementById("ose-live-fonts") as HTMLLinkElement | null;
       if (href && !fl) { fl = document.createElement("link"); fl.id = "ose-live-fonts"; fl.rel = "stylesheet"; document.head.appendChild(fl); }

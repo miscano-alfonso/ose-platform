@@ -26,7 +26,10 @@ export function StyleBuilder({ saved, kind = "site" }: { saved: SiteStyles; kind
   const dirty = JSON.stringify(styles) !== JSON.stringify(saved);
 
   const fonts = useMemo(() => fontsHref(styles), [styles]);
-  const send = useCallback(() => frame.current?.contentWindow?.postMessage({ type: "ose-styles", css, fonts, probes: PROBES }, location.origin), [css, fonts, PROBES]);
+  // on the phone preview, the website menu list is shown open while the menu settings are open, so changes to it can be seen
+  const [navOpen, setNavOpen] = useState(false);
+  const menu = kind === "site" && device === "phone" && navOpen;
+  const send = useCallback(() => frame.current?.contentWindow?.postMessage({ type: "ose-styles", css, fonts, probes: PROBES, menu }, location.origin), [css, fonts, PROBES, menu]);
   useEffect(() => { send(); }, [send, device]);
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
@@ -79,7 +82,7 @@ export function StyleBuilder({ saved, kind = "site" }: { saved: SiteStyles; kind
         </div>
         <label className="fld sb-page">Preview page<select value={page} onChange={(e) => setPage(e.target.value)}>{PAGES.map(([l, h]) => <option key={h} value={h}>{l}</option>)}</select></label>
       </div>
-      <p className="muted sb-note">{device === "desktop" ? "Desktop sizes apply to screens wider than 820px." : "Phone sizes apply to screens 820px wide or less."} {changed ? `${changed} changed for ${device}.` : "Nothing changed yet; everything uses the default."}</p>
+      <p className="muted sb-note">{device === "desktop" ? `Desktop sizes apply to screens wider than 820px${kind === "site" ? " (the menu: wider than 1080px)" : ""}.` : `Phone sizes apply to screens 820px wide or less${kind === "site" ? " (the menu: 1080px or less, where it becomes a list)" : ""}.`} {changed ? `${changed} changed for ${device}.` : "Nothing changed yet; everything uses the default."}</p>
       <details className="sb-grp" open>
         <summary>Fonts</summary>
         <p className="muted sb-note">Fonts and weights apply on every screen size. Each text item below can also have its own.</p>
@@ -89,7 +92,7 @@ export function StyleBuilder({ saved, kind = "site" }: { saved: SiteStyles; kind
         </div>)}
         {fontCount > 0 && <button type="button" className="abtn sm" style={{ justifySelf: "start", marginTop: 6 }} onClick={() => setStyles((s) => ({ ...s, fonts: {} }))}>Reset all fonts</button>}
       </details>
-      {STYLE_GROUPS.map((g) => <details key={g} className="sb-grp" open={g === "Headings"}>
+      {STYLE_GROUPS.map((g) => <details key={g} className="sb-grp" open={g === "Headings"} onToggle={g === "Navigation & buttons" ? (e) => setNavOpen(e.currentTarget.open) : undefined}>
         <summary>{g}</summary>
         {TOKENS.filter((t) => t.group === g).map((t) => {
           const v = styles[device][t.id]; const seen = t.choices ? t.dflt : sizes[t.id]; const shown = v ?? seen ?? Math.round((t.min + t.max) / 2);

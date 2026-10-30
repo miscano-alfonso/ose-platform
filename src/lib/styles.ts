@@ -42,7 +42,9 @@ export function fontsHref(s: SiteStyles): string | null {
 }
 export type StyleToken = { id: string; group: string; label: string; hint?: string; sel: string; prop: string; min: number; max: number; step: number; unit: "px" | "";
   /** a pick-list instead of a slider: each value and its label, and the CSS each one writes */
-  choices?: { v: number; label: string; css: string }[]; dflt?: number; important?: boolean };
+  choices?: { v: number; label: string; css: string }[]; dflt?: number; important?: boolean;
+  /** the width the item changes to its phone version at, when that isn't 820px (the website menu turns into a list at 1080px) */
+  bp?: number };
 
 export const STYLE_GROUPS = ["Headings", "Text", "Navigation & buttons", "Spacing"] as const;
 
@@ -61,8 +63,8 @@ export const STYLE_TOKENS: StyleToken[] = [
   { id: "faq_q", group: "Text", label: "FAQ questions", sel: ".faq summary", prop: "font-size", min: 13, max: 30, step: 0.5, unit: "px" },
   { id: "footer", group: "Text", label: "Footer text", sel: ".s-foot", prop: "font-size", min: 11, max: 22, step: 0.5, unit: "px" },
 
-  { id: "nav", group: "Navigation & buttons", label: "Menu links", sel: ".s-nav .s-links", prop: "font-size", min: 10, max: 24, step: 0.5, unit: "px" },
-  { id: "nav_gap", group: "Navigation & buttons", label: "Space between menu links", hint: "On phones the menu is a list, so this only changes the desktop menu", sel: ".s-nav .s-links", prop: "column-gap", min: 4, max: 60, step: 1, unit: "px" },
+  { id: "nav", group: "Navigation & buttons", label: "Menu links", hint: "On phones and tablets: the text in the opened menu list", sel: ".s-nav .s-links, .s-nav .s-links a", prop: "font-size", min: 10, max: 28, step: 0.5, unit: "px", bp: 1080 },
+  { id: "nav_gap", group: "Navigation & buttons", label: "Space between menu links", hint: "On phones and tablets: the space between the rows of the opened menu list", sel: ".s-nav .s-links", prop: "--nav-gap", min: 0, max: 60, step: 1, unit: "px", bp: 1080 },
   { id: "logo_h", group: "Navigation & buttons", label: "Logo size", hint: "Height of the logo in the menu bar", sel: ".s-logo img", prop: "height", min: 24, max: 160, step: 1, unit: "px", important: true },
   { id: "nav_depth", group: "Navigation & buttons", label: "Menu bar depth", hint: "Space above and below the logo and menu", sel: ".s-nav .wrap", prop: "padding-block", min: 4, max: 80, step: 1, unit: "px", important: true },
   { id: "nav_align", group: "Navigation & buttons", label: "Menu links position", hint: "Where the menu links sit in the bar (computers only)", sel: ".s-nav .s-links", prop: "--nav-align", min: 0, max: 2, step: 1, unit: "", dflt: 2,
@@ -158,9 +160,14 @@ export function stylesCss(s: SiteStyles, kind: StyleKind = "site"): string {
   }
   for (const t of tokens) { const f = s.fonts?.[t.id]; if (f && (f.family || f.weight)) css += `${pre(t.sel)}{${decl(f)}}`; }
   for (const d of ["desktop", "phone"] as Device[]) {
-    const rules = tokens.filter((t) => s[d]?.[t.id] != null).map((t) =>
-      `${t.sel.split(",").map((x) => `:root ${x.trim()}`).join(",")}{${t.choices ? (t.choices.find((c) => c.v === s[d][t.id])?.css ?? "") : `${t.prop}:${s[d][t.id]}${t.unit}${t.important ? "!important" : ""}`}}`);
-    if (rules.length) css += `@media ${MEDIA[d]}{${rules.join("")}}`;
+    const byMedia = new Map<string, string[]>();
+    for (const t of tokens) {
+      if (s[d]?.[t.id] == null) continue;
+      const media = t.bp ? (d === "phone" ? `(max-width:${t.bp}px)` : `(min-width:${t.bp + 1}px)`) : MEDIA[d];
+      const rule = `${pre(t.sel)}{${t.choices ? (t.choices.find((c) => c.v === s[d][t.id])?.css ?? "") : `${t.prop}:${s[d][t.id]}${t.unit}${t.important ? "!important" : ""}`}}`;
+      byMedia.set(media, [...(byMedia.get(media) ?? []), rule]);
+    }
+    for (const [media, rules] of byMedia) css += `@media ${media}{${rules.join("")}}`;
   }
   return css;
 }

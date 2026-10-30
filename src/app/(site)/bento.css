@@ -42,7 +42,7 @@ html[data-theme=dark] .bt .s-logo img{filter:none}
 @media (max-width:1080px){
   .bt .s-nav .s-links{background:var(--b-tile);border-radius:20px;padding:6px}
   .bt .s-nav .s-links a{border-bottom:1px solid var(--b-line);border-radius:0;padding:13px 10px}
-  .bt .s-nav .s-links a[aria-current=page]{background:transparent;color:var(--b-ink);font-weight:700}
+  .bt .s-nav .s-links a[aria-current=page]{background:transparent;color:var(--b-ink);font-weight:500;box-shadow:inset 3px 0 0 #5fe0e8}
   .bt .s-theme span{display:none}
 }
 
@@ -123,7 +123,7 @@ a.bh-t{transition:transform .15s,box-shadow .15s}a.bh-t:hover{transform:translat
 .bh-half{grid-column:span 2}
 .bh-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:10px;align-items:baseline}
 .bh-head h2{margin:0;font-size:clamp(24px,2.6vw,32px)}
-.bh-courses{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
+.bh-courses{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(220px,100%),1fr));gap:12px}
 .bh-course{background:var(--b-inset);border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:8px;min-height:130px;text-decoration:none;color:var(--b-ink);transition:background-color .15s}
 .bh-course:hover{background:color-mix(in srgb,var(--c) 18%,var(--b-inset))}
 .bh-course .lv{display:flex;gap:8px;align-items:center;font-size:12.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--b-muted)}
@@ -390,7 +390,7 @@ body:has(.bh-home,.s-phead){background:transparent}
 .wk-filters button{font:600 14px "OSE Futura","Futura PT","Jost","Century Gothic",system-ui,sans-serif;padding:8px 16px;border-radius:999px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);cursor:pointer}
 .wk-filters button[aria-pressed=true]{background:var(--b-ink);color:var(--b-bg);border-color:var(--b-ink)}
 .wk-filters button:hover,.wk-filters button:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
-.wk{display:grid;grid-template-columns:56px repeat(var(--days),minmax(140px,1fr));gap:8px;background:var(--b-tile);border:1px solid var(--b-line);border-radius:24px;padding:16px;overflow-x:auto}
+.wk{display:grid;grid-template-columns:56px repeat(var(--days),minmax(min(140px,100%),1fr));gap:8px;background:var(--b-tile);border:1px solid var(--b-line);border-radius:24px;padding:16px;overflow-x:auto}
 .wk-times{position:relative;margin-top:40px}.wk-times span{position:absolute;transform:translateY(-50%);font-size:13px;color:var(--b-muted)}
 .wk-day h3{margin:0 0 12px;font-size:15px;height:28px;font-weight:600}
 .wk-col{position:relative;border-radius:12px;background-image:linear-gradient(var(--b-line) 1px,transparent 1px)}
@@ -556,3 +556,24 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
 @media (max-width:1100px){.bt .tprofile.tp3{grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr)}.bt .tp3 .tp-left{grid-row:span 2}.bt .tp3 .tp-side{grid-column:2}}
 @media (max-width:760px){.bt .tprofile.tp3{grid-template-columns:1fr}.bt .tp3 .tp-left{grid-row:auto}.bt .tp3 .tp-side{grid-column:auto}.bt .tp3 .tp-photo{aspect-ratio:4/3}
   .bt .tp3 .tp-left{display:contents}.bt .tp3 .tp-body{order:1}.bt .tp3 .tp-left>.tp-tile{order:2}.bt .tp3 .tp-side{order:3}}
+
+/* the menu: Admin → Page styles sets its text size and spacing (--nav-gap); on phones and tablets the list has larger text and closer rows */
+@media (min-width:1081px){.bt .s-nav .s-links{--nav-gap:0px;column-gap:var(--nav-gap)}}
+@media (max-width:1080px){
+  .bt .s-nav .s-links{--nav-gap:14px;font-size:18px}
+  .bt .s-nav .s-links a{padding:calc(var(--nav-gap) / 2) 12px;line-height:1.3}
+  .bt .s-nav .s-links.open{max-height:calc(100dvh - 110px)}
+  html.ose-menu-preview .bt .s-nav .s-links{display:flex}
+  html.ose-menu-preview .bt .s-links .s-mob{display:flex;gap:10px;align-items:center}}
+
+/* nothing wider than the screen: larger text settings on phones made the footer and some tiles run off the right */
+.bt .fgrid>*{min-width:0}
+@media (max-width:640px){.bt .fgrid{grid-template-columns:minmax(0,1fr)}.bt .s-foot .fcols{column-gap:20px}}
+.bt main,.bt .s-foot{overflow-wrap:break-word}
+.bt .s-foot .nl-row{min-width:0}.bt .s-foot .nl-row button{flex:none}
+.bt .cform{grid-template-columns:minmax(0,1fr)}
+.bt .cform>*,.bt .cform label,.bt fieldset{min-width:0}
+.bt .cform input:not([type=checkbox]):not([type=radio]),.bt .cform select,.bt .cform textarea{min-width:0;width:100%;box-sizing:border-box}
+.bt .login{grid-template-columns:minmax(0,1fr)}.bt .login>*,.bt .login label{min-width:0}
+.bt .login input{min-width:0;width:100%;box-sizing:border-box}
+@media (max-width:360px){.bt .course .roundel{width:92px;height:92px}}
