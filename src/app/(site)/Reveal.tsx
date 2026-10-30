@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 // home page tiles and hero, and each block of the other pages. Things already on screen come in one after another.
 // The hiding is switched on by a tiny script before the page draws (html.rv), so nothing flashes; without JavaScript,
 // or with reduced motion, everything simply shows. A CSS fallback shows anything not revealed within a few seconds.
-export const REVEAL = [".bh-grid > .bh-t:not(.bh-hero)", ".bh-three > .bh-t", ".bh-hero > :not(.bh-marks):not(.bh-scene)", "main .s-sec .wrap > :not(.cgrid)", "main .s-sec .cgrid > :not(.course)"].join(",");
+export const REVEAL = [".bh-grid > .bh-t:not(.bh-hero)", ".bh-three > .bh-t", ".bh-hero > :not(.bh-marks):not(.bh-scene)", "main .s-sec .wrap > :not(.cgrid):not(.tgrid)", "main .s-sec .cgrid > :not(.course)"].join(",");
 export function Reveal() {
   const path = usePathname();
   useEffect(() => {

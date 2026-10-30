@@ -81,13 +81,11 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
           <span className="lv">{c.level}</span><b>{c.subject}</b>
           <span>{c.slots?.length ? c.slots.map((x) => `${DAYS[x.d]} ${x.t}`).join(" & ") : "Times to be announced"}</span></Link>; })}</div></div>
       </section>}
-      <div className="bh-three">
+      <div className="bh-three bh-two">
       <Link className="bh-t bh-cta bh-homeed" href="/home-ed"><p className="k">New to home education?</p>
         <b>Start here: how home education works in the UK, and how we fit in →</b></Link>
       <Link className="bh-t bh-cta bh-faq" href="/faq"><p className="k">FAQs</p>
         <b>Questions about lessons, payments, exams or Google Classroom? →</b></Link>
-      <section className="bh-t bh-how"><h2 style={{ margin: 0, fontSize: 24 }}>How it works</h2>
-        <p>Your child gets a Google Classroom invitation, joins lessons live in Google Meet, and finds every recording in Classroom afterwards. You see attendance, work and reports in your account.</p></section>
       </div>
     </div>
     <MeetHead title={txt.head_title} text={txt.head_text} photo bento />
