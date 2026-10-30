@@ -31,18 +31,19 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
   return (<>
     <section className="s-phead"><div className="wrap cd-head">
       <div><p className="eyebrow"><Link href={`/courses?level=${encodeURIComponent(p.level)}`}>← Back to courses</Link></p>
-        <h1>{p.subject}</h1><p>{p.level}{g ? ` · ${g.course_years} year course` : ""}</p></div>
+        <div className="cd-title"><h1>{p.subject}</h1>{g?.label && <span className="sticky sl-few cd-hlabel">{g.label_text ?? g.label}</span>}</div><p>{p.level}{g ? ` · ${g.course_years} year course` : ""}</p></div>
     </div></section>
     <div className="cd-badge"><div className="wrap">
       {site.demo ? <div className="roundel cd-roundel" style={{ ["--c" as string]: p.colour }} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={roundelSrc(p.subject, site.demo)} alt="" width={140} height={140} /></div>
         : <div className="cd-roundel cd-rtext" style={{ ["--rbg" as string]: roundelFace(p.subject).bg }} aria-hidden="true"><span>OH–SO</span><span>{roundelFace(p.subject).word}</span></div>}
+      {g && <span className={`btn ${g.shows_waitlist ? "btn-line" : "btn-brand"} cd-hcart`} aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>}
     </div></div>
     <section className="s-sec"><div className="wrap cd-grid">
       <div>
         <h2 className="cd-h">Course details</h2>
-        {p.groups.length === 0 ? <p>This course isn’t running at the moment. <Link href="/contact">Get in touch</Link> to hear when it opens.</p> : p.groups.map((c) => <div key={c.code} className="cd-card">
+        {p.groups.length === 0 ? <p>This course isn’t running at the moment. <Link href="/contact">Get in touch</Link> to hear when it opens.</p> : p.groups.map((c, gi) => <div key={c.code} className="cd-card">
           {p.groups.length > 1 && <h3>{c.year_label.replace("/", "–")}{c.is_next ? ` · starts ${monthYear(c.year_start)}` : ""}</h3>}
           <table className="cd-table"><tbody>
             {c.status === "waitlist" ? <tr><th>Day &amp; time</th><td>Announced when the course opens</td></tr>
@@ -58,10 +59,10 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             {c.teacher_photo && <img src={c.teacher_photo} alt="" width={72} height={72} />}
             <div><span>{p.subject} teacher</span>{c.teacher_slug ? <Link href={`/teachers/${c.teacher_slug}`}><b>{c.teacher}</b></Link> : <b>{c.teacher}</b>}</div></div>}
-          <div className="cd-btns">
+          {gi > 0 && <div className="cd-btns">
             {c.label && <span className="sticky sl-few" style={{ position: "static" }}>{c.label_text ?? c.label}</span>}
             <span className={`btn ${c.shows_waitlist ? "btn-line" : "btn-brand"}`} aria-disabled="true" title="Booking opens in the next update">{c.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>
-          </div>
+          </div>}
         </div>)}
         {p.video && <div className="cd-video"><h2 className="cd-h">Sample lesson</h2><Video url={p.video} title={p.video_title ?? `${p.level} ${p.subject} sample lesson`} />
           {p.video_title && <p className="muted">{p.video_title}</p>}</div>}
