@@ -1,7 +1,7 @@
 "use client";
 import Link from "@/app/(site)/HoverLink";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 // Desktop: the links in a row. Phone: a hamburger button that opens them as a full-width list.
 export function SiteNav({ items }: { items: [string, string][] }) {
@@ -14,12 +14,22 @@ export function SiteNav({ items }: { items: [string, string][] }) {
     document.addEventListener("keydown", esc);
     return () => document.removeEventListener("keydown", esc);
   }, [open]);
+  // phones and tablets: the open menu fills the screen under the top bar, so the page behind doesn't scroll
+  const nav = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    root.classList.toggle("menu-open", open);
+    if (!open) return;
+    const place = () => { const bar = nav.current?.closest(".s-nav")?.getBoundingClientRect(); if (bar) root.style.setProperty("--menu-top", `${Math.max(0, Math.round(bar.bottom))}px`); };
+    place(); window.addEventListener("resize", place);
+    return () => { window.removeEventListener("resize", place); root.classList.remove("menu-open"); };
+  }, [open]);
   return <>
     <button className="s-burger" aria-expanded={open} aria-controls="site-menu" aria-label={open ? "Close menu" : "Open menu"} onClick={() => setOpen(!open)}>
       <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
         {open ? <path d="M6 6l12 12M18 6L6 18" /> : <path d="M4 7h16M4 12h16M4 17h16" />}</svg>
     </button>
-    <nav id="site-menu" className={`s-links${open ? " open" : ""}`} aria-label="Main">
+    <nav ref={nav} id="site-menu" className={`s-links${open ? " open" : ""}`} aria-label="Main">
       {items.map(([t, h]) => <Link key={h} href={h} aria-current={path === h ? "page" : undefined} onClick={() => setOpen(false)}>{t}</Link>)}
       {/* phones: the basket and account sit in the menu instead of the top bar */}
       <Link className="s-mob" href="/cart" aria-current={path === "/cart" ? "page" : undefined} onClick={() => setOpen(false)}>

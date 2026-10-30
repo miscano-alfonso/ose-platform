@@ -577,3 +577,13 @@ html.rv .bt :is(.bh-grid > .bh-t:not(.bh-hero),.bh-three > .bh-t,.bh-hero > :not
 .bt .login{grid-template-columns:minmax(0,1fr)}.bt .login>*,.bt .login label{min-width:0}
 .bt .login input{min-width:0;width:100%;box-sizing:border-box}
 @media (max-width:360px){.bt .course .roundel{width:92px;height:92px}}
+/* phones and tablets: the open menu is one column filling the screen width, from under the top bar to the bottom of the screen */
+@media (max-width:1080px){
+  .bt .s-nav .s-links{--nav-gap:10px;flex-wrap:nowrap}
+  .bt .s-nav .s-links.open{position:fixed;left:0;right:0;top:var(--menu-top,88px);bottom:0;z-index:60;width:auto;max-height:none;margin:0;
+    border-radius:24px 24px 0 0;border-width:1px 0 0;padding:8px clamp(12px,4vw,24px) calc(20px + env(safe-area-inset-bottom));overflow-y:auto;overscroll-behavior:contain;flex-wrap:nowrap}
+  .bt .s-nav .s-links.open a{flex:none}
+  .bt .s-nav:has(.s-links.open){backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  html.menu-open,html.menu-open body{overflow:hidden}
+}
+@media (max-width:1080px){.bt .s-nav.over .s-links a,.bt:has(.bh-home,.s-phead) .s-nav:not(.past) .s-links a{border-bottom-color:rgba(255,255,255,.1)}}
