@@ -3,7 +3,7 @@ import { cache } from "react";
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { cookies } from "next/headers";
 import { runAsSchool, siteSchool, withSchool } from "./db";
-import { EMPTY_CMS, type Cms, type SecSet, type StyleSet, FONTS, SIZES } from "./edt-cms-key";
+import { EMPTY_CMS, type Cms, type SecSet, type StyleSet, type BlkSet, FONTS, SIZES, BSIZES } from "./edt-cms-key";
 
 // OH-SO EdTech website editor (edit on the page). OH-SO ED's admins open it from the "Admin" link at the foot of the
 // EdTech site (or Admin → Website → EdTech website): /admin/cms checks they're signed in and sets a signed "ose_cms"
@@ -33,7 +33,7 @@ export const editor = cache(async (): Promise<{ id: string; name: string } | nul
 const kv = (key: string) => runAsSchool(siteSchool(), () => withSchool((q) => q<{ value: Cms }>(`select value from meet_kv where key = $1`, [key]))).then((r) => r[0]?.value ?? null).catch(() => null);
 const put = (key: string, v: Cms | null) => runAsSchool(siteSchool(), () => withSchool((q) => v == null ? q(`delete from meet_kv where key = $1`, [key])
   : q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2) on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [key, JSON.stringify(v)])));
-const fill = (c: Partial<Cms> | null): Cms => ({ text: c?.text ?? {}, sec: c?.sec ?? {}, order: c?.order ?? {}, style: c?.style ?? {}, at: c?.at, by: c?.by });
+const fill = (c: Partial<Cms> | null): Cms => ({ text: c?.text ?? {}, sec: c?.sec ?? {}, order: c?.order ?? {}, blk: c?.blk ?? {}, style: c?.style ?? {}, at: c?.at, by: c?.by });
 
 /** What the site shows: the published version, or for an editor the draft (if there is one). */
 export const siteCms = cache(async (): Promise<{ cms: Cms; edit: boolean; hasDraft: boolean; publishedAt: string | null }> => {
@@ -70,4 +70,10 @@ export function cleanStyle(s: Partial<StyleSet>): StyleSet {
     space: s.space === "compact" || s.space === "roomy" ? s.space : undefined, btn: s.btn === "round" || s.btn === "square" ? s.btn : undefined,
     card: typeof s.card === "number" && s.card >= 0 && s.card <= 32 ? Math.round(s.card) : undefined,
   }).filter(([, v]) => v !== undefined)) as StyleSet;
+}
+const BZ = new Set(BSIZES.map((s) => s.id));
+export function cleanBlock(b: Partial<BlkSet>): BlkSet {
+  const o: BlkSet = {};
+  if (b.mt && BZ.has(b.mt)) o.mt = b.mt; if (b.mb && BZ.has(b.mb)) o.mb = b.mb; if (b.gap && BZ.has(b.gap)) o.gap = b.gap;
+  return o;
 }

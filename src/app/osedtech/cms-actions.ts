@@ -1,7 +1,7 @@
 "use server";
 import { revalidatePath } from "next/cache";
-import { editor, changeDraft, publishDraft, discardDraft, stopEditing, cleanSection, cleanStyle } from "@/lib/edt-cms";
-import { norm, type SecSet, type StyleSet } from "@/lib/edt-cms-key";
+import { editor, changeDraft, publishDraft, discardDraft, stopEditing, cleanSection, cleanStyle, cleanBlock } from "@/lib/edt-cms";
+import { norm, BLOCK_ID, type SecSet, type StyleSet, type BlkSet } from "@/lib/edt-cms-key";
 
 // The OH-SO EdTech website editor's saves. Every one checks the signed editor cookie and that the person is still an admin.
 const must = async () => { const e = await editor(); if (!e) throw new Error("Not signed in to edit."); return e; };
@@ -30,6 +30,24 @@ export async function cmsMoveSection(page: string, idx: number, dir: -1 | 1, cou
     [order[at], order[to]] = [order[to], order[at]];
     c.order[page] = order.every((v, i) => v === i) ? [] : order;
     if (!c.order[page].length) delete c.order[page];
+  });
+  done();
+}
+/** An element's space above / below and the gap between its items (null clears them). */
+export async function cmsSaveBlock(id: string, b: Partial<BlkSet> | null): Promise<void> {
+  const e = await must(); if (!BLOCK_ID.test(id) || id.split(":").length !== 3) return;
+  await changeDraft(e.name, (c) => { const v = b ? cleanBlock(b) : {}; if (Object.keys(v).length) c.blk[id] = v; else delete c.blk[id]; });
+  done();
+}
+/** Move an item earlier or later among the items of the element it sits in (parent = a section or an element id). */
+export async function cmsMoveChild(parent: string, idx: number, dir: -1 | 1, count: number): Promise<void> {
+  const e = await must(); if (!BLOCK_ID.test(parent) || count < 2 || count > 60 || idx < 0 || idx >= count) return;
+  await changeDraft(e.name, (c) => {
+    const base = (c.order[parent] ?? []).filter((i) => i < count);
+    const order = [...base, ...Array.from({ length: count }, (_, i) => i).filter((i) => !base.includes(i))];
+    const at = order.indexOf(idx), to = at + dir; if (at < 0 || to < 0 || to >= order.length) return;
+    [order[at], order[to]] = [order[to], order[at]];
+    if (order.every((v, i) => v === i)) delete c.order[parent]; else c.order[parent] = order;
   });
   done();
 }

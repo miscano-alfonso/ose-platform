@@ -38,5 +38,5 @@ export default async function EdTechLayout({ children }: { children: React.React
       <p className="edt-small">© {new Date().getFullYear()} OH-SO EdTech. Prices exclude VAT where it applies. <a href="/admin/cms" className="edt-admin" rel="nofollow">Admin</a></p>
     </div></footer>
   </div>;
-  return <><CmsStyles s={cms.style} />{await cmsLayout(tree, children)}{ed && <CmsEditor hasDraft={hasDraft} publishedAt={publishedAt} sec={cms.sec} style={cms.style} by={ed.name} />}</>;
+  return <><CmsStyles s={cms.style} />{await cmsLayout(tree, children)}{ed && <CmsEditor hasDraft={hasDraft} publishedAt={publishedAt} sec={cms.sec} blk={cms.blk} style={cms.style} by={ed.name} />}</>;
 }
