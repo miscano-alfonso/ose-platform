@@ -7,6 +7,7 @@ import { inboxList, inboxStatus } from "@/lib/inbox";
 import { money, dayMonth, yearLabel } from "@/lib/format";
 import { getLayout, mirrorOf } from "@/lib/dashboard-layout";
 import { MoreList } from "../MoreList";
+import { schoolPlan, notInPlan } from "@/lib/plan";
 import { BentoBoard, type BoardModule } from "../BentoBoard";
 
 const PILL: Record<string, [string, string]> = { failed: ["bad", "Payment failed"], full: ["warn", "Class full"], almost: ["warn", "Almost full"], enquiry: ["info", "New enquiry"], waitlist: ["mute", "Waiting list"],
@@ -35,6 +36,7 @@ const I = {
 
 export default async function Dashboard() {
   const [{ t, attention }, m, me, flags, box] = await Promise.all([getDashboard(), getDashboardMore(LOW), requireStaff(), openFlags().catch(() => []), inboxStatus().catch(() => null)]);
+  const { plan } = await schoolPlan();
   const mail = box?.connected ? await inboxList("new").catch(() => ({ rows: [], unread: 0 })) : { rows: [], unread: 0 };
   const ago = (iso: string) => { const h = (Date.now() - Date.parse(iso)) / 3600e3; return h < 1 ? `${Math.max(1, Math.round(h * 60))} min ago` : h < 24 ? `${Math.round(h)} h ago` : dayMonth(iso.slice(0, 10)); };
   const pct = t.capacity ? Math.round((t.taken / t.capacity) * 100) : 0;
@@ -91,7 +93,7 @@ export default async function Dashboard() {
         <span className="dx-big">{m.day.lessons.filter((l) => l.status !== "cancelled").length}</span>
         <span>lesson{m.day.lessons.length === 1 ? "" : "s"} {m.day.today ? "today" : `on ${DAY(m.day.date, { weekday: "long" })}`}</span>
         {nextIdx >= 0 && <small>Next: {m.day.lessons[nextIdx].starts} {m.day.lessons[nextIdx].name}</small>}
-        <div className="dx-acts"><Link href="/admin/timetable">Timetable</Link><Link href="/admin/families">Families</Link><Link href="/admin/messages">Messages</Link><Link href="/admin/social">New post</Link></div>
+        <div className="dx-acts"><Link href="/admin/timetable">Timetable</Link><Link href="/admin/families">Families</Link><Link href="/admin/messages">Messages</Link>{!notInPlan(plan, "/admin/social") && <Link href="/admin/social">New post</Link>}</div>
       </div>
       {t.students === 0 && <Link className="dx-flag" href="/admin/import">No families imported yet: import them</Link>}
     </section> },

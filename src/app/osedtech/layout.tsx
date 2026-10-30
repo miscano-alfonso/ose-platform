@@ -21,6 +21,7 @@ export default function EdTechLayout({ children }: { children: React.ReactNode }
         <Link href="/osedtech#who">Who it’s for</Link>
         <Link href="/osedtech#faq">FAQ</Link>
         <Link href="/osedtech/demo">Demo</Link>
+        <Link href="/osedtech/login">Sign in</Link>
         <Link href="/osedtech/trial" className="edt-btn sm">Start a free trial</Link>
       </nav>
     </div></header>

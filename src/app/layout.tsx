@@ -6,6 +6,8 @@ import { cookies } from "next/headers";
 
 export async function generateMetadata(): Promise<Metadata> {
   const [{ icon }, site] = await Promise.all([brandSrc(), siteInfo()]);
+  const { isPlatformSchool } = await import("@/lib/db");
+  if (!site.demo && !(await isPlatformSchool())) return { title: { default: site.name, template: `%s | ${site.name}` }, robots: { index: false, follow: false }, icons: { icon, apple: icon } };   // an OH-SO EdTech customer's dashboard
   if (site.demo) return { title: { default: `${site.name} | A made-up school on OH-SO EdTech`, template: `%s | ${site.name}` }, robots: { index: false, follow: false }, icons: { icon, apple: icon } };
   return {
   title: { default: "OH-SO ED | Online school for home-educated students", template: "%s | OH-SO ED" },

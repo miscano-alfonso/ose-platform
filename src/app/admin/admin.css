@@ -800,3 +800,7 @@
 .adm .fx .dx-hero .fx-side .ntf-bellwrap{align-self:flex-end}
 .adm .fx .dx-hero .fx-main .fx-btns{margin-top:auto;padding-top:18px}
 @media (max-width:640px){.adm .fx .dx-hero .fx-side{flex-direction:row;align-items:center}.adm .fx .dx-hero .fx-side .lclock{margin:0}}
+/* trial schools: getting started */
+.adm .gs-step{display:grid;gap:2px;padding:12px 14px;border:1px solid var(--line, #e3e5ee);border-radius:12px;text-decoration:none;color:inherit;height:100%}
+.adm .gs-step span{font-size:14px;opacity:.8}
+.adm .gs-step:hover{background:#5fe0e8;border-color:#5fe0e8;color:#0f1747}

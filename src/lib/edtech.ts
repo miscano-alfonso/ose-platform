@@ -3,7 +3,7 @@ import { withSchool } from "./db";
 import { sendHtml } from "./email";
 
 // OH-SO EdTech free-trial requests (/osedtech/trial).
-export type Trial = { id: string; name: string; email: string; business: string; website: string; teachers: string; students: string; plan: string; subjects: string; tools: string; google: string; message: string; status: string; note: string; created_at: string };
+export type Trial = { id: string; name: string; email: string; business: string; website: string; teachers: string; students: string; plan: string; subjects: string; tools: string; google: string; message: string; status: string; note: string; created_at: string; self_serve?: boolean; school_slug?: string | null; waiting?: boolean };
 export const TEACHERS = ["Just me", "2–3", "4–8", "9 or more"], STUDENTS = ["Under 20", "20–60", "60–250", "Over 250"];
 export const GOOGLE = ["Yes, Google Workspace for Education", "Yes, Google Workspace (business)", "Personal Gmail accounts", "Not yet", "Not sure"];
 export const STATUSES = ["new", "contacted", "trial", "customer", "closed"] as const;
@@ -22,7 +22,7 @@ export async function saveTrial(t: Omit<Trial, "id" | "status" | "note" | "creat
 }
 
 export async function listTrials(): Promise<Trial[]> {
-  return withSchool((q) => q<Trial>(`select id, name, email::text, business, website, teachers, students, plan, subjects, tools, google, message, status, note, created_at::text from edtech_trials order by created_at desc limit 300`));
+  return withSchool((q) => q<Trial>(`select id, name, email::text, business, website, teachers, students, plan, subjects, tools, google, message, status, note, created_at::text, self_serve, school_slug, (token_kind = 'confirm' and token_expires > now()) as waiting from edtech_trials order by created_at desc limit 300`));
 }
 export async function updateTrial(id: string, status: string, note: string) {
   if (!(STATUSES as readonly string[]).includes(status)) return;

@@ -66,11 +66,14 @@ export async function listSchools(): Promise<{ slug: string; name: string }[]> {
 export const siteSchool = () => process.env.SCHOOL_SLUG || "ohsoed";
 /** The school this request works in. */
 export async function activeSchool(): Promise<string> { return forced.getStore() || (await adminSchool()) || siteSchool(); }
+/** True in this site's own school (OH-SO ED). The keys set in Vercel (Brevo, Stripe) belong to it alone: customer and
+ *  trial schools connect their own, so they can never send as OH-SO ED or read its payments. */
+export async function isPlatformSchool(): Promise<boolean> { return (await activeSchool()) === siteSchool(); }
 /** The schools a person can switch to: where their email has an admin account (always including this site's school). */
 export async function schoolsFor(email: string): Promise<{ slug: string; name: string }[]> {
   const client = await pool().connect();
   try {
-    return (await client.query(`select s.slug, s.name from schools s where s.slug = $2 or exists (select 1 from users u where u.school_id = s.id
+    return (await client.query(`select s.slug, s.name from schools s where (s.slug = $2 and exists (select 1 from users u where lower(u.email::text) = lower($1) and (u.school_id = s.id or u.school_id is null) and u.disabled_at is null)) or exists (select 1 from users u where u.school_id = s.id
       and lower(u.email::text) = lower($1) and u.role in ('school_admin','platform_admin') and u.disabled_at is null)
       or (s.is_demo and exists (select 1 from users u join schools h on h.id = u.school_id where h.slug = $2 and lower(u.email::text) = lower($1) and u.role in ('school_admin','platform_admin') and u.disabled_at is null))
       order by s.is_demo, s.name`, [email, siteSchool()])).rows;

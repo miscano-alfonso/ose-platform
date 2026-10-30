@@ -33,7 +33,7 @@ export const PLANS: Plan[] = [
     ],
   },
   {
-    id: "school", name: "School", for: "An online school with staff, payroll and marketing", monthly: 600, yearly: 6000, teachers: "Unlimited teachers and staff", students: "600 students included", cta: "Start a free trial", adds: "Everything in Growth, plus",
+    id: "school", name: "School", for: "An online school with staff, payroll and marketing", monthly: 600, yearly: 6000, teachers: "Unlimited teachers and staff", students: "600 students included", cta: "Ask about School", adds: "Everything in Growth, plus",
     features: [
       "Payroll for teachers, worked out from the lessons they taught",
       "Staff roles and access: office, teachers and admins",

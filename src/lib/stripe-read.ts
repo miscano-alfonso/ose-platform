@@ -1,6 +1,6 @@
 import "server-only";
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { withSchool } from "./db";
+import { withSchool, isPlatformSchool } from "./db";
 
 // Read-only Stripe. The site never charges, refunds or changes anything in Stripe:
 //  - it only accepts a RESTRICTED key (rk_…), which the school creates with Read permissions only, so Stripe itself
@@ -13,18 +13,19 @@ import { withSchool } from "./db";
 
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 const API = () => (process.env.STRIPE_API_URL || "https://api.stripe.com/v1").replace(/\/$/, "");
-export type StripeCfg = { key?: string; webhookSecret?: string; at?: string; by?: string; account?: string; sync?: { at?: string; added?: number; error?: string; v?: number }; auto?: boolean };
+export type StripeCfg = { key?: string; webhookSecret?: string; at?: string; by?: string; account?: string; sync?: { at?: string; added?: number; error?: string; v?: number }; auto?: boolean; noEnv?: boolean };
 
 async function kv(q?: Q): Promise<StripeCfg> {
-  const run = async (qq: Q) => (await qq<{ value: StripeCfg }>(`select value from meet_kv where key = 'stripe_read'`))[0]?.value ?? {};
+  const run = async (qq: Q) => ({ ...((await qq<{ value: StripeCfg }>(`select value from meet_kv where key = 'stripe_read'`))[0]?.value ?? {}), ...(await isPlatformSchool() ? {} : { noEnv: true }) });
   return q ? run(q) : withSchool(run);
 }
-async function kvPut(c: StripeCfg, q?: Q) {
+async function kvPut(c0: StripeCfg, q?: Q) {
+  const { noEnv: _n, ...c } = c0; void _n;
   const run = (qq: Q) => qq(`insert into meet_kv (school_id, key, value) values (current_school(), 'stripe_read', $1) on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [JSON.stringify(c)]);
   await (q ? run(q) : withSchool(run));
 }
-const keyOf = (c: StripeCfg) => process.env.STRIPE_READ_KEY || c.key || "";
-const secretOf = (c: StripeCfg) => process.env.STRIPE_WEBHOOK_SECRET || c.webhookSecret || "";
+const keyOf = (c: StripeCfg) => (c.noEnv ? "" : process.env.STRIPE_READ_KEY) || c.key || "";   // the keys in Vercel are OH-SO ED's only
+const secretOf = (c: StripeCfg) => (c.noEnv ? "" : process.env.STRIPE_WEBHOOK_SECRET) || c.webhookSecret || "";
 export const isReadKey = (k: string) => /^rk_(live|test)_[A-Za-z0-9]{20,}$/.test(k);
 
 async function sget<T>(key: string, path: string): Promise<T> {
@@ -37,7 +38,7 @@ async function sget<T>(key: string, path: string): Promise<T> {
 export type StripeStatus = { connected: boolean; mode: "live" | "test" | null; fromEnv: boolean; at: string | null; by: string | null; account: string | null; webhook: boolean; sync: StripeCfg["sync"]; auto: boolean };
 export async function stripeStatus(): Promise<StripeStatus> {
   const c = await kv(), k = keyOf(c);
-  return { connected: !!k, mode: k ? (k.startsWith("rk_live_") ? "live" : "test") : null, fromEnv: !!process.env.STRIPE_READ_KEY, at: c.at ?? null, by: c.by ?? null,
+  return { connected: !!k, mode: k ? (k.startsWith("rk_live_") ? "live" : "test") : null, fromEnv: !!process.env.STRIPE_READ_KEY && !c.noEnv, at: c.at ?? null, by: c.by ?? null,
     account: c.account ?? null, webhook: !!secretOf(c), sync: c.sync ?? {}, auto: c.auto !== false };
 }
 /** Save the restricted key (checked: it must be a read-only restricted key and able to read charges). */

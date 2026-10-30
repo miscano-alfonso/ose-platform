@@ -24,7 +24,7 @@ import { markOneTaught, undoPoints, addMyHours, removeMyHours, teacherPost } fro
 import { requireViewer } from "@/lib/auth";
 import { requireStaff, requireSignedIn, signIn, signOut, setUpFirstAdmin, changePassword, createInvite, acceptInvite, VIEWAS_COOKIE } from "@/lib/auth";
 import { cookies } from "next/headers";
-import { SCHOOL_COOKIE, siteSchool, schoolsFor } from "@/lib/db";
+import { SCHOOL_COOKIE, siteSchool, schoolsFor, activeSchool } from "@/lib/db";
 
 const str = (f: FormData, k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -132,12 +132,20 @@ export async function inviteAction(_: unknown, f: FormData): Promise<{ error?: s
   const teacherId = str(f, "teacher_id", 40) || null;
   if (!name || !EMAIL.test(email)) return { error: "Enter their name and a valid email address." };
   if (role !== "school_admin" && role !== "teacher") return { error: "Choose Admin or Teacher." };
+  if (role === "teacher" && !teacherId) {   // a new teacher counts towards the plan's teachers
+    const { schoolPlan, TEACHER_LIMIT, PLAN_NAME } = await import("@/lib/plan");
+    const pl = await schoolPlan();
+    if (pl.plan && pl.teachers >= TEACHER_LIMIT[pl.plan]) return { error: `The ${PLAN_NAME[pl.plan]} plan has up to ${TEACHER_LIMIT[pl.plan]} teachers. Choose a bigger plan to add more.` };
+  }
   const r = await createInvite(me.id, name, email, role, role === "teacher" ? teacherId : null);
   if (r.error) return { error: r.error };
   const h = await headers();
   const host = h.get("x-forwarded-host") || h.get("host") || "ose.miscano.co.uk";
   const proto = h.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
   revalidatePath("/admin/staff");
+  // in an OH-SO EdTech customer school the link first picks that school (and gets past the private-preview password)
+  const slug = await activeSchool();
+  if (slug !== siteSchool()) return { link: `${proto}://${host}/osedtech/join?s=${slug}&t=${r.token}`, name };
   return { link: `${proto}://${host}/admin/invite/${r.token}`, name };
 }
 
@@ -423,6 +431,9 @@ export async function addTeacherAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const name = str(f, "name", 80), email = str(f, "email", 120).toLowerCase();
   if (!name || !EMAIL.test(email)) redirect(`/admin/teachers?err=${encodeURIComponent("Enter the teacher’s name and email.")}`);
+  const { schoolPlan, TEACHER_LIMIT, PLAN_NAME } = await import("@/lib/plan");
+  const pl = await schoolPlan();
+  if (pl.plan && pl.teachers >= TEACHER_LIMIT[pl.plan]) redirect(`/admin/teachers?err=${encodeURIComponent(`The ${PLAN_NAME[pl.plan]} plan has ${TEACHER_LIMIT[pl.plan] === 1 ? "one teacher" : `up to ${TEACHER_LIMIT[pl.plan]} teachers`}. Choose a bigger plan to add more.`)}`);
   const r = await addTeacher(me.id, name, email);
   revalidatePath("/admin/teachers");
   redirect(r.id ? `/admin/teachers/${r.id}?ok=${encodeURIComponent("Teacher added. Now fill in their profile.")}` : `/admin/teachers?err=${encodeURIComponent(r.error!)}`);
@@ -1255,12 +1266,21 @@ export async function importRecordingsAction(): Promise<void> {
 // ---------- Demo school ----------
 export async function resetDemoAction(): Promise<void> {
   const me = await requireStaff();
+  if (await activeSchool() !== siteSchool()) redirect("/admin");   // only from OH-SO ED's own school
   const { resetDemo } = await import("@/lib/demo");
   const err = await resetDemo(me);
   redirect("/admin?" + (err ? `err=${encodeURIComponent(err)}` : `ok=${encodeURIComponent("The demo school has been made again with fresh example data. Pick “Demo Academy” in the School switcher.")}`));
 }
 
 // ---------- OH-SO EdTech trial requests ----------
+/** Settings → EdTech trials: move a self-serve trial's end date (OH-SO ED's own admins only). */
+export async function trialEndAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); if (me.role !== "school_admin" || await activeSchool() !== siteSchool()) redirect("/admin");
+  const { setTrialEnd } = await import("@/lib/edtech-account");
+  const slug = str(f, "slug", 40), days = Number(str(f, "days", 3)) || 0;
+  await setTrialEnd(slug, days);
+  redirect("/admin/edtech?ok=" + encodeURIComponent(days ? `${slug} now ends in ${days} days.` : `${slug}’s trial has ended. Its dashboard now asks them to choose a plan.`));
+}
 export async function edtechTrialAction(f: FormData): Promise<void> {
   const me = await requireStaff(); if (me.role !== "school_admin") redirect("/admin/edtech");
   const { updateTrial } = await import("@/lib/edtech");

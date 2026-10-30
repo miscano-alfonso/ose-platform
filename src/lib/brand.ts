@@ -8,6 +8,8 @@ export const DEFAULT_SRC: Record<BrandKind, string> = { logo: "/ose-logo.svg", i
 export const BRAND_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 
 /** Image URLs for the page, with a version so a new upload shows straight away. */
+/** An OH-SO EdTech customer school (not OH-SO ED, not the demo): never shows OH-SO ED's roundel. */
+const other = async () => { const { isPlatformSchool } = await import("./db"); return !(await isPlatformSchool()); };
 export const brandSrc = cache(async (): Promise<Record<BrandKind, string> & { custom: Record<BrandKind, boolean> }> => {
   try {
     const rows = await withSchool((q) => q<{ kind: BrandKind; v: string }>(`select kind, extract(epoch from updated_at)::bigint::text as v from brand_assets`));
@@ -15,8 +17,8 @@ export const brandSrc = cache(async (): Promise<Record<BrandKind, string> & { cu
     // the made-up demo school has its own built-in logo, never OH-SO ED's
     const demo = !v.logo && (await withSchool((q) => q<{ d: boolean }>(`select is_demo as d from schools where id = current_school()`)))[0]?.d;
     return {
-      logo: v.logo ? `/brand/logo?v=${v.logo}` : demo ? "/osedtech/demo-academy-logo.svg" : DEFAULT_SRC.logo,
-      icon: v.icon ? `/brand/icon?v=${v.icon}` : demo ? "/osedtech/demo-academy-icon.svg" : DEFAULT_SRC.icon,
+      logo: v.logo ? `/brand/logo?v=${v.logo}` : demo ? "/osedtech/demo-academy-logo.svg" : (await other()) ? "/osedtech/icon.svg" : DEFAULT_SRC.logo,
+      icon: v.icon ? `/brand/icon?v=${v.icon}` : demo ? "/osedtech/demo-academy-icon.svg" : (await other()) ? "/osedtech/icon.svg" : DEFAULT_SRC.icon,
       custom: { logo: !!v.logo, icon: !!v.icon },
     };
   } catch { return { ...DEFAULT_SRC, custom: { logo: false, icon: false } }; }

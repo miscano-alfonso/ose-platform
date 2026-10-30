@@ -227,3 +227,16 @@
 .edt #main{background:transparent}
 .edt-foot .edt-small{border-top-color:var(--line)}
 .edt-sec.ink .edt-ico{background:var(--teal-soft)}
+/* trial: choose a plan */
+.edt-pick{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;max-width:900px}
+.edt-pick a{display:grid;gap:2px;padding:16px 18px;border:2px solid var(--line);border-radius:16px;background:var(--card);color:var(--ink);text-decoration:none;position:relative}
+.edt-pick a:hover{border-color:var(--teal);color:var(--ink)}
+.edt-pick a[aria-current]{border-color:var(--teal);background:var(--teal-soft);color:var(--ink)}
+.edt-pick b{font-size:20px}.edt-pick span{font-size:14.5px;opacity:.85}
+.edt-pick em{font-style:normal;font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;position:absolute;top:14px;right:14px;background:var(--sun-soft);color:var(--ink);border-radius:999px;padding:3px 9px}
+.edt-pick a[aria-current] em{background:var(--teal);color:#08191e}
+@media (max-width:640px){.edt-pick{grid-template-columns:1fr}.edt-pick em{position:static;justify-self:start;margin-top:6px}}
+.edt-fs{border:0;padding:0;margin:0;display:grid;gap:8px}
+.edt-fs legend{font-weight:500;font-size:15.5px;margin-bottom:6px}
+.edt-fs legend small{font-weight:400;color:var(--muted)}
+.edt-form .edt-pw{display:grid;gap:4px}

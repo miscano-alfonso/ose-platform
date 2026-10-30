@@ -1,7 +1,7 @@
 import "server-only";
 import { isTestMode } from "./test-mode";
 import { createHmac, randomBytes } from "node:crypto";
-import { isDemoSchool, withSchool } from "./db";
+import { isDemoSchool, isPlatformSchool, withSchool } from "./db";
 import { sendHtml } from "./email";
 
 // The newsletter: footer sign-up with double opt-in, the subscribers list, saved emails built from blocks,
@@ -49,10 +49,10 @@ export function simplePage(base: string, title: string, text: string, btn: strin
 }
 
 // ---------- Brevo ----------
-type BrevoCfg = { key?: string; account?: string; senderName?: string; senderEmail?: string; replyTo?: string; copyTo?: string; listId?: number; listName?: string; lastSync?: string };
+type BrevoCfg = { key?: string; account?: string; senderName?: string; senderEmail?: string; replyTo?: string; copyTo?: string; listId?: number; listName?: string; lastSync?: string; noEnv?: boolean };
 const BREVO = () => (process.env.BREVO_API_BASE || "https://api.brevo.com/v3/").replace(/\/?$/, "/");
-export const brevoCfg = async (): Promise<BrevoCfg> => (await kvGet<BrevoCfg>("brevo").catch(() => null)) ?? {};
-const keyOf = (c: BrevoCfg) => c.key || process.env.BREVO_API_KEY || "";
+export const brevoCfg = async (): Promise<BrevoCfg> => ({ ...((await kvGet<BrevoCfg>("brevo").catch(() => null)) ?? {}), ...(await isPlatformSchool() ? {} : { noEnv: true }) });
+const keyOf = (c: BrevoCfg) => c.key || (c.noEnv ? "" : process.env.BREVO_API_KEY) || "";   // Vercel's key is OH-SO ED's only
 export const brevoOn = (c: BrevoCfg) => !!(keyOf(c) && c.senderEmail && c.listId);
 type BrevoRes = Record<string, any> & { __error?: string; __code?: number }; // eslint-disable-line @typescript-eslint/no-explicit-any
 async function brevo(method: string, path: string, body: unknown = null, soft = false, key?: string): Promise<BrevoRes> {
@@ -76,7 +76,7 @@ async function brevoContact(m: { email: string; name: string; status: string }) 
 }
 export async function brevoStatus() {
   const c = await brevoCfg(); const k = keyOf(c);
-  return { connected: brevoOn(c), hasKey: !!k, keyHint: k ? "…" + k.slice(-4) : "", fromEnv: !c.key && !!process.env.BREVO_API_KEY, account: c.account ?? "", senderName: c.senderName ?? (await schoolLook()).school,
+  return { connected: brevoOn(c), hasKey: !!k, keyHint: k ? "…" + k.slice(-4) : "", fromEnv: !c.key && !c.noEnv && !!process.env.BREVO_API_KEY, account: c.account ?? "", senderName: c.senderName ?? (await schoolLook()).school,
     senderEmail: c.senderEmail ?? "", replyTo: c.replyTo ?? "", copyTo: c.copyTo ?? "", listId: c.listId ?? null, listName: c.listName ?? "", lastSync: c.lastSync ?? "", canEdit: true };
 }
 export async function brevoSave(b: Record<string, unknown>) {

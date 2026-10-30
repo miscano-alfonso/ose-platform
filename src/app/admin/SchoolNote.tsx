@@ -5,6 +5,7 @@ import { listSchools, siteSchool, SCHOOL_COOKIE } from "@/lib/db";
 export async function SchoolNote() {
   const slug = (await cookies()).get(SCHOOL_COOKIE)?.value;
   if (!slug || slug === siteSchool()) return null;
+  if ((await (await import("@/lib/plan")).schoolPlan()).plan) return null;   // an OH-SO EdTech customer's own sign-in page
   const all = await listSchools();
   const here = all.find((s) => s.slug === slug)?.name ?? slug, home = all.find((s) => s.slug === siteSchool())?.name ?? "OH-SO ED";
   return <p className="err">You’re in <b>{here}</b>, not {home}. <a href="/admin/school-reset">Back to {home}</a></p>;

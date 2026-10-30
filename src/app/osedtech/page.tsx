@@ -119,7 +119,7 @@ export default function EdTechHome() {
       <p className="edt-eyebrow">Getting started</p>
       <h2 className="edt-h2">Up and running in a few days</h2>
       <div className="edt-grid">
-        <div className="edt-card"><h3>1. Start your free trial</h3><p>Tell us about your teaching and we’ll set up your school with your name, logo and colours.</p></div>
+        <div className="edt-card"><h3>1. Start your free trial</h3><p>Solo and Growth open straight away: confirm your email, choose a password and add your name, logo and colours. School is set up with you.</p></div>
         <div className="edt-card"><h3>2. Add your courses and families</h3><p>Add your classes, term dates and prices, or send us your spreadsheet and we’ll bring everything across.</p></div>
         <div className="edt-card"><h3>3. Share your website</h3><p>Families book and pay online. From then on, reminders, registers and receipts look after themselves.</p></div>
       </div>

@@ -1,6 +1,6 @@
 import "server-only";
 import { gate } from "./test-mode";
-import { isDemoSchool, withSchool } from "./db";
+import { isDemoSchool, isPlatformSchool, withSchool } from "./db";
 import { emailHtml, defaultFooter, type EmailDesign } from "./email-layout";
 import { siteBase } from "./social";
 
@@ -9,7 +9,7 @@ import { siteBase } from "./social";
 type Creds = { key: string; email: string; name: string; replyTo?: string; copyTo?: string };
 async function creds(): Promise<Creds | null> {
   if (await isDemoSchool()) return null;   // the demo school never sends email
-  if (process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL) return { key: process.env.BREVO_API_KEY, email: process.env.BREVO_SENDER_EMAIL, name: process.env.BREVO_SENDER_NAME || "OH-SO ED", replyTo: process.env.BREVO_REPLY_TO || undefined, copyTo: process.env.BREVO_COPY_TO || undefined };
+  if (process.env.BREVO_API_KEY && process.env.BREVO_SENDER_EMAIL && await isPlatformSchool()) return { key: process.env.BREVO_API_KEY, email: process.env.BREVO_SENDER_EMAIL, name: process.env.BREVO_SENDER_NAME || "OH-SO ED", replyTo: process.env.BREVO_REPLY_TO || undefined, copyTo: process.env.BREVO_COPY_TO || undefined };
   const c = await withSchool((q) => q<{ value: { key?: string; senderEmail?: string; senderName?: string; replyTo?: string; copyTo?: string } }>(`select value from newsletter_kv where key = 'brevo'`)).then((r) => r[0]?.value).catch(() => undefined);
   return c?.key && c.senderEmail ? { key: c.key, email: c.senderEmail, name: c.senderName || "OH-SO ED", replyTo: c.replyTo || undefined, copyTo: c.copyTo || undefined } : null;
 }
@@ -154,12 +154,14 @@ export async function history(kind: string) {
 }
 
 /** Sends a ready-made HTML email (one per address). Used by Social's weekly report. */
-export async function sendHtml(subject: string, htmlContent: string, to: string[], tag?: string): Promise<{ ok: boolean; error?: string; held?: number }> {
-  const c = await creds();
+/** opts.account: an OH-SO EdTech account email (confirm your email, reset your password) to the person who just asked for it on
+ *  the website. Never a family, student or teacher, so test mode doesn't hold it. opts.fromName: the name shown as the sender. */
+export async function sendHtml(subject: string, htmlContent: string, to: string[], tag?: string, opts: { account?: boolean; fromName?: string } = {}): Promise<{ ok: boolean; error?: string; held?: number }> {
+  const c0 = await creds(); const c = c0 && opts.fromName ? { ...c0, name: opts.fromName, copyTo: undefined } : c0;
   if (!c) return { ok: false, error: "Brevo isn’t connected yet." };
   if (!to.length) return { ok: false, error: "No one to send it to." };
   const textContent0 = htmlContent.replace(/<style[\s\S]*?<\/style>/g, "").replace(/<[^>]+>/g, " ").replace(/&[a-z]+;/g, " ").replace(/\s+/g, " ").trim();
-  const g = await gate(to.map((email) => ({ email })), { subject, body: textContent0, tag: tag || "social-report" });
+  const g = opts.account ? { send: to.map((email) => ({ email })), held: [], monitor: null, copy: [] } : await gate(to.map((email) => ({ email })), { subject, body: textContent0, tag: tag || "social-report" });
   to = g.send.map((r) => r.email);
   await monitorCopies(c, g.monitor, g.copy, subject, htmlContent, textContent0, tag || "social-report");
   if (!to.length) return { ok: true, held: g.held.length };
