@@ -11,9 +11,9 @@
 html[data-theme=dark] .bt{--b-bg:#0d0f1c;--b-tile:#171a2e;--b-inset:#1e2238;--b-line:#2a2e4a;--b-ink:#eef0f7;--b-muted:#b9c0e4;--b-faint:#8d93b8;--b-sky:#8fd6f0;--b-good:#5bd393;--b-deep:#080a14;
   --b-hero:radial-gradient(circle at 85% 12%,#24318a 0%,#131633 60%);color-scheme:dark}
 
-.bt{background:var(--b-bg);color:var(--b-ink);font-family:"Space Grotesk","Jost",system-ui,sans-serif;min-height:100vh;transition:background-color .2s}
+.bt{background:var(--b-bg);color:var(--b-ink);font-family:Futura,"Futura PT","Jost","Century Gothic",system-ui,sans-serif;min-height:100vh;transition:background-color .2s}
 html:has(.bt){background:var(--b-bg,#f3f4f8)}
-.bt h1,.bt h2,.bt h3{font-family:"Space Grotesk","Jost",system-ui,sans-serif;font-weight:700;letter-spacing:-.02em}
+.bt h1,.bt h2,.bt h3{font-family:Futura,"Futura PT","Jost","Century Gothic",system-ui,sans-serif;font-weight:700;letter-spacing:-.02em}
 .bt #main{background:transparent}
 .bt a{color:inherit}
 
@@ -33,7 +33,7 @@ html[data-theme=dark] .bt .s-logo img{filter:none}
 .bt .s-ico:hover,.bt .s-ico:focus-visible{background:var(--b-pop);color:var(--b-pop-ink);border-color:var(--b-pop)}
 .bt .s-burger{border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);border-radius:21px}
 .bt .s-burger:hover,.bt .s-burger[aria-expanded=true]{background:var(--b-ink);color:var(--b-bg)}
-.bt .s-theme{height:42px;padding:0 14px;border-radius:21px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);font:500 14.5px "Space Grotesk",system-ui,sans-serif;display:inline-flex;gap:7px;align-items:center;cursor:pointer}
+.bt .s-theme{height:42px;padding:0 14px;border-radius:21px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);font:500 14.5px Futura,"Futura PT","Jost","Century Gothic",system-ui,sans-serif;display:inline-flex;gap:7px;align-items:center;cursor:pointer}
 .bt .s-theme:hover{background:var(--b-inset)}
 @media (max-width:1080px){
   .bt .s-nav .s-links{background:var(--b-tile);border-radius:20px;padding:6px}
@@ -383,7 +383,7 @@ body:has(.bh-home,.s-phead){background:transparent}
 .bh-home .bh-hero h1.chalkt span.pop{color:var(--b-pop)}
 /* ---------- public timetable: week calendar ---------- */
 .wk-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
-.wk-filters button{font:600 14px "Space Grotesk",sans-serif;padding:8px 16px;border-radius:999px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);cursor:pointer}
+.wk-filters button{font:600 14px Futura,"Futura PT","Jost","Century Gothic",system-ui,sans-serif;padding:8px 16px;border-radius:999px;border:1px solid var(--b-line);background:var(--b-tile);color:var(--b-ink);cursor:pointer}
 .wk-filters button[aria-pressed=true]{background:var(--b-ink);color:var(--b-bg);border-color:var(--b-ink)}
 .wk-filters button:hover,.wk-filters button:focus-visible{background:#5fe0e8;color:#0f1747;border-color:#5fe0e8}
 .wk{display:grid;grid-template-columns:56px repeat(var(--days),minmax(140px,1fr));gap:8px;background:var(--b-tile);border:1px solid var(--b-line);border-radius:24px;padding:16px;overflow-x:auto}
@@ -418,3 +418,6 @@ body:has(.bh-home,.s-phead){background:transparent}
 /* the Facebook reviews widget (Elfsight) only has dark text: in dark mode it sits on a light panel so it can be read */
 @media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .rev-widget{background:#eef0f7;color:#0f1747;border-radius:28px;padding:clamp(14px,3vw,30px);color-scheme:light}}
 html[data-theme=dark] .bt .rev-widget{background:#eef0f7;color:#0f1747;border-radius:28px;padding:clamp(14px,3vw,30px);color-scheme:light}
+/* Futura for headlines and text (Leanne, 30 Oct): real Futura where the device has it (Mac, iPhone, iPad), otherwise Jost,
+   the free Futura-style face. Futura runs wide, so headlines are a touch less tight. */
+.bt h1,.bt h2,.bt h3{letter-spacing:-.01em}
