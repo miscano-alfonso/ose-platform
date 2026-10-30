@@ -74,7 +74,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
           return <Link key={i} className="bh-course" href={`/courses/${c.page_slug}`} style={{ ["--c" as string]: c.colour }} aria-hidden={dup || undefined} tabIndex={dup ? -1 : undefined}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img className="rd" src={roundelSrc(c.subject)} alt="" width={64} height={64} loading="lazy" />
-          <span className="lv"><i />{c.level}</span><b>{c.subject}</b>
+          <span className="lv">{c.level}</span><b>{c.subject}</b>
           <span>{c.slots?.length ? c.slots.map((x) => `${DAYS[x.d]} ${x.t}`).join(" & ") : "Times to be announced"}</span></Link>; })}</div></div>
       </section>}
       <Link className="bh-t bh-half bh-cta bh-homeed" href="/home-ed"><p className="k">New to home education?</p>
