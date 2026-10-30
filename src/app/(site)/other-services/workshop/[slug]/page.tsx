@@ -29,7 +29,10 @@ export default async function WorkshopPage({ params, searchParams }: { params: P
       <p>{day(w.starts_at)} · {time(w.starts_at)} · {w.minutes} minutes{w.teacher ? ` · ${w.teacher}` : ""}</p>
       <div className="cd-hbtns"><Link href="/other-services?tag=workshops">← All workshops</Link>{!full && <a href="#book">Book a place</a>}</div>
     </div></section>
-    <section className="s-sec"><div className="wrap wk-grid">
+    {/* once the title panel scrolls up, a slim band with the title and the buttons stays under the menu (as on course pages) */}
+    <div className="cd-sticky wk-sticky"><div className="cd-stitle"><b>{w.title}</b></div>
+      <div className="cd-hbtns"><Link href="/other-services?tag=workshops" tabIndex={-1}>← All workshops</Link>{!full && <a href="#book" tabIndex={-1}>Book a place</a>}</div></div>
+    <section className="s-sec wk-sec"><div className="wrap wk-grid">
       <article className="wk-tile" style={w.colour ? { ["--c" as string]: w.colour } : undefined}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {w.image && <div className="wk-pic"><img src={w.image} alt="" width={1280} height={720} /></div>}

@@ -41,6 +41,8 @@ export default async function Website({ searchParams }: { searchParams: Promise<
       <label className="fld">“Teach with us” heading (under the teachers)<input name="teach_title" maxLength={120} defaultValue={txt.teach_title} style={{ maxWidth: 520 }} /></label>
       <label className="fld">“Teach with us” text<textarea name="teach_text" rows={3} maxLength={600} defaultValue={txt.teach_text} className="mini" style={{ width: "100%", maxWidth: 720 }} /></label>
       <label className="fld">“Teach with us” button (goes to Jobs)<input name="teach_button" maxLength={60} defaultValue={txt.teach_button} style={{ maxWidth: 360 }} /></label>
+      <h2 style={{ marginTop: 8 }}>Past paper marking</h2>
+      <label className="fld">“Pay now” link <span className="muted">(a Stripe Payment Link, buy.stripe.com/…, works best: a checkout.stripe.com page link stops working after a day)</span><input name="marking_pay_url" type="url" maxLength={1200} defaultValue={txt.marking_pay_url} style={{ width: "100%" }} /></label>
       <h2 style={{ marginTop: 8 }}>Homepage: Meet the Headteacher</h2>
       <label className="fld">Heading<input name="head_title" maxLength={80} defaultValue={txt.head_title} style={{ maxWidth: 420 }} /></label>
       <label className="fld">Text (each line is a paragraph)<textarea name="head_text" rows={6} maxLength={1000} defaultValue={txt.head_text} className="mini" style={{ width: "100%" }} /></label>

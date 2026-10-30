@@ -1,3 +1,4 @@
+import { AddToCart } from "../../../AddToCart";
 import type { Metadata } from "next";
 import Link from "@/app/(site)/HoverLink";
 import { notFound } from "next/navigation";
@@ -31,12 +32,12 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
     <section className="s-phead"><div className="wrap cd-head">
       <div><div className="cd-title"><h1>{p.subject}</h1>{g?.label && <span className="sticky sl-few cd-hlabel">{g.label_text ?? g.label}</span>}</div>
         <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`}>← Back to courses</Link>
-          {g && <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>}</div></div>
+          {g && (g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
     </div></section>
     {/* once the title panel scrolls up, a slim band with the title stays under the menu, the roundel sticking on its edge */}
     <div className="cd-sticky"><div className="cd-stitle"><b>{p.subject}</b>{g?.label && <span className="sticky sl-few">{g.label_text ?? g.label}</span>}</div>
       <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`} tabIndex={-1}>← Back to courses</Link>
-        {g && <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Add to cart"}</span>}</div></div>
+        {g && (g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
     <div className="cd-badge"><div className="wrap">
       {site.demo ? <div className="roundel cd-roundel" style={{ ["--c" as string]: p.colour }} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}

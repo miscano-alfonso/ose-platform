@@ -13,6 +13,7 @@ export const DEFAULTS: Record<string, string> = {
   teach_title: "Want to teach with us?",
   teach_text: "We’re always glad to hear from outstanding secondary teachers who’d love to teach their subject live online to home-educated students.",
   teach_button: "See our current vacancies",
+  marking_pay_url: "https://checkout.stripe.com/c/pay/cs_live_b1r9aTQtL23LYWz3w9MWepocc26tf3BQfC1JnyXYCV31wP3E6oULfPFYVr#fid1d2BpamRhQ2prcSc%2FJ0p1YGslVmRrdicpJ2dqd2Fgd1ZxfGlgJz8ndnRwZHdgJyknYnMnPzUpJ2R1bE5gfCc%2FJ3VuWmlsc2BaMDRJcGdPNExwaTRncUl%2FRjV1NGh8VWducTRSRG9yblN3TmtBdm9uSH9sSmQwYGAwYDRXVE1PMmpsckJfbWxJcnJBPEdURHI9NjFTfX1SaEgwPEdcYFRkdEY1NW9UNHVffzJiJyknY3dqaFZgd3Ngdyc%2FcXdwYCknZ2RmbmJ3anBrYUZqaWp3Jz8nJmEzYTNhMycpJ2lkfGpwcVF8dWAnPydocGlxbFpscWBoJyknYGtkZ2lgVWlkZmBtamlhYHd2Jz9xd3BgeCUl",
   head_title: "Meet the Headteacher",
   head_text: "I’m Leanne, Principal and English Teacher. OH-SO ED was born from the success of OH-SO ENGLISH, which I started in 2021 after leaving the mainstream classroom for good. We are now a fast-growing team, offering a number of secondary subjects to the home-educating community.\nOur OH-SO ED team are all outstanding ex-secondary practitioners who have worked for many years in secondary education within their specialisms. We’re all committed to delivering a curriculum that is more diverse, more inspirational and ultimately more fulfilling than the one delivered in the mainstream secondary classroom.",
   about_title: "About Us",

@@ -1,4 +1,5 @@
 import { isPlatformSchool } from "@/lib/db";
+import { cartCodes } from "@/lib/cart";
 import { ChalkTitles } from "./ChalkTitles";
 import { Reveal } from "./Reveal";
 import { TiltTiles } from "./TiltTiles";
@@ -34,6 +35,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   // OH-SO ED's own site always shows its logo white with ONLINE SCHOOL in the light blue (the bar and footer are always dark blue),
   // even if a logo has been uploaded in Admin → Website; other schools keep their own logo
   const duo = !site.demo && (logo.startsWith("/ose-logo.svg") || await isPlatformSchool());
+  const inCart = site.demo ? 0 : (await cartCodes()).length;
   const css = stylesCss(styles), fonts = fontsHref(styles);
   return (<div className={site.demo ? undefined : "bt"}>
       {!site.demo && <script dangerouslySetInnerHTML={{ __html: "if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('rv')" }} />}
@@ -47,7 +49,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
             <span className="demo-links"><a href="/osedtech/demo">Its dashboard</a><a href="/osedtech">OH-SO EdTech</a><a href="/osedtech/demo/leave">Leave the demo</a></span></div></div></>}
         <header className="s-nav"><div className="wrap">
           <Link href="/" className="s-logo"><img src={duo ? "/ose-logo-duo.svg" : logo} className={duo ? "duo" : undefined} alt={`${site.name}: home`} width={773} height={224} /></Link>
-          <div className="s-icons">{!site.demo && <SiteTheme />}<Link href="/cart" className="s-ico" aria-label="Basket"><Cart /></Link><Link href="/account" className="s-ico" aria-label="My account"><Person /></Link></div>
+          <div className="s-icons">{!site.demo && <SiteTheme />}<Link href="/cart" className="s-ico" aria-label={inCart ? `Basket, ${inCart} course${inCart > 1 ? "s" : ""}` : "Basket"}><Cart />{inCart > 0 && <span className="s-badge" aria-hidden="true">{inCart}</span>}</Link><Link href="/account" className="s-ico" aria-label="My account"><Person /></Link></div>
           <SiteNav items={NAV as [string, string][]} />
         </div></header>
         <main id="main">{children}</main>{!site.demo && <HeroNav />}{!site.demo && <ChalkTitles />}{!site.demo && <Reveal />}{!site.demo && <TiltTiles />}

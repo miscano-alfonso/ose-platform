@@ -1076,3 +1076,68 @@ html[data-theme=dark] .bt .mc-foot .btn{color:#eef0f7;border-color:rgba(255,255,
 .bt .wk-done p:not(.ab-k){margin:0;line-height:1.6}
 .bt .mc-link{color:inherit;text-decoration:none}.bt .mc-link:hover{color:var(--b-sky)}
 @media (max-width:900px){.bt .wk-grid{grid-template-columns:minmax(0,1fr)}.bt .wk-book{position:static}}
+/* basket (31 Oct): course rows in a tile on the left, summary and checkout on the right; cart count on the menu icon */
+.bt .s-ico{position:relative}
+.bt .s-badge{position:absolute;top:-4px;right:-4px;min-width:18px;height:18px;padding:0 5px;border-radius:999px;background:#cad26d;color:#050f2d;font:600 11px/18px "Jost",sans-serif;text-align:center}
+.bt .bk-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:28px;align-items:start}
+.bt .bk-tile{background:var(--b-tile);border:1px solid var(--b-line);border-radius:28px;padding:clamp(22px,2.6vw,40px);color:var(--b-ink);min-width:0}
+.bt .bk-tile h2{margin:0 0 10px;font-size:clamp(26px,2.3vw,34px)}
+.bt .bk-done{max-width:760px;display:grid;gap:12px}.bt .bk-done p:not(.ab-k){margin:0}
+.bt .bk-rows{list-style:none;margin:6px 0 0;padding:0}
+.bt .bk-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:18px;align-items:center;padding:18px 0;border-bottom:1px solid var(--b-line)}
+.bt .bk-row:first-child{border-top:1px solid var(--b-line)}
+.bt .bk-rd{--d:58px}
+.bt .bk-name{display:grid;gap:4px;min-width:0}.bt .bk-name a{color:inherit;text-decoration:none}.bt .bk-name a:hover b{color:var(--b-sky)}
+.bt .bk-name b{font-size:clamp(18px,1.5vw,21px);font-weight:500}.bt .bk-name span{color:var(--b-muted);font-size:15px}
+.bt .bk-price{display:grid;justify-items:end;gap:2px;text-align:right}.bt .bk-price b{font-size:20px;font-weight:500}
+.bt .bk-price s{color:var(--b-muted);font-size:14px}.bt .bk-price span{color:var(--b-sky);font-size:14px}
+.bt .bk-x{width:38px;height:38px;border-radius:50%;border:1px solid var(--b-line);background:transparent;color:var(--b-ink);font-size:22px;line-height:1;cursor:pointer;transition:background-color .2s,color .2s,border-color .2s}
+.bt .bk-x:hover,.bt .bk-x:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.bt .bk-notes{margin:22px 0 0;padding-left:20px;color:var(--b-muted);font-size:15px;display:grid;gap:6px}
+.bt .bk-sum{position:sticky;top:calc(var(--navh,96px) + 20px);display:flex;flex-direction:column;gap:16px}
+.bt .bk-dl{margin:0;display:grid}
+.bt .bk-dl>div{display:flex;justify-content:space-between;gap:12px;padding:11px 0;border-bottom:1px solid var(--b-line)}
+.bt .bk-dl dt{color:var(--b-sky)}.bt .bk-dl dd{margin:0;font-weight:500}
+.bt .bk-dl .bk-off dd{color:#cad26d}
+html:not([data-theme=dark]) .bt .bk-dl .bk-off dd{color:#5f6a12}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .bk-dl .bk-off dd{color:#cad26d}}
+.bt .bk-dl .bk-big{border-bottom:0;padding-top:16px}.bt .bk-dl .bk-big dt{color:var(--b-ink);font-size:20px}.bt .bk-dl .bk-big dd{font-size:clamp(24px,2vw,30px)}
+.bt .bk-coupon summary{cursor:pointer;color:var(--b-sky);font-weight:500}
+.bt .bk-cform{display:flex;gap:8px;margin-top:10px}
+.bt .bk-cform input{flex:1;min-width:0;padding:10px 14px;border-radius:14px;border:1px solid var(--b-line);background:var(--b-inset);color:var(--b-ink);font:inherit}
+.bt .bk-cform button{padding:10px 18px;border-radius:999px;border:1px solid currentColor;background:transparent;color:var(--b-ink);font:inherit;cursor:pointer}
+.bt .bk-cform button:hover{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.bt .bk-form{display:flex;flex-direction:column;gap:14px;margin:0;max-width:none}
+.bt .bk-form input:not([type=checkbox]),.bt .bk-form textarea{background:var(--b-inset);border-color:var(--b-line);color:var(--b-ink);border-radius:14px}
+.bt .bk-check{display:flex!important;flex-direction:row!important;gap:10px;align-items:flex-start;font-weight:400}
+.bt .bk-check input{width:20px;height:20px;margin:2px 0 0;accent-color:#68bbe4;flex:none}
+.bt .bk-check a{color:var(--b-sky)}
+.bt .bk-spread{display:none;margin:-6px 0 0 30px;color:var(--b-muted)}
+.bt .bk-form:has(input[name=spread]:checked) .bk-spread{display:block}
+.bt .bk-go{align-self:stretch;text-align:center}
+.bt .cd-hbtns .in-cart,.bt .in-cart{border-color:#68bbe4!important;color:#68bbe4}
+.bt .cd-hbtns button{font:inherit}
+@media (max-width:1000px){.bt .bk-grid{grid-template-columns:minmax(0,1fr)}.bt .bk-sum{position:static}}
+@media (max-width:600px){.bt .bk-row{grid-template-columns:auto minmax(0,1fr) auto;gap:12px}.bt .bk-price{grid-column:2;justify-items:start;text-align:left}.bt .bk-row form{grid-row:1;grid-column:3}.bt .bk-rd{--d:46px}}
+/* past paper marking (31 Oct): the form in a tile, Send the paper and Pay now side by side at the bottom */
+.bt .pp-wrap{max-width:900px}
+.bt .pp-form{display:flex;flex-direction:column}
+.bt .pp-btns{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.bt .pp-send{background:transparent;color:var(--b-ink);border-color:currentColor}
+.bt .pp-send:hover,.bt .pp-send:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.bt a.pp-pay{display:inline-block;text-decoration:none;justify-self:start;align-self:flex-start}
+/* "Added to your basket" pop-up */
+.cart-toast{position:fixed;z-index:200;right:clamp(12px,2.5vw,32px);bottom:clamp(12px,2.5vw,32px);width:min(420px,calc(100vw - 24px));display:grid;grid-template-columns:auto minmax(0,1fr);gap:12px 14px;align-items:center;padding:18px 20px;border-radius:24px;background:#050f2d;color:#eef0f7;border:1px solid rgba(104,187,228,.45);box-shadow:0 24px 50px -18px rgba(0,0,0,.7);font-family:"Jost","Futura PT",system-ui,sans-serif;animation:ctIn .3s cubic-bezier(.2,.75,.2,1)}
+.cart-toast .ct-tick{width:36px;height:36px;border-radius:50%;background:#cad26d;color:#050f2d;display:grid;place-items:center;font-weight:700}
+.cart-toast .ct-txt{display:grid;gap:2px}.cart-toast .ct-txt b{font-weight:500;font-size:17px}.cart-toast .ct-txt span{color:#b9c0e4;font-size:14.5px;font-weight:300}
+.cart-toast .ct-acts{grid-column:1/-1;display:flex;gap:8px;flex-wrap:wrap}
+.cart-toast button{font:inherit;font-size:15px;padding:8px 18px;border-radius:999px;cursor:pointer;border:1px solid rgba(255,255,255,.85);background:transparent;color:#eef0f7;transition:background-color .2s,color .2s,border-color .2s}
+.cart-toast .ct-go{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.cart-toast button:hover,.cart-toast button:focus-visible{background:#eef0f7;border-color:#eef0f7;color:#050f2d}
+@keyframes ctIn{from{opacity:0;transform:translateY(16px)}}
+@media (prefers-reduced-motion:reduce){.cart-toast{animation:none}}
+/* workshop page: same sticky title band as course pages (no roundel), and the same room under the title panel */
+.bt .wk-sticky .cd-stitle{max-width:100%}
+.bt .wk-sec{padding-top:clamp(44px,4vw,58px)}
+.bt .wk-book{top:calc(var(--navh,96px) + 182px)}
+.bt .in-cart:hover,.bt .in-cart:focus-visible,.bt .cd-hbtns .in-cart:hover{background:#68bbe4;border-color:#68bbe4;color:#050f2d}

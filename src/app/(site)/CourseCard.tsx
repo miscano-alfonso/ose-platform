@@ -1,3 +1,4 @@
+import { AddToCart } from "./AddToCart";
 import Link from "@/app/(site)/HoverLink";
 import type { Course } from "@/lib/data";
 import { money, DAYS, monthYear } from "@/lib/format";
@@ -54,9 +55,9 @@ export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }
       <div className="cbtns">
         {c.label && <span className={`sticky sl-${LABEL_CLASS[c.label] || "few"}`}>{c.label_text ?? c.label}</span>}
         <Link className="btn sm btn-line cread" href={`/courses/${c.page_slug}`}>Read more</Link>
-        <span className={`btn sm ${c.shows_waitlist ? "btn-line" : "btn-line"}`} aria-disabled="true" title="Booking opens in the next update">
-          {c.shows_waitlist ? "Join waiting list" : "Add to cart"}
-        </span>
+        {c.shows_waitlist || !c.bookable || mark !== "OH–SO" ? <span className="btn sm btn-line" aria-disabled="true" title="Booking opens in the next update">
+          {c.shows_waitlist ? "Join waiting list" : c.is_full ? "Full" : "Add to cart"}
+        </span> : <AddToCart code={c.code} label={`${c.level} ${c.subject}`} />}
       </div>
     </article>
   );
