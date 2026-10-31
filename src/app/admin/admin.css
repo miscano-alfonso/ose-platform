@@ -657,7 +657,7 @@
 .adm .top h1{line-height:1.15}
 .adm .top .sub{margin-top:10px;line-height:1.5}
 .adm .top h1 .h1-code{font-size:.55em;font-weight:500;color:var(--muted);margin-left:14px;letter-spacing:.02em;vertical-align:.18em;white-space:nowrap}
-.adm .backlink{margin:0 0 14px;font-size:15px}.adm .backlink a{text-decoration:none;color:var(--muted)}.adm .backlink a:hover{color:var(--ink);text-decoration:underline}
+.adm .backlink{margin:0 0 16px}.adm .backlink a{text-decoration:none}
 .adm h1 + .sub{margin-top:10px;line-height:1.5}
 /* Page styles: the settings and the preview both fit on screen and scroll inside themselves */
 @media (min-width:1001px){
@@ -882,3 +882,17 @@
 .adm .mc-table .mc-name{color:var(--ink);text-decoration:none}.adm .mc-table .mc-name:hover{text-decoration:underline}
 .adm .mc-table .mc-code{font-size:13px;letter-spacing:.08em}
 .adm .mc-acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+/* 31 Oct: Demo Academy's own colourway (burgundy, burnt orange, yellow highlights), on every dashboard in the demo school (data-palette=demo) */
+.adm[data-palette=demo]{--bg:#faf4f2;--panel:#ffffff;--ink:#3d0d1a;--muted:#6e4a52;--line:#eddcdc;--soft:#f8eeec;--hover:#f3e4e2;--track:#eddcdc;
+  --rail:#ffffff;--rail-on:#7b1e34;--rail-on-ink:#ffffff;--pop:#ffcc33;--pop-ink:#3d0d1a;--sky:#b84a12;--bar:#cc5a1e;--info:#b84a12;--info-bg:#fbe8dc}
+@media (prefers-color-scheme:dark){.adm[data-palette=demo]:not([data-theme=light]){--bg:#170a0e;--panel:#25121a;--ink:#f7ecee;--muted:#dcbfc5;--line:#46232e;--soft:#2d1620;--hover:#381b26;--track:#46232e;
+  --rail:#12070b;--rail-on:#ffcc33;--rail-on-ink:#1a0a0f;--pop:#ffcc33;--pop-ink:#1a0a0f;--sky:#f39a62;--bar:#e8763a;--info:#f5a06e;--info-bg:#3a1f17}}
+.adm[data-palette=demo][data-theme=dark]{--bg:#170a0e;--panel:#25121a;--ink:#f7ecee;--muted:#dcbfc5;--line:#46232e;--soft:#2d1620;--hover:#381b26;--track:#46232e;
+  --rail:#12070b;--rail-on:#ffcc33;--rail-on-ink:#1a0a0f;--pop:#ffcc33;--pop-ink:#1a0a0f;--sky:#f39a62;--bar:#e8763a;--info:#f5a06e;--info-bg:#3a1f17}
+.adm[data-palette=demo] .dx-hero{background:radial-gradient(circle at 88% 10%,rgba(214,98,34,.85) 0%,transparent 55%),linear-gradient(125deg,#7b1e34,#3a0a16)}
+.adm[data-palette=demo] .dx-hero::after{border-color:rgba(255,204,51,.16)}
+.adm[data-palette=demo] .fx-hero-s{color:#f3d9dc}
+.adm[data-palette=demo] .lwin{background:#7b1e34}
+/* 31 Oct: page titles line up with the buttons on the right (first line of text, not the middle of title + subtitle) */
+.adm .top{align-items:baseline}
+.adm .top>:not(:first-child){position:relative;top:-5px}

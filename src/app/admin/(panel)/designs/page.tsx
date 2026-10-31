@@ -18,7 +18,8 @@ export default async function Designs({ searchParams }: { searchParams: Promise<
     withSchool((q) => q<{ brand: { primary?: string } }>(`select brand from schools where id = current_school()`)).then((r) => r[0]?.brand ?? {})]);
   const navy = typeof brand.primary === "string" && /^#[0-9a-f]{6}$/i.test(brand.primary) ? brand.primary : "#141a5c";
   return <>
-    <div className="top"><div><p style={{ margin: "0 0 4px" }}><Link href="/admin/social">← Social</Link></p><h1>More designs</h1><div className="sub">The Facebook-style designs, for a post that wants a different look from your picture template. Pick a design, change the words, then post it from Social or download it. Pictures come from your library and Canva (Social → Pictures &amp; Canva).</div></div></div>
+    <p className="backlink"><Link className="abtn sm" href="/admin/social">← Social</Link></p>
+    <div className="top"><div><h1>More designs</h1><div className="sub">The Facebook-style designs, for a post that wants a different look from your picture template. Pick a design, change the words, then post it from Social or download it. Pictures come from your library and Canva (Social → Pictures &amp; Canva).</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <Studio data={data} navy={navy} canva={canva.connected} purpose={sp.purpose} ai={await aiReady().catch(() => false)} />
   </>;

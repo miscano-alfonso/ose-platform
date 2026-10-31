@@ -72,7 +72,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const school = jar.get(SCHOOL_COOKIE)?.value || siteSchool();
   const views = [{ value: "admin", label: "Admin" }, ...teachers.map((t) => ({ value: `t:${t.id}`, label: `Teacher: ${t.name}` })),
     { value: "p", label: "Parent…" }, { value: "s", label: "Student…" }];
-  return <div className="adm" data-theme={theme} style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b"), ["--brand-accent-ink" as string]: inkOn(hex(brand.accent, "#e3cd4b")) }}><DashStyles /><LessonWindow /><NotifyCenter api="/admin/notify-api" role="admin" /><div className="app">
+  return <div className="adm" data-theme={theme} data-palette={demo ? "demo" : undefined} style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b"), ["--brand-accent-ink" as string]: inkOn(hex(brand.accent, "#e3cd4b")) }}><DashStyles /><LessonWindow /><NotifyCenter api="/admin/notify-api" role="admin" /><div className="app">
     <aside className="side">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {demo || (pl.plan && !custom.logo) ? <a className="logo" href="/admin" title="Dashboard" style={{ color: "#fff", font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>{demo ? "Demo school" : `${PLAN_NAME[pl.plan!]} plan`}</span></a>

@@ -30,7 +30,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
   const joinedN = arrivals.filter((a) => a.x).length;
   const backHref = me.role === "school_admin" ? "/admin/attendance" : "/admin/teacher";
   return <>
-    <p className="backlink"><a href={backHref}>← Back</a></p>
+    <p className="backlink"><a className="abtn sm" href={backHref}>← Back</a></p>
     <div className="top"><div><h1>{r.name}<span className="h1-code">{r.code}</span></h1>
       <div className="sub">{longDay(r.lesson_date)}, {r.starts_at}–{r.ends_at}{r.teacher ? ` · ${r.teacher}` : ""}</div></div>
       <span className="grow" />{r.status === "taught" ? <span className="pill good">Taught</span> : r.status === "cancelled" ? <span className="pill bad">Cancelled</span> : <span className="pill info">Scheduled</span>}</div>

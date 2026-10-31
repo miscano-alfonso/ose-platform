@@ -25,12 +25,13 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   const me = await requireViewer();
   after(() => checkinsBackground()); // a school without Meet may only ever have teachers signed in
   const { logo } = await brandSrc();
-  const brand = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string } }>(`select brand from schools where id = current_school()`)))[0]?.brand ?? {};
+  const sch = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string }; is_demo: boolean; name: string }>(`select brand, is_demo, name from schools where id = current_school()`)))[0];
+  const brand = sch?.brand ?? {}, palette = sch?.is_demo ? "demo" : undefined;
   const inkOn = (h: string) => { const n = parseInt(h.slice(1), 16), l = (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255; return l < 0.6 ? "#ffffff" : "#0f1747"; };
   const hex = (v: unknown, d: string) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
   const style = { ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b"), ["--brand-accent-ink" as string]: inkOn(hex(brand.accent, "#e3cd4b")) };
 
-  if (me.role === "school_admin") return <div className="adm" data-theme={theme} style={style}><DashStyles />
+  if (me.role === "school_admin") return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles />
     <LessonWindow /><NotifyCenter api="/admin/notify-api" role="admin" /><div className="staffbar">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <a href="/admin"><img src={logo} alt="OH-SO ED" width={773} height={224} /></a>
@@ -43,13 +44,14 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     (select count(*)::int from report_entries e join report_cycles cy on cy.id = e.cycle_id join course_groups g on g.id = e.group_id join teachers t on t.id = g.teacher_id
       where t.user_id = $1 and cy.status <> 'published' and e.status in ('todo','draft','returned')) as reports`, [me.id]));
 
-  return <div className="adm" data-theme={theme} style={style}><DashStyles />
+  return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles />
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
     <LessonWindow /><NotifyCenter api="/admin/notify-api" role="teacher" /><div className="app">
       <aside className="side">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>
+        {sch?.is_demo ? <a className="logo" href="/admin/teacher" title="My day" style={{ font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
+        : <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>}
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports }} groups={await menuFor("teacher")} />
         <SideFoot theme={theme} signOut={signOutAction} inline toggle />
       </aside>

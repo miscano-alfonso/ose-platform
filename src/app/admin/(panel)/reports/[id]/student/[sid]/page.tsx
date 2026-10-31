@@ -12,7 +12,7 @@ export default async function Preview({ params }: { params: Promise<{ id: string
   if (!r) notFound();
   const label = (n: number | null) => n == null ? "–" : `${n} ${r.bands.find((b) => b.score === n)?.label ?? ""}`;
   return <>
-    <p><Link href={`/admin/reports/${id}?tab=students`}>← Preview reports</Link></p>
+    <p className="backlink"><Link className="abtn sm" href={`/admin/reports/${id}?tab=students`}>← Preview reports</Link></p>
     <section className="card" style={{ maxWidth: 820 }}>
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}><div><h1 style={{ margin: 0 }}>{r.student}</h1><div className="sub">{r.cycle} · {r.school}</div></div>
         <span className="muted">Published {new Date(r.publish_on + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</span></div>

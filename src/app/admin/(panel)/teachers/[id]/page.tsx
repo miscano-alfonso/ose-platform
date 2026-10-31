@@ -8,7 +8,7 @@ export default async function EditTeacher({ params, searchParams }: { params: Pr
   const { teacher: t, subjects } = await getTeacherAdmin(id);
   if (!t) notFound();
   return <>
-    <p><Link href="/admin/teachers">← Teachers</Link></p>
+    <p className="backlink"><Link className="abtn sm" href="/admin/teachers">← Teachers</Link></p>
     <div className="top"><div><h1>{t.name}</h1><div className="sub">{t.email}{t.slug ? ` · ohsoed.co.uk/teachers/${t.slug}` : ""}</div></div><span className="grow" />
       {t.slug && !t.archived && <a className="abtn sm" href={`/teachers/${t.slug}`} target="_blank" rel="noreferrer">View on the website</a>}</div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}

@@ -11,7 +11,8 @@ export default async function JobEdit({ params, searchParams }: { params: Promis
   const job = await getJob(id); if (!job) notFound();
   const apps = await listApplications(id);
   return <>
-    <div className="top"><div><p className="sub"><Link href="/admin/jobs">← Jobs</Link></p><h1>{job.title}</h1></div><span className="grow" />{job.status !== "draft" && <a className="abtn sm" href={`/jobs/${job.slug}`} target="_blank" rel="noreferrer">View on the website</a>}</div>
+    <p className="backlink"><Link className="abtn sm" href="/admin/jobs">← Jobs</Link></p>
+    <div className="top"><div><h1>{job.title}</h1></div><span className="grow" />{job.status !== "draft" && <a className="abtn sm" href={`/jobs/${job.slug}`} target="_blank" rel="noreferrer">View on the website</a>}</div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg err">{sp.err}</p>}
     <h2 className="h2">Applications ({apps.length})</h2>
     <div className="tw"><table><thead><tr><th>Applicant</th><th>Received</th><th>Status</th><th></th></tr></thead><tbody>

@@ -22,7 +22,7 @@ export default async function MyClass({ params, searchParams }: { params: Promis
   const list = sortStudents(all, so.key, so.dir);
   const qs = (o: Record<string, string>) => { const u = new URLSearchParams(o).toString(); return `/admin/teacher/classes/${id}${u ? `?${u}` : ""}`; };
   return <>
-    <p style={{ margin: "0 0 6px" }}><Link href="/admin/teacher/classes">← My classes</Link></p>
+    <p className="backlink"><Link className="abtn sm" href="/admin/teacher/classes">← My classes</Link></p>
     <div className="top"><div><h1>{c.level} {c.subject}<span className="h1-code">{c.code}</span></h1>
       <div className="sub">{(c.slots ?? []).map((s) => `${DAY[s.d]} ${s.t}–${s.e}`).join(" · ")} · {c.students} student{c.students === 1 ? "" : "s"}{c.att !== null ? ` · ${c.att}% attendance` : ""}</div></div>
       <span className="grow" /><div className="acts">

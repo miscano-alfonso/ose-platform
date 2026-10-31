@@ -31,7 +31,7 @@ export default async function Family({ params, searchParams }: { params: Promise
   const [previews, swaps] = await Promise.all([Promise.all(live.map((c) => cancelPreview(c.id))), Promise.all(live.map((c) => swapOptions(c.id)))]);
   const P = Object.fromEntries(live.map((c, i) => [c.id, { pre: previews[i], swaps: swaps[i] }]));
   return <>
-    <p><Link href="/admin/families">← Families</Link></p>
+    <p className="backlink"><Link className="abtn sm" href="/admin/families">← Families</Link></p>
     <div className="top"><div><h1>{f.first} {f.last}</h1><div className="sub"><a href={`mailto:${f.email}`}>{f.email}</a>{f.phone ? ` · ${f.phone}` : ""}{f.heard ? ` · found us by ${f.heard.toLowerCase()}` : ""} · courses booked online by the parent</div></div>
       <span className="grow" /><form action={viewAsFamilyAction}><input type="hidden" name="kind" value="p" /><input type="hidden" name="id" value={f.id} /><button className="abtn sm" type="submit">View as this family</button></form></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}

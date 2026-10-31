@@ -9,7 +9,7 @@ export default async function EditCoursePage({ params, searchParams }: { params:
   if (!c) notFound();
   const topics = c.topics.map((t) => `## ${t.title}\n${t.text}`).join("\n\n");
   return <>
-    <p><Link href="/admin/website">← Website</Link></p>
+    <p className="backlink"><Link className="abtn sm" href="/admin/website">← Website</Link></p>
     <div className="top"><div><h1>{c.level} {c.subject}</h1><div className="sub">/courses/{c.slug}</div></div><span className="grow" />
       <a className="abtn sm" href={`/courses/${c.slug}`} target="_blank" rel="noreferrer">View page</a></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}

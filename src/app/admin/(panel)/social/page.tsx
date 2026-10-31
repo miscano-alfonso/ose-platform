@@ -22,7 +22,8 @@ export default async function SocialPage({ searchParams }: { searchParams: Promi
   if (sp.view === "pictures") {
     const [canva, data] = await Promise.all([canvaStatus(await siteBase(origin)), studioData()]);
     return <>
-      <div className="top"><div><p style={{ margin: "0 0 4px" }}><Link href="/admin/social">← Social</Link></p><h1>Pictures &amp; Canva</h1><div className="sub">Connect Canva for “From Canva”, and see the illustrations and photos brought in for posts.</div></div></div>
+      <p className="backlink"><Link className="abtn sm" href="/admin/social">← Social</Link></p>
+    <div className="top"><div><h1>Pictures &amp; Canva</h1><div className="sub">Connect Canva for “From Canva”, and see the illustrations and photos brought in for posts.</div></div></div>
       {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
       <PicturesCanva canva={canva} assets={data.assets} />
     </>;

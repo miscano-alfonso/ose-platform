@@ -11,7 +11,7 @@ export default async function EditWorkshop({ params, searchParams }: { params: P
   const { w, levels, subjects, teachers } = await getWorkshopEdit(isNew ? null : id);
   if (!isNew && !w) notFound();
   return <>
-    <p><Link href="/admin/workshops">← Workshops</Link></p>
+    <p className="backlink"><Link className="abtn sm" href="/admin/workshops">← Workshops</Link></p>
     <div className="top"><div><h1>{isNew ? "New workshop" : w!.title}</h1>{w && <div className="sub">{w.booked} booked · {w.status}</div>}</div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <form action={saveWorkshopAction} className="card" style={{ display: "grid", gap: 14 }} encType="multipart/form-data">

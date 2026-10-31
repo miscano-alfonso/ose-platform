@@ -14,7 +14,7 @@ export default async function Report({ params }: { params: Promise<{ cycle: stri
   const lines = r.lines.filter((l) => l.status === "approved");
   const label = (n: number | null) => n == null ? "–" : `${n} ${r.bands.find((b) => b.score === n)?.label ?? ""}`;
   return <>
-    <p><Link href="/parent/reports">← Reports</Link></p>
+    <p className="backlink"><Link className="abtn sm" href="/parent/reports">← Reports</Link></p>
     <section className="card" style={{ maxWidth: 820 }}>
       <h1 style={{ margin: 0 }}>{r.student}</h1><div className="sub">{r.cycle} · {r.school}</div>
       {lines.map((l, i) => <div key={i} style={{ borderTop: "1px solid var(--line)", paddingTop: 12, marginTop: 12 }}>

@@ -9,7 +9,8 @@ export default async function Application({ params, searchParams }: { params: Pr
   const a = await getApplication(id); if (!a) notFound();
   const row = (k: string, v: React.ReactNode) => <div><dt>{k}</dt><dd>{v}</dd></div>;
   return <>
-    <div className="top"><div><p className="sub"><Link href={`/admin/jobs/${a.job_id}`}>← {a.job_title}</Link></p><h1>{a.name}</h1>
+    <p className="backlink"><Link className="abtn sm" href={`/admin/jobs/${a.job_id}`}>← {a.job_title}</Link></p>
+    <div className="top"><div><h1>{a.name}</h1>
       <div className="sub">Applied {new Date(a.created_at).toLocaleString("en-GB", { dateStyle: "long", timeStyle: "short" })}</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}
     <div className="appgrid">

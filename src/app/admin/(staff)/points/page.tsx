@@ -9,7 +9,7 @@ export default async function Points({ searchParams }: { searchParams: Promise<{
   const [sp, me] = await Promise.all([searchParams, requireViewer()]);
   const [classes, given] = await Promise.all([classesForPoints(me.id, me.role === "school_admin"), me.role === "school_admin" ? Promise.resolve([]) : pointsGiven(me.id)]);
   return <>
-    {me.role === "school_admin" && <p className="backlink"><a href="/admin/rewards">← Back</a></p>}
+    {me.role === "school_admin" && <p className="backlink"><a className="abtn sm" href="/admin/rewards">← Back</a></p>}
     <div className="top"><div><h1>Reward points</h1><div className="sub">1–10 points with a short reason. The top 3 students in the school each term win a gift. Points given in the holidays don’t count towards a term.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <datalist id="reasons">{REASONS.map((r) => <option key={r} value={r} />)}</datalist>

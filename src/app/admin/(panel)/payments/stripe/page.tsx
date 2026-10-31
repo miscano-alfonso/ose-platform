@@ -16,7 +16,7 @@ export default async function StripePayments({ searchParams }: { searchParams: P
   const [sug, recent] = st.connected ? await Promise.all([suggestions(), recentCharges(200)]) : [[], []];
   const fresh = sug.filter((s) => s.sure && !s.already), unsure = sug.filter((s) => !s.sure), already = sug.filter((s) => s.already), sure = fresh;
   return <>
-    <p><Link href="/admin/payments">← Payments</Link></p>
+    <p className="backlink"><Link className="abtn sm" href="/admin/payments">← Payments</Link></p>
     <div className="top"><div><h1>Stripe payments</h1><div className="sub">Card payments read from Stripe and matched to each family’s terms. Read only: this site never charges, refunds or changes anything in Stripe, and never emails families from here.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
 
