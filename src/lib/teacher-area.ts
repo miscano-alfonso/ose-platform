@@ -308,7 +308,7 @@ export async function sendTeacherEmail(user: { id: string; name: string; email: 
       const site = (process.env.SITE_URL || (await siteBase().catch(() => "")) || "").replace(/\/$/, "");
       const row = (await q<{ id: string }>(`select id from inbox_messages where gmail_id = $1`, [`local:${id}`]))[0];
       await sendOne([{ email: toEmail, name: toName }], `${user.name}: ${sub}`,
-        `${user.name} (teacher) emailed you through the school site:\n\n${text}${links.length ? `\n\nLinks:\n${links.join("\n")}` : ""}${blobs.length ? `\n\n${blobs.length} attachment${blobs.length > 1 ? "s" : ""} (open the email in the admin to download): ${blobs.map((b) => b.name).join(", ")}` : ""}\n\nReply from the admin: ${site}/admin/email?tab=inbox&show=all&m=${row?.id ?? ""}\n(Replying there emails ${user.name} and keeps the conversation on their Email page.)`,
+        `${user.name} (teacher) messaged you through the school site:\n\n${text}${links.length ? `\n\nLinks:\n${links.join("\n")}` : ""}${blobs.length ? `\n\n${blobs.length} attachment${blobs.length > 1 ? "s" : ""} (open the email in the admin to download): ${blobs.map((b) => b.name).join(", ")}` : ""}\n\nReply from the admin: ${site}/admin/email?tab=inbox&show=all&m=${row?.id ?? ""}\n(Replying there emails ${user.name} and keeps the conversation on their Messages page.)`,
         { tag: "teacher-email" }).catch(() => null);
     }
     return null;

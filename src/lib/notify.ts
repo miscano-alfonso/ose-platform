@@ -54,7 +54,7 @@ export async function notifyEvents(w: Who, since: Date): Promise<NotifyEvent[]> 
       run(`select 'm:' || m.id as id, 'message' as type, 'Message from ' || p.first_name || ' ' || p.last_name as title, th.subject as body, '/admin/messages/' || th.id as href, m.created_at::text as at
         from messages m join message_threads th on th.id = m.thread_id join parents p on p.id = th.parent_id
         where th.teacher_id = ${T} and m.sender = 'parent' and m.created_at > $2::timestamptz order by m.created_at desc limit 10`, [w.id, from]),
-      run(`select 'r:' || m.id as id, 'email' as type, 'The school replied: ' || m.subject as title, left(coalesce(m.reply_body, ''), 140) as body, '/admin/teacher/email' as href, m.replied_at::text as at
+      run(`select 'r:' || m.id as id, 'email' as type, 'The school replied: ' || m.subject as title, left(coalesce(m.reply_body, ''), 140) as body, '/admin/teacher/messages?school=' || m.thread_id as href, m.replied_at::text as at
         from inbox_messages m where m.kind = 'staff' and lower(m.from_email::text) = (select lower(email::text) from users where id = $1) and m.replied_at > $2::timestamptz limit 10`, [w.id, from]),
       run(`select 'c:' || cm.id as id, 'chat' as type, coalesce(nullif(st.known_as, ''), st.first_name) || ' in ' || l.name || ' ' || sj.name as title, left(cm.body, 140) as body,
           '/admin/teacher/chats?c=' || c.id || '&t=' || coalesce(cm.parent_id, cm.id) as href, cm.created_at::text as at

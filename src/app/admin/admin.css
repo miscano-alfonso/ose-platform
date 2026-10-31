@@ -882,18 +882,21 @@
 .adm .mc-table .mc-name{color:var(--ink);text-decoration:none}.adm .mc-table .mc-name:hover{text-decoration:underline}
 .adm .mc-table .mc-code{font-size:13px;letter-spacing:.08em}
 .adm .mc-acts{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
-/* 31 Oct: Demo Academy's own colourway (two shades of burgundy, yellow highlights), on every dashboard in the demo school (data-palette=demo) */
-.adm[data-palette=demo]{--bg:#faf4f5;--panel:#ffffff;--ink:#3d0d1a;--muted:#6e4a52;--line:#eddce0;--soft:#f8eef0;--hover:#f3e3e7;--track:#eddce0;
-  --rail:#ffffff;--rail-on:#7b1e34;--rail-on-ink:#ffffff;--pop:#ffcc33;--pop-ink:#3d0d1a;--sky:#a8324f;--bar:#a8324f;--info:#a8324f;--info-bg:#f8e3e8}
-@media (prefers-color-scheme:dark){.adm[data-palette=demo]:not([data-theme=light]){--bg:#170a0e;--panel:#25121a;--ink:#f7ecee;--muted:#dcbfc5;--line:#46232e;--soft:#2d1620;--hover:#381b26;--track:#46232e;
-  --rail:#12070b;--rail-on:#ffcc33;--rail-on-ink:#1a0a0f;--pop:#ffcc33;--pop-ink:#1a0a0f;--sky:#e8a0b2;--bar:#d0607d;--info:#e8a0b2;--info-bg:#3d1a25}}
-.adm[data-palette=demo][data-theme=dark]{--bg:#170a0e;--panel:#25121a;--ink:#f7ecee;--muted:#dcbfc5;--line:#46232e;--soft:#2d1620;--hover:#381b26;--track:#46232e;
-  --rail:#12070b;--rail-on:#ffcc33;--rail-on-ink:#1a0a0f;--pop:#ffcc33;--pop-ink:#1a0a0f;--sky:#e8a0b2;--bar:#d0607d;--info:#e8a0b2;--info-bg:#3d1a25}
-.adm[data-palette=demo] .dx-hero{background:radial-gradient(circle at 88% 10%,rgba(184,58,92,.8) 0%,transparent 55%),linear-gradient(125deg,#7b1e34,#3a0a16)}
-.adm[data-palette=demo] .dx-hero::after{border-color:rgba(255,204,51,.16)}
+/* 31 Oct: Demo Academy's own colourway: a dark burgundy and a bright burgundy (highlights, hovers, the selected item), no yellow.
+   On every dashboard in the demo school (data-palette=demo). The brand accent (buttons, badges, the "Viewing as" bar) is set in db/075. */
+.adm[data-palette=demo]{--bg:#faf4f5;--panel:#ffffff;--ink:#3d0d1a;--muted:#6e4a52;--line:#eddce0;--soft:#f8eef0;--hover:#f6e1e7;--track:#eddce0;
+  --brand-accent-ink:#ffffff;--rail:#ffffff;--rail-on:#b8264f;--rail-on-ink:#ffffff;--pop:#b8264f;--pop-ink:#ffffff;--sky:#a8264a;--bar:#b8264f;--info:#a8264a;--info-bg:#f8e3e8}
+@media (prefers-color-scheme:dark){.adm[data-palette=demo]:not([data-theme=light]){--bg:#170a0e;--panel:#25121a;--ink:#f7ecee;--muted:#dcbfc5;--line:#46232e;--soft:#2d1620;--hover:#3d1a27;--track:#46232e;
+  --rail:#12070b;--rail-on:#c8325e;--rail-on-ink:#ffffff;--pop:#c8325e;--pop-ink:#ffffff;--sky:#ef8fa9;--bar:#d6406b;--info:#ef8fa9;--info-bg:#3d1a25}}
+.adm[data-palette=demo][data-theme=dark]{--bg:#170a0e;--panel:#25121a;--ink:#f7ecee;--muted:#dcbfc5;--line:#46232e;--soft:#2d1620;--hover:#3d1a27;--track:#46232e;
+  --rail:#12070b;--rail-on:#c8325e;--rail-on-ink:#ffffff;--pop:#c8325e;--pop-ink:#ffffff;--sky:#ef8fa9;--bar:#d6406b;--info:#ef8fa9;--info-bg:#3d1a25}
+.adm[data-palette=demo] .dx-hero{background:radial-gradient(circle at 88% 10%,rgba(214,64,107,.75) 0%,transparent 55%),linear-gradient(125deg,#6e1830,#320812)}
+.adm[data-palette=demo] .dx-hero::after{border-color:rgba(255,255,255,.08)}
+.adm[data-palette=demo] .dx-hero .dx-hello,.adm[data-palette=demo] .fx-hello,.adm[data-palette=demo] .fx-bday b,.adm[data-palette=demo] .fx-bday svg,.adm[data-palette=demo] .ntf-bell.on{color:#ffb3c6}
+.adm[data-palette=demo] .fx-bday{background:rgba(255,179,198,.1);border-color:rgba(255,179,198,.35)}
 .adm[data-palette=demo] .fx-hero-s{color:#f3d9dc}
-.adm[data-palette=demo] .lwin{background:#7b1e34}
-.adm[data-palette=demo] .fx-send{background:rgba(232,160,178,.14);border-color:rgba(232,160,178,.45)}.adm[data-palette=demo] .fx-send svg,.adm[data-palette=demo] .fx-send b{color:#f2b8c6}
+.adm[data-palette=demo] .lwin{background:#6e1830}
+.adm[data-palette=demo] .fx-send{background:rgba(255,179,198,.1);border-color:rgba(255,179,198,.35)}.adm[data-palette=demo] .fx-send svg,.adm[data-palette=demo] .fx-send b{color:#ffb3c6}
 /* 31 Oct: page titles line up with the buttons on the right (first line of text, not the middle of title + subtitle) */
 .adm .top{align-items:baseline}
 .adm .top>:not(:first-child){position:relative;top:-5px}
@@ -926,3 +929,24 @@
 .adm .ct-who{display:flex;gap:8px;align-items:center;font-size:14px;margin-bottom:2px}.adm .ct-who .grow{flex:1}.adm .ct-who .pill{font-size:11.5px;padding:1px 7px}
 .adm .ct-body{white-space:pre-line}
 @media (max-width:600px){.adm .ct-row{flex-direction:column;align-items:flex-start}.adm .ct-n{justify-items:start;text-align:left}.adm .ct-msg{margin-left:10px}.adm .ct-form{flex-direction:column;align-items:stretch}}
+/* 31 Oct: teacher Messages with the school's contacts (was Email) */
+.adm .tm-contacts{display:flex;flex-wrap:wrap;gap:10px;margin:4px 0 12px}
+.adm .tm-contact{display:flex;gap:10px;align-items:center;padding:8px 16px 8px 8px;border:1px solid var(--line);border-radius:999px;color:var(--ink);text-decoration:none;background:var(--panel)}
+.adm .tm-contact:hover,.adm .tm-contact.on{background:var(--hover);border-color:var(--rail-on)}
+.adm .tm-contact>span:last-child{display:grid;line-height:1.2}.adm .tm-contact .muted{font-size:13px}
+.adm .tm-av{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--rail-on);color:var(--rail-on-ink);font-weight:600;font-size:14px;flex:none}
+.adm .tm-form{display:grid;gap:10px;max-width:760px;margin:6px 0 14px}
+.adm .tm-form details summary{cursor:pointer;color:var(--muted);font-size:14.5px}.adm .tm-extra{display:grid;gap:10px;margin-top:8px}
+.adm .tm-list{display:grid}.adm .tm-row{text-decoration:none;color:inherit}
+.adm .tm-head{display:flex;align-items:center;gap:12px;justify-content:space-between;flex-wrap:wrap;margin-bottom:6px}.adm .tm-head h2{margin:0}
+.adm .tm-msgs{display:grid;gap:10px;margin-bottom:16px}.adm .tm-pair{display:grid;gap:10px}.adm .tm-pair .card{margin:0}
+.adm .tm-who{font-size:14px;margin-bottom:4px}.adm .tm-body{white-space:pre-wrap}.adm .tm-att{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.adm .bubble.b-office{border-left:3px solid var(--good)}
+.adm .tm-form textarea,.adm .tm-form input:not([type=file]):not([type=hidden]){width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
+/* 31 Oct: birthdays and SEND for the next lesson, in a tile beside the teacher's hero, in the hero's colours */
+.adm .dx-stack{display:flex;flex-direction:column;gap:16px;height:100%}.adm .dx-stack>.dx-pop{flex:1}
+.adm .dx-notes{box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:22px;border-radius:20px;color:#fff;
+  background:linear-gradient(160deg,color-mix(in srgb,var(--brand) 85%,#000),color-mix(in srgb,var(--brand) 55%,#000))}
+.adm .dx-notes .fx-bday{max-width:none}
+.adm .dx-notes-k{margin:0;font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.75)}
+.adm[data-palette=demo] .dx-notes{background:linear-gradient(160deg,#5e1428,#320812)}
