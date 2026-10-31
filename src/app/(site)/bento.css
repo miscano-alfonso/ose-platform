@@ -1171,3 +1171,9 @@ html:not([data-theme=dark]) .bt .bk-dl .bk-off dd{color:#5f6a12}
   .bt .s-phead .cd-hlabel{position:absolute;right:-6px;left:auto;top:-18px;bottom:auto;transform:rotate(-4deg);margin:0;font-size:12px;padding:5px 11px}
   .bt .s-phead .cd-hbtns{flex-direction:column;align-items:flex-start;gap:10px}
 }
+/* phone menu: square top corners, a straight line under the top bar */
+@media (max-width:1080px){.bt .s-nav .s-links.open{border-radius:0!important;border-width:1px 0 0!important}}
+/* phone menu: a pressed or hovered item (and the current page) shows dark blue words on its light highlight, in light and dark mode */
+@media (max-width:1080px){.bt .s-nav .s-links.open a:is(:hover,:focus-visible,:active,[aria-current=page]){background:#eef0f7!important;color:#050f2d!important}}
+/* home hero girl (31 Oct): on a deep window she sits in the middle of the hero, level with the words; as the window gets shorter she slides down until she rests on the bottom */
+.bh-girl .bg-box{bottom:clamp(0px,calc((100vh - 820px) * .6),calc((100% - min(94%,calc(56vw * 1438 / 1546))) / 2))}
