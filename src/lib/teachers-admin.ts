@@ -4,13 +4,14 @@ import { withSchool } from "./db";
 // Admin: add teachers and edit the profile shown on the website (/teachers/<slug>).
 export type TeacherAdmin = { id: string; user_id: string; name: string; email: string; slug: string | null; designation: string | null; bio: string | null;
   qualifications: string[]; photo: string | null; archived: boolean; sort_order: number; subjects: string[]; classes: number; can_sign_in: boolean;
-  invited: { email: string; at: string; expired: boolean } | null; is_admin: boolean };
+  invited: { email: string; at: string; expired: boolean } | null; is_admin: boolean; last_sign_in_at: string | null; accepted_at: string | null };
 
 const SQL = `select t.id, u.id as user_id, u.name, u.email::text, t.slug, t.designation, t.bio, t.qualifications, t.archived_at is not null as archived, t.sort_order,
     case when t.photo is not null then '/teacher-photo/' || t.slug || '?v=' || extract(epoch from t.photo_updated_at)::bigint else t.photo_asset end as photo,
     coalesce((select array_agg(distinct ts.subject_id::text) from teacher_subjects ts where ts.teacher_id = t.id), '{}') as subjects,
     (select count(*)::int from course_groups g join academic_years y on y.id = g.academic_year_id where g.teacher_id = t.id and y.ends_on >= current_date) as classes,
-    u.password_hash is not null and u.disabled_at is null as can_sign_in, u.role = 'school_admin' as is_admin,
+    u.password_hash is not null and u.disabled_at is null as can_sign_in, u.role = 'school_admin' as is_admin, u.last_sign_in_at::text,
+    (select max(i.accepted_at)::text from staff_invites i where i.teacher_id = t.id and i.accepted_at is not null) as accepted_at,
     (select json_build_object('email', i.email::text, 'at', i.created_at::text, 'expired', i.expires_at < now()) from staff_invites i
       where i.teacher_id = t.id and i.accepted_at is null and i.revoked_at is null order by i.created_at desc limit 1) as invited
   from teachers t join users u on u.id = t.user_id`;
