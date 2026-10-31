@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
 import { getWriteSheet } from "@/lib/reports";
 import { saveWriteSheetAction } from "../../../../actions";
+import { AiDraft } from "./AiDraft";
 
 const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" });
 const PILL: Record<string, [string, string]> = { todo: ["To write", "mute"], draft: ["Draft", "warn"], submitted: ["Submitted", "info"], returned: ["Sent back", "bad"], approved: ["Approved", "good"] };
@@ -39,7 +40,9 @@ export default async function Write({ params, searchParams }: { params: Promise<
           {h.gcse && <><label className="fld">Working grade<select name={`working_${r.id}`} defaultValue={r.working_grade ?? ""} disabled={ro}><option value="">—</option>{scale(9).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
             <label className="fld">Predicted grade<select name={`predicted_${r.id}`} defaultValue={r.predicted_grade ?? ""} disabled={ro}><option value="">—</option>{scale(9).map((n) => <option key={n} value={n}>{n}</option>)}</select></label></>}
         </div>
-        <label className="fld">Comment and targets<textarea name={`comment_${r.id}`} defaultValue={r.comment ?? ""} rows={4} maxLength={2000} disabled={ro} className="mini" style={{ width: "100%" }} /></label>
+        <div className="aid-wrap"><label className="fld" htmlFor={`comment_${r.id}`}>Comment and targets</label>
+          <textarea id={`comment_${r.id}`} name={`comment_${r.id}`} defaultValue={r.comment ?? ""} rows={5} maxLength={2000} disabled={ro} className="mini" style={{ width: "100%" }} />
+          {!ro && <AiDraft id={r.id} auto={r.auto_progress ?? null} />}</div>
       </section>; })}
       {!locked && <div style={{ display: "flex", gap: 10, position: "sticky", bottom: 0, padding: "12px 0", background: "var(--bg)" }}>
         <button className="abtn" type="submit" name="submit" value="0">Save drafts</button>

@@ -533,3 +533,32 @@ export async function getThumb(fileId: string): Promise<{ mime: string; data: Bu
   if (thumbCache.size > 300) thumbCache.clear();
   thumbCache.set(fileId, out); return out;
 }
+
+/** What one student wrote in the Meet chat of a class's recent lessons (31 Oct, for drafting report comments): the archived
+ *  "Chat transcript" files in the transcripts folder, newest first, the lines whose speaker is this student. Best effort:
+ *  returns [] when Google, the folder or the class's recording settings aren't there. */
+export async function studentChatLines(groupId: string, names: string[], since: string, max = 30): Promise<{ day: string; text: string }[]> {
+  try {
+    const cfg = await recCfg();
+    if (!cfg.transcriptsFolder) return [];
+    const lessons = (await withSchool((q) => q<{ name: string }>(`select name from rec_lessons where group_id = $1 and kind = 'class'`, [groupId]))).map((l) => l.name);
+    if (!lessons.length) return [];
+    const token = await googleAccess("rec");
+    const files = (await driveList(token, `'${esc(cfg.transcriptsFolder)}' in parents and mimeType = 'text/plain' and trashed = false and createdTime > '${since}T00:00:00Z' and (${lessons.map((n) => `name contains '${esc(n)}'`).join(" or ")})`, "id,name,createdTime"))
+      .sort((a, b) => (a.createdTime! < b.createdTime! ? 1 : -1)).slice(0, 10);
+    const who = names.map((n) => n.trim().toLowerCase()).filter(Boolean);
+    const out: { day: string; text: string }[] = [];
+    for (const f of files) {
+      const r = await fetch(`${DRIVE_URL()}/files/${encodeURIComponent(f.id)}?alt=media&supportsAllDrives=true`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(8000) }).catch(() => null);
+      if (!r?.ok) continue;
+      const text = (await r.text()).slice(0, 200_000);
+      for (const line of text.split(/\r?\n/)) {
+        const m = /^(.{2,80}?)\s:\s(.+)$/.exec(line.trim());           // "Ada Ashdown : I think it's osmosis"
+        if (!m || !who.includes(m[1].trim().toLowerCase())) continue;
+        out.push({ day: londonDay(f.createdTime!), text: m[2].slice(0, 240) });
+        if (out.length >= max) return out;
+      }
+    }
+    return out;
+  } catch { return []; }
+}

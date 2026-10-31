@@ -950,3 +950,9 @@
 .adm .dx-notes .fx-bday{max-width:none}
 .adm .dx-notes-k{margin:0;font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.75)}
 .adm[data-palette=demo] .dx-notes{background:linear-gradient(160deg,#5e1428,#320812)}
+/* 31 Oct: "Draft with AI" in the report comment box */
+.adm .aid-wrap{position:relative;display:grid;gap:6px}
+.adm .aid-wrap textarea{padding-bottom:46px}
+.adm .aid{position:absolute;right:10px;bottom:10px;display:flex;gap:10px;align-items:center;justify-content:flex-end;max-width:calc(100% - 20px);flex-wrap:wrap}
+.adm .aid-go{background:var(--panel);border-color:var(--rail-on);color:var(--ink)}.adm .aid-go:hover{background:var(--rail-on);color:var(--rail-on-ink)}
+.adm .aid-err{font-size:13.5px;color:var(--bad);background:var(--panel);padding:2px 8px;border-radius:8px}
