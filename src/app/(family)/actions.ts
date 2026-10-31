@@ -1,4 +1,5 @@
 "use server";
+import { threadFields } from "@/lib/chat-threads";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
@@ -108,9 +109,9 @@ export async function privacyRequestAction(f: FormData): Promise<void> {
 // ---------- student ----------
 export async function studentPostAction(f: FormData): Promise<void> {
   const chat = str(f, "chat", 40), s = await student(`/student/chat?c=${chat}`);
-  const body = str(f, "body", 1000);
-  const err = body ? await F.studentPost(s.id, chat, body) : "Write a message first.";
-  redirect(`/student/chat?c=${chat}${err ? `&err=${encodeURIComponent(err)}` : ""}`);
+  const body = str(f, "body", 1000), th = threadFields(f);
+  const err = body ? await F.studentPost(s.id, chat, body, th) : "Write a message first.";
+  redirect(`/student/chat?c=${chat}${th.parent ? `&t=${th.parent}` : ""}${err ? `&err=${encodeURIComponent(err)}` : ""}`);
 }
 export async function startDirectAction(f: FormData): Promise<void> {
   const s = await student("/student/chat");
@@ -120,7 +121,8 @@ export async function startDirectAction(f: FormData): Promise<void> {
 export async function reportMessageAction(f: FormData): Promise<void> {
   const chat = str(f, "chat", 40), s = await student(`/student/chat?c=${chat}`);
   await F.reportMessage(s.id, str(f, "id", 40));
-  redirect(`/student/chat?c=${chat}&ok=${encodeURIComponent("Thanks. The office will look at it.")}`);
+  const t = str(f, "t", 40);
+  redirect(`/student/chat?c=${chat}${/^[0-9a-f-]{36}$/.test(t) ? `&t=${t}` : ""}&ok=${encodeURIComponent("Thanks. The office will look at it.")}`);
 }
 export async function requestOneAction(f: FormData): Promise<void> {
   const p = await parent("/parent/book");

@@ -2,14 +2,20 @@ import Link from "next/link";
 import { chatOverview, chatMessages } from "@/lib/community";
 import { hideChatMessageAction, dismissReportAction, officePostAction, setWordsAction, saveChatSafetyAction, resolveChatFlagAction } from "../../actions";
 import { RULES, openFlags, ruleLabel, safetyCfg } from "@/lib/chat-safety";
+import { chatThreads, threadMessages } from "@/lib/chat-threads";
+import { ChatThreads } from "../../ChatThreads";
 
 const when = (s: string) => new Date(s).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 
-export default async function StudentChat({ searchParams }: { searchParams: Promise<{ chat?: string; ok?: string; err?: string }> }) {
+export default async function StudentChat({ searchParams }: { searchParams: Promise<{ chat?: string; t?: string; ok?: string; err?: string }> }) {
   const sp = await searchParams;
   const [{ chats, reports, words }, flags, safe] = await Promise.all([chatOverview(), openFlags(), safetyCfg()]);
   const chat = chats.find((c) => c.id === sp.chat);
-  const msgs = chat ? await chatMessages(chat.id) : [];
+  const cls = chat?.kind === "class";
+  const msgs = chat && !cls ? await chatMessages(chat.id) : [];
+  const threads = cls ? await chatThreads(chat!.id) : [];
+  const open = threads.find((t) => t.id === sp.t) ?? null;
+  const tmsgs = open ? await threadMessages(chat!.id, open.id) : [];
   return <>
     <div className="top"><div><h1>Student chat</h1><div className="sub">A chat for each class, and private chats between classmates. Staff can read chats to keep students safe, and hide messages; students can report a message, and the safety rules flag or block the rest.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
@@ -17,14 +23,14 @@ export default async function StudentChat({ searchParams }: { searchParams: Prom
       <p className="cs">Messages that matched the safety rules below. Blocked ones were never shown to anyone; the others were posted and are waiting for you to check.</p>
       {flags.length === 0 ? <p className="empty">No alerts.</p> : flags.map((x) => { const urgent = x.rules.includes("wellbeing"); return <div className="li" key={x.id} style={urgent ? { borderLeft: "4px solid #c0392b", paddingLeft: 10 } : undefined}>
         <div className="t"><b>“{x.body}”</b><span>{urgent && <span className="pill bad" style={{ marginRight: 6 }}>Urgent: wellbeing</span>}{x.rules.filter((r) => r !== "wellbeing").map((r) => <span key={r} className="pill warn" style={{ marginRight: 6 }}>{ruleLabel(r)}</span>)}
-          {x.blocked ? <span className="pill mute" style={{ marginRight: 6 }}>Blocked</span> : null}{x.sender} · {x.chat} · {when(x.created_at)}{x.matched ? ` · matched “${x.matched}”` : ""} · <Link href={`/admin/student-chat?chat=${x.chat_id}`}>see chat</Link></span></div>
+          {x.blocked ? <span className="pill mute" style={{ marginRight: 6 }}>Blocked</span> : null}{x.sender} · {x.chat} · {when(x.created_at)}{x.matched ? ` · matched “${x.matched}”` : ""} · <Link href={`/admin/student-chat?chat=${x.chat_id}${x.thread ? `&t=${x.thread}` : ""}`}>see chat</Link></span></div>
         <div className="acts">{x.message_id && !x.hidden && <form action={resolveChatFlagAction}><input type="hidden" name="id" value={x.id} /><input type="hidden" name="hide" value="1" /><button className="abtn sm pri" type="submit">Hide message</button></form>}
           <form action={resolveChatFlagAction}><input type="hidden" name="id" value={x.id} /><button className="abtn sm" type="submit">{x.blocked || x.hidden ? "Done" : "No action"}</button></form></div></div>; })}
       {flags.some((x) => x.rules.includes("wellbeing")) && <p className="note msg bad" style={{ marginTop: 10 }}>An urgent alert may mean a child is at risk. Follow your safeguarding procedure and speak to your designated safeguarding lead today.</p>}
     </section>
     <section className="card"><h2>Reported messages ({reports.length})</h2>
       {reports.length === 0 ? <p className="empty">Nothing reported.</p> : reports.map((r) => <div className="li" key={r.id}>
-        <div className="t"><b>“{r.body}”</b><span>by {r.sender} · reported by {r.reporter} · {when(r.created_at)} · <Link href={`/admin/student-chat?chat=${r.chat_id}`}>see chat</Link></span></div>
+        <div className="t"><b>“{r.body}”</b><span>by {r.sender} · reported by {r.reporter} · {when(r.created_at)} · <Link href={`/admin/student-chat?chat=${r.chat_id}&t=${r.thread}`}>see chat</Link></span></div>
         <div className="acts"><form action={hideChatMessageAction}><input type="hidden" name="id" value={r.message_id} /><input type="hidden" name="hide" value="1" /><input type="hidden" name="chat" value={r.chat_id} /><button className="abtn sm pri" type="submit">Hide message</button></form>
           <form action={dismissReportAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit">No action</button></form></div></div>)}</section>
 
@@ -35,9 +41,10 @@ export default async function StudentChat({ searchParams }: { searchParams: Prom
       <section className="card" style={{ margin: 0 }}>
         {!chat ? <p className="empty">Choose a chat to read it.</p> : <>
           <h2>{chat.name}</h2>
-          {chat.kind === "class" && <form action={officePostAction} className="eform" style={{ margin: "8px 0 14px" }}><input type="hidden" name="chat" value={chat.id} />
-            <input name="body" className="mini" required maxLength={1000} placeholder="Post a message from the office" style={{ flex: 1, minWidth: 240 }} /><button className="abtn sm" type="submit">Post</button></form>}
-          {msgs.length === 0 ? <p className="empty">No messages yet.</p> : msgs.map((m) => <div className="li" key={m.id} style={m.hidden ? { opacity: .55 } : undefined}>
+          {cls ? <ChatThreads threads={threads} open={open} msgs={tmsgs} href={(t) => `/admin/student-chat?chat=${chat.id}${t ? `&t=${t}` : ""}`} action={officePostAction} hidden={{ chat: chat.id }}
+            control={(m) => <form action={hideChatMessageAction}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="hide" value={m.hidden ? "0" : "1"} /><input type="hidden" name="chat" value={chat.id} /><input type="hidden" name="t" value={open?.id ?? ""} />
+              <button className="abtn sm" type="submit">{m.hidden ? "Show again" : "Hide"}</button></form>} />
+          : msgs.length === 0 ? <p className="empty">No messages yet.</p> : msgs.map((m) => <div className="li" key={m.id} style={m.hidden ? { opacity: .55 } : undefined}>
             <div className="t"><b>{m.who}</b><span style={{ whiteSpace: "pre-line", color: "var(--ink)", fontSize: 15 }}>{m.body}</span><span>{when(m.created_at)}{m.hidden ? " · hidden from students" : ""}</span></div>
             <form action={hideChatMessageAction}><input type="hidden" name="id" value={m.id} /><input type="hidden" name="hide" value={m.hidden ? "0" : "1"} /><input type="hidden" name="chat" value={chat.id} />
               <button className="abtn sm" type="submit">{m.hidden ? "Show again" : "Hide"}</button></form></div>)}</>}

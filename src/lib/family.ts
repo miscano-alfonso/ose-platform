@@ -356,13 +356,13 @@ export async function chatFor(studentId: string, chatId: string) {
       where m.chat_id = $2 order by m.created_at desc limit 100`, [studentId, chatId]).then((r) => r.reverse());
   });
 }
-export async function studentPost(studentId: string, chatId: string, body: string): Promise<string | null> {
+export async function studentPost(studentId: string, chatId: string, body: string, th: { parent: string | null; topic: string | null } = { parent: null, topic: null }): Promise<string | null> {
   if (!(await chatFor(studentId, chatId))) return "That chat wasn’t found.";
   const { screenMessage } = await import("./chat-safety");
   const screen = await screenMessage(studentId, chatId, body); // the school's chat rules: blocked, or posted and flagged for staff
   if (screen.blocked) return screen.blocked;
   try {
-    const r = await withSchool((q) => q<{ id: string }>(`insert into student_chat_messages (school_id, chat_id, sender_student_id, body) values (current_school(), $1, $2, $3) returning id`, [chatId, studentId, body]));
+    const r = await withSchool((q) => q<{ id: string }>(`insert into student_chat_messages (school_id, chat_id, sender_student_id, body, parent_id, topic) values (current_school(), $1, $2, $3, $4, $5) returning id`, [chatId, studentId, body, th.parent, th.topic]));
     await screen.after(r[0].id).catch((e) => console.error("chat flag", e));
     return null;
   }

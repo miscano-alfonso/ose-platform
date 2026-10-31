@@ -179,11 +179,11 @@ export async function myChats(userId: string) {
 export async function teacherOwnsChat(userId: string, chatId: string) {
   return withSchool(async (q) => (await q(`select 1 from student_chats c join course_groups g on g.id = c.group_id where c.id = $2 and g.teacher_id = ${ME}`, [userId, chatId])).length > 0);
 }
-export async function teacherPost(userId: string, chatId: string, body: string): Promise<string | null> {
+export async function teacherPost(userId: string, chatId: string, body: string, th: { parent: string | null; topic: string | null } = { parent: null, topic: null }): Promise<string | null> {
   try {
     return await withSchool(async (q) => {
-      const r = await q(`insert into student_chat_messages (school_id, chat_id, sender_teacher_id, body)
-        select current_school(), c.id, g.teacher_id, $3 from student_chats c join course_groups g on g.id = c.group_id where c.id = $2 and g.teacher_id = ${ME} returning id`, [userId, chatId, body]);
+      const r = await q(`insert into student_chat_messages (school_id, chat_id, sender_teacher_id, body, parent_id, topic)
+        select current_school(), c.id, g.teacher_id, $3, $4, $5 from student_chats c join course_groups g on g.id = c.group_id where c.id = $2 and g.teacher_id = ${ME} returning id`, [userId, chatId, body, th.parent, th.topic]);
       return r.length ? null : "You can only post in your own classes’ chats.";
     });
   } catch (e) { return (e as Error).message.includes("not allowed") ? "That message contains a blocked word." : "Couldn’t post that."; }

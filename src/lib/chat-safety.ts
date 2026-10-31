@@ -103,10 +103,10 @@ async function alertEmail(cfg: SafetyCfg, studentId: string, body: string, rules
   await sendHtml(`${urgent ? "URGENT: " : ""}Chat alert: ${rules.map((r) => LABEL[r].toLowerCase()).join(", ")} (${who})`, html, to, "chat-alert");
 }
 
-export type ChatFlag = { id: string; chat_id: string; message_id: string | null; body: string; rules: RuleId[]; matched: string | null; blocked: boolean; sender: string; chat: string; created_at: string; hidden: boolean };
+export type ChatFlag = { id: string; chat_id: string; message_id: string | null; body: string; rules: RuleId[]; matched: string | null; blocked: boolean; sender: string; chat: string; created_at: string; hidden: boolean; thread: string | null };
 export async function openFlags(): Promise<ChatFlag[]> {
   return withSchool((q) => q<ChatFlag>(`select f.id, f.chat_id, f.message_id, f.body, f.rules, f.matched, f.blocked, coalesce(s.first_name || ' ' || s.last_name, 'A student') as sender,
-      coalesce(case when c.kind = 'class' then l.name || ' ' || sj.name end, 'Private chat') as chat, f.created_at::text, coalesce(m.hidden_at is not null, false) as hidden
+      coalesce(case when c.kind = 'class' then l.name || ' ' || sj.name end, 'Private chat') as chat, f.created_at::text, coalesce(m.hidden_at is not null, false) as hidden, case when c.kind = 'class' then coalesce(m.parent_id, m.id) end as thread
     from student_chat_flags f join student_chats c on c.id = f.chat_id left join course_groups g on g.id = c.group_id left join levels l on l.id = g.level_id
     left join subjects sj on sj.id = g.subject_id left join students s on s.id = f.sender_student_id left join student_chat_messages m on m.id = f.message_id
     where f.status = 'open' order by ('wellbeing' = any(f.rules)) desc, f.created_at desc limit 100`));

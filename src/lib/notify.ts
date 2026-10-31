@@ -57,7 +57,7 @@ export async function notifyEvents(w: Who, since: Date): Promise<NotifyEvent[]> 
       run(`select 'r:' || m.id as id, 'email' as type, 'The school replied: ' || m.subject as title, left(coalesce(m.reply_body, ''), 140) as body, '/admin/teacher/email' as href, m.replied_at::text as at
         from inbox_messages m where m.kind = 'staff' and lower(m.from_email::text) = (select lower(email::text) from users where id = $1) and m.replied_at > $2::timestamptz limit 10`, [w.id, from]),
       run(`select 'c:' || cm.id as id, 'chat' as type, coalesce(nullif(st.known_as, ''), st.first_name) || ' in ' || l.name || ' ' || sj.name as title, left(cm.body, 140) as body,
-          '/admin/teacher/chats?c=' || c.id as href, cm.created_at::text as at
+          '/admin/teacher/chats?c=' || c.id || '&t=' || coalesce(cm.parent_id, cm.id) as href, cm.created_at::text as at
         from student_chat_messages cm join student_chats c on c.id = cm.chat_id join course_groups g on g.id = c.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
           join students st on st.id = cm.sender_student_id
         where c.kind = 'class' and g.teacher_id = ${T} and cm.hidden_at is null and cm.created_at > $2::timestamptz order by cm.created_at desc limit 10`, [w.id, from]),
@@ -78,7 +78,7 @@ export async function notifyEvents(w: Who, since: Date): Promise<NotifyEvent[]> 
     if (w.role === "student") parts = [
       run(LESSON(`ev.group_id in (select group_id from enrolments where student_id = $1 and status in ('pending','active'))`).replace("%HREF%", "'/join/' || g.id"), [w.id]),
       run(`select 'c:' || cm.id as id, 'chat' as type, coalesce(case when cm.sender_teacher_id is not null then (select u.name from users u join teachers t on t.user_id = u.id where t.id = cm.sender_teacher_id) end,
-            (select coalesce(nullif(known_as, ''), first_name) from students where id = cm.sender_student_id), 'The office') as title, left(cm.body, 140) as body, '/student/chat?c=' || c.id as href, cm.created_at::text as at
+            (select coalesce(nullif(known_as, ''), first_name) from students where id = cm.sender_student_id), 'The office') as title, left(cm.body, 140) as body, '/student/chat?c=' || c.id || case when c.kind = 'class' then '&t=' || coalesce(cm.parent_id, cm.id) else '' end as href, cm.created_at::text as at
         from student_chat_messages cm join student_chats c on c.id = cm.chat_id
         where cm.created_at > $2::timestamptz and cm.hidden_at is null and (cm.sender_student_id is null or cm.sender_student_id <> $1)
           and (c.group_id in (select group_id from enrolments where student_id = $1 and status in ('pending','active')) or exists (select 1 from student_chat_members mm where mm.chat_id = c.id and mm.student_id = $1))

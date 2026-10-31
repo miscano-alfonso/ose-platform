@@ -85,7 +85,7 @@ export async function chatOverview() {
         (select count(*)::int from student_chat_messages x where x.chat_id = c.id) as messages, (select max(created_at)::text from student_chat_messages x where x.chat_id = c.id) as last_at
       from student_chats c left join course_groups g on g.id = c.group_id left join levels l on l.id = g.level_id left join subjects sj on sj.id = g.subject_id
       order by (select max(created_at) from student_chat_messages x where x.chat_id = c.id) desc nulls last, c.kind, l.sort_order, sj.name`),
-    reports: await q<{ id: string; message_id: string; chat_id: string; body: string; sender: string; reporter: string; created_at: string }>(`select r.id, r.message_id, m.chat_id, m.body,
+    reports: await q<{ id: string; message_id: string; chat_id: string; thread: string; body: string; sender: string; reporter: string; created_at: string }>(`select r.id, r.message_id, m.chat_id, coalesce(m.parent_id, m.id) as thread, m.body,
         coalesce(ss.first_name || ' ' || ss.last_name, 'Teacher') as sender, rs.first_name || ' ' || rs.last_name as reporter, r.created_at::text
       from student_chat_reports r join student_chat_messages m on m.id = r.message_id left join students ss on ss.id = m.sender_student_id join students rs on rs.id = r.reported_by
       where r.status = 'open' order by r.created_at`),
@@ -108,8 +108,8 @@ export async function setHidden(actorId: string, messageId: string, hide: boolea
 export async function dismissReport(actorId: string, id: string) {
   await withSchool(async (q) => { await q(`update student_chat_reports set status = 'no_action', resolved_by = $2 where id = $1`, [id, actorId]); await audit(q, actorId, "dismiss", "chat_report", id); });
 }
-export async function officePost(actorId: string, chatId: string, body: string): Promise<string | null> {
-  try { await withSchool(async (q) => { await q(`insert into student_chat_messages (school_id, chat_id, sender_office, body) values (current_school(), $1, true, $2)`, [chatId, body]); await audit(q, actorId, "post", "student_chat", chatId); }); return null; }
+export async function officePost(actorId: string, chatId: string, body: string, th: { parent: string | null; topic: string | null } = { parent: null, topic: null }): Promise<string | null> {
+  try { await withSchool(async (q) => { await q(`insert into student_chat_messages (school_id, chat_id, sender_office, body, parent_id, topic) values (current_school(), $1, true, $2, $3, $4)`, [chatId, body, th.parent, th.topic]); await audit(q, actorId, "post", "student_chat", chatId); }); return null; }
   catch (e) { return (e as Error).message.includes("not allowed") ? "That message contains a blocked word." : "Couldn’t post that."; }
 }
 export async function setWords(actorId: string, words: string[]) {

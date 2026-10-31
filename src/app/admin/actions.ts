@@ -1,4 +1,5 @@
 "use server";
+import { threadFields } from "@/lib/chat-threads";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { withSchool } from "@/lib/db";
@@ -579,7 +580,8 @@ export async function startThreadAction(f: FormData): Promise<void> {
 export async function hideChatMessageAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   await setHidden(me.id, str(f, "id", 40), str(f, "hide", 1) === "1");
-  revalidatePath("/admin/student-chat"); redirect(`/admin/student-chat?chat=${str(f, "chat", 40)}`);
+  const t = str(f, "t", 40);
+  revalidatePath("/admin/student-chat"); redirect(`/admin/student-chat?chat=${str(f, "chat", 40)}${/^[0-9a-f-]{36}$/.test(t) ? `&t=${t}` : ""}`);
 }
 export async function dismissReportAction(f: FormData): Promise<void> {
   const me = await requireStaff();
@@ -587,8 +589,8 @@ export async function dismissReportAction(f: FormData): Promise<void> {
 }
 export async function officePostAction(f: FormData): Promise<void> {
   const me = await requireStaff();
-  const chat = str(f, "chat", 40), err = await officePost(me.id, chat, str(f, "body", 1000));
-  revalidatePath("/admin/student-chat"); redirect(`/admin/student-chat?chat=${chat}${err ? "&err=" + encodeURIComponent(err) : ""}`);
+  const chat = str(f, "chat", 40), th = threadFields(f), err = await officePost(me.id, chat, str(f, "body", 1000), th);
+  revalidatePath("/admin/student-chat"); redirect(`/admin/student-chat?chat=${chat}${th.parent ? `&t=${th.parent}` : ""}${err ? "&err=" + encodeURIComponent(err) : ""}`);
 }
 export async function setWordsAction(f: FormData): Promise<void> {
   const me = await requireStaff();
@@ -947,9 +949,9 @@ export async function removeMyHoursAction(f: FormData): Promise<void> {
 }
 export async function teacherPostAction(f: FormData): Promise<void> {
   const me = await requireViewer();
-  const chat = str(f, "chat", 40), body = str(f, "body", 1000);
-  const err = me.viewing ? "While viewing as a teacher you can read their chats but not post as them." : body ? await teacherPost(me.id, chat, body) : "Write a message first.";
-  redirect(`/admin/teacher/chats?c=${chat}${err ? `&err=${encodeURIComponent(err)}` : ""}`);
+  const chat = str(f, "chat", 40), body = str(f, "body", 1000), th = threadFields(f);
+  const err = me.viewing ? "While viewing as a teacher you can read their chats but not post as them." : body ? await teacherPost(me.id, chat, body, th) : "Write a message first.";
+  redirect(`/admin/teacher/chats?c=${chat}${th.parent ? `&t=${th.parent}` : ""}${err ? `&err=${encodeURIComponent(err)}` : ""}`);
 }
 export async function undoPointsAction(f: FormData): Promise<void> {
   const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
