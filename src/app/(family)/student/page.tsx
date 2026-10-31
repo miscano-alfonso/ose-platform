@@ -24,7 +24,7 @@ export default async function StudentHome() {
   const modules: BoardModule[] = [
     { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.subject}, ${hm(next.next!)}` : undefined}>
         {next ? <><div className="fx-main">
-          <p className="fx-live" style={soon ? undefined : { color: "#c9cdea" }}>{soon && <i />}{soon ? whenText(next.next!, now) : `Next lesson · ${dlong(next.next!)}`}</p>
+          <p className="fx-live" style={soon ? undefined : { color: "var(--hero-soft)" }}>{soon && <i />}{soon ? whenText(next.next!, now) : `Next lesson · ${dlong(next.next!)}`}</p>
           <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hi</span> {h.me.first} ✦</span><br />{next.subject}</h1>
           <p className="fx-hero-s">{hm(next.next!)}{next.teacher ? ` with ${next.teacher}` : ""} · {next.level}</p>
           {next.invited && <p className="fx-hero-s"><b>Accept the Google Classroom invitation in your email first.</b></p>}

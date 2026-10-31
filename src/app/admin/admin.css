@@ -487,7 +487,7 @@
 .adm .fx-live{display:inline-flex;gap:10px;align-items:center;margin:0;font-size:13px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#7fe0aa}
 .adm .fx-live i{width:9px;height:9px;border-radius:50%;background:#7fe0aa;box-shadow:0 0 0 5px rgba(127,224,170,.22)}
 .adm .fx-hero-t{margin:0;font:700 clamp(30px,4.2vw,48px)/1 "Space Grotesk","Jost",sans-serif;letter-spacing:-.02em}
-.adm .fx-hero-s{margin:0;font-size:17px;color:#d6daf0}
+.adm .fx-hero-s{margin:0;font-size:17px;color:var(--hero-soft)}
 .adm .fx-btns{display:flex;flex-wrap:wrap;gap:10px;position:relative;z-index:1}
 .adm .fx-btns a{font-size:16px;font-weight:600;padding:11px 22px;border-radius:30px;text-decoration:none;border:1.5px solid rgba(255,255,255,.55);color:#fff}
 .adm .fx-btns a.go{background:var(--pop);color:var(--pop-ink);border-color:var(--pop)}
@@ -685,7 +685,7 @@
 .adm .fx-cd{font:600 17px "Space Grotesk","Jost",sans-serif;color:#fff;padding-left:6px;white-space:nowrap}
 .adm .lclock{width:clamp(130px,14vw,180px);height:auto;align-self:center}
 .adm .lclock-t{fill:#fff;font:600 30px "Space Grotesk","Jost",sans-serif}
-.adm .lclock-l{fill:#c9cdea;font:600 12px "Space Grotesk","Jost",sans-serif;letter-spacing:.14em;text-transform:uppercase}
+.adm .lclock-l{fill:var(--hero-soft);font:600 12px "Space Grotesk","Jost",sans-serif;letter-spacing:.14em;text-transform:uppercase}
 @media (max-width:640px){.adm .fx .dx-hero.has-clock{grid-template-columns:1fr}.adm .lclock{width:120px;justify-self:start;order:-1}}
 /* birthday note in the teacher's My day hero */
 .adm .fx-bday{display:flex;gap:10px;align-items:flex-start;margin:0;padding:9px 14px;border-radius:12px;background:rgba(233,245,106,.12);border:1px solid rgba(233,245,106,.35);color:#fff;font-size:15px;line-height:1.4;max-width:60ch}
@@ -734,7 +734,7 @@
 .adm .fx-slides a,.adm .fx-slides .add{display:inline-flex;align-items:center;gap:7px;padding:6px 14px;border-radius:999px;border:1.5px solid rgba(255,255,255,.45);color:#fff;background:transparent;font:600 14px inherit;font-family:inherit;text-decoration:none;cursor:pointer}
 .adm .fx-slides a:hover,.adm .fx-slides .add:hover{background:rgba(255,255,255,.1)}
 .adm .fx-slides svg{width:16px;height:16px}
-.adm .fx-slides>button:not(.add){border:0;background:none;color:#c9cdea;padding:6px;border-radius:8px;cursor:pointer;display:inline-flex}
+.adm .fx-slides>button:not(.add){border:0;background:none;color:var(--hero-soft);padding:6px;border-radius:8px;cursor:pointer;display:inline-flex}
 .adm .fx-slides>button:not(.add):hover{color:#fff}
 .adm .fx-slides-edit{display:flex;flex-wrap:wrap;gap:8px;align-items:center;width:100%}
 .adm .fx-slides-edit input{flex:1 1 260px;min-width:0;padding:8px 12px;border-radius:10px;border:1.5px solid var(--line);font:inherit;background:var(--panel);color:var(--ink)}
@@ -745,7 +745,7 @@
 .adm .fx-row .fx-slides .add{color:var(--muted)}
 .adm .fx-row .fx-slides>button:not(.add){color:var(--muted)}
 .adm .fx-row .fx-slides-edit{flex-basis:100%}
-.adm .fx-slides .none{font-size:14px;color:#c9cdea;padding:6px 4px;cursor:help;border-bottom:1px dotted rgba(201,205,234,.5)}
+.adm .fx-slides .none{font-size:14px;color:var(--hero-soft);padding:6px 4px;cursor:help;border-bottom:1px dotted color-mix(in srgb,var(--hero-soft) 50%,transparent)}
 /* packed board: modules placed by bento-pack.ts so they fill the space */
 .adm .bb-grid.packed{display:block;position:relative}
 .adm .bb-grid.packed>.bb-cell{position:absolute}
@@ -753,11 +753,11 @@
 .adm .bb-grid.packed>.bb-cell.grown[class*=" h-"] .bb-body{height:auto;flex:1 1 0;min-height:0}
 /* ---------- notifications: bell, corner notes, settings ---------- */
 .adm .ntf-bellwrap{display:inline-flex;align-items:center;gap:2px;vertical-align:middle;position:relative}
-.adm .ntf-bell,.adm .ntf-set{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:999px;border:0;background:transparent;color:rgba(201,205,234,.45);cursor:pointer;padding:0}
+.adm .ntf-bell,.adm .ntf-set{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:999px;border:0;background:transparent;color:color-mix(in srgb,var(--hero-soft) 45%,transparent);cursor:pointer;padding:0}
 .adm .ntf-bell svg{width:20px;height:20px}.adm .ntf-set svg{width:16px;height:16px}
 .adm .ntf-bell.on{color:var(--pop,#e9f56a)}
 .adm .ntf-bell:hover,.adm .ntf-set:hover{background:rgba(255,255,255,.1);color:#fff}
-.adm .ntf-set{color:rgba(201,205,234,.6);width:28px;height:28px}
+.adm .ntf-set{color:color-mix(in srgb,var(--hero-soft) 60%,transparent);width:28px;height:28px}
 .adm .ntf-err{position:absolute;top:100%;left:0;white-space:nowrap;font-size:12.5px;color:#ffb4ab}
 .adm .dx-date .ntf-bellwrap{margin-left:6px}
 .adm .ntf-stack{position:fixed;right:16px;bottom:16px;z-index:60;display:grid;gap:8px;width:min(360px,calc(100vw - 32px))}
@@ -773,7 +773,7 @@
 .adm .ntf-tick{display:flex;gap:10px;align-items:flex-start;flex:1 1 260px;min-width:0;cursor:pointer}
 .adm .ntf-tick span{display:grid}.adm .ntf-tick small{color:var(--muted);font-size:13.5px}
 .adm .ntf-row select{padding:7px 10px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:inherit}
-.adm .fx-btns a.ntf-set{padding:0;border:0;border-radius:999px;font-size:inherit;color:rgba(201,205,234,.6)}
+.adm .fx-btns a.ntf-set{padding:0;border:0;border-radius:999px;font-size:inherit;color:color-mix(in srgb,var(--hero-soft) 60%,transparent)}
 /* inbox: the whole row opens the email; the read/unread dot sits above that link */
 .adm .ibx-hit{position:absolute;inset:0;z-index:1;border-radius:inherit}
 .adm .ibx-hit:focus-visible{outline:2px solid var(--ink);outline-offset:-2px}
@@ -894,7 +894,6 @@
 .adm[data-palette=demo] .dx-hero::after{border-color:rgba(255,255,255,.08)}
 .adm[data-palette=demo] .dx-hero .dx-hello,.adm[data-palette=demo] .fx-hello,.adm[data-palette=demo] .fx-bday b,.adm[data-palette=demo] .fx-bday svg,.adm[data-palette=demo] .ntf-bell.on{color:#ffb3c6}
 .adm[data-palette=demo] .fx-bday{background:rgba(255,179,198,.1);border-color:rgba(255,179,198,.35)}
-.adm[data-palette=demo] .fx-hero-s{color:#f3d9dc}
 .adm[data-palette=demo] .lwin{background:#6e1830}
 .adm[data-palette=demo] .fx-send{background:rgba(255,179,198,.1);border-color:rgba(255,179,198,.35)}.adm[data-palette=demo] .fx-send svg,.adm[data-palette=demo] .fx-send b{color:#ffb3c6}
 /* 31 Oct: page titles line up with the buttons on the right (first line of text, not the middle of title + subtitle) */
@@ -945,18 +944,21 @@
 .adm .tm-form textarea,.adm .tm-form input:not([type=file]):not([type=hidden]){width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
 /* 31 Oct: the foot of the teacher's hero, one row when it fits: the next lesson's birthdays and SEND (compact boxes: the icon,
    or the icon and the "SEND in this class" link, on top; one person per line below), then Meet, Attendance and the countdown */
-.adm .fx .dx-hero .fx-foot{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;justify-content:space-between;position:relative;z-index:1}
+.adm .fx .dx-hero .fx-foot{grid-column:1/-1;display:grid;grid-template-columns:subgrid;gap:12px 24px;align-items:end;position:relative;z-index:1}
+.adm .fx .dx-hero:not(.has-clock) .fx-foot{display:flex;flex-wrap:wrap;justify-content:space-between}
 .adm .fx .dx-hero .fx-notes{flex:0 1 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
 .adm .fx .dx-hero .fx-notes .fx-bday{max-width:none;display:grid;gap:4px;padding:9px 13px;min-width:150px}
 .adm .fx .dx-hero .fx-notes .fx-nh{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .adm .fx .dx-hero .fx-notes .fx-nh svg{margin:0}
 .adm .fx .dx-hero .fx-notes .fx-nh a{color:#fff;font-size:14px;text-underline-offset:3px}.adm .fx .dx-hero .fx-notes .fx-nh a b{color:inherit}
 .adm .fx .dx-hero .fx-notes .fx-lines{display:grid;gap:2px}
-.adm .fx .dx-hero .fx-foot .fx-btns-r{margin-left:auto;display:grid;grid-template-columns:auto auto;gap:10px 14px;align-items:center;justify-items:end}
-.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-meet{grid-column:2;text-align:center}   /* Meet above Attendance; the countdown to Attendance's left */
+.adm .fx .dx-hero .fx-foot .fx-btns-r{grid-column:-2;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px 14px;align-items:center}
+.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-cd{grid-column:1;grid-row:2;justify-self:end;white-space:nowrap}
+.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-att{grid-column:2;grid-row:2}
+.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-meet{grid-column:2;grid-row:1;text-align:center}   /* Meet above Attendance; the countdown to Attendance's left */
 .adm .fx .dx-hero .fx-foot .fx-btns-r .fx-meet,.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-att{min-width:150px;box-sizing:border-box;text-align:center}
 .adm .fx .dx-hero .fx-foot .fx-btns-r .fx-cd{padding:0 2px}
-@media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{margin-left:0;justify-items:start}}
+@media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{grid-template-columns:auto auto auto;justify-content:start}}
 /* bigger "Next lesson · day · time" line */
 .adm .fx .dx-hero .fx-live{font-size:17px;letter-spacing:.1em}
 .adm .fx .dx-hero .fx-live.next{color:var(--pop,#e9f56a)}.adm[data-palette=demo] .fx .dx-hero .fx-live.next{color:#ffb3c6}
@@ -983,3 +985,10 @@
 .adm .send-form textarea{width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 .adm .send-tick{display:flex;gap:8px;align-items:center;font-size:14.5px}
 .adm[data-palette=demo]{--clock-sec:#ffb3c6}   /* the clock's second hand in light pink */
+/* 31 Oct: colour rule: dashboards use only their palette's colours. Soft text on the hero (the "No slides" line, the bell,
+   the subtitle) is --hero-soft: a lavender with OH-SO ED's navy, a soft pink with the demo's burgundy. */
+.adm{--hero-soft:#c9cdea}.adm[data-palette=demo]{--hero-soft:#f0c9d3}
+@media (min-width:641px){.adm .fx .dx-hero.has-clock{grid-template-columns:minmax(0,1fr) min-content}}   /* the clock sets the right column; the buttons centre under it */
+/* when the hero is too narrow for the countdown to sit beside Attendance without touching the SEND box, it goes under it */
+.adm .fx .dx-hero.has-clock{container-type:inline-size}
+@container (max-width:980px){.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-cd{grid-column:2;grid-row:3;justify-self:center}}
