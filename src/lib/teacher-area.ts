@@ -390,7 +390,10 @@ export async function myStudents(userId: string, groupId?: string): Promise<MySt
         order by l.sort_order, sj.name)
         from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         where e.student_id = s.id and e.status in ('pending','active') and not e.is_taster and g.id in (select id from mine)) as classes,
-      (select a.attendance_pct from student_term_attendance a where a.student_id = s.id and a.term_id = ${TERM_NOW}) as att,
+      -- attendance this term in this teacher's classes (marked lessons; approved absences don't count against it)
+      (select round(100.0 * count(*) filter (where m.mark in ('present','late')) / nullif(count(*) filter (where m.mark <> 'approved_absence'), 0))::int
+        from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id where m.student_id = s.id and ev.group_id in (select id from mine)
+          and ev.lesson_date between (select starts_on from terms where id = ${TERM_NOW}) and (select ends_on from terms where id = ${TERM_NOW})) as att,
       coalesce((select sum(rp.points)::int from reward_points rp where rp.student_id = s.id
         and rp.awarded_on between (select starts_on from terms where id = ${TERM_NOW}) and (select ends_on from terms where id = ${TERM_NOW})), 0) as points,
       coalesce(ss.has_send = 'yes' and ss.share_with_teachers, false) as send,
