@@ -3,6 +3,7 @@ import LiveSearch from "../../LiveSearch";
 import { familyList, contactLog, type FamState, type FamilyListRow } from "@/lib/families";
 import { stopContactAction } from "../../actions";
 import { money } from "@/lib/format";
+import { sendLabels } from "@/lib/send";
 
 export const dynamic = "force-dynamic";
 const STATE: Record<FamState, [string, string]> = { failed: ["bad", "Payment failed"], overdue: ["warn", "Past term not recorded as paid"], unscheduled: ["info", "No payment schedule"],
@@ -47,7 +48,7 @@ export default async function Families({ searchParams }: { searchParams: Promise
       : list.map((f) => <tr key={f.id} className="click">
         <td><Link href={`/admin/families/${f.id}`} className="rowlink"><b>{f.name}</b></Link><br /><span className="muted">{f.email}</span></td>
         <td>{f.children.map((k, i) => <div key={i}>{k.first} <span className="muted">{k.level}</span></div>)}</td>
-        <td>{f.children.map((k, i) => <div key={i}>{k.send === "yes" ? <span className="pill warn">SEND</span> : k.send === "discuss" ? <span className="pill info">To discuss</span> : k.send === "no" ? <span className="muted">No</span> : <span className="muted">—</span>}</div>)}</td>
+        <td>{f.children.map((k, i) => <div key={i}>{k.send === "yes" ? sendLabels(k.needs, k.details).map((n) => <span key={n} className="pill warn" style={{ marginRight: 4 }}>{n}</span>) : k.send === "discuss" ? <span className="pill info">To discuss</span> : k.send === "no" ? <span className="muted">No</span> : <span className="muted">—</span>}</div>)}</td>
         <td className="n">{f.courses}</td>
         <td>{f.latest_on ? <><b style={{ fontWeight: 500 }}>{day(f.latest_on)}</b> <span className="muted" style={{ fontSize: 13.5 }}>· {ago(f.latest_on)}</span><br /><span className="muted" style={{ fontSize: 13.5 }}>{f.latest_child}: {f.latest_course}</span>
           {f.first_on && f.first_on !== f.latest_on && <><br /><span className="muted" style={{ fontSize: 12.5 }}>with us since {new Date(f.first_on + "T12:00:00Z").toLocaleDateString("en-GB", { month: "short", year: "numeric" })}</span></>}</> : <span className="muted">—</span>}</td>

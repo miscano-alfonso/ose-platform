@@ -1,3 +1,4 @@
+import { sendLabels } from "@/lib/send";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { familyDetail, cancelPreview, swapOptions, type Cell } from "@/lib/families";
@@ -49,7 +50,7 @@ export default async function Family({ params, searchParams }: { params: Promise
     {f.children.map((st) => { const disc = st.courses.find((c) => c.status === "active" && c.discount > 0); return <section className="card" key={st.id}>
       <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: 8 }}>
         <h2 style={{ margin: 0 }}>{st.first} {st.last}</h2>{st.level && <span className="pill mute">{st.level}</span>}{age(st.dob) && <span className="pill mute">{age(st.dob)}</span>}
-        {st.send === "yes" && <span className="pill warn" title={`${st.send_details ?? ""}${st.adjustments ? ` · What helps: ${st.adjustments}` : ""}`}>Support needs</span>}
+        {st.send === "yes" && sendLabels(st.needs, st.send_details).map((n) => <span key={n} className="pill warn" style={{ marginLeft: 4 }} title={`${st.send_details ?? ""}${st.adjustments ? ` · What helps: ${st.adjustments}` : ""}`}>{n}</span>)}
         {disc && disc.list > 0 && <span className="pill info">{Math.round(disc.discount / disc.list * 100)}% bundle discount</span>}
         {st.att != null && <span className={`pill ${st.att < 50 ? "bad" : st.att < 80 ? "warn" : "good"}`}>Attendance {st.att}%</span>}
         {st.email && <span className="muted" style={{ fontSize: 14.5 }}>{st.email}</span>}</div>

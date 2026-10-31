@@ -823,3 +823,8 @@
 /* the round buttons follow the menu's own colours (dark text on the light menu) */
 .adm .theme-ico,.adm .side .sf-row .side-toggle{border-color:var(--line);background:var(--panel);color:var(--ink)}
 .adm .app.side-closed .side .sf-row .side-toggle{background:var(--brand);border-color:var(--brand);color:#fff}
+/* lesson register: the student's SEND labels (ADHD, Dyslexia…) at the right of their row */
+.adm .arr-row{grid-template-columns:minmax(140px,1.2fr) minmax(110px,.8fr) minmax(0,2fr) auto}
+.adm .arr-needs{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
+.adm .regrow legend .pill{margin-left:6px}
+@media (max-width:700px){.adm .arr-row{grid-template-columns:1fr auto}.adm .arr-needs{grid-column:1/-1;justify-content:flex-start}}

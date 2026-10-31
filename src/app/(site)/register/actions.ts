@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { currentFamily, sendVerifyLink } from "@/lib/family-auth";
 import { siteBase } from "@/lib/social";
+import { NEEDS } from "@/lib/send";
 import { registerFamily, addChildren, checkChild, checkChildEmails, GENDERS, type ChildIn } from "@/lib/registration";
 
 const safeNext = (n: string) => (/^\/(cart|parent)(\/|$|\?)/.test(n) ? n : "/cart");
@@ -16,6 +17,7 @@ function readChildren(f: FormData): Promise<ChildIn[]> {
     gender: GENDERS.includes(v(`c${i}_gender`, 30)) ? v(`c${i}_gender`, 30) : null,
     send: v(`c${i}_send`, 3) === "yes" ? true : v(`c${i}_send`, 3) === "no" ? false : null,
     sendDetails: v(`c${i}_send_details`, 2000) || null, adjustments: v(`c${i}_adjust`, 2000) || null, share: f.get(`c${i}_share`) !== "off",
+    needs: f.getAll(`c${i}_needs`).map(String).filter((x) => NEEDS.includes(x)),
     files: await Promise.all(f.getAll(`c${i}_files`).filter((x): x is File => x instanceof File && x.size > 0).slice(0, 5)
       .map(async (x) => ({ name: x.name, mime: x.type, data: Buffer.from(await x.arrayBuffer()) }))),
   })));

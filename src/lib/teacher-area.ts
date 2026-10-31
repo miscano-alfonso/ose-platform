@@ -62,7 +62,8 @@ export async function myDay(userId: string): Promise<MyDay> {
           cross join lateral (select (s.date_of_birth + make_interval(years => extract(year from ev.lesson_date)::int - extract(year from s.date_of_birth)::int))::date as d,
             extract(year from ev.lesson_date)::int - extract(year from s.date_of_birth)::int as age) b
           where e.group_id = g.id and e.status in ('pending','active') and s.date_of_birth is not null and abs(b.d - ev.lesson_date) <= 3), '[]'::json) as birthdays,
-        coalesce((select array_agg(coalesce(nullif(s.known_as, ''), s.first_name) || ' ' || left(s.last_name, 1) order by s.first_name) from enrolments e join students s on s.id = e.student_id
+        coalesce((select array_agg(coalesce(nullif(s.known_as, ''), s.first_name) || ' ' || left(s.last_name, 1)
+            || coalesce(' (' || nullif(array_to_string(array_remove(ss.needs, 'Other'), ', '), '') || ')', '') order by s.first_name) from enrolments e join students s on s.id = e.student_id
           join student_support ss on ss.student_id = s.id
           where e.group_id = g.id and e.status in ('pending','active') and ss.has_send = 'yes' and ss.share_with_teachers), '{}') as send
       from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id

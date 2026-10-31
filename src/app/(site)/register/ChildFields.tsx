@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { NEEDS } from "@/lib/send";
 
 const GENDERS = ["Male", "Female", "Non-binary", "Prefer not to answer"];
 
@@ -40,6 +41,8 @@ export function ChildFields() {
       <fieldset className="wk-fs"><legend>Does your child have SEND?</legend><div className="ct-pills">
         <label><input type="radio" name={`c${i}_send`} value="yes" /><span>Yes</span></label><label><input type="radio" name={`c${i}_send`} value="no" /><span>No</span></label></div></fieldset>
       <div className="rg-send">
+        <fieldset className="wk-fs"><legend>Which needs? <small className="note">tick any that apply: teachers see these as short labels</small></legend><div className="ct-pills">
+          {NEEDS.map((n) => <label key={n}><input type="checkbox" name={`c${i}_needs`} value={n} /><span>{n}</span></label>)}</div></fieldset>
         <label>About your child’s needs <small className="note">what their needs are, and any diagnosis or EHCP</small><textarea name={`c${i}_send_details`} rows={3} maxLength={2000} /></label>
         <label>What helps in lessons <small className="note">optional</small><textarea name={`c${i}_adjust`} rows={2} maxLength={2000} /></label>
         <fieldset className="wk-fs"><legend>Share this with your child’s teachers?</legend><div className="ct-pills">
