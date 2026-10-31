@@ -346,3 +346,58 @@ export async function setClassFolder(userId: string, groupId: string, value: str
   await withSchool((q) => q(`delete from meet_kv where key like 'slidesdir:%'`)).catch(() => null);
   return null;
 }
+
+// ---------- My classes and My students (31 Oct) ----------
+// Only the teacher's own classes this school year. SEND details only where the parent agreed to share them with teachers;
+// no parent contact details (teachers reach parents through Messages).
+export type MyClass = { id: string; code: string; level: string; subject: string; colour: string; students: number; capacity: number | null;
+  slots: { d: number; t: string; e: string }[] | null; meet_url: string | null; classroom: string | null; next: { id: string; d: string; t: string } | null;
+  att: number | null; send: number; slides_folder: string | null };
+export type MyStudent = { id: string; name: string; known_as: string | null; email: string | null; dob: string | null; year_group: number | null;
+  classes: { id: string; name: string; code: string; att: number | null; lessons: number }[]; att: number | null; points: number;
+  send: boolean; needs: string[] | null; send_details: string | null; adjustments: string | null; confirmed: boolean; in_classroom: boolean | null };
+
+export async function myClasses(userId: string): Promise<MyClass[]> {
+  return withSchool((q) => q<MyClass>(`
+    select g.id, g.code, l.name as level, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour, g.capacity, g.meet_url, g.slides_folder,
+      case when g.google_course_id is not null then 'https://classroom.google.com/c/' || g.google_course_id end as classroom,
+      (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students,
+      (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at,'HH24:MI'), 'e', to_char(s.ends_at,'HH24:MI')) order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id) as slots,
+      (select json_build_object('id', ev.id, 'd', ev.lesson_date::text, 't', to_char(sl.starts_at,'HH24:MI')) from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id
+        where ev.group_id = g.id and ev.status <> 'cancelled' and ev.lesson_date >= current_date order by ev.lesson_date, sl.starts_at limit 1) as next,
+      (select round(100.0 * count(*) filter (where m.mark in ('present','late')) / nullif(count(*) filter (where m.mark <> 'approved_absence'), 0))::int
+        from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id where ev.group_id = g.id) as att,
+      (select count(*)::int from enrolments e join student_support ss on ss.student_id = e.student_id where e.group_id = g.id and e.status in ('pending','active')
+        and ss.has_send = 'yes' and ss.share_with_teachers) as send
+    from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join academic_years y on y.id = g.academic_year_id
+    where y.ends_on >= current_date and g.status <> 'closed' and (g.teacher_id = ${ME} or exists (select 1 from lesson_slots s where s.group_id = g.id and s.teacher_id = ${ME}))
+    order by l.sort_order, sj.name, g.code`, [userId]));
+}
+
+/** The teacher's students, in all their classes or in one (groupId). */
+export async function myStudents(userId: string, groupId?: string): Promise<MyStudent[]> {
+  return withSchool((q) => q<MyStudent>(`
+    with mine as (select g.id from course_groups g join academic_years y on y.id = g.academic_year_id
+      where y.ends_on >= current_date and (g.teacher_id = ${ME} or exists (select 1 from lesson_slots s where s.group_id = g.id and s.teacher_id = ${ME}))
+        and ($2::uuid is null or g.id = $2::uuid))
+    select s.id, s.first_name || ' ' || s.last_name as name, nullif(s.known_as, '') as known_as, s.email::text, s.date_of_birth::text as dob, s.year_group,
+      coalesce(s.google_account_confirmed, false) as confirmed,
+      (select bool_and(cm.state = 'joined') from classroom_memberships cm where cm.student_id = s.id and cm.group_id in (select id from mine)) as in_classroom,
+      (select json_agg(json_build_object('id', g.id, 'name', l.name || ' ' || sj.name, 'code', g.code,
+          'att', (select round(100.0 * count(*) filter (where m.mark in ('present','late')) / nullif(count(*) filter (where m.mark <> 'approved_absence'), 0))::int
+                  from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id where ev.group_id = g.id and m.student_id = s.id),
+          'lessons', (select count(*)::int from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id where ev.group_id = g.id and m.student_id = s.id))
+        order by l.sort_order, sj.name)
+        from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+        where e.student_id = s.id and e.status in ('pending','active') and not e.is_taster and g.id in (select id from mine)) as classes,
+      (select a.attendance_pct from student_term_attendance a where a.student_id = s.id and a.term_id = ${TERM_NOW}) as att,
+      coalesce((select sum(rp.points)::int from reward_points rp where rp.student_id = s.id
+        and rp.awarded_on between (select starts_on from terms where id = ${TERM_NOW}) and (select ends_on from terms where id = ${TERM_NOW})), 0) as points,
+      coalesce(ss.has_send = 'yes' and ss.share_with_teachers, false) as send,
+      case when ss.has_send = 'yes' and ss.share_with_teachers then ss.needs end as needs,
+      case when ss.has_send = 'yes' and ss.share_with_teachers then ss.details end as send_details,
+      case when ss.has_send = 'yes' and ss.share_with_teachers then ss.adjustments end as adjustments
+    from students s left join student_support ss on ss.student_id = s.id
+    where exists (select 1 from enrolments e where e.student_id = s.id and e.group_id in (select id from mine) and e.status in ('pending','active') and not e.is_taster)
+    order by s.first_name, s.last_name`, [userId, groupId ?? null]));
+}
