@@ -1228,3 +1228,5 @@ html:not([data-theme=dark]) .bt .rg-warn{color:#b3392a}
 .bt .rg-send{display:none;flex-direction:column;gap:16px;padding:16px;border-radius:16px;background:var(--b-inset)}
 .bt .rg-child:has(input[value="yes"]:checked)>.rg-send{display:flex}
 .bt .rg-send textarea{background:var(--b-tile)}
+/* phones: the label sits further right, its right end at the screen margin over the roundel's top, clear of the buttons */
+@media (max-width:600px){.bt .cd-badge:not(.stuck) .cd-rlabel{right:-6px}.bt .cd-badge.stuck .cd-rlabel{right:-6px}}
