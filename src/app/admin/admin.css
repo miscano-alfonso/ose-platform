@@ -944,22 +944,12 @@
 .adm .tm-form textarea,.adm .tm-form input:not([type=file]):not([type=hidden]){width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
 /* 31 Oct: the foot of the teacher's hero, one row when it fits: the next lesson's birthdays and SEND (compact boxes: the icon,
    or the icon and the "SEND in this class" link, on top; one person per line below), then Meet, Attendance and the countdown */
-.adm .fx .dx-hero .fx-foot{grid-column:1/-1;display:grid;grid-template-columns:subgrid;gap:12px 24px;align-items:end;position:relative;z-index:1}
-.adm .fx .dx-hero:not(.has-clock) .fx-foot{display:flex;flex-wrap:wrap;justify-content:space-between}
-.adm .fx .dx-hero .fx-notes{grid-column:1;min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px;align-items:stretch}   /* the boxes share the space left of the buttons, side by side or stacked, never overlapping */
 .adm .fx .dx-hero .fx-notes .fx-bday{max-width:none;display:grid;align-content:start;gap:4px;padding:9px 13px;min-width:0;box-sizing:border-box}
 .adm .fx .dx-hero .fx-notes .fx-lines>*{overflow-wrap:anywhere}
 .adm .fx .dx-hero .fx-notes .fx-nh{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .adm .fx .dx-hero .fx-notes .fx-nh svg{margin:0}
 .adm .fx .dx-hero .fx-notes .fx-nh a{color:#fff;font-size:14px;text-underline-offset:3px}.adm .fx .dx-hero .fx-notes .fx-nh a b{color:inherit}
 .adm .fx .dx-hero .fx-notes .fx-lines{display:grid;gap:2px}
-.adm .fx .dx-hero .fx-foot .fx-btns-r{grid-column:-2;display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px 14px;align-items:center}
-.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-cd{grid-column:1;grid-row:2;justify-self:end;white-space:nowrap}
-.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-att{grid-column:2;grid-row:2}
-.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-meet{grid-column:2;grid-row:1;text-align:center}   /* Meet above Attendance; the countdown to Attendance's left */
-.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-meet,.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-att{min-width:150px;box-sizing:border-box;text-align:center}
-.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-cd{padding:0 2px}
-@media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{grid-template-columns:auto auto auto;justify-content:start}}
 /* bigger "Next lesson · day · time" line */
 .adm .fx .dx-hero .fx-live{font-size:17px;letter-spacing:.1em}
 .adm .fx .dx-hero .fx-live.next{color:var(--pop,#e9f56a)}.adm[data-palette=demo] .fx .dx-hero .fx-live.next{color:#ffb3c6}
@@ -992,17 +982,12 @@
 @media (min-width:641px){.adm .fx .dx-hero.has-clock{grid-template-columns:minmax(0,1fr) min-content}}   /* the clock sets the right column; the buttons centre under it */
 /* when the hero is too narrow for the countdown to sit beside Attendance without touching the SEND box, it goes under it */
 .adm .fx .dx-hero.has-clock{container-type:inline-size}
-@container (max-width:980px){.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-cd{grid-column:2;grid-row:3;justify-self:center}}
 /* 31 Oct: the clock and the two buttons share one centre line; the countdown hangs to Attendance's left (under it when narrow) */
 .adm .fx .dx-hero .fx-side .lclock{margin:0;align-self:center}
 .adm .fx .dx-hero .fx-side{align-items:center}
-.adm .fx .dx-hero .fx-foot .fx-btns-r{grid-column:-2;justify-self:center;display:flex;flex-direction:column;align-items:center;gap:10px}
-.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-attw{position:relative;display:inline-flex}
-.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-attw .fx-cd{position:absolute;right:calc(100% + 14px);top:50%;transform:translateY(-50%);white-space:nowrap;padding:0}
 /* the time left shows inside the lesson button until 5 minutes before the start (LessonLinkButton) */
 .adm .fx .dx-hero .fx-btns a.go.fx-meet.wait{background:transparent;color:var(--pop,#e9f56a);border-color:var(--pop,#e9f56a)}
 .adm[data-palette=demo] .fx .dx-hero .fx-btns a.go.fx-meet.wait{color:#ffb3c6;border-color:#ffb3c6}
-@media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{justify-self:start;align-items:flex-start}}
 /* more room between "Hello Jade" and the course title */
 .adm .fx .dx-hero .fx-hero-t .fx-hi{display:inline-block;margin-bottom:12px}
 /* the SEND box: an "S" badge, one student per line; the whole box opens the class list */
@@ -1021,3 +1006,11 @@
 .adm[data-palette=demo] .fx .dx-hero .fx-btns a.go.fx-meet.wait:hover,.adm[data-palette=demo] .fx .dx-hero .fx-btns a.go.fx-meet.wait:focus-visible{background:#ffb3c6;color:#3d0d1a;border-color:#ffb3c6}
 .adm .fx .dx-hero .fx-btns a:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .adm .fx .dx-hero .fx-live .fx-live-k{color:#fff}   /* "Next lesson" white, the day and time in the highlight colour (like Hello + name) */
+
+/* 31 Oct: the foot of the teacher's hero: the lesson button and Attendance on the left, the birthday and SEND boxes on the right */
+.adm .fx .dx-hero .fx-foot{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between;position:relative;z-index:1}
+.adm .fx .dx-hero .fx-foot .fx-btns-r{order:0;display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-meet,.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-att{min-width:150px;box-sizing:border-box;text-align:center}
+.adm .fx .dx-hero .fx-notes{order:1;margin-left:auto;max-width:100%;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;align-items:stretch}
+.adm .fx .dx-hero .fx-notes .fx-bday{flex:0 1 auto;max-width:100%}
+@media (max-width:640px){.adm .fx .dx-hero .fx-notes{margin-left:0;justify-content:flex-start}}
