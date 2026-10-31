@@ -1,7 +1,7 @@
 "use server";
 import { redirect } from "next/navigation";
 import { currentFamily, startParentSession } from "@/lib/family-auth";
-import { registerFamily, addChildren, checkChild, GENDERS, type ChildIn } from "@/lib/registration";
+import { registerFamily, addChildren, checkChild, checkChildEmails, GENDERS, type ChildIn } from "@/lib/registration";
 
 const safeNext = (n: string) => (/^\/(cart|parent)(\/|$|\?)/.test(n) ? n : "/cart");
 
@@ -29,6 +29,7 @@ export async function registerAction(f: FormData): Promise<void> {
   const fam = await currentFamily();
   if (fam?.kind === "parent") {
     if (fam.viewer) return back("You’re viewing as this family, so nothing can be changed.");
+    const dup = await checkChildEmails(fam.email, kids); if (dup) return back(dup);
     await addChildren(fam.id, kids);
     redirect(`${next}${next.includes("?") ? "&" : "?"}added=${kids.length}`);
   }
@@ -36,6 +37,7 @@ export async function registerAction(f: FormData): Promise<void> {
   if (!p.first || !p.last) return back("Add your first and last name.");
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) return back("Add a valid email address.");
   if (f.get("terms") !== "on") return back("Please agree to the Terms & Conditions.");
+  const dup = await checkChildEmails(p.email, kids); if (dup) return back(dup);
   const id = await registerFamily(p, kids);
   if (id === "exists") redirect(`/account?next=cart&err=${encodeURIComponent("That email already has an account. We can email you a sign-in link instead.")}`);
   await startParentSession(id);

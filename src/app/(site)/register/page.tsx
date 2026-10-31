@@ -22,7 +22,7 @@ export default async function Register({ searchParams }: { searchParams: Promise
       <div className="cd-hbtns">{codes.length > 0 && <Link href="/cart">← Back to basket</Link>}{!parent && <Link href="/account?next=cart">I already have an account</Link>}</div>
     </div></section>
     <section className="s-sec"><div className="wrap rg-wrap">
-      <form action={registerAction} className="cform ct-form rg-form" encType="multipart/form-data">
+      <form action={registerAction} className="cform ct-form rg-form" encType="multipart/form-data" data-parent-email={parent?.email ?? undefined}>
         {sp.error && <p className="notice err" role="alert">{sp.error}</p>}
         <input type="hidden" name="next" value={next} />
         {!parent && <fieldset className="rg-child"><legend><span className="ab-k">Parent or guardian</span></legend>

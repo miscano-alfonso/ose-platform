@@ -50,3 +50,18 @@ export async function addChildren(parentId: string, kids: ChildIn[]) {
 export async function familyChildren(parentId: string): Promise<{ id: string; name: string }[]> {
   return withSchool((q) => q<{ id: string; name: string }>(`select id, first_name || ' ' || last_name as name from students where parent_id = $1 order by created_at`, [parentId]));
 }
+
+/** Each child needs their own Google email: not the parent's, not another child's on the form, and not already used by any parent or student. */
+export async function checkChildEmails(parentEmail: string, kids: ChildIn[]): Promise<string | null> {
+  const pe = parentEmail.trim().toLowerCase(), seen = new Set<string>();
+  for (const [i, c] of kids.entries()) {
+    const e = c.email.trim().toLowerCase(), who = kids.length > 1 ? `Child ${i + 1}` : "Your child";
+    if (e === pe) return `${who} needs their own email address. It can’t be the same as the parent’s email.`;
+    if (seen.has(e)) return `${who} needs their own email address. Each child must have a different one.`;
+    seen.add(e);
+  }
+  const used = await withSchool((q) => q<{ email: string }>(`select lower(email::text) as email from students where lower(email::text) = any($1)
+    union select lower(email::text) from parents where lower(email::text) = any($1)`, [[...seen]]));
+  if (used.length) return `${used[0].email} is already used on another account. Each child needs their own email address.`;
+  return null;
+}
