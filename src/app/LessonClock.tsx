@@ -47,8 +47,8 @@ export function LessonClock({ date, time }: { date: string; time: string }) {
       stroke={big ? "#fff" : "rgba(255,255,255,.4)"} strokeWidth={big ? 3 : 1.2} strokeLinecap="round" transform={`rotate(${i * 6} 100 100)`} />; })}
     <line ref={h} x1="100" y1="108" x2="100" y2="56" stroke="#fff" strokeWidth="6" strokeLinecap="round" />
     <line ref={m} x1="100" y1="112" x2="100" y2="28" stroke="#fff" strokeWidth="3.5" strokeLinecap="round" />
-    <line ref={s} x1="100" y1="118" x2="100" y2="20" stroke="var(--pop,#e9f56a)" strokeWidth="1.6" strokeLinecap="round" />
-    <circle cx="100" cy="100" r="5" fill="var(--pop,#e9f56a)" />
+    <line ref={s} x1="100" y1="118" x2="100" y2="20" stroke="var(--clock-sec,var(--pop,#e9f56a))" strokeWidth="1.6" strokeLinecap="round" />
+    <circle cx="100" cy="100" r="5" fill="var(--clock-sec,var(--pop,#e9f56a))" />
   </svg>;
 }
 

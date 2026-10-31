@@ -952,11 +952,14 @@
 .adm .fx .dx-hero .fx-notes .fx-nh svg{margin:0}
 .adm .fx .dx-hero .fx-notes .fx-nh a{color:#fff;font-size:14px;text-underline-offset:3px}.adm .fx .dx-hero .fx-notes .fx-nh a b{color:inherit}
 .adm .fx .dx-hero .fx-notes .fx-lines{display:grid;gap:2px}
-.adm .fx .dx-hero .fx-foot .fx-btns-r{margin-left:auto;justify-content:flex-end;align-items:center}
+.adm .fx .dx-hero .fx-foot .fx-btns-r{margin-left:auto;display:grid;grid-template-columns:auto auto;gap:10px 14px;align-items:center;justify-items:end}
+.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-meet{grid-column:2;text-align:center}   /* Meet above Attendance; the countdown to Attendance's left */
+.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-meet,.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-att{min-width:150px;box-sizing:border-box;text-align:center}
 .adm .fx .dx-hero .fx-foot .fx-btns-r .fx-cd{padding:0 2px}
-@media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{margin-left:0;justify-content:flex-start}}
+@media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{margin-left:0;justify-items:start}}
 /* bigger "Next lesson · day · time" line */
 .adm .fx .dx-hero .fx-live{font-size:17px;letter-spacing:.1em}
+.adm .fx .dx-hero .fx-live.next{color:var(--pop,#e9f56a)}.adm[data-palette=demo] .fx .dx-hero .fx-live.next{color:#ffb3c6}
 .adm .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 /* 31 Oct: "Draft with AI" in the report comment box */
 .adm .aid-wrap{position:relative;display:grid;gap:6px}
@@ -979,3 +982,4 @@
 .adm .send-form .ct-pills input:focus-visible+span{outline:2px solid var(--rail-on);outline-offset:2px}
 .adm .send-form textarea{width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 .adm .send-tick{display:flex;gap:8px;align-items:center;font-size:14.5px}
+.adm[data-palette=demo]{--clock-sec:#ffb3c6}   /* the clock's second hand in light pink */

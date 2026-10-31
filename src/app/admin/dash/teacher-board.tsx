@@ -33,7 +33,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
   const waiting = threads.filter((t) => t.last_sender === "parent").length;
   const modules: BoardModule[] = [
     { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">
-        <p className="fx-live" style={isToday ? undefined : { color: "#c9cdea" }}>{isToday && <i />}{next ? (isToday ? `Today · ${next.time.slice(0, 5)}` : `Next lesson · ${wd(next.d)} ${dm(next.d)} · ${next.time.slice(0, 5)}`) : d.term?.name ?? "My day"} <NotifyBell settingsHref="/admin/teacher/notifications" /></p>
+        <p className={`fx-live${isToday ? "" : " next"}`}>{isToday && <i />}{next ? (isToday ? `Today · ${next.time.slice(0, 5)}` : `Next lesson · ${wd(next.d)} ${dm(next.d)} · ${next.time.slice(0, 5)}`) : d.term?.name ?? "My day"} <NotifyBell settingsHref="/admin/teacher/notifications" /></p>
         <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {me.name.split(" ")[0]}</span>{next && <><br />{next.name}</>}</h1>
         <div className="fx-sub-row"><p className="fx-hero-s">{next ? <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>{next && <SlidesButton eventId={next.id} url={next.slides_url ?? null} found={found.get(next.id) ?? null} n={next.lesson_no} />}</div>
       </div>{next && <div className="fx-side"><LessonClock date={next.d} time={next.time} />
@@ -43,10 +43,10 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
         {!!next.send?.length && <p className="fx-bday fx-send"><span className="fx-nh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4.2a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2zM14 17h-4v-1.6h1.2v-3.8H10V10h3v5.4h1z" fill="currentColor"/></svg><Link href={`/admin/register/${next.id}`}><b>SEND</b> in this class</Link></span>
           <span className="fx-lines">{next.send.map((x, i) => { const m = /^(.*?) \((.*)\)$/.exec(x);
             return <span key={i}><b className="fx-nm">{m ? m[1] : x}</b>{m ? ` · ${m[2]}` : ""}</span>; })}</span></p>}</div> : null}
-        <div className="fx-btns fx-btns-r">{next && (next.meet_url ? <a className="go" href={next.meet_url} target="_blank" rel="noopener">{joinLabel(next.meet_url)}</a>
-          : <span className="fx-nomeet" title="The office adds the Meet link to the class">Meet link</span>)}
-          {next && <Link href={`/admin/register/${next.id}`}>Attendance</Link>}
+        <div className="fx-btns fx-btns-r">{next && (next.meet_url ? <a className="go fx-meet" href={next.meet_url} target="_blank" rel="noopener">{joinLabel(next.meet_url)}</a>
+          : <span className="fx-nomeet fx-meet" title="The office adds the Meet link to the class">Meet link</span>)}
           {next && <LessonCountdown date={next.d} time={next.time} />}
+          {next && <Link className="fx-att" href={`/admin/register/${next.id}`}>Attendance</Link>}
 </div></div></section> },
     { id: "reports-pop", title: "Reports to write", node: <Link href="/admin/teacher/reports" className="dx-pop c4"><span>{d.reportCycle ?? "Reports"}</span>
         <b className="fx-big">{d.reportsLeft}</b>
