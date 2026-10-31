@@ -11,20 +11,20 @@ export default async function MyStudents({ searchParams }: { searchParams: Promi
   const me = await requireViewer();
   const sp = await searchParams;
   const [all, classes] = await Promise.all([myStudents(me.id), myClasses(me.id)]);
-  const q = (sp.q ?? "").trim().toLowerCase(), show = sp.show ?? "all", view = sp.view === "list" ? "list" : "cards";
+  const q = (sp.q ?? "").trim().toLowerCase(), show = sp.show ?? "all", view = sp.view === "cards" ? "cards" : "list";
   const list = all.filter((s) => (!q || `${s.name} ${s.known_as ?? ""}`.toLowerCase().includes(q))
     && (show === "all" || (show === "send" && s.send) || (show === "low" && s.att !== null && s.att < 85) || (s.classes ?? []).some((c) => c.id === show)));
   const sendN = all.filter((s) => s.send).length;
-  const href = (v: string, w = view) => `/admin/teacher/students?${new URLSearchParams({ ...(v !== "all" ? { show: v } : {}), ...(sp.q ? { q: sp.q } : {}), ...(w === "list" ? { view: "list" } : {}) })}`;
+  const href = (v: string, w = view) => `/admin/teacher/students?${new URLSearchParams({ ...(v !== "all" ? { show: v } : {}), ...(sp.q ? { q: sp.q } : {}), ...(w === "cards" ? { view: "cards" } : {}) })}`;
   return <>
     <div className="top"><div><h1>My students</h1><div className="sub">{all.length} student{all.length === 1 ? "" : "s"} across {classes.length} class{classes.length === 1 ? "" : "es"}{sendN ? ` · ${sendN} with SEND` : ""}</div></div></div>
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
-      <form method="get" action="/admin/teacher/students" style={{ display: "flex", gap: 6 }}>{show !== "all" && <input type="hidden" name="show" value={show} />}{view === "list" && <input type="hidden" name="view" value="list" />}
+      <form method="get" action="/admin/teacher/students" style={{ display: "flex", gap: 6 }}>{show !== "all" && <input type="hidden" name="show" value={show} />}{view === "cards" && <input type="hidden" name="view" value="cards" />}
         <input name="q" defaultValue={sp.q ?? ""} placeholder="Search by name" aria-label="Search students" className="mini" style={{ width: 220 }} /><button className="abtn sm" type="submit">Search</button></form>
       <div className="segl" role="group" aria-label="Show">
         {[["all", "All"], ["send", `SEND (${sendN})`], ["low", "Attendance under 85%"]].map(([k, l]) => <Link key={k} scroll={false} href={href(k)} aria-current={show === k ? "true" : undefined}>{l}</Link>)}
       </div>
-      <form method="get" action="/admin/teacher/students">{sp.q && <input type="hidden" name="q" value={sp.q} />}{view === "list" && <input type="hidden" name="view" value="list" />}
+      <form method="get" action="/admin/teacher/students">{sp.q && <input type="hidden" name="q" value={sp.q} />}{view === "cards" && <input type="hidden" name="view" value="cards" />}
         <select name="show" defaultValue={classes.some((c) => c.id === show) ? show : ""} className="mini" aria-label="Class">
           <option value="">Any class</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.level} {c.subject} ({c.code})</option>)}</select>
         <button className="abtn sm" type="submit" style={{ marginLeft: 6 }}>Show</button></form>

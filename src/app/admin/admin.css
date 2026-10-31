@@ -853,3 +853,6 @@
 .adm .ms-send dd{background:rgba(224,161,43,.1);border-radius:10px;padding:8px 10px;line-height:1.5}
 .adm .ms-acts{display:flex;gap:6px;margin-top:2px}
 .adm .ms-table td{vertical-align:top}.adm .ms-table .ms-cls{display:flex;margin:0 0 4px}
+.adm .ms-table .ms-line{min-height:30px;display:flex;align-items:center;justify-content:inherit}
+.adm .ms-table td.n .ms-line{justify-content:flex-end}
+.adm .ms-table .ms-line{min-height:28px}.adm .ms-table td>b,.adm .ms-table td.n{line-height:28px}
