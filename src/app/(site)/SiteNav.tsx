@@ -20,7 +20,7 @@ export function SiteNav({ items }: { items: [string, string][] }) {
     const root = document.documentElement;
     root.classList.toggle("menu-open", open);
     if (!open) return;
-    const place = () => { const bar = nav.current?.closest(".s-nav")?.getBoundingClientRect(); if (bar) root.style.setProperty("--menu-top", `${Math.max(0, Math.round(bar.bottom))}px`); };
+    const place = () => { const bar = nav.current?.closest<HTMLElement>(".s-nav"); if (bar) root.style.setProperty("--menu-top", `${bar.offsetHeight}px`); };   // the bar is pinned to the top while the menu is open
     place(); window.addEventListener("resize", place);
     return () => { window.removeEventListener("resize", place); root.classList.remove("menu-open"); };
   }, [open]);

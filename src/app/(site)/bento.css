@@ -1141,3 +1141,10 @@ html:not([data-theme=dark]) .bt .bk-dl .bk-off dd{color:#5f6a12}
 .bt .wk-sec{padding-top:clamp(44px,4vw,58px)}
 .bt .wk-book{top:calc(var(--navh,96px) + 182px)}
 .bt .in-cart:hover,.bt .in-cart:focus-visible,.bt .cd-hbtns .in-cart:hover{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+/* phone menu: always a solid dark blue sheet, never see-through, whatever the page is doing behind it */
+@media (max-width:1080px){
+  .bt .s-nav .s-links.open,.bt .s-nav.over .s-links.open,.bt:has(.bh-home,.s-phead) .s-nav .s-links.open,.bt .s-nav.past .s-links.open{background:#050f2d!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;opacity:1;border-color:rgba(104,187,228,.25)}
+  .bt .s-nav .s-links.open a{color:#eef0f7}
+}
+/* phone menu open: the top bar (logo and close button) is pinned to the top and solid, so the menu always sits under it */
+@media (max-width:1080px){html.menu-open .bt .s-nav{position:fixed;top:0;left:0;right:0;z-index:61;background:#050f2d!important}}
