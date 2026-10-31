@@ -59,10 +59,10 @@ export default async function EmailSettings({ searchParams }: { searchParams: Pr
       <p className="note" style={{ marginTop: 8 }}>Replies are sent through the Reply from address’s Gmail, in the same conversation for the family. That address must be one of the inboxes above. Inboxes connected before sending was added need to be disconnected and connected again (tick the box to send email).</p></>}
     </section>
 
-    <section className="card"><h2>Who teachers can email</h2>
-      <p className="cs">On their Email page, teachers write to the people ticked here. Each email shows in Email → Inbox, tagged with who it’s for, and that person also gets it by email.</p>
+    <section className="card"><h2>Who teachers can message</h2>
+      <p className="cs">On their Messages page (“The school”), teachers write to the people ticked here. Each message shows in Email → Inbox, tagged with who it’s for, and that person also gets it by email.</p>
       <form action={teacherContactsAction} style={{ display: "grid", gap: 10 }}>
-        <p className="muted" style={{ margin: 0, fontSize: 14 }}>Teachers can email the people ticked here (the first one is chosen for them to start with):</p>
+        <p className="muted" style={{ margin: 0, fontSize: 14 }}>Teachers can message the people ticked here, in this order. Only admin accounts can be listed (add someone in Settings → Staff &amp; access first):</p>
         {admins.map((a) => <div key={a.id} style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap", padding: "8px 0", borderTop: "1px solid var(--line)" }}>
           <label style={{ display: "flex", gap: 10, alignItems: "center", flex: "1 1 260px", cursor: "pointer" }}>
             <input type="checkbox" name="on" value={a.id} defaultChecked={on.has(a.id)} style={{ width: 20, height: 20 }} />

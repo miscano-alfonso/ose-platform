@@ -1014,3 +1014,6 @@
 .adm .fx .dx-hero .fx-notes{order:1;margin-left:auto;max-width:100%;display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;align-items:stretch}
 .adm .fx .dx-hero .fx-notes .fx-bday{flex:0 1 auto;max-width:100%}
 @media (max-width:640px){.adm .fx .dx-hero .fx-notes{margin-left:0;justify-content:flex-start}}
+/* the SEND box grows to fill the space up to the right margin; the birthday box keeps its size */
+.adm .fx .dx-hero .fx-notes{flex:1 1 auto;min-width:0}
+.adm .fx .dx-hero .fx-notes .fx-send{flex:1 1 auto}
