@@ -404,3 +404,28 @@ export async function myStudents(userId: string, groupId?: string): Promise<MySt
     where exists (select 1 from enrolments e where e.student_id = s.id and e.group_id in (select id from mine) and e.status in ('pending','active') and not e.is_taster)
     order by s.first_name, s.last_name`, [userId, groupId ?? null]));
 }
+
+/** A class's Google Classroom work (31 Oct), as synced from Classroom: newest first, with each enrolled student's hand-in.
+ *  status: done (handed in), marked (returned), missing (not handed in, past the due date), todo. link = the student's own work in Classroom. */
+export type ClassWork = { id: string; title: string; due_at: string | null; max_points: number | null; link: string | null;
+  done: number; marked: number; missing: number; late: number; todo: number;
+  subs: { id: string; name: string; status: "done" | "marked" | "missing" | "todo"; late: boolean; points: number | null; at: string | null; link: string | null }[] };
+export async function classWork(groupId: string, limit = 25): Promise<ClassWork[]> {
+  return withSchool(async (q) => {
+    const rows = await q<Omit<ClassWork, "done" | "marked" | "missing" | "late" | "todo">>(`
+      with kids as (select st.id, st.first_name || ' ' || st.last_name as name from enrolments e join students st on st.id = e.student_id
+        where e.group_id = $1 and e.status in ('pending','active') and not e.is_taster)
+      select c.id, c.title, c.due_at::text, c.max_points::float as max_points, c.link,
+        coalesce((select json_agg(json_build_object('id', k.id, 'name', k.name,
+            'status', case when s.state = 'returned' then 'marked' when s.state = 'turned_in' then 'done'
+                           when c.due_at is not null and c.due_at < now() then 'missing' else 'todo' end,
+            'late', coalesce(s.late, false), 'points', s.points::float, 'at', s.turned_in_at::text, 'link', s.link) order by k.name)
+          from kids k left join classroom_submissions s on s.coursework_id = c.id and s.student_id = k.id), '[]') as subs
+      from classroom_coursework c where c.group_id = $1
+      order by c.due_at desc nulls last, c.created_at desc limit $2`, [groupId, limit]);
+    return rows.map((r) => {
+      const n = (k: string) => r.subs.filter((s) => s.status === k).length;
+      return { ...r, done: n("done"), marked: n("marked"), missing: n("missing"), todo: n("todo"), late: r.subs.filter((s) => s.late).length };
+    });
+  });
+}

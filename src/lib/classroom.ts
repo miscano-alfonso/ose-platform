@@ -24,7 +24,7 @@ async function all<T>(token: string, path: string, key: string): Promise<{ ok: t
 
 type Student = { userId: string; profile?: { emailAddress?: string; name?: { fullName?: string } } };
 type Work = { id: string; title?: string; dueDate?: { year: number; month: number; day: number }; dueTime?: { hours?: number; minutes?: number }; maxPoints?: number; alternateLink?: string; state?: string };
-type Sub = { courseWorkId: string; userId: string; state?: string; late?: boolean; assignedGrade?: number; updateTime?: string;
+type Sub = { courseWorkId: string; userId: string; alternateLink?: string; state?: string; late?: boolean; assignedGrade?: number; updateTime?: string;
   submissionHistory?: { stateHistory?: { state?: string; stateTimestamp?: string } }[] };
 
 const dueOf = (w: Work) => w.dueDate ? new Date(Date.UTC(w.dueDate.year, w.dueDate.month - 1, w.dueDate.day, w.dueTime ? w.dueTime.hours ?? 0 : 23, w.dueTime ? w.dueTime.minutes ?? 0 : 59)).toISOString() : null;
@@ -85,10 +85,10 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
         const st = STATE[s.state ?? ""] ?? "assigned";
         const turned = [...(s.submissionHistory ?? [])].reverse().find((h) => h.stateHistory?.state === "TURNED_IN")?.stateHistory?.stateTimestamp ?? null;
         const pts = st === "returned" && typeof s.assignedGrade === "number" ? s.assignedGrade : null;
-        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7)
-          on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points,
+        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8)
+          on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points, link = excluded.link,
             graded_at = case when excluded.points is null then null else coalesce(classroom_submissions.graded_at, excluded.graded_at) end`,
-          [cw, sid, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString()]);
+          [cw, sid, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null]);
         info.submissions!++;
       }
     });

@@ -23,9 +23,38 @@ export function StudentRows({ list, showClasses = true }: { list: MyStudent[]; s
   </article>)}</div>;
 }
 
-/** The same students as a table: one line each, with the Message button. */
-export function StudentTable({ list, showClasses = true }: { list: MyStudent[]; showClasses?: boolean }) {
-  return <div className="tw"><table className="ms-table"><thead><tr><th>Student</th>{showClasses && <th>Classes</th>}<th className="n">Attendance</th><th className="n">Points</th><th>SEND</th><th>Google account</th><th>Birthday</th><th /></tr></thead>
+/** Column sorting for the list (31 Oct): ?sort=<key>&dir=desc, sorted on the server. Birthday sorts by the next one coming up. */
+export const SORTS = ["name", "class", "att", "points", "send", "email", "bday"] as const;
+export type SortKey = (typeof SORTS)[number];
+export type Sort = { key: SortKey; dir: "asc" | "desc"; href: (key: SortKey, dir: "asc" | "desc") => string };
+export const sortOf = (sp: { sort?: string; dir?: string }) => ({ key: (SORTS as readonly string[]).includes(sp.sort ?? "") ? sp.sort as SortKey : "name" as SortKey, dir: sp.dir === "desc" ? "desc" as const : "asc" as const });
+const daysToBirthday = (dob: string | null) => {
+  if (!dob) return null;
+  const n = new Date(), t = Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate()), b = new Date(dob + "T12:00:00Z");
+  let d = Date.UTC(n.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate()); if (d < t) d = Date.UTC(n.getUTCFullYear() + 1, b.getUTCMonth(), b.getUTCDate());
+  return Math.round((d - t) / 864e5);
+};
+export function sortStudents(list: MyStudent[], key: SortKey, dir: "asc" | "desc"): MyStudent[] {
+  const val = (s: MyStudent): string | number | null => key === "name" ? s.name.toLowerCase() : key === "class" ? ((s.classes ?? [])[0]?.name ?? "").toLowerCase()
+    : key === "att" ? s.att : key === "points" ? s.points : key === "send" ? (s.send ? 0 : 1) : key === "email" ? (s.email ?? "").toLowerCase() || null : daysToBirthday(s.dob);
+  const m = dir === "desc" ? -1 : 1;
+  return [...list].sort((a, b) => {
+    const x = val(a), y = val(b);
+    if (x === null || y === null) return x === y ? a.name.localeCompare(b.name) : x === null ? 1 : -1;   // blanks always last
+    return (x < y ? -m : x > y ? m : 0) || a.name.localeCompare(b.name);
+  });
+}
+function Th({ k, label, sort, n }: { k: SortKey; label: string; sort?: Sort; n?: boolean }) {
+  if (!sort) return <th className={n ? "n" : undefined}>{label}</th>;
+  const on = sort.key === k, next = on && sort.dir === "asc" ? "desc" : "asc";
+  return <th className={`${n ? "n " : ""}sorth`} aria-sort={on ? (sort.dir === "asc" ? "ascending" : "descending") : undefined}>
+    <Link scroll={false} href={sort.href(k, next)} className={on ? "on" : undefined}>{label}<span className="sar" aria-hidden="true">{on ? (sort.dir === "asc" ? "▲" : "▼") : "▲"}</span></Link></th>;
+}
+
+/** The same students as a table: one line each, with the Message button. Column headings sort when `sort` is given. */
+export function StudentTable({ list, showClasses = true, sort }: { list: MyStudent[]; showClasses?: boolean; sort?: Sort }) {
+  return <div className="tw"><table className="ms-table"><thead><tr><Th k="name" label="Student" sort={sort} />{showClasses && <Th k="class" label="Classes" sort={sort} />}
+    <Th k="att" label="Attendance" sort={sort} n /><Th k="points" label="Points" sort={sort} n /><Th k="send" label="SEND" sort={sort} /><Th k="email" label="Google account" sort={sort} /><Th k="bday" label="Birthday" sort={sort} /><th /></tr></thead>
     <tbody>{list.map((s) => <tr key={s.id}>
       <td><b>{s.name}</b>{s.known_as && <div className="muted" style={{ fontSize: 13.5 }}>“{s.known_as}”</div>}</td>
       {showClasses && <td>{(s.classes ?? []).map((c) => <div key={c.id} className="ms-line">{c.name}</div>)}</td>}
