@@ -1235,3 +1235,15 @@ html:not([data-theme=dark]) .bt .rg-warn{color:#b3392a}
 .bt .apply legend{font-weight:600;font-size:13px;letter-spacing:.16em;text-transform:uppercase;padding:0 8px}
 .bt .apply fieldset{border-color:var(--b-line)}
 .bt .job-dl{border-color:var(--b-line)}.bt .job-dl div{border-color:var(--b-line)}
+/* timetable on phones and tablets: the day names stick under the level buttons in their own strip, following the sideways scroll */
+.wk-head{display:none}
+@media (max-width:899px){
+  .wk-head{display:flex;gap:8px;position:sticky;top:calc(var(--navh,73px) + var(--phh,61px) - 1px);z-index:30;background:var(--b-tile);border:1px solid var(--b-line);border-bottom:0;border-radius:24px 24px 0 0;padding:14px 16px 10px}
+  .wk-head-t{flex:none;width:56px}
+  .wk-head-v{flex:1;overflow:hidden;min-width:0}
+  .wk-head-in{display:grid;gap:8px;will-change:transform}
+  .wk-head-in b{font-size:15px;font-weight:600;white-space:nowrap}
+  .wk-head+.wk{border-top:0;border-radius:0 0 24px 24px;padding-top:4px}
+  .wk-head+.wk .wk-day h3{visibility:hidden;height:0;margin:0}
+  .wk-head+.wk .wk-times{margin-top:0}
+}

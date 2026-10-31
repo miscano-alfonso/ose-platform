@@ -1,4 +1,5 @@
 "use client";
+import { useEffect, useRef } from "react";
 import Link from "@/app/(site)/HoverLink";
 
 // The public timetable as a week calendar (Option B): Monday to Friday, every level, each lesson placed at its time;
@@ -12,6 +13,16 @@ const m = (t: string) => { const [h, mm] = t.split(":").map(Number); return h * 
 const short = (s: string) => s.replace("English ", "Eng. ").replace("Literature", "Lit.").replace("Business Studies", "Business").replace("Science Double Award", "Science DA").replace("Maths Foundation", "Maths Found.");
 
 export function WeekCalendar({ lessons, levels, initial }: { lessons: Lesson[]; levels: string[]; initial: string | null }) {
+  // phones: the week scrolls sideways, so the day names live in their own strip that sticks under the level buttons and follows the sideways scroll
+  const wk = useRef<HTMLDivElement>(null), inner = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const w = wk.current, h = inner.current; if (!w || !h) return;
+    const size = () => { const first = w.querySelector<HTMLElement>(".wk-day"); const last = w.querySelectorAll<HTMLElement>(".wk-day"); if (!first || !last.length) return;
+      const l = last[last.length - 1]; h.style.width = `${l.offsetLeft + l.offsetWidth - first.offsetLeft}px`; h.style.gridTemplateColumns = [...last].map((d) => `${d.offsetWidth}px`).join(" "); };
+    const move = () => { h.style.transform = `translateX(${-w.scrollLeft}px)`; };
+    size(); move(); w.addEventListener("scroll", move, { passive: true }); addEventListener("resize", size);
+    return () => { w.removeEventListener("scroll", move); removeEventListener("resize", size); };
+  });
   const lv = initial;   // the level chosen with the buttons in the title panel (?level=)
   const shown = lessons.filter((l) => !lv || l.level === lv);
   if (!lessons.length) return <p className="empty">No lesson times published yet.</p>;
@@ -21,7 +32,8 @@ export function WeekCalendar({ lessons, levels, initial }: { lessons: Lesson[]; 
   const hours = [...new Set(lessons.map((l) => m(l.t)))].sort((a, b) => a - b);   // a line and label at each lesson start
   const H = (end - start) * PX;
   return <>
-    <div className="wk" style={{ ["--days" as string]: days.length }}>
+    <div className="wk-head" aria-hidden="true"><span className="wk-head-t" /><div className="wk-head-v"><div className="wk-head-in" ref={inner}>{days.map((d) => <b key={d}>{DAYS[d]}</b>)}</div></div></div>
+    <div className="wk" ref={wk} style={{ ["--days" as string]: days.length }}>
       <div className="wk-times" style={{ height: H }} aria-hidden="true">{hours.map((h) => <span key={h} style={{ top: (h - start) * PX }}>{String(Math.floor(h / 60)).padStart(2, "0")}:{String(h % 60).padStart(2, "0")}</span>)}</div>
       {days.map((d) => {
         const mine = shown.filter((l) => l.d === d);
