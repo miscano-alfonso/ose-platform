@@ -943,16 +943,21 @@
 .adm .tm-who{font-size:14px;margin-bottom:4px}.adm .tm-body{white-space:pre-wrap}.adm .tm-att{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .adm .bubble.b-office{border-left:3px solid var(--good)}
 .adm .tm-form textarea,.adm .tm-form input:not([type=file]):not([type=hidden]){width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
-/* 31 Oct: the foot of the teacher's hero, across its width: the next lesson's birthdays and SEND on the left,
-   Meet, Attendance and the countdown on the right */
-.adm .fx .dx-hero .fx-foot{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:14px 20px;align-items:flex-end;justify-content:space-between;position:relative;z-index:1}
-.adm .fx .dx-hero .fx-notes{flex:1 1 340px;max-width:640px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;align-items:start}
-.adm .fx .dx-hero .fx-notes .fx-bday{max-width:none;display:block}
-.adm .fx .dx-hero .fx-notes .fx-bday svg{float:left;margin:2px 8px 0 0}
-.adm .fx .dx-hero .fx-notes .fx-lines,.adm .fx .dx-hero .fx-notes .fx-lines>*{display:block}.adm .fx .dx-hero .fx-notes .fx-lines>*+*{margin-top:3px}
+/* 31 Oct: the foot of the teacher's hero, one row when it fits: the next lesson's birthdays and SEND (compact boxes: the icon,
+   or the icon and the "SEND in this class" link, on top; one person per line below), then Meet, Attendance and the countdown */
+.adm .fx .dx-hero .fx-foot{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;justify-content:space-between;position:relative;z-index:1}
+.adm .fx .dx-hero .fx-notes{flex:0 1 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
+.adm .fx .dx-hero .fx-notes .fx-bday{max-width:none;display:grid;gap:4px;padding:9px 13px;min-width:150px}
+.adm .fx .dx-hero .fx-notes .fx-nh{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.adm .fx .dx-hero .fx-notes .fx-nh svg{margin:0}
+.adm .fx .dx-hero .fx-notes .fx-nh a{color:#fff;font-size:14px;text-underline-offset:3px}.adm .fx .dx-hero .fx-notes .fx-nh a b{color:inherit}
+.adm .fx .dx-hero .fx-notes .fx-lines{display:grid;gap:2px}
 .adm .fx .dx-hero .fx-foot .fx-btns-r{margin-left:auto;justify-content:flex-end;align-items:center}
 .adm .fx .dx-hero .fx-foot .fx-btns-r .fx-cd{padding:0 2px}
 @media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{margin-left:0;justify-content:flex-start}}
+/* bigger "Next lesson · day · time" line */
+.adm .fx .dx-hero .fx-live{font-size:17px;letter-spacing:.1em}
+.adm .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
 /* 31 Oct: "Draft with AI" in the report comment box */
 .adm .aid-wrap{position:relative;display:grid;gap:6px}
 .adm .aid-wrap textarea{padding-bottom:46px}
@@ -974,4 +979,3 @@
 .adm .send-form .ct-pills input:focus-visible+span{outline:2px solid var(--rail-on);outline-offset:2px}
 .adm .send-form textarea{width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
 .adm .send-tick{display:flex;gap:8px;align-items:center;font-size:14.5px}
-.adm .fx .dx-hero .fx-notes .fx-lines>a{display:inline-block}
