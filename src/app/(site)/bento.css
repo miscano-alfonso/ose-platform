@@ -1177,3 +1177,15 @@ html:not([data-theme=dark]) .bt .bk-dl .bk-off dd{color:#5f6a12}
 @media (max-width:1080px){.bt .s-nav .s-links.open a:is(:hover,:focus-visible,:active,[aria-current=page]){background:#eef0f7!important;color:#050f2d!important}}
 /* home hero girl (31 Oct): on a deep window she sits in the middle of the hero, level with the words; as the window gets shorter she slides down until she rests on the bottom */
 .bh-girl .bg-box{bottom:clamp(0px,calc((100vh - 820px) * .6),calc((100% - min(94%,calc(56vw * 1438 / 1546))) / 2))}
+/* phones (31 Oct): the course label sits under the title at the right margin, just above the roundel (title panel and sticky band) */
+@media (max-width:600px){
+  .bt .cd-stitle .sticky,.bt .s-phead .cd-hlabel{top:calc(100% + 6px);right:0;bottom:auto;transform:rotate(-3deg)}
+  .bt .cd-stitle b{padding-right:0}
+}
+/* phones (31 Oct): shorter course title panel; the roundel moves up into its bottom right, the label under the title overlapping the roundel's top left */
+@media (max-width:600px){
+  .bt .s-phead>.wrap.cd-head{padding-bottom:30px}
+  .bt .cd-badge:not(.stuck) .cd-roundel{top:-108px}
+  .bt .s-phead .cd-title{position:relative;z-index:3}
+  .bt .s-phead .cd-hlabel{z-index:6}
+}
