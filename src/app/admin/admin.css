@@ -1022,8 +1022,8 @@
    to the hero's right margin, so they sit above the tiles below. c = one column, from the hero's width (100cqw + its padding). */
 @media (min-width:1251px){
   .adm .bb-cell.s-xl .fx .dx-hero.has-clock,.adm .fx .bb-cell.s-xl .dx-hero.has-clock{--hp:clamp(22px,3vw,34px);--c:calc((100cqw + 2 * var(--hp) - 7 * 16px) / 8)}
-  .adm .bb-cell.s-xl .dx-hero.has-clock .fx-foot{display:grid;column-gap:16px;row-gap:12px;align-items:end;
-    grid-template-columns:minmax(0,1fr) calc(2 * var(--c) + 16px) calc(2 * var(--c) + 16px - var(--hp))}
+  .adm .bb-cell.s-xl .dx-hero.has-clock .fx-foot{margin-right:calc(16px - var(--hp));display:grid;column-gap:16px;row-gap:12px;align-items:end;
+    grid-template-columns:minmax(0,1fr) calc(2 * var(--c) + 16px) calc(2 * var(--c))}   /* the SEND box runs to 16px from the hero's edge */
   .adm .bb-cell.s-xl .dx-hero.has-clock .fx-foot .fx-btns-r{grid-column:1;grid-row:1}
   .adm .bb-cell.s-xl .dx-hero.has-clock .fx-notes{grid-column:2/4;grid-row:1;margin:0;display:grid;grid-template-columns:subgrid;column-gap:16px;align-items:stretch}
   .adm .bb-cell.s-xl .dx-hero.has-clock .fx-notes>.fx-bday:not(.fx-send){grid-column:1}
