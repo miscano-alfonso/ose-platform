@@ -1,8 +1,8 @@
-import { sendLabels } from "@/lib/send";
+import { sendLabels, NEEDS } from "@/lib/send";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { familyDetail, cancelPreview, swapOptions, type Cell } from "@/lib/families";
-import { cancelCourseAction, swapCourseAction, familyTermAction, familyCheckAction, viewAsFamilyAction } from "../../../actions";
+import { cancelCourseAction, swapCourseAction, familyTermAction, familyCheckAction, viewAsFamilyAction, saveStudentSendAction } from "../../../actions";
 import { money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -82,6 +82,17 @@ export default async function Family({ params, searchParams }: { params: Promise
           {c.cells.map((cell, i) => <td key={i} className="n"><CellView c={cell} term={f.terms[i].number} family={f.id} /></td>)}<td /></tr>; })}
       </tbody></table></div>
       {st.send === "yes" && <p className="note" style={{ margin: "8px 0 0" }}><b>Support needs:</b> {st.send_details}{st.adjustments ? ` · What helps: ${st.adjustments}` : ""}{st.share ? " · shared with teachers" : " · not shared with teachers"}</p>}
+      <details className="send-edit"><summary>{st.send === "yes" || st.send === "discuss" ? "Edit SEND details" : "Add SEND details"}</summary>
+        <form action={saveStudentSendAction} className="send-form"><input type="hidden" name="family" value={f.id} /><input type="hidden" name="student" value={st.id} />
+          <fieldset><legend>Special educational needs or disabilities?</legend><div className="ct-pills">
+            {[["no", "No"], ["yes", "Yes"], ["discuss", "Parent would like to talk"]].map(([v, l]) => <label key={v}><input type="radio" name="has" value={v} defaultChecked={(st.send ?? "no") === v} /><span>{l}</span></label>)}</div></fieldset>
+          <fieldset><legend>Needs</legend><div className="ct-pills">{NEEDS.map((n) => <label key={n}><input type="checkbox" name="needs" value={n} defaultChecked={!!st.needs?.includes(n)} /><span>{n}</span></label>)}</div></fieldset>
+          <label className="fld">Description<textarea name="details" rows={2} maxLength={2000} defaultValue={st.send_details ?? ""} placeholder="e.g. Diagnosed with ADHD in Year 5" /></label>
+          <label className="fld">What helps in lessons<textarea name="adjustments" rows={2} maxLength={2000} defaultValue={st.adjustments ?? ""} placeholder="e.g. Short tasks with clear steps" /></label>
+          <label className="send-tick"><input type="checkbox" name="share" value="1" defaultChecked={st.share ?? true} /> Share with the student’s teachers</label>
+          <label className="send-tick"><input type="checkbox" name="ehcp" value="1" defaultChecked={!!st.ehcp} /> Has an EHCP</label>
+          <div><button className="abtn sm pri" type="submit">Save SEND details</button></div>
+        </form></details>
       {!!st.files?.length && <p className="note" style={{ margin: "6px 0 0" }}><b>Reports from the parent:</b> {st.files.map((f, i) => <span key={f.id}>{i ? " · " : ""}<a href={`/admin/student-file/${f.id}`}>{f.name}</a></span>)}</p>}
     </section>; })}
 

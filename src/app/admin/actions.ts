@@ -1024,6 +1024,16 @@ export async function familyTermAction(f: FormData): Promise<void> {
   revalidatePath("/admin/payments");
   famBack(fam, `Term ${n} updated.`);
 }
+export async function saveStudentSendAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { saveStudentSend } = await import("@/lib/families");
+  const { NEEDS } = await import("@/lib/send");
+  const has = str(f, "has", 10), fam = str(f, "family", 40);
+  const err = await saveStudentSend(me.id, str(f, "student", 40), { has: has === "yes" || has === "discuss" ? has : "no",
+    needs: f.getAll("needs").map(String).filter((n) => NEEDS.includes(n)), details: str(f, "details", 2000), adjustments: str(f, "adjustments", 2000),
+    share: f.get("share") === "1", ehcp: f.get("ehcp") === "1" });
+  famBack(fam, err ? null : "SEND details saved.", err);
+}
 export async function familyCheckAction(f: FormData): Promise<void> {
   await setCheckAction(f);
   famBack(str(f, "family", 40), "Marked as checked.");

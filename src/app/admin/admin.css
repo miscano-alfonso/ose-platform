@@ -943,16 +943,32 @@
 .adm .tm-who{font-size:14px;margin-bottom:4px}.adm .tm-body{white-space:pre-wrap}.adm .tm-att{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .adm .bubble.b-office{border-left:3px solid var(--good)}
 .adm .tm-form textarea,.adm .tm-form input:not([type=file]):not([type=hidden]){width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
-/* 31 Oct: the next lesson's birthdays and SEND at the foot of the teacher's hero (side by side when there's room);
-   Attendance and the countdown sit on the right under the clock */
-.adm .fx .dx-hero .fx-notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:auto;padding-top:14px;align-items:start}
+/* 31 Oct: the foot of the teacher's hero, across its width: the next lesson's birthdays and SEND on the left,
+   Meet, Attendance and the countdown on the right */
+.adm .fx .dx-hero .fx-foot{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:14px 20px;align-items:flex-end;justify-content:space-between;position:relative;z-index:1}
+.adm .fx .dx-hero .fx-notes{flex:1 1 340px;max-width:640px;display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;align-items:start}
 .adm .fx .dx-hero .fx-notes .fx-bday{max-width:none}
-.adm .fx .dx-hero .fx-side .fx-btns-r{justify-content:flex-end;align-items:center;margin-top:auto}
-.adm .fx .dx-hero .fx-side .fx-btns-r .fx-cd{padding:0 2px}
-@media (max-width:640px){.adm .fx .dx-hero .fx-side .fx-btns-r{order:5;width:100%;justify-content:flex-start}}
+.adm .fx .dx-hero .fx-foot .fx-btns-r{margin-left:auto;justify-content:flex-end;align-items:center}
+.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-cd{padding:0 2px}
+@media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{margin-left:0;justify-content:flex-start}}
 /* 31 Oct: "Draft with AI" in the report comment box */
 .adm .aid-wrap{position:relative;display:grid;gap:6px}
 .adm .aid-wrap textarea{padding-bottom:46px}
 .adm .aid{position:absolute;right:10px;bottom:10px;display:flex;gap:10px;align-items:center;justify-content:flex-end;max-width:calc(100% - 20px);flex-wrap:wrap}
 .adm .aid-go{background:var(--panel);border-color:var(--rail-on);color:var(--ink)}.adm .aid-go:hover{background:var(--rail-on);color:var(--rail-on-ink)}
 .adm .aid-err{font-size:13.5px;color:var(--bad);background:var(--panel);padding:2px 8px;border-radius:8px}
+/* 31 Oct: the teacher's hero: bell and its settings by the "Next lesson" line; the Meet button always shows by Attendance */
+.adm .fx .dx-hero .fx-live .ntf-bellwrap{margin-left:8px}
+.adm .fx-btns .fx-nomeet{font-size:15px;font-weight:600;padding:11px 20px;border-radius:30px;border:1.5px dashed rgba(255,255,255,.4);color:rgba(255,255,255,.7);white-space:nowrap}
+/* 31 Oct: the office records a student's SEND details (Families → family) */
+.adm .send-edit{margin-top:10px}.adm .send-edit>summary{cursor:pointer;font-weight:600;font-size:14.5px;color:var(--muted)}
+.adm .send-form{display:grid;gap:12px;max-width:760px;margin-top:10px;padding:14px;border:1px solid var(--line);border-radius:14px;background:var(--soft)}
+.adm .send-form fieldset{border:0;margin:0;padding:0;display:grid;gap:6px}.adm .send-form legend{font-weight:600;font-size:14.5px;margin-bottom:4px}
+.adm .send-form .ct-pills{display:flex;flex-wrap:wrap;gap:6px}
+.adm .send-form .ct-pills label{position:relative}
+.adm .send-form .ct-pills input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.adm .send-form .ct-pills span{display:inline-block;padding:5px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel);font-size:14px}
+.adm .send-form .ct-pills input:checked+span{background:var(--rail-on);color:var(--rail-on-ink);border-color:var(--rail-on)}
+.adm .send-form .ct-pills input:focus-visible+span{outline:2px solid var(--rail-on);outline-offset:2px}
+.adm .send-form textarea{width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+.adm .send-tick{display:flex;gap:8px;align-items:center;font-size:14.5px}

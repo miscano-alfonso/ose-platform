@@ -46,7 +46,7 @@ export type Cell = { id: string; status: string; amount: number; refunded: numbe
 export type Course = { id: string; group_id: string; subject: string; level: string; code: string; colour: string; status: string; needs_check: boolean; note: string | null;
   enrolled_on: string; notice_terms: number | null; notice_given_on: string | null; end_reason: string | null; list: number; discount: number; net: number; cells: Cell[] };
 export type Child = { id: string; first: string; last: string; email: string | null; dob: string | null; year_group: number | null; level: string;
-  send: string | null; send_details: string | null; adjustments: string | null; share: boolean | null; att: number | null; files?: { id: string; name: string }[]; needs?: string[] | null; courses: Course[] };
+  send: string | null; send_details: string | null; adjustments: string | null; share: boolean | null; att: number | null; files?: { id: string; name: string }[]; needs?: string[] | null; ehcp?: boolean | null; courses: Course[] };
 export type FamilyDetail = {
   id: string; first: string; last: string; email: string; phone: string | null; heard: string | null; address: string | null; marketing: boolean; contact: boolean;
   since: string; note: string | null; guardian: { name: string; email: string; relationship: string; invoices: boolean; reports: boolean; marketing: string } | null;
@@ -75,7 +75,7 @@ export async function familyDetail(id: string): Promise<FamilyDetail | null> {
     const kids = await q<Omit<Child, "courses">>(`select s.id, s.first_name as first, s.last_name as last, s.email::text, s.date_of_birth::text as dob, s.year_group,
         coalesce((select string_agg(distinct l.name, ', ') from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id
           where e.student_id = s.id and e.status = 'active' and not e.is_taster), '') as level,
-        ss.has_send as send, ss.details as send_details, ss.adjustments, ss.share_with_teachers as share, ss.needs,
+        ss.has_send as send, ss.details as send_details, ss.adjustments, ss.share_with_teachers as share, ss.needs, ss.has_ehcp as ehcp,
         (select a.attendance_pct from student_term_attendance a where a.student_id = s.id and a.term_id = (select id from terms where current_date between starts_on and ends_on limit 1)) as att
       , coalesce((select json_agg(json_build_object('id', f.id, 'name', f.name) order by f.created_at) from student_files f where f.student_id = s.id), '[]') as files
       from students s left join student_support ss on ss.student_id = s.id where s.parent_id = $1 order by s.first_name`, [id]);
@@ -174,5 +174,23 @@ export async function stopContact(actorId: string, id: string) {
   await withSchool(async (q) => {
     await q(`update contact_requests set status = 'revoked', revoked_by = 'admin', responded_at = coalesce(responded_at, now()) where id = $1 and status in ('pending','accepted')`, [id]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'revoke', 'contact_request', $2, '{}')`, [actorId, id]);
+  });
+}
+
+/** The office records or updates a student's SEND details (31 Oct): for families who joined before registration asked,
+ *  or after a conversation with the parent. "no" clears it. Shared with teachers only when ticked. */
+export async function saveStudentSend(actorId: string, studentId: string, d: { has: "yes" | "no" | "discuss"; needs: string[]; details: string; adjustments: string; share: boolean; ehcp: boolean }): Promise<string | null> {
+  if (!/^[0-9a-f-]{36}$/.test(studentId)) return "That student wasn’t found.";
+  if (d.has === "yes" && d.details.trim().length < 3) return "Add a short description of the student’s needs.";
+  return withSchool(async (q) => {
+    if (d.has === "no") await q(`delete from student_support where student_id = $1`, [studentId]);
+    else await q(`insert into student_support (student_id, school_id, has_send, details, adjustments, share_with_teachers, has_ehcp, needs, consent_at)
+        select id, school_id, $2, nullif($3, ''), nullif($4, ''), $5, $6, $7::text[], now() from students where id = $1
+      on conflict (student_id) do update set has_send = excluded.has_send, details = excluded.details, adjustments = excluded.adjustments,
+        share_with_teachers = excluded.share_with_teachers, has_ehcp = excluded.has_ehcp, needs = excluded.needs, updated_at = now()`,
+      [studentId, d.has, d.details.trim().slice(0, 2000), d.adjustments.trim().slice(0, 2000), d.share, d.ehcp, d.needs.slice(0, 12)]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'send', 'student', $2, $3)`,
+      [actorId, studentId, JSON.stringify({ has: d.has, needs: d.needs, share: d.share })]);
+    return null;
   });
 }
