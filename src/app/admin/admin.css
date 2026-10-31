@@ -1029,3 +1029,9 @@
   .adm .bb-cell.s-xl .dx-hero.has-clock .fx-notes>.fx-bday:not(.fx-send){grid-column:1}
   .adm .bb-cell.s-xl .dx-hero.has-clock .fx-notes>.fx-send{grid-column:2}
 }
+/* 31 Oct: the register page: who's expected and the register on the left, SEND in this class on the right */
+.adm .reg-cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;align-items:start}
+.adm .reg-cols .reg-main{min-width:0}.adm .reg-cols .reg-main>.card:first-child{margin-top:0}
+.adm .reg-cols .reg-side{margin-top:0;position:sticky;top:16px}
+.adm .reg-cols .reg-side .li{flex-wrap:wrap;gap:8px}
+@media (max-width:1100px){.adm .reg-cols{grid-template-columns:1fr}.adm .reg-cols .reg-side{position:static;order:-1}}
