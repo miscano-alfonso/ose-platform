@@ -20,7 +20,8 @@ export async function sendLinkAction(f: FormData): Promise<void> {
 }
 export async function redeemLinkAction(f: FormData): Promise<void> {
   const kind = await redeemSignInLink(str(f, "t", 100));
-  redirect(kind === "parent" ? "/parent" : kind === "student" ? "/student" : "/account?expired=1");
+  const { cartCodes } = await import("@/lib/cart");
+  redirect(kind === "parent" ? ((await cartCodes()).length ? "/cart" : "/parent") : kind === "student" ? "/student" : "/account?expired=1");
 }
 export async function familySignOutAction(): Promise<void> {
   const f = await currentFamily();

@@ -42,6 +42,9 @@ async function startSession(parentId: string | null, studentId: string | null, v
   (await cookies()).set(FAMILY_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: hours * 3600 });
 }
 
+/** A parent who has just registered on the website: signed in straight away on this device (30 days). */
+export async function startParentSession(parentId: string) { await startSession(parentId, null, null, DAYS * 24); }
+
 /** The emailed link: use it once, start a session, and say where to go. */
 export async function redeemSignInLink(token: string): Promise<"parent" | "student" | null> {
   if (!token || token.length > 100) return null;

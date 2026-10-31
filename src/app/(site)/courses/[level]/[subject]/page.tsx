@@ -39,6 +39,7 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
       <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`} tabIndex={-1}>← Back to courses</Link>
         {g && (g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
     <div className="cd-badge"><div className="wrap">
+      {g?.label && <span className="sticky sl-few cd-rlabel" aria-hidden="true">{g.label_text ?? g.label}</span>}
       {site.demo ? <div className="roundel cd-roundel" style={{ ["--c" as string]: p.colour }} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={roundelSrc(p.subject, site.demo)} alt="" width={140} height={140} /></div>

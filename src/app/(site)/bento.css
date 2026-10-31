@@ -1189,3 +1189,38 @@ html:not([data-theme=dark]) .bt .bk-dl .bk-off dd{color:#5f6a12}
   .bt .s-phead .cd-title{position:relative;z-index:3}
   .bt .s-phead .cd-hlabel{z-index:6}
 }
+/* parent registration (31 Oct) */
+.bt .rg-wrap{max-width:900px}
+.bt .rg-form{display:flex;flex-direction:column;gap:22px}
+.bt .rg-child{border:1px solid var(--b-line);border-radius:22px;padding:clamp(16px,2vw,24px);margin:0;display:flex;flex-direction:column;gap:16px;min-width:0}
+.bt .rg-child>legend{display:flex;gap:12px;align-items:center;padding:0 8px;margin-left:-8px}
+.bt .rg-form select,.bt .rg-form input[type=date]{background:var(--b-inset);border:1px solid var(--b-line);color:var(--b-ink);border-radius:14px;padding:12px 14px;font:inherit}
+.bt .rg-form input[type=file]{background:var(--b-inset);border:1px dashed var(--b-line);border-radius:14px;padding:12px;color:var(--b-ink)}
+.bt .rg-warn{display:block;color:#e8806f;font-weight:400;margin:2px 0 4px}
+html:not([data-theme=dark]) .bt .rg-warn{color:#b3392a}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .bt .rg-warn{color:#e8806f}}
+.bt .rg-add,.bt .rg-x{align-self:flex-start;font:inherit;font-weight:500;padding:10px 20px;border-radius:999px;border:1px solid currentColor;background:transparent;color:var(--b-ink);cursor:pointer;transition:background-color .2s,color .2s,border-color .2s}
+.bt .rg-x{padding:4px 12px;font-size:14px}
+.bt .rg-add:hover,.bt .rg-x:hover,.bt .rg-add:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+/* phones: the course label rides with the roundel, layered over its top left (in the title panel and once the band sticks) */
+.bt .cd-rlabel{display:none}
+@media (max-width:600px){
+  .bt .cd-stitle .sticky,.bt .s-phead .cd-hlabel{display:none}
+  .bt .cd-rlabel{display:inline-block;position:absolute;z-index:3;right:62px;top:-122px;left:auto;bottom:auto;transform:rotate(-4deg);font-size:12px;padding:5px 11px;white-space:nowrap;transition:top .25s,right .25s}
+  .bt .cd-badge.stuck .cd-rlabel{top:-100px;right:34px;font-size:11px;padding:4px 9px}
+}
+/* phones: the roundel a little lower in the title panel, leaving room for the label above it */
+@media (max-width:600px){.bt .cd-badge:not(.stuck) .cd-roundel{top:-84px}.bt .cd-badge:not(.stuck) .cd-rlabel{top:-118px}}
+/* basket: who each course is for, and the register / sign in step */
+.bt .bk-row{grid-template-columns:auto minmax(0,1fr) auto auto auto}
+.bt .bk-who{display:grid;gap:4px;font-size:13px;color:var(--b-sky);min-width:150px}
+.bt .bk-who select{font:inherit;font-size:15px;color:var(--b-ink);background:var(--b-inset);border:1px solid var(--b-line);border-radius:12px;padding:8px 10px}
+.bt .bk-who a{color:var(--b-sky);font-size:15px}
+.bt .bk-who-note{margin:0;color:var(--b-muted)}.bt .bk-who-note a{color:var(--b-sky)}
+.bt .bk-reg{display:flex;flex-direction:column;gap:14px}.bt .bk-reg p:not(.ab-k){margin:0}
+.bt a.bk-go{text-decoration:none;display:block}
+.bt .bk-line{display:block;text-align:center;text-decoration:none;padding:12px 24px;border-radius:999px;border:1px solid currentColor;color:var(--b-ink);font-weight:500;transition:background-color .2s,color .2s,border-color .2s}
+.bt .bk-line:hover,.bt .bk-line:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.bt .bk-go:disabled{opacity:.5;cursor:not-allowed}
+@media (max-width:900px){.bt .bk-row{grid-template-columns:auto minmax(0,1fr) auto}.bt .bk-who{grid-column:2/-1;grid-row:2}}
+@media (max-width:600px){.bt .bk-who{grid-column:2/-1;grid-row:3}}

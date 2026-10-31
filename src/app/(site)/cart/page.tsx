@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "@/app/(site)/HoverLink";
 import { cartQuote } from "@/lib/cart";
+import { currentFamily } from "@/lib/family-auth";
+import { familyChildren } from "@/lib/registration";
 import { money } from "@/lib/format";
 import { roundelFace } from "../CourseCard";
 import { removeFromCart, applyCoupon, checkout } from "./actions";
@@ -12,9 +14,12 @@ const TERMS_URL = "https://ohsoed.co.uk/terms-conditions";
 
 // The basket (31 Oct), from ohsoed.co.uk/cart in the new style: the courses on the left, the summary and checkout on the right.
 // Checkout sends the booking to the office (Admin → Enquiries), who confirm the places and email a secure payment link.
-export default async function Cart({ searchParams }: { searchParams: Promise<{ sent?: string; error?: string }> }) {
-  const [q, sp] = await Promise.all([cartQuote(), searchParams]);
+// Checkout needs a registered parent: each course is then given to one of their children (as on the old site's "Assign student").
+export default async function Cart({ searchParams }: { searchParams: Promise<{ sent?: string; error?: string; welcome?: string; added?: string }> }) {
+  const [q, sp, fam] = await Promise.all([cartQuote(), searchParams, currentFamily()]);
   const n = q.lines.length;
+  const parent = fam?.kind === "parent" ? fam : null;
+  const kids = parent ? await familyChildren(parent.id) : [];
   return (<>
     <section className="s-phead"><div className="wrap"><h1>Your Basket</h1>
       <p>{sp.sent ? "Thank you, your booking is with us." : n ? `${n} course${n > 1 ? "s" : ""} · ${money(q.payPence)} including registration` : "Choose a course and add it here to book."}</p>
@@ -37,6 +42,9 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
                 <span>{l.level} · {l.years} year{l.years > 1 ? "s" : ""}</span>
                 {l.slots?.map((s, i) => <span key={i} className="bk-slot">{DAYS[s.d]} {s.t}</span>)}</div>
               <div className="bk-price"><b>{money(l.netPence)}</b>{l.discountPence > 0 && <s>{money(l.listPence)}</s>}<span>or {money(l.perTermPence)} a term</span></div>
+              {parent && <label className="bk-who"><span>Student</span>{kids.length ? <select name={`who:${l.code}`} form="bk-checkout" required defaultValue={kids.length === 1 ? kids[0].id : ""}>
+                  {kids.length > 1 && <option value="" disabled>Choose a child</option>}{kids.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}</select>
+                : <Link href="/register?next=/cart">Add a child first</Link>}</label>}
               <form action={removeFromCart}><input type="hidden" name="code" value={l.code} />
                 <button className="bk-x" type="submit" aria-label={`Remove ${l.level} ${l.subject}`} title="Remove">×</button></form>
             </li>; })}</ul>
@@ -59,20 +67,25 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
           <details className="bk-coupon" open={!!q.coupon || !!sp.error?.includes("coupon")}><summary>I have a coupon code</summary>
             <form action={applyCoupon} className="bk-cform"><input name="coupon" defaultValue={q.coupon?.code ?? ""} placeholder="Coupon code" aria-label="Coupon code" maxLength={40} />
               <button type="submit">Apply</button></form></details>
-          <form action={checkout} className="cform bk-form">
+          {!parent ? <div className="bk-reg">
             {sp.error && <p className="notice err" role="alert">{sp.error}</p>}
+            <p className="ab-k">Check out</p>
+            <p>To book, create your family account with your children’s details, or sign in if you already have one. Your basket is kept.</p>
+            <Link className="wk-go bk-go" href="/register?next=/cart">Register to check out</Link>
+            <Link className="bk-line" href="/account?next=cart">I already have an account</Link>
+          </div>
+          : <form action={checkout} id="bk-checkout" className="cform bk-form">
+            {sp.welcome && <p className="notice ok" role="status">Welcome, {parent.first}. Your account is ready: choose the student for each course, then check out.</p>}
+            {sp.added && <p className="notice ok" role="status">Child added. Choose them for each course on the left.</p>}
+            {sp.error && <p className="notice err" role="alert">{sp.error}</p>}
+            <p className="bk-who-note">Booking as <b>{parent.first} {parent.last}</b> · {parent.email}. <Link href="/register?next=/cart">+ Add a child</Link></p>
             <label className="bk-check"><input type="checkbox" name="spread" value="1" /><span>Spread the cost in termly instalments <sup>3</sup></span></label>
             <p className="bk-spread">About <b>{money(q.perTermPence)}</b> a term over {q.terms} terms, plus {money(q.feesPence)} registration today.</p>
-            <div className="row2"><label>Parent first name<input name="first" autoComplete="given-name" required maxLength={80} /></label>
-              <label>Parent last name<input name="last" autoComplete="family-name" required maxLength={80} /></label></div>
-            <label>Parent email<input name="email" type="email" autoComplete="email" required maxLength={200} /></label>
-            <label>Child’s name <small className="note">for more than one child, add each name and their courses below</small><input name="child" required maxLength={160} /></label>
             <label>Anything we should know? <small className="note">optional</small><textarea name="message" rows={2} maxLength={1500} /></label>
             <label className="bk-check"><input type="checkbox" name="terms" value="1" required /><span>I agree to the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a></span></label>
-            <label className="hp" aria-hidden="true">Leave this empty<input name="website" tabIndex={-1} autoComplete="off" /></label>
-            <button className="wk-go bk-go" type="submit">Checkout</button>
+            <button className="wk-go bk-go" type="submit" disabled={!kids.length}>Checkout</button>
             <p className="note">We’ll confirm the places and email you a secure payment link.</p>
-          </form>
+          </form>}
         </aside>
       </div>}
     </div></section>
