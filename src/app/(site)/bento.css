@@ -1148,3 +1148,26 @@ html:not([data-theme=dark]) .bt .bk-dl .bk-off dd{color:#5f6a12}
 }
 /* phone menu open: the top bar (logo and close button) is pinned to the top and solid, so the menu always sits under it */
 @media (max-width:1080px){html.menu-open .bt .s-nav{position:fixed;top:0;left:0;right:0;z-index:61;background:#050f2d!important}}
+/* small labels and role lines keep the site font at the FAQs label weight (the light body copy rule had thinned them) */
+.bt :is(.hh-k,.hh-role,.ab-k,.ab-role,.bh .k,.ph-k,.mc-tags,.lvl){font-family:"OSE Futura","Futura PT","Jost","Century Gothic",system-ui,sans-serif;font-weight:600}
+/* course band on phones (31 Oct): the full title, the label overlapping its end at the right margin, Add to cart under Back to courses, and the roundel tucked into the band's right side */
+@media (max-width:600px){
+  .bt .cd-sticky{--cdh:158px;gap:12px}
+  .bt .cd-badge{top:calc(var(--navh,73px) + 158px)}
+  .bt .cd-stitle{display:block;position:relative;max-width:100%}
+  .bt .cd-stitle b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:4px}
+  .bt .cd-stitle .sticky{position:absolute;right:-4px;top:-8px;z-index:2;transform:rotate(-4deg)}
+  .bt .cd-sticky .cd-hbtns{flex-direction:column;align-items:flex-start;gap:8px}
+  .bt .cd-badge.stuck .cd-roundel{top:calc(var(--d) * -0.5 - 50px);transform:scale(.6);transform-origin:100% 50%}
+}
+/* basket: each lesson day and time on its own line */
+.bt .bk-name{gap:2px}.bt .bk-name b{margin-bottom:2px}.bt .bk-name .bk-slot{color:var(--b-sky)}
+/* home "Courses with space" on phones: wider cards so subject names never split mid-word */
+@media (max-width:600px){.bh-track{--per:1.12}}
+.bh-course b,.bh-course h3,.bt .course h3{overflow-wrap:normal;word-break:normal;hyphens:manual}
+/* course title panel on phones: the label sits at the right margin over the end of the title; Add to cart goes under Back to courses */
+@media (max-width:600px){
+  .bt .s-phead .cd-title{display:block;max-width:100%}
+  .bt .s-phead .cd-hlabel{position:absolute;right:-6px;left:auto;top:-18px;bottom:auto;transform:rotate(-4deg);margin:0;font-size:12px;padding:5px 11px}
+  .bt .s-phead .cd-hbtns{flex-direction:column;align-items:flex-start;gap:10px}
+}

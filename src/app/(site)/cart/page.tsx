@@ -34,7 +34,8 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
             return <li key={l.code} className="bk-row" style={{ ["--c" as string]: f.bg }}>
               <span className="cd-rtext bk-rd" style={{ ["--rbg" as string]: f.bg }} aria-hidden="true"><span>OH–SO</span><span>{f.word}</span></span>
               <div className="bk-name"><Link href={`/courses/${l.page_slug}`}><b>{l.subject}</b></Link>
-                <span>{l.level} · {l.years} year{l.years > 1 ? "s" : ""}{l.slots?.length ? ` · ${l.slots.map((s) => `${DAYS[s.d]} ${s.t}`).join(", ")}` : ""}</span></div>
+                <span>{l.level} · {l.years} year{l.years > 1 ? "s" : ""}</span>
+                {l.slots?.map((s, i) => <span key={i} className="bk-slot">{DAYS[s.d]} {s.t}</span>)}</div>
               <div className="bk-price"><b>{money(l.netPence)}</b>{l.discountPence > 0 && <s>{money(l.listPence)}</s>}<span>or {money(l.perTermPence)} a term</span></div>
               <form action={removeFromCart}><input type="hidden" name="code" value={l.code} />
                 <button className="bk-x" type="submit" aria-label={`Remove ${l.level} ${l.subject}`} title="Remove">×</button></form>
