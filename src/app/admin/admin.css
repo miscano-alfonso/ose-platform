@@ -828,3 +828,8 @@
 .adm .arr-needs{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end}
 .adm .regrow legend .pill{margin-left:6px}
 @media (max-width:700px){.adm .arr-row{grid-template-columns:1fr auto}.adm .arr-needs{grid-column:1/-1;justify-content:flex-start}}
+/* Admin → Teachers: invite / resend invite in the Sign-in column */
+.adm .tinv{display:flex;flex-wrap:wrap;gap:6px;align-items:center;max-width:340px}
+.adm .tinv-f{display:flex;gap:6px;flex-wrap:wrap;align-items:center;width:100%}
+.adm .tinv-f input{flex:1;min-width:160px;padding:6px 10px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:14px}
+.adm .tinv-ok{font-size:13.5px;color:var(--muted);line-height:1.4}

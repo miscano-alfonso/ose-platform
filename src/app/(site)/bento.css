@@ -1230,3 +1230,8 @@ html:not([data-theme=dark]) .bt .rg-warn{color:#b3392a}
 .bt .rg-send textarea{background:var(--b-tile)}
 /* phones: the label sits further right, its right end at the screen margin over the roundel's top, clear of the buttons */
 @media (max-width:600px){.bt .cd-badge:not(.stuck) .cd-rlabel{right:-6px}.bt .cd-badge.stuck .cd-rlabel{right:-6px}}
+/* job pages (31 Oct): the subheadings in the light blue (they were navy, so hard to see on dark) */
+.bt .job-apply h2,.bt .job-desc h2,.bt .job-desc h3,.bt .job-desc h4,.bt .apply legend,.bt .job-dl dt,.bt .job-card h2{color:var(--b-sky)}
+.bt .apply legend{font-weight:600;font-size:13px;letter-spacing:.16em;text-transform:uppercase;padding:0 8px}
+.bt .apply fieldset{border-color:var(--b-line)}
+.bt .job-dl{border-color:var(--b-line)}.bt .job-dl div{border-color:var(--b-line)}

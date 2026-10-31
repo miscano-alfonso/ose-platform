@@ -149,6 +149,36 @@ export async function inviteAction(_: unknown, f: FormData): Promise<{ error?: s
   return { link: `${proto}://${host}/admin/invite/${r.token}`, name };
 }
 
+/** Admin → Teachers: invite (or invite again) a teacher to sign in, emailing them the link; or, when the email is an admin's, link the profile to that admin. */
+export async function inviteTeacherAction(_: unknown, f: FormData): Promise<{ error?: string; ok?: string; link?: string }> {
+  const me = await requireStaff();
+  const teacherId = str(f, "teacher_id", 40), email = str(f, "email").toLowerCase();
+  if (!/^[0-9a-f-]{36}$/.test(teacherId)) return { error: "That teacher wasn’t found." };
+  if (!EMAIL.test(email) || /\.example$/.test(email)) return { error: "Enter the teacher’s real email address." };
+  const t = (await withSchool((q) => q<{ name: string }>(`select u.name from teachers t join users u on u.id = t.user_id where t.id = $1`, [teacherId])))[0];
+  if (!t) return { error: "That teacher wasn’t found." };
+  const admin = (await withSchool((q) => q(`select 1 from users where email = $1::citext and role = 'school_admin' and disabled_at is null`, [email])))[0];
+  if (admin) {
+    const { linkTeacherToAdmin } = await import("@/lib/teachers-admin");
+    const err = await linkTeacherToAdmin(me.id, teacherId, email);
+    revalidatePath("/admin/teachers");
+    return err ? { error: err } : { ok: `${t.name}’s teacher profile is now on the admin account ${email}. Open it from Viewing as → Teacher: ${t.name} (bottom of the menu).` };
+  }
+  const r = await createInvite(me.id, t.name, email, "teacher", teacherId);
+  if (r.error) return { error: r.error };
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "ose.miscano.co.uk";
+  const proto = h.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
+  const slug = await activeSchool();
+  const link = slug !== siteSchool() ? `${proto}://${host}/osedtech/join?s=${slug}&t=${r.token}` : `${proto}://${host}/admin/invite/${r.token}`;
+  const { sendOne, senderName } = await import("@/lib/email");
+  const school = await senderName();
+  const sent = await sendOne([{ name: t.name, email }], `Your ${school} teacher sign-in`,
+    `Hello ${t.name.split(" ")[0]},\n\nYou’re invited to sign in to the ${school} teacher dashboard: your lessons and registers, Google Meet links, reports to write, messages and pay.\n\nSet your password here (the link works once, for 7 days):\n\n${link}\n\n${school}`, { tag: "staff-invite" });
+  revalidatePath("/admin/teachers"); revalidatePath("/admin/staff");
+  return { ok: sent.ok && !sent.held ? `Invitation emailed to ${email}.` : sent.held ? `Invitation created. Test mode held the email, so send ${t.name.split(" ")[0]} this link yourself:` : `Invitation created, but the email didn’t send (${sent.error ?? "email isn’t set up"}). Send this link yourself:`, link: sent.ok && !sent.held ? undefined : link };
+}
+
 export async function acceptInviteAction(_: unknown, f: FormData): Promise<{ error?: string }> {
   const token = String(f.get("token") ?? "").slice(0, 100), password = String(f.get("password") ?? "").slice(0, 200);
   if (password !== String(f.get("confirm") ?? "").slice(0, 200)) return { error: "The two passwords don’t match." };
@@ -448,14 +478,24 @@ export async function saveTeacherAction(f: FormData): Promise<void> {
     if (file.size > 3 * 1024 * 1024) return back("err", "The photo must be under 3 MB.");
     photo = { data: Buffer.from(await file.arrayBuffer()), type: file.type };
   }
-  const name = str(f, "name", 80);
+  const name = str(f, "name", 80), email = str(f, "email", 120).toLowerCase();
   if (!name) return back("err", "The teacher needs a name.");
+  if (email && !EMAIL.test(email)) return back("err", "Check the email address.");
   const err = await saveTeacher(me.id, id, { name, designation: str(f, "designation", 80), bio: String(f.get("bio") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 6000),
     qualifications: String(f.get("qualifications") ?? "").split(/\r?\n/).map((x) => x.trim()).filter(Boolean).slice(0, 30).map((x) => x.slice(0, 150)),
     slug: str(f, "slug", 60), sortOrder: Math.max(0, Math.min(99, parseInt(str(f, "sort", 2), 10) || 0)),
-    subjects: f.getAll("subjects").map(String).filter((x) => /^[0-9a-f-]{36}$/.test(x)), photo, removePhoto: f.get("remove_photo") === "on" });
+    subjects: f.getAll("subjects").map(String).filter((x) => /^[0-9a-f-]{36}$/.test(x)), photo, removePhoto: f.get("remove_photo") === "on", email: email || undefined });
+  // the email belongs to an admin (e.g. the principal, who also teaches): the profile joins that admin's account
+  let linked = false;
+  if (!err && email && (await withSchool((q) => q(`select 1 from users u where u.email = $1::citext and u.role = 'school_admin' and u.disabled_at is null
+      and not exists (select 1 from teachers t where t.user_id = u.id and t.id = $2)`, [email, id]))).length) {
+    const { linkTeacherToAdmin } = await import("@/lib/teachers-admin");
+    const e2 = await linkTeacherToAdmin(me.id, id, email);
+    if (e2) return back("err", e2);
+    linked = true;
+  }
   revalidatePath("/admin/teachers"); revalidatePath("/teachers", "layout");
-  back(err ? "err" : "ok", err ?? "Profile saved.");
+  back(err ? "err" : "ok", err ?? (linked ? `Profile saved and joined to the admin account ${email}. Open it from Viewing as → Teacher: ${name} (bottom of the menu).` : "Profile saved."));
 }
 export async function archiveTeacherAction(f: FormData): Promise<void> {
   const me = await requireStaff();

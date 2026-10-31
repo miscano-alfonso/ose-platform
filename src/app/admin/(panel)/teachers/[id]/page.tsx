@@ -24,6 +24,7 @@ export default async function EditTeacher({ params, searchParams }: { params: Pr
       </div>
       <div className="eform">
         <label className="fld">Name<input name="name" required maxLength={80} defaultValue={t.name} /></label>
+        <label className="fld">Email <span className="muted">(their sign-in and where emails go)</span><input name="email" type="email" maxLength={120} defaultValue={/\.example$/.test(t.email) ? "" : t.email} placeholder={t.email} style={{ width: 280 }} /></label>
         <label className="fld">Role shown on the website<input name="designation" maxLength={80} defaultValue={t.designation ?? ""} placeholder="e.g. Science Teacher" style={{ width: 280 }} /></label>
         <label className="fld">Web address<input name="slug" maxLength={60} defaultValue={t.slug ?? ""} /></label>
         <label className="fld">Order on the page<input name="sort" type="number" min={0} max={99} defaultValue={t.sort_order} style={{ width: 80 }} /></label>

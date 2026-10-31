@@ -3,13 +3,16 @@ import { withSchool } from "./db";
 
 // Admin: add teachers and edit the profile shown on the website (/teachers/<slug>).
 export type TeacherAdmin = { id: string; user_id: string; name: string; email: string; slug: string | null; designation: string | null; bio: string | null;
-  qualifications: string[]; photo: string | null; archived: boolean; sort_order: number; subjects: string[]; classes: number; can_sign_in: boolean };
+  qualifications: string[]; photo: string | null; archived: boolean; sort_order: number; subjects: string[]; classes: number; can_sign_in: boolean;
+  invited: { email: string; at: string; expired: boolean } | null; is_admin: boolean };
 
 const SQL = `select t.id, u.id as user_id, u.name, u.email::text, t.slug, t.designation, t.bio, t.qualifications, t.archived_at is not null as archived, t.sort_order,
     case when t.photo is not null then '/teacher-photo/' || t.slug || '?v=' || extract(epoch from t.photo_updated_at)::bigint else t.photo_asset end as photo,
     coalesce((select array_agg(distinct ts.subject_id::text) from teacher_subjects ts where ts.teacher_id = t.id), '{}') as subjects,
     (select count(*)::int from course_groups g join academic_years y on y.id = g.academic_year_id where g.teacher_id = t.id and y.ends_on >= current_date) as classes,
-    u.password_hash is not null and u.disabled_at is null as can_sign_in
+    u.password_hash is not null and u.disabled_at is null as can_sign_in, u.role = 'school_admin' as is_admin,
+    (select json_build_object('email', i.email::text, 'at', i.created_at::text, 'expired', i.expires_at < now()) from staff_invites i
+      where i.teacher_id = t.id and i.accepted_at is null and i.revoked_at is null order by i.created_at desc limit 1) as invited
   from teachers t join users u on u.id = t.user_id`;
 
 export async function listTeachers() {
@@ -42,7 +45,7 @@ export async function addTeacher(actorId: string, name: string, email: string): 
 }
 
 export type ProfileInput = { name: string; designation: string; bio: string; qualifications: string[]; slug: string; sortOrder: number; subjects: string[];
-  photo?: { data: Buffer; type: string } | null; removePhoto: boolean };
+  photo?: { data: Buffer; type: string } | null; removePhoto: boolean; email?: string };
 
 export async function saveTeacher(actorId: string, id: string, d: ProfileInput): Promise<string | null> {
   try {
@@ -53,6 +56,18 @@ export async function saveTeacher(actorId: string, id: string, d: ProfileInput):
       if (!slug) return "Give the profile a web address.";
       if ((await q(`select 1 from teachers where slug = $1 and id <> $2`, [slug, id])).length) return "Another teacher already uses that web address.";
       await q(`update users set name = $2 where id = $1`, [t.user_id, d.name]);
+      // a new email: the teacher's sign-in and where their emails go (another person's address isn't allowed; an admin's is linked instead, below)
+      if (d.email) {
+        const cur = (await q<{ email: string }>(`select email::text from users where id = $1`, [t.user_id]))[0]?.email ?? "";
+        if (d.email.toLowerCase() !== cur.toLowerCase()) {
+          const other = (await q<{ id: string; role: string }>(`select id, role::text from users where email = $1::citext and id <> $2`, [d.email, t.user_id]))[0];
+          if (other && other.role !== "school_admin") return "Someone else already uses that email.";
+          if (!other) {
+            await q(`update users set email = $2 where id = $1`, [t.user_id, d.email.toLowerCase()]);
+            await q(`update staff_invites set revoked_at = now() where teacher_id = $1 and accepted_at is null and revoked_at is null and email <> $2::citext`, [id, d.email]);
+          }
+        }
+      }
       await q(`update teachers set designation = nullif($2, ''), bio = nullif($3, ''), qualifications = $4::text[], slug = $5, sort_order = $6::int where id = $1`,
         [id, d.designation, d.bio, d.qualifications, slug, d.sortOrder]);
       if (d.photo) await q(`update teachers set photo = $2, photo_type = $3, photo_updated_at = now() where id = $1`, [id, d.photo.data, d.photo.type]);
@@ -70,5 +85,23 @@ export async function setTeacherArchived(actorId: string, id: string, archived: 
   await withSchool(async (q) => {
     await q(`update teachers set archived_at = case when $2 then now() else null end where id = $1`, [id, archived]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, $2, 'teacher', $3)`, [actorId, archived ? "archive" : "restore", id]);
+  });
+}
+
+/** A teacher record whose sign-in should be an existing admin's (e.g. the principal, who also teaches): the profile, classes and
+ *  reports move onto the admin's account, so they sign in once and open their teaching from "Viewing as". */
+export async function linkTeacherToAdmin(actorId: string, teacherId: string, email: string): Promise<string | null> {
+  return withSchool(async (q) => {
+    const a = (await q<{ id: string }>(`select id from users where email = $1::citext and role = 'school_admin' and disabled_at is null`, [email]))[0];
+    if (!a) return "There’s no admin with that email.";
+    if ((await q(`select 1 from teachers where user_id = $1 and id <> $2`, [a.id, teacherId])).length) return "That admin already has a different teacher profile.";
+    const old = (await q<{ user_id: string }>(`select user_id from teachers where id = $1`, [teacherId]))[0];
+    if (!old) return "That teacher wasn’t found.";
+    if (old.user_id === a.id) return null;
+    await q(`update teachers set user_id = $2 where id = $1`, [teacherId, a.id]);
+    await q(`update users set disabled_at = coalesce(disabled_at, now()) where id = $1 and role = 'teacher' and not exists (select 1 from teachers where user_id = $1)`, [old.user_id]);
+    await q(`update staff_invites set revoked_at = now() where teacher_id = $1 and accepted_at is null and revoked_at is null`, [teacherId]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'link_admin', 'teacher', $2, $3)`, [actorId, teacherId, JSON.stringify({ email })]);
+    return null;
   });
 }
