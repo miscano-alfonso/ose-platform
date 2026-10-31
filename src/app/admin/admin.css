@@ -946,8 +946,9 @@
    or the icon and the "SEND in this class" link, on top; one person per line below), then Meet, Attendance and the countdown */
 .adm .fx .dx-hero .fx-foot{grid-column:1/-1;display:grid;grid-template-columns:subgrid;gap:12px 24px;align-items:end;position:relative;z-index:1}
 .adm .fx .dx-hero:not(.has-clock) .fx-foot{display:flex;flex-wrap:wrap;justify-content:space-between}
-.adm .fx .dx-hero .fx-notes{flex:0 1 auto;display:flex;flex-wrap:wrap;gap:10px;align-items:flex-start}
-.adm .fx .dx-hero .fx-notes .fx-bday{max-width:none;display:grid;gap:4px;padding:9px 13px;min-width:150px}
+.adm .fx .dx-hero .fx-notes{grid-column:1;min-width:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:10px;align-items:stretch}   /* the boxes share the space left of the buttons, side by side or stacked, never overlapping */
+.adm .fx .dx-hero .fx-notes .fx-bday{max-width:none;display:grid;align-content:start;gap:4px;padding:9px 13px;min-width:0;box-sizing:border-box}
+.adm .fx .dx-hero .fx-notes .fx-lines>*{overflow-wrap:anywhere}
 .adm .fx .dx-hero .fx-notes .fx-nh{display:flex;align-items:center;justify-content:space-between;gap:14px}
 .adm .fx .dx-hero .fx-notes .fx-nh svg{margin:0}
 .adm .fx .dx-hero .fx-notes .fx-nh a{color:#fff;font-size:14px;text-underline-offset:3px}.adm .fx .dx-hero .fx-notes .fx-nh a b{color:inherit}
@@ -1009,3 +1010,14 @@
 .adm .fx .dx-hero a.fx-send:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.55)}
 .adm .fx-sicon{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#8fd0f0;color:#0d0f1c;font:700 11.5px/1 "Space Grotesk","Jost",sans-serif}
 .adm[data-palette=demo] .fx-sicon{background:#ffb3c6;color:#3d0d1a}
+/* 31 Oct: hover and keyboard focus on the hero's buttons (highlight colour fills, dark text; checked for contrast) */
+.adm .fx .dx-hero .fx-btns a,.adm .fx .dx-hero .fx-btns .fx-nomeet{transition:background-color .15s,color .15s,border-color .15s}
+.adm .fx .dx-hero .fx-btns a.fx-att:hover,.adm .fx .dx-hero .fx-btns a.fx-att:focus-visible,
+.adm .fx .dx-hero .fx-btns a.go.fx-meet.wait:hover,.adm .fx .dx-hero .fx-btns a.go.fx-meet.wait:focus-visible{background:var(--pop,#e9f56a);color:var(--pop-ink,#0d0f1c);border-color:var(--pop,#e9f56a)}
+.adm .fx .dx-hero .fx-btns a.go.fx-meet:not(.wait):hover,.adm .fx .dx-hero .fx-btns a.go.fx-meet:not(.wait):focus-visible{background:#fff;color:var(--pop-ink,#0d0f1c);border-color:#fff}
+.adm .fx .dx-hero .fx-btns .fx-nomeet{cursor:help}
+.adm .fx .dx-hero .fx-btns .fx-nomeet:hover{border-color:rgba(255,255,255,.75);color:#fff;background:rgba(255,255,255,.08)}
+.adm[data-palette=demo] .fx .dx-hero .fx-btns a.fx-att:hover,.adm[data-palette=demo] .fx .dx-hero .fx-btns a.fx-att:focus-visible,
+.adm[data-palette=demo] .fx .dx-hero .fx-btns a.go.fx-meet.wait:hover,.adm[data-palette=demo] .fx .dx-hero .fx-btns a.go.fx-meet.wait:focus-visible{background:#ffb3c6;color:#3d0d1a;border-color:#ffb3c6}
+.adm .fx .dx-hero .fx-btns a:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.adm .fx .dx-hero .fx-live .fx-live-k{color:#fff}   /* "Next lesson" white, the day and time in the highlight colour (like Hello + name) */
