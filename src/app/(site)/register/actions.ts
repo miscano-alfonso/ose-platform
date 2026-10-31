@@ -15,6 +15,7 @@ function readChildren(f: FormData): Promise<ChildIn[]> {
     dob: v(`c${i}_dob`, 10) || null, known: v(`c${i}_known`, 60) || null,
     gender: GENDERS.includes(v(`c${i}_gender`, 30)) ? v(`c${i}_gender`, 30) : null,
     send: v(`c${i}_send`, 3) === "yes" ? true : v(`c${i}_send`, 3) === "no" ? false : null,
+    sendDetails: v(`c${i}_send_details`, 2000) || null, adjustments: v(`c${i}_adjust`, 2000) || null, share: f.get(`c${i}_share`) !== "off",
     files: await Promise.all(f.getAll(`c${i}_files`).filter((x): x is File => x instanceof File && x.size > 0).slice(0, 5)
       .map(async (x) => ({ name: x.name, mime: x.type, data: Buffer.from(await x.arrayBuffer()) }))),
   })));

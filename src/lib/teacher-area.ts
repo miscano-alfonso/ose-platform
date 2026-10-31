@@ -17,7 +17,9 @@ export type WeekLesson = { id: string; d: string; time: string; name: string; co
   /** slides found in Classroom or Drive (when the teacher hasn't pasted a link) */
   slides?: { url: string; title: string; from: string } | null;
   /** Students in the class whose birthday is on the lesson day or within 3 days of it (so the teacher can say happy birthday). */
-  birthdays?: { name: string; d: string; age: number }[] };
+  birthdays?: { name: string; d: string; age: number }[];
+  /** Students in the class with SEND whose parent agreed to share it with teachers. */
+  send?: string[] };
 export type MyDay = {
   term: { name: string; pay_date: string } | null; classes: number;
   reportsLeft: number; reportsDue: string | null; attendance: number | null; onesThisWeek: number; payThisTerm: number;
@@ -59,7 +61,10 @@ export async function myDay(userId: string): Promise<MyDay> {
           from enrolments e join students s on s.id = e.student_id
           cross join lateral (select (s.date_of_birth + make_interval(years => extract(year from ev.lesson_date)::int - extract(year from s.date_of_birth)::int))::date as d,
             extract(year from ev.lesson_date)::int - extract(year from s.date_of_birth)::int as age) b
-          where e.group_id = g.id and e.status in ('pending','active') and s.date_of_birth is not null and abs(b.d - ev.lesson_date) <= 3), '[]'::json) as birthdays
+          where e.group_id = g.id and e.status in ('pending','active') and s.date_of_birth is not null and abs(b.d - ev.lesson_date) <= 3), '[]'::json) as birthdays,
+        coalesce((select array_agg(coalesce(nullif(s.known_as, ''), s.first_name) || ' ' || left(s.last_name, 1) order by s.first_name) from enrolments e join students s on s.id = e.student_id
+          join student_support ss on ss.student_id = s.id
+          where e.group_id = g.id and e.status in ('pending','active') and ss.has_send = 'yes' and ss.share_with_teachers), '{}') as send
       from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where ev.teacher_id = ${ME} and ev.status <> 'cancelled' and ev.lesson_date >= current_date

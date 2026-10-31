@@ -1224,3 +1224,7 @@ html:not([data-theme=dark]) .bt .rg-warn{color:#b3392a}
 .bt .bk-go:disabled{opacity:.5;cursor:not-allowed}
 @media (max-width:900px){.bt .bk-row{grid-template-columns:auto minmax(0,1fr) auto}.bt .bk-who{grid-column:2/-1;grid-row:2}}
 @media (max-width:600px){.bt .bk-who{grid-column:2/-1;grid-row:3}}
+/* registration: the SEND questions appear once "Yes" is chosen */
+.bt .rg-send{display:none;flex-direction:column;gap:16px;padding:16px;border-radius:16px;background:var(--b-inset)}
+.bt .rg-child:has(input[value="yes"]:checked)>.rg-send{display:flex}
+.bt .rg-send textarea{background:var(--b-tile)}

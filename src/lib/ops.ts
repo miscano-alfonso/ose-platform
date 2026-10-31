@@ -139,7 +139,7 @@ export async function makeLessonDates(actorId: string, termId: string): Promise<
   });
 }
 
-export type RegisterStudent = { id: string; name: string; mark: string | null; notice: string | null };
+export type RegisterStudent = { id: string; name: string; mark: string | null; notice: string | null; send?: boolean; send_details?: string | null; adjustments?: string | null };
 export type Register = { id: string; lesson_date: string; starts_at: string; ends_at: string; code: string; name: string; status: string; note: string | null;
   teacher: string | null; teacher_user: string | null; link: string | null; start_at: string; end_at: string; students: RegisterStudent[]; tasters: { id: string; child: string; status: string }[] };
 
@@ -152,8 +152,12 @@ export async function getRegister(eventId: string): Promise<Register | null> {
       join subjects sj on sj.id = g.subject_id left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id where e.id = $1`, [eventId]))[0];
     if (!ev) return null;
     const students = await q<RegisterStudent>(`select st.id, st.first_name || ' ' || st.last_name as name, m.mark::text as mark,
-        (select n.reason from absence_notices n where n.student_id = st.id and n.lesson_event_id = $1 and n.cancelled_at is null) as notice
+        (select n.reason from absence_notices n where n.student_id = st.id and n.lesson_event_id = $1 and n.cancelled_at is null) as notice,
+        coalesce(sup.has_send = 'yes' and sup.share_with_teachers, false) as send,
+        case when sup.has_send = 'yes' and sup.share_with_teachers then sup.details end as send_details,
+        case when sup.has_send = 'yes' and sup.share_with_teachers then sup.adjustments end as adjustments
       from enrolments x join students st on st.id = x.student_id left join attendance_marks m on m.lesson_event_id = $1 and m.student_id = st.id
+      left join student_support sup on sup.student_id = st.id
       where x.group_id = $2 and not x.is_taster and (x.status = 'active' or m.id is not null) and x.enrolled_at::date <= $3::date
       order by st.first_name, st.last_name`, [eventId, ev.group_id, ev.lesson_date]);
     const tasters = await q<{ id: string; child: string; status: string }>(`select b.id, r.child_name as child, b.status::text from taster_bookings b

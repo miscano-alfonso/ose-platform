@@ -807,3 +807,7 @@
 
 /* dashboard welcome tile: no decorative ring (30 Oct) */
 .adm .dx-hero::after{display:none!important}
+/* teacher hero: SEND in the next lesson's class (light blue, like the birthday line in yellow) */
+.adm .fx-send{background:rgba(104,187,228,.14);border-color:rgba(104,187,228,.45)}
+.adm .fx-send svg,.adm .fx-send b{color:#8fd0f0}
+.adm .fx-send a{color:#fff;text-decoration:underline;text-underline-offset:3px}

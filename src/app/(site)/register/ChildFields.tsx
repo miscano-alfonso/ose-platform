@@ -39,6 +39,12 @@ export function ChildFields() {
         {GENDERS.map((g) => <label key={g}><input type="radio" name={`c${i}_gender`} value={g} /><span>{g}</span></label>)}</div></fieldset>
       <fieldset className="wk-fs"><legend>Does your child have SEND?</legend><div className="ct-pills">
         <label><input type="radio" name={`c${i}_send`} value="yes" /><span>Yes</span></label><label><input type="radio" name={`c${i}_send`} value="no" /><span>No</span></label></div></fieldset>
+      <div className="rg-send">
+        <label>About your child’s needs <small className="note">what their needs are, and any diagnosis or EHCP</small><textarea name={`c${i}_send_details`} rows={3} maxLength={2000} /></label>
+        <label>What helps in lessons <small className="note">optional</small><textarea name={`c${i}_adjust`} rows={2} maxLength={2000} /></label>
+        <fieldset className="wk-fs"><legend>Share this with your child’s teachers?</legend><div className="ct-pills">
+          <label><input type="radio" name={`c${i}_share`} value="on" defaultChecked /><span>Yes, share it</span></label><label><input type="radio" name={`c${i}_share`} value="off" /><span>No, office only</span></label></div></fieldset>
+      </div>
       <label>Reports or evidence <small className="note">optional · PDF, Word or photos, under 3.5 MB each</small>
         <input name={`c${i}_files`} type="file" multiple accept=".pdf,.doc,.docx,image/jpeg,image/png,image/webp" /></label>
     </fieldset>)}

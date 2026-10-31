@@ -4,6 +4,7 @@ import { withSchool } from "./db";
 // Parent registration on the website (31 Oct, from the old site's Add Child form): the parent, then each child with their
 // Google account email (for Classroom and Meet), date of birth, classroom name, gender, SEND and any reports.
 export type ChildIn = { first: string; last: string; email: string; dob: string | null; known: string | null; gender: string | null; send: boolean | null;
+  sendDetails: string | null; adjustments: string | null; share: boolean;
   files: { name: string; mime: string; data: Buffer }[] };
 export type ParentIn = { first: string; last: string; email: string; phone: string | null; heard: string | null; marketing: boolean };
 export const GENDERS = ["Male", "Female", "Non-binary", "Prefer not to answer"];
@@ -24,8 +25,12 @@ export function checkChild(c: ChildIn, n: number): string | null {
 
 async function insertChildren(q: Parameters<Parameters<typeof withSchool>[0]>[0], parentId: string, kids: ChildIn[]) {
   for (const c of kids) {
-    const [s] = await q<{ id: string }>(`insert into students (school_id, parent_id, first_name, last_name, email, date_of_birth, known_as, gender, has_send)
-      values (current_school(), $1, $2, $3, $4, $5, $6, $7, $8) returning id`, [parentId, c.first, c.last, c.email.toLowerCase(), c.dob, c.known, c.gender, c.send]);
+    const [s] = await q<{ id: string }>(`insert into students (school_id, parent_id, first_name, last_name, email, date_of_birth, known_as, gender)
+      values (current_school(), $1, $2, $3, $4, $5, $6, $7) returning id`, [parentId, c.first, c.last, c.email.toLowerCase(), c.dob, c.known, c.gender]);
+    // SEND goes in the school's existing support record (Admin → Families shows it; teachers see it only if the parent agreed to share)
+    if (c.send !== null) await q(`insert into student_support (student_id, school_id, has_send, details, adjustments, share_with_teachers)
+      values ($1, current_school(), $2, $3, $4, $5)`, [s.id, c.send ? "yes" : "no", c.send ? (c.sendDetails || (c.files.length ? "See the reports uploaded at registration." : "The parent said yes at registration; details to follow.")) : null,
+      c.send ? c.adjustments : null, c.share]);
     for (const f of c.files) await q(`insert into student_files (school_id, student_id, name, mime, size, data) values (current_school(), $1, $2, $3, $4, $5)`,
       [s.id, f.name.slice(0, 200), f.mime, f.data.length, f.data]);
   }

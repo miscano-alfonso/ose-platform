@@ -7,7 +7,7 @@ import { withSchool } from "./db";
 const YEAR_SQL = `(select id from academic_years where ends_on >= current_date order by starts_on limit 1)`;
 
 export type FamState = "failed" | "overdue" | "unscheduled" | "check" | "paid" | "none";
-export type FamilyListRow = { id: string; name: string; email: string; children: { first: string; level: string }[]; courses: number;
+export type FamilyListRow = { id: string; name: string; email: string; children: { first: string; level: string; send: string | null }[]; courses: number;
   state: FamState; next_on: string | null; next_due: number; checks: number; last_name: string;
   /** the family's most recent course booking (and their first, to see how long they've been with the school) */
   latest_on: string | null; latest_course: string | null; latest_child: string | null; first_on: string | null };
@@ -22,7 +22,8 @@ export async function familyList(): Promise<FamilyListRow[]> {
       (select min(e.enrolled_at)::date::text from enrolments e join students s on s.id = e.student_id where s.parent_id = p.id and not e.is_taster) as first_on,
       coalesce((select json_agg(json_build_object('first', s.first_name, 'level',
           coalesce((select string_agg(distinct l.name, ', ') from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id
-            where e.student_id = s.id and e.status = 'active' and not e.is_taster), '')) order by s.first_name) from students s where s.parent_id = p.id), '[]') as children,
+            where e.student_id = s.id and e.status = 'active' and not e.is_taster), ''),
+          'send', (select ss.has_send from student_support ss where ss.student_id = s.id)) order by s.first_name) from students s where s.parent_id = p.id), '[]') as children,
       (select count(*)::int from enrolments e join students s on s.id = e.student_id where s.parent_id = p.id and e.status = 'active' and not e.is_taster) as courses,
       case when exists (select 1 from i where i.parent_id = p.id and i.status = 'failed') then 'failed'
            when exists (select 1 from i where i.parent_id = p.id and i.status = 'scheduled' and i.due_on < current_date) then 'overdue'
@@ -43,7 +44,7 @@ export type Cell = { id: string; status: string; amount: number; refunded: numbe
 export type Course = { id: string; group_id: string; subject: string; level: string; code: string; colour: string; status: string; needs_check: boolean; note: string | null;
   enrolled_on: string; notice_terms: number | null; notice_given_on: string | null; end_reason: string | null; list: number; discount: number; net: number; cells: Cell[] };
 export type Child = { id: string; first: string; last: string; email: string | null; dob: string | null; year_group: number | null; level: string;
-  send: string | null; send_details: string | null; adjustments: string | null; share: boolean | null; att: number | null; courses: Course[] };
+  send: string | null; send_details: string | null; adjustments: string | null; share: boolean | null; att: number | null; files?: { id: string; name: string }[]; courses: Course[] };
 export type FamilyDetail = {
   id: string; first: string; last: string; email: string; phone: string | null; heard: string | null; address: string | null; marketing: boolean; contact: boolean;
   since: string; note: string | null; guardian: { name: string; email: string; relationship: string; invoices: boolean; reports: boolean; marketing: string } | null;
@@ -74,6 +75,7 @@ export async function familyDetail(id: string): Promise<FamilyDetail | null> {
           where e.student_id = s.id and e.status = 'active' and not e.is_taster), '') as level,
         ss.has_send as send, ss.details as send_details, ss.adjustments, ss.share_with_teachers as share,
         (select a.attendance_pct from student_term_attendance a where a.student_id = s.id and a.term_id = (select id from terms where current_date between starts_on and ends_on limit 1)) as att
+      , coalesce((select json_agg(json_build_object('id', f.id, 'name', f.name) order by f.created_at) from student_files f where f.student_id = s.id), '[]') as files
       from students s left join student_support ss on ss.student_id = s.id where s.parent_id = $1 order by s.first_name`, [id]);
     const courses = await q<Omit<Course, "cells"> & { student_id: string; cells: Record<string, NonNullable<Cell>> }>(`select e.id, e.student_id, g.id as group_id, sj.name as subject, l.name as level, g.code,
         coalesce(sj.colour, '#8494c2') as colour, e.status::text, e.needs_check, e.admin_note as note, e.enrolled_at::date::text as enrolled_on,

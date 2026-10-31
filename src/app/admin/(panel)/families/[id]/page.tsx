@@ -81,6 +81,7 @@ export default async function Family({ params, searchParams }: { params: Promise
           {c.cells.map((cell, i) => <td key={i} className="n"><CellView c={cell} term={f.terms[i].number} family={f.id} /></td>)}<td /></tr>; })}
       </tbody></table></div>
       {st.send === "yes" && <p className="note" style={{ margin: "8px 0 0" }}><b>Support needs:</b> {st.send_details}{st.adjustments ? ` · What helps: ${st.adjustments}` : ""}{st.share ? " · shared with teachers" : " · not shared with teachers"}</p>}
+      {!!st.files?.length && <p className="note" style={{ margin: "6px 0 0" }}><b>Reports from the parent:</b> {st.files.map((f, i) => <span key={f.id}>{i ? " · " : ""}<a href={`/admin/student-file/${f.id}`}>{f.name}</a></span>)}</p>}
     </section>; })}
 
     <div className="card" style={{ background: "var(--soft)" }}>{f.agreed ? <><b>Terms & Conditions</b> (version {f.agreed.version}) agreed at checkout by {f.first} {f.last} on {day(f.agreed.at)}, including the notice period for each course. <span className="muted">Stored with the order: version, time and browser.</span></>

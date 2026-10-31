@@ -35,10 +35,14 @@ export default async function RegisterPage({ params, searchParams }: { params: P
       <span className="grow" />{r.status === "taught" ? <span className="pill good">Taught</span> : r.status === "cancelled" ? <span className="pill bad">Cancelled</span> : <span className="pill info">Scheduled</span>}</div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {r.note && <p className="note">{r.note}</p>}
+    {r.students.some((s) => s.send) && <section className="card send-card"><h2>SEND in this class</h2>
+      <p className="cs">Shared by the parents so you can plan for them. Please keep it to yourself.</p>
+      {r.students.filter((s) => s.send).map((s) => <div key={s.id} className="li" style={{ alignItems: "flex-start" }}><span className="pill warn">SEND</span>
+        <div className="t"><b>{s.name}</b><span>{s.send_details}</span>{s.adjustments && <span><b style={{ fontWeight: 500 }}>What helps:</b> {s.adjustments}</span>}</div></div>)}</section>}
     {live && <AutoRefresh seconds={45} />}
     {r.status !== "cancelled" && (future
       ? <section className="card"><h2>Who’s expected</h2><p className="cs">{r.students.length} student{r.students.length === 1 ? "" : "s"}{r.tasters.length ? ` and ${r.tasters.length} taster${r.tasters.length === 1 ? "" : "s"}` : ""}. On the day, arrivals show here as students join, and the register opens below.</p>
-          <div className="arr">{r.students.map((s) => <div key={s.id} className={`arr-row ${s.notice ? "away" : "waiting"}`}><b>{s.name}</b><span>{s.notice ? `Away: ${s.notice}` : "Expected"}</span></div>)}
+          <div className="arr">{r.students.map((s) => <div key={s.id} className={`arr-row ${s.notice ? "away" : "waiting"}`}><b>{s.name}{s.send && <> <span className="pill warn" title="Special educational needs: see the student’s support notes">SEND</span></>}</b><span>{s.notice ? `Away: ${s.notice}` : "Expected"}</span></div>)}
             {r.tasters.map((t) => <div key={t.id} className="arr-row waiting"><b>{t.child}</b><span>Taster</span></div>)}</div></section>
       : <section className="card" data-lesson={`${r.name}, ${r.starts_at}`}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>{live ? "Arrivals" : "Who joined"}</h2>
@@ -47,7 +51,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
             {r.link && live && <a className="abtn sm pri" href={r.link} target="_blank" rel="noopener">{joinLabel(r.link)}</a>}
             <form action={refreshJoinsAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit">Check Meet now</button></form></div>
           <div className="arr" style={{ marginTop: 12 }}>{arrivals.sort((a, b) => order[a.state] - order[b.state]).map(({ s, x, lateBy, state }) => <div key={s.id} className={`arr-row ${state}`}>
-            <b>{s.name}</b>
+            <b>{s.name}{s.send && <> <span className="pill warn" title="Special educational needs: see the student’s support notes">SEND</span></>}</b>
             <span className="arr-st">{state === "in" ? "On time" : state === "late" ? `Late · ${lateBy} min` : state === "away" ? `Away: ${s.notice}` : state === "missing" ? "Not joined" : "Not joined yet"}</span>
             <span className="arr-t">{x ? <>Joined {hm(x.first)}{x.last ? ` · left ${hm(x.last)}` : live ? " · still in" : ""} · {x.minutes} min{x.joins > 1 ? ` · ${x.joins} joins` : ""} · {x.sources.map((y) => SRC[y] ?? y).join(", ")}</> : ""}</span>
           </div>)}
@@ -60,7 +64,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
       <input type="hidden" name="id" value={r.id} />
       {r.students.length === 0 && <p className="empty">No students in this class yet.</p>}
       {r.students.map((s) => <fieldset key={s.id} className="regrow">
-        <legend><b>{s.name}</b>{s.notice && <span className="pill info">Parent reported: {s.notice}</span>}</legend>
+        <legend><b>{s.name}</b>{s.send && <span className="pill warn" title="Special educational needs: see the student’s support notes">SEND</span>}{s.notice && <span className="pill info">Parent reported: {s.notice}</span>}</legend>
         {(["present", "late", "absent", "approved_absence"] as const).map((m) => <label key={m} className={`regopt r-${m}`}>
           <input type="radio" name={`m_${s.id}`} value={m} defaultChecked={(s.mark ?? (s.notice ? "approved_absence" : "present")) === m} />{LABEL[m]}</label>)}
       </fieldset>)}
