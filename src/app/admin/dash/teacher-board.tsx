@@ -39,7 +39,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
       </div>{next && <div className="fx-side"><LessonClock date={next.d} time={next.time} />
 </div>}
       <div className="fx-foot">{next && (next.birthdays?.length || next.send?.length) ? <div className="fx-notes">{!!next.birthdays?.length && <p className="fx-bday"><span className="fx-nh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 1.2 1.5 2.1 1.5 2.8a1.5 1.5 0 0 1-3 0c0-.7.5-1.6 1.5-2.8zM11.2 8h1.6v3h-1.6zM4 13a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.2c-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-.7.6-1.3.9-2 .9zM4 17.5c.7 0 1.4-.2 2-.7 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 .6.5 1.3.7 2 .7V21H4z" fill="currentColor"/></svg><span className="sr-only">Birthdays</span></span>
-          <span className="fx-lines">{next.birthdays.map((b, i) => <span key={i}><b>{b.name}</b> · {b.d === today ? "today" : `${wd(b.d)} ${dm(b.d)}`} · turns {b.age}</span>)}</span></p>}
+          <span className="fx-lines">{[...next.birthdays].sort((x, y) => x.d.localeCompare(y.d)).map((b, i) => <span key={i}><b>{b.name}</b> · {b.d === today ? "today" : wd(b.d)} · turns {b.age}</span>)}</span></p>}
         {!!next.send?.length && <Link className="fx-bday fx-send" href={`/admin/register/${next.id}`} title="SEND in this class: open the class list">
           <span className="fx-nh"><span className="fx-sicon" aria-hidden="true">S</span><span className="sr-only">SEND in this class</span></span>
           <span className="fx-lines">{next.send.map((x, i) => { const m = /^(.*?) \((.*)\)$/.exec(x);
