@@ -943,13 +943,13 @@
 .adm .tm-who{font-size:14px;margin-bottom:4px}.adm .tm-body{white-space:pre-wrap}.adm .tm-att{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .adm .bubble.b-office{border-left:3px solid var(--good)}
 .adm .tm-form textarea,.adm .tm-form input:not([type=file]):not([type=hidden]){width:100%;box-sizing:border-box;font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:9px 12px}
-/* 31 Oct: birthdays and SEND for the next lesson, in a tile beside the teacher's hero, in the hero's colours */
-.adm .dx-stack{display:flex;flex-direction:column;gap:16px;height:100%}.adm .dx-stack>.dx-pop{flex:1}
-.adm .dx-notes{box-sizing:border-box;display:flex;flex-direction:column;gap:10px;padding:22px;border-radius:20px;color:#fff;
-  background:linear-gradient(160deg,color-mix(in srgb,var(--brand) 85%,#000),color-mix(in srgb,var(--brand) 55%,#000))}
-.adm .dx-notes .fx-bday{max-width:none}
-.adm .dx-notes-k{margin:0;font-size:12.5px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.75)}
-.adm[data-palette=demo] .dx-notes{background:linear-gradient(160deg,#5e1428,#320812)}
+/* 31 Oct: the next lesson's birthdays and SEND at the foot of the teacher's hero (side by side when there's room);
+   Attendance and the countdown sit on the right under the clock */
+.adm .fx .dx-hero .fx-notes{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px;margin-top:auto;padding-top:14px;align-items:start}
+.adm .fx .dx-hero .fx-notes .fx-bday{max-width:none}
+.adm .fx .dx-hero .fx-side .fx-btns-r{justify-content:flex-end;align-items:center;margin-top:auto}
+.adm .fx .dx-hero .fx-side .fx-btns-r .fx-cd{padding:0 2px}
+@media (max-width:640px){.adm .fx .dx-hero .fx-side .fx-btns-r{order:5;width:100%;justify-content:flex-start}}
 /* 31 Oct: "Draft with AI" in the report comment box */
 .adm .aid-wrap{position:relative;display:grid;gap:6px}
 .adm .aid-wrap textarea{padding-bottom:46px}
