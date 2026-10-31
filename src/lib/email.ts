@@ -25,6 +25,7 @@ export type Recipient = { name: string; email: string };
  *  Newsletters are not copied (they have their own stats). A failed copy never affects the real send. */
 async function keepCopy(c: Creds, subject: string, htmlContent: string, textContent: string, to: { email: string; name?: string }[], note?: string) {
   if (!c.copyTo || !to.length) return;
+  if (subject.startsWith("[Test] ")) return;   // tests (Admin → Automations) aren't copied to the office
   const copies = c.copyTo.split(/[,;\s]+/).map((x) => x.trim().toLowerCase()).filter(Boolean).slice(0, 5); if (!copies.length) return;
   const others = to.filter((r) => !copies.includes(r.email.toLowerCase())); if (!others.length) return;
   const shown = others.slice(0, 40).map((r) => r.name ? `${r.name} <${r.email}>` : r.email);

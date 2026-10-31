@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { automations, DEFS } from "@/lib/automations";
-import { saveAutomationAction, runAutomationsAction } from "../../actions";
+import { saveAutomationAction, runAutomationsAction, sendAllTestsAction } from "../../actions";
 import { emailDesign, senderName } from "@/lib/email";
 import { EmailPreview } from "../../EmailPreview";
 
@@ -47,6 +47,11 @@ export default async function Automations({ searchParams }: { searchParams: Prom
         </div><EmailPreview design={design} from={from} vars={vars} /></form>
       </details>
     </section>)}
+    <section className="card" id="tests"><h2>Send every email as a test</h2>
+      <p className="cs">One example of each email the system sends by itself: the automations above (with your wording), sign-in link, taster booked, taster follow-up, Classroom reminder, newsletter confirmation, report-comment reminder, attendance alert, chat alert and job application. Each is marked [Test] and uses made-up details.</p>
+      <form action={sendAllTestsAction} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>
+        <label className="fld">Send to<input name="email" type="email" required defaultValue="alfonso@iacurci.co.uk" style={{ width: 300 }} /></label>
+        <button className="abtn pri" type="submit">Send all test emails</button></form></section>
     <section className="card"><h2>Recent emails</h2>
       {recent.length === 0 ? <p className="empty">Nothing sent yet.</p> : <div className="tw" style={{ border: 0, marginBottom: 0 }}><table><thead><tr><th>When</th><th>Automation</th><th>To</th><th>Status</th></tr></thead><tbody>
         {recent.map((s, i) => <tr key={i}><td className="mono">{s.at}</td><td>{NAME[s.key] ?? s.key}</td><td>{s.to}</td>

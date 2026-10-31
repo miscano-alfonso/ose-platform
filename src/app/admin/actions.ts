@@ -1086,6 +1086,15 @@ export async function setDpaAction(f: FormData): Promise<void> {
 }
 
 // ---------- automations ----------
+export async function sendAllTestsAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const email = str(f, "email", 200).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) redirect(`/admin/automations?err=${encodeURIComponent("Enter the email address to send the tests to.")}#tests`);
+  const { sendAllTests } = await import("@/lib/email-tests");
+  const r = await sendAllTests({ name: me.name, email });
+  if (r.error) redirect(`/admin/automations?err=${encodeURIComponent(r.error)}#tests`);
+  redirect(`/admin/automations?${r.failed.length ? "err=" + encodeURIComponent(`${r.sent.length} sent to ${email}; these didn’t send: ${r.failed.join(", ")}.`) : "ok=" + encodeURIComponent(`${r.sent.length} test emails sent to ${email}.`)}#tests`);
+}
 export async function saveAutomationAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const A = await import("@/lib/automations");
