@@ -1,6 +1,8 @@
 "use server";
 import { redirect } from "next/navigation";
-import { currentFamily, startParentSession } from "@/lib/family-auth";
+import { headers } from "next/headers";
+import { currentFamily, sendVerifyLink } from "@/lib/family-auth";
+import { siteBase } from "@/lib/social";
 import { registerFamily, addChildren, checkChild, checkChildEmails, GENDERS, type ChildIn } from "@/lib/registration";
 
 const safeNext = (n: string) => (/^\/(cart|parent)(\/|$|\?)/.test(n) ? n : "/cart");
@@ -40,6 +42,8 @@ export async function registerAction(f: FormData): Promise<void> {
   const dup = await checkChildEmails(p.email, kids); if (dup) return back(dup);
   const id = await registerFamily(p, kids);
   if (id === "exists") redirect(`/account?next=cart&err=${encodeURIComponent("That email already has an account. We can email you a sign-in link instead.")}`);
-  await startParentSession(id);
-  redirect(`${next}${next.includes("?") ? "&" : "?"}welcome=1`);
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`;
+  const sent = await sendVerifyLink(id, await siteBase(origin));
+  redirect(`/register?check=${encodeURIComponent(p.email)}${sent.ok ? "" : "&error=" + encodeURIComponent("We couldn’t send the email just now. Use “I already have an account” to get a new link.")}`);
 }

@@ -48,7 +48,7 @@ export default async function Automations({ searchParams }: { searchParams: Prom
       </details>
     </section>)}
     <section className="card" id="tests"><h2>Send every email as a test</h2>
-      <p className="cs">One example of each email the system sends by itself: the automations above (with your wording), sign-in link, taster booked, taster follow-up, Classroom reminder, newsletter confirmation, report-comment reminder, attendance alert, chat alert and job application. Each is marked [Test] and uses made-up details.</p>
+      <p className="cs">One example of each email the system sends by itself: the automations above (with your wording), sign-in link, registration email confirmation, taster booked, taster follow-up, Classroom reminder, newsletter confirmation, report-comment reminder, attendance alert, chat alert and job application. Each is marked [Test] and uses made-up details.</p>
       <form action={sendAllTestsAction} style={{ display: "flex", gap: 8, flexWrap: "wrap", alignItems: "end" }}>
         <label className="fld">Send to<input name="email" type="email" required defaultValue="alfonso@iacurci.co.uk" style={{ width: 300 }} /></label>
         <button className="abtn pri" type="submit">Send all test emails</button></form></section>

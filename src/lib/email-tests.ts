@@ -33,6 +33,10 @@ export async function sendAllTests(to: Recipient): Promise<{ sent: string[]; fai
   log("Sign-in link", await sendOne([to], T(`Your ${school} sign-in link`),
     `Hello ${first},\n\nUse this link to sign in to your ${school} account. It works once, for the next 30 minutes:\n\n${base}/account/sign-in?t=EXAMPLE\n\nIf you didn’t ask for it, you can ignore this email.\n\n${school}`, { tag: "email-test" }));
 
+  // 9b: new parent: confirm your email to finish registering
+  log("Registration: confirm your email", await sendOne([to], T(`Confirm your email to finish registering with ${school}`),
+    `Hello ${first},\n\nThank you for registering with ${school}. Please confirm your email address to finish setting up your account:\n\n${base}/account/sign-in?t=EXAMPLE\n\nThe link works once, for the next 24 hours, and signs you in. Your basket will be waiting for you.\n\nIf you didn’t register, you can ignore this email and the account won’t be used.\n\n${school}`, { tag: "email-test" }));
+
   // 10: taster booked (website taster form)
   log("Taster booked confirmation", await sendHtml(T("Sam’s taster lesson is booked"), `<div style="font-family:Arial,sans-serif;font-size:15px;line-height:1.55;color:#1a1f3d;max-width:600px">
     <p>Hello ${esc(first)},</p><p>Thank you for booking a free taster lesson for <b>Sam Example</b> at ${esc(school)}. Here’s what’s booked:</p>

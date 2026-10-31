@@ -11,14 +11,24 @@ const TERMS_URL = "https://ohsoed.co.uk/terms-conditions";
 const HEARD = ["Facebook", "Instagram", "Google", "A friend or family member", "Home-ed group", "Other"];
 
 // Parent registration (31 Oct): needed before checking out. The parent's details, then each child; signed-in parents use it to add a child.
-export default async function Register({ searchParams }: { searchParams: Promise<{ next?: string; error?: string }> }) {
+export default async function Register({ searchParams }: { searchParams: Promise<{ next?: string; error?: string; check?: string }> }) {
   const [sp, fam, codes] = await Promise.all([searchParams, currentFamily(), cartCodes()]);
   const parent = fam?.kind === "parent" ? fam : null;
   const next = sp.next && /^\/(cart|parent)/.test(sp.next) ? sp.next : codes.length ? "/cart" : "/parent";
+  if (sp.check && !parent) return (<>
+    <section className="s-phead"><div className="wrap"><h1>Check your email</h1><p>One last step: confirm your email address.</p></div></section>
+    <section className="s-sec"><div className="wrap rg-wrap"><div className="bk-tile bk-done" role="status">
+      {sp.error && <p className="notice err" role="alert">{sp.error}</p>}
+      <p className="ab-k">Confirm your email</p><h2>We’ve sent you a link</h2>
+      <p>We’ve emailed <b>{sp.check}</b> a link to confirm it’s you. Press it to finish registering: you’ll be signed in and taken back to your basket to check out.</p>
+      <p>The link works for 24 hours. It can take a minute to arrive, so check your spam folder too.</p>
+      <div className="cd-hbtns"><Link href="/account?next=cart">Send a new link</Link>{codes.length > 0 && <Link href="/cart">Back to basket</Link>}</div>
+    </div></div></section>
+  </>);
   return (<>
     <section className="s-phead"><div className="wrap"><h1>{parent ? "Add a child" : "Register"}</h1>
       <p>{parent ? `Signed in as ${parent.first} ${parent.last}. Add a child to your account, then choose them for each course in your basket.`
-        : "Create your family account: your details, then your children. You’ll be signed in straight away and can check out."}</p>
+        : "Create your family account: your details, then your children. We’ll email you a link to confirm your address, then you can check out."}</p>
       <div className="cd-hbtns">{codes.length > 0 && <Link href="/cart">← Back to basket</Link>}{!parent && <Link href="/account?next=cart">I already have an account</Link>}</div>
     </div></section>
     <section className="s-sec"><div className="wrap rg-wrap">
@@ -38,7 +48,7 @@ export default async function Register({ searchParams }: { searchParams: Promise
           <label className="bk-check"><input type="checkbox" name="terms" required /><span>I agree to the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a></span></label></>}
         <label className="hp" aria-hidden="true">Leave this empty<input name="website" tabIndex={-1} autoComplete="off" /></label>
         <button className="wk-go bk-go" type="submit">{parent ? "Add child" : "Create my account"}</button>
-        {!parent && <p className="note">You sign in with a link we email you, so there’s no password to remember.</p>}
+        {!parent && <p className="note">We’ll email you a link to confirm your address. You always sign in with an emailed link, so there’s no password to remember.</p>}
       </form>
     </div></section>
   </>);

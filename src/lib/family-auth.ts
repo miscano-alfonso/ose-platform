@@ -42,8 +42,22 @@ async function startSession(parentId: string | null, studentId: string | null, v
   (await cookies()).set(FAMILY_COOKIE, token, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: hours * 3600 });
 }
 
-/** A parent who has just registered on the website: signed in straight away on this device (30 days). */
-export async function startParentSession(parentId: string) { await startSession(parentId, null, null, DAYS * 24); }
+/** A parent who has just registered on the website: email a link to confirm the address. Pressing it signs them in (and marks the email
+ *  as confirmed), so nobody can use an account made with someone else's email. The link works once, for 24 hours. */
+export async function sendVerifyLink(parentId: string, base: string): Promise<{ ok: boolean; error?: string }> {
+  const r = await withSchool(async (q) => {
+    const p = (await q<{ first: string; email: string }>(`select first_name as first, email::text from parents where id = $1`, [parentId]))[0];
+    if (!p) return null;
+    const token = randomBytes(32).toString("base64url");
+    await q(`insert into family_links (school_id, parent_id, token_hash, expires_at) values (current_school(), $1, $2, now() + interval '24 hours')`, [parentId, sha256(token)]);
+    const school = (await q<{ name: string }>(`select name from schools where id = current_school()`))[0]?.name ?? "OH-SO ED";
+    return { ...p, token, school };
+  });
+  if (!r) return { ok: false, error: "That account wasn’t found." };
+  return sendOne([{ name: r.first, email: r.email }], `Confirm your email to finish registering with ${r.school}`,
+    `Hello ${r.first},\n\nThank you for registering with ${r.school}. Please confirm your email address to finish setting up your account:\n\n${base}/account/sign-in?t=${r.token}\n\nThe link works once, for the next 24 hours, and signs you in. Your basket will be waiting for you.\n\nIf you didn’t register, you can ignore this email and the account won’t be used.\n\n${r.school}`,
+    { tag: "register-verify" });
+}
 
 /** The emailed link: use it once, start a session, and say where to go. */
 export async function redeemSignInLink(token: string): Promise<"parent" | "student" | null> {
