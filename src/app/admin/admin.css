@@ -811,3 +811,15 @@
 .adm .fx-send{background:rgba(104,187,228,.14);border-color:rgba(104,187,228,.45)}
 .adm .fx-send svg,.adm .fx-send b{color:#8fd0f0}
 .adm .fx-send a{color:#fff;text-decoration:underline;text-underline-offset:3px}
+/* menu foot (31 Oct): Sign out on the left; the sun/moon switch and the hide-menu button on the right, in one row */
+.adm .side .side-foot{padding-bottom:16px}
+.adm .side .sf-row{justify-content:flex-start}
+.adm .side .sf-row .sf-grow{flex:1}
+.adm .theme-ico,.adm .side .sf-row .side-toggle{width:36px;height:36px;min-width:36px;padding:0;display:inline-grid;place-items:center;border-radius:50%;border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.06);color:#fff;cursor:pointer;transition:background-color .2s,color .2s,border-color .2s}
+.adm .theme-ico:hover,.adm .theme-ico:focus-visible,.adm .side .sf-row .side-toggle:hover,.adm .side .sf-row .side-toggle:focus-visible{background:#68bbe4;border-color:#68bbe4;color:#050f2d}
+.adm .side .sf-row .side-toggle{position:static}
+/* menu hidden: the button stays in view at the bottom left of the screen to bring it back */
+.adm .app.side-closed .side .sf-row .side-toggle{position:fixed;left:12px;bottom:14px;width:auto;padding:0 12px;border-radius:999px;gap:6px;display:inline-flex;align-items:center;visibility:visible;background:var(--brand);border-color:var(--brand);color:#fff}
+/* the round buttons follow the menu's own colours (dark text on the light menu) */
+.adm .theme-ico,.adm .side .sf-row .side-toggle{border-color:var(--line);background:var(--panel);color:var(--ink)}
+.adm .app.side-closed .side .sf-row .side-toggle{background:var(--brand);border-color:var(--brand);color:#fff}

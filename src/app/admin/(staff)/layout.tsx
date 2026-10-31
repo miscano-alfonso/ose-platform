@@ -51,7 +51,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports }} groups={await menuFor("teacher")} />
-        <SideFoot theme={theme} signOut={signOutAction} inline />
+        <SideFoot theme={theme} signOut={signOutAction} inline toggle />
       </aside>
       <main className="main"><TopBar />{children}</main>
     </div></div>;
