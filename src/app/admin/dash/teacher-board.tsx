@@ -1,6 +1,6 @@
 import { NotifyBell } from "../../NotifyBell";
 import Link from "next/link";
-import { LessonClock, LessonCountdown } from "../../LessonClock";
+import { LessonClock, LessonLinkButton } from "../../LessonClock";
 import { myDay, teacherEmails, myChats, pointsGiven } from "@/lib/teacher-area";
 import { teacherStream } from "@/lib/classroom-stream";
 import { SlidesButton } from "../(staff)/teacher/SlidesButton";
@@ -40,14 +40,13 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
 </div>}
       <div className="fx-foot">{next && (next.birthdays?.length || next.send?.length) ? <div className="fx-notes">{!!next.birthdays?.length && <p className="fx-bday"><span className="fx-nh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 1.2 1.5 2.1 1.5 2.8a1.5 1.5 0 0 1-3 0c0-.7.5-1.6 1.5-2.8zM11.2 8h1.6v3h-1.6zM4 13a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.2c-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-.7.6-1.3.9-2 .9zM4 17.5c.7 0 1.4-.2 2-.7 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 .6.5 1.3.7 2 .7V21H4z" fill="currentColor"/></svg><span className="sr-only">Birthdays</span></span>
           <span className="fx-lines">{next.birthdays.map((b, i) => <span key={i}><b>{b.name}</b> · {b.d === today ? "today" : `${wd(b.d)} ${dm(b.d)}`} · turns {b.age}</span>)}</span></p>}
-        {!!next.send?.length && <p className="fx-bday fx-send"><span className="fx-nh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm0 4.2a1.6 1.6 0 1 1 0 3.2 1.6 1.6 0 0 1 0-3.2zM14 17h-4v-1.6h1.2v-3.8H10V10h3v5.4h1z" fill="currentColor"/></svg><Link href={`/admin/register/${next.id}`}><b>SEND</b> in this class</Link></span>
+        {!!next.send?.length && <Link className="fx-bday fx-send" href={`/admin/register/${next.id}`} title="SEND in this class: open the class list">
+          <span className="fx-nh"><span className="fx-sicon" aria-hidden="true">S</span><span className="sr-only">SEND in this class</span></span>
           <span className="fx-lines">{next.send.map((x, i) => { const m = /^(.*?) \((.*)\)$/.exec(x);
-            return <span key={i}><b className="fx-nm">{m ? m[1] : x}</b>{m ? ` · ${m[2]}` : ""}</span>; })}</span></p>}</div> : null}
-        <div className="fx-btns fx-btns-r">{next && (next.meet_url ? <a className="go fx-meet" href={next.meet_url} target="_blank" rel="noopener">{joinLabel(next.meet_url)}</a>
-          : <span className="fx-nomeet fx-meet" title="The office adds the Meet link to the class">Meet link</span>)}
-          {next && <LessonCountdown date={next.d} time={next.time} />}
-          {next && <Link className="fx-att" href={`/admin/register/${next.id}`}>Attendance</Link>}
-</div></div></section> },
+            return <span key={i}><b className="fx-nm">{m ? m[1] : x}</b>{m ? ` · ${m[2]}` : ""}</span>; })}</span></Link>}</div> : null}
+        {next && <div className="fx-btns fx-btns-r"><LessonLinkButton date={next.d} time={next.time} url={next.meet_url ?? null} title={next.meet_url ? joinLabel(next.meet_url) : undefined} />
+          <Link className="fx-att" href={`/admin/register/${next.id}`}>Attendance</Link>
+        </div>}</div></section> },
     { id: "reports-pop", title: "Reports to write", node: <Link href="/admin/teacher/reports" className="dx-pop c4"><span>{d.reportCycle ?? "Reports"}</span>
         <b className="fx-big">{d.reportsLeft}</b>
         {total > 0 && <span className="fx-pop-prog"><span className="fx-pop-bar" role="img" aria-label={`${rpct}% of reports written`}><i style={{ width: `${rpct}%` }} /></span><small>{done} of {total} written · {rpct}%</small></span>}

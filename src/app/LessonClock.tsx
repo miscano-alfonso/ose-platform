@@ -59,3 +59,15 @@ export function LessonCountdown({ date, time, withTime }: { date: string; time: 
   const t = untilText(at(date, time), now);
   return t ? <span className="fx-cd" aria-live="polite">{withTime && t !== "on now" ? `${time.slice(0, 5)} · ${t}` : t}</span> : null;
 }
+
+/** The hero's lesson button (31 Oct): shows the time left ("in 3 days", "in 2 h 5 min") until 5 minutes before the start,
+ *  then "Lesson link". Without a link it's a dashed placeholder with the same countdown. */
+export function LessonLinkButton({ date, time, url, title }: { date: string; time: string; url: string | null; title?: string }) {
+  const now = useNow(15000);
+  const start = at(date, time);
+  const soon = now != null && start - now <= 5 * 60e3;
+  const label = now == null || soon ? "Lesson link" : untilText(start, now) || "Lesson link";
+  const txt = label.charAt(0).toUpperCase() + label.slice(1);
+  return url ? <a className={`go fx-meet${soon ? "" : " wait"}`} href={url} target="_blank" rel="noopener" title={soon ? title : `Lesson link · opens Google Meet${title ? ` (${title})` : ""}`}>{txt}</a>
+    : <span className="fx-nomeet fx-meet" title="The office adds the lesson link to the class">{txt}</span>;
+}

@@ -992,3 +992,20 @@
 /* when the hero is too narrow for the countdown to sit beside Attendance without touching the SEND box, it goes under it */
 .adm .fx .dx-hero.has-clock{container-type:inline-size}
 @container (max-width:980px){.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-cd{grid-column:2;grid-row:3;justify-self:center}}
+/* 31 Oct: the clock and the two buttons share one centre line; the countdown hangs to Attendance's left (under it when narrow) */
+.adm .fx .dx-hero .fx-side .lclock{margin:0;align-self:center}
+.adm .fx .dx-hero .fx-side{align-items:center}
+.adm .fx .dx-hero .fx-foot .fx-btns-r{grid-column:-2;justify-self:center;display:flex;flex-direction:column;align-items:center;gap:10px}
+.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-attw{position:relative;display:inline-flex}
+.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-attw .fx-cd{position:absolute;right:calc(100% + 14px);top:50%;transform:translateY(-50%);white-space:nowrap;padding:0}
+/* the time left shows inside the lesson button until 5 minutes before the start (LessonLinkButton) */
+.adm .fx .dx-hero .fx-btns a.go.fx-meet.wait{background:transparent;color:var(--pop,#e9f56a);border-color:var(--pop,#e9f56a)}
+.adm[data-palette=demo] .fx .dx-hero .fx-btns a.go.fx-meet.wait{color:#ffb3c6;border-color:#ffb3c6}
+@media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{justify-self:start;align-items:flex-start}}
+/* more room between "Hello Jade" and the course title */
+.adm .fx .dx-hero .fx-hero-t .fx-hi{display:inline-block;margin-bottom:12px}
+/* the SEND box: an "S" badge, one student per line; the whole box opens the class list */
+.adm .fx .dx-hero a.fx-send{color:#fff;text-decoration:none;transition:background-color .15s,border-color .15s}
+.adm .fx .dx-hero a.fx-send:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.55)}
+.adm .fx-sicon{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#8fd0f0;color:#0d0f1c;font:700 11.5px/1 "Space Grotesk","Jost",sans-serif}
+.adm[data-palette=demo] .fx-sicon{background:#ffb3c6;color:#3d0d1a}
