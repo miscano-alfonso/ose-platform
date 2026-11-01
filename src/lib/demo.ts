@@ -20,7 +20,8 @@ export async function resetDemo(me: Staff): Promise<string | null> {
       await withSchool((q) => q(`select demo_threads()`)).catch((e) => console.error("demo threads", e));   // class chats as threads with replies
       await withSchool((q) => q(`select demo_contacts()`)).catch((e) => console.error("demo contacts", e)); // the Principal and IT Support teachers message
       await withSchool((q) => q(`select demo_tutoring()`)).catch((e) => console.error("demo 1:1s", e));   // past and upcoming 1:1 lessons
-      await withSchool((q) => q(`select demo_send()`)).catch((e) => console.error("demo SEND", e));        // SEND details and birthdays coming up
+      await withSchool((q) => q(`select demo_send()`)).catch((e) => console.error("demo SEND", e));
+      await withSchool((q) => q(`select demo_genders()`)).catch((e) => console.error("demo genders", e));   // so report drafts use he/she/they        // SEND details and birthdays coming up
     });
     return null;
   } catch (e) { console.error("demo reset", e); return "Couldn’t make the demo school: " + (e instanceof Error ? e.message : String(e)).slice(0, 200); }

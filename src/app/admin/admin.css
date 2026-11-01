@@ -1061,3 +1061,22 @@
 .adm .fx .dx-hero .fx-foot .fx-btns-r .fx-tasters{align-self:stretch;min-width:200px;align-content:start}
 @media (min-width:1251px){.adm .bb-cell.s-xl .dx-hero.has-clock .fx-foot .fx-btns-r .fx-tasters{width:calc(2 * var(--c) + 16px);min-width:0}}
 @media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{flex-wrap:wrap}}
+/* 1 Nov: report writing: scores stacked on the left, the comment on the right (shorter lines, easier to read) */
+.adm .wr-body{display:grid;grid-template-columns:minmax(260px,320px) minmax(0,1fr);gap:20px;margin-top:12px;align-items:start}
+.adm .wr-scores{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.adm .wr-scores .fld select{width:100%}
+.adm .wr-scores .wr-sug{grid-column:1/-1;margin:0}
+.adm .wr-chead{display:flex;align-items:flex-end;justify-content:space-between;gap:10px;margin-bottom:6px}
+.adm .wr-chead .wr-acts{margin:0}
+.adm .aid-wrap{display:block}.adm .aid-box{position:relative}
+.adm .aid-box textarea{min-height:190px;line-height:1.55;max-width:none}
+.adm .aid-all{display:inline-flex;align-items:center;gap:10px}.adm .aid-all-msg{font-size:13.5px;color:var(--muted);max-width:420px}
+@media (max-width:900px){.adm .wr-body{grid-template-columns:1fr}}
+/* 1 Nov: on wide screens the Tasters, birthday and SEND boxes are one row of equal boxes with equal 16px gaps, the lesson button on the left */
+@media (min-width:1251px){
+  .adm .bb-cell.s-xl .dx-hero.has-clock .fx-foot{grid-template-columns:minmax(0,1fr) repeat(3,calc(2 * var(--c) + 8px))}
+  .adm .bb-cell.s-xl .dx-hero.has-clock .fx-foot .fx-btns-r{display:contents}
+  .adm .bb-cell.s-xl .dx-hero.has-clock .fx-foot .fx-btns-r .fx-meet{grid-column:1;grid-row:1;justify-self:start;align-self:end}
+  .adm .bb-cell.s-xl .dx-hero.has-clock .fx-foot .fx-btns-r .fx-tasters{grid-column:2;grid-row:1;width:auto;min-width:0}
+  .adm .bb-cell.s-xl .dx-hero.has-clock .fx-notes{grid-column:3/5}
+}

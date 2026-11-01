@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
 import { getWriteSheet } from "@/lib/reports";
 import { saveWriteSheetAction } from "../../../../actions";
-import { AiDraft } from "./AiDraft";
+import { AiDraft, AiDraftAll } from "./AiDraft";
 import { suggestGrades } from "@/lib/grades";
 
 const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" });
@@ -23,7 +23,7 @@ export default async function Write({ params, searchParams }: { params: Promise<
     <p className="backlink"><a className="abtn sm" href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a></p>
       <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · comments due {day(h.comments_due)}</div></div>
         <span className="grow" />{!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
-          <SubmitAll /></div>}</div>
+          <AiDraftAll /><SubmitAll /></div>}</div>
       {!sp.r && sp.ok && <p className="note msg">{sp.ok}</p>}{!sp.r && sp.err && <p className="note msg bad">{sp.err}</p>}
       <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters. A report can be submitted once the term’s assessment is marked in Classroom, or once you’ve said why there isn’t one.</p>
     </div>
@@ -42,19 +42,23 @@ export default async function Write({ params, searchParams }: { params: Promise<
             <input name={`noassess_${r.id}`} defaultValue={r.no_assessment ?? ""} placeholder="e.g. absent, joined late" maxLength={200} disabled={ro} className="mini" style={{ width: 220 }} /></label>}</div>
         {r.status === "returned" && r.review_note && <p className="note msg bad">Sent back: {r.review_note}</p>}
         {here && (sp.ok || sp.err) && <p className={`note msg${sp.err ? " bad" : ""}`} role="status">{sp.err ?? sp.ok}</p>}
-        <div className="eform wr-row" style={{ margin: "10px 0" }}>
-          <label className="fld">Progress<select name={`progress_${r.id}`} defaultValue={r.progress_override ?? ""} disabled={ro}><option value="">{r.auto_progress ? `From marks (${r.auto_progress})` : "Choose"}</option>{scale(5).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
-          <label className="fld">Effort<select name={`effort_${r.id}`} defaultValue={r.effort ?? ""} disabled={ro}><option value="">Choose</option>{scale(5).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
-          {h.gcse && <><label className="fld">Working grade<select name={`working_${r.id}`} defaultValue={r.working_grade ?? sg?.working ?? ""} disabled={ro}><option value="">—</option>{scale(9).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
-            <label className="fld">Predicted grade<select name={`predicted_${r.id}`} defaultValue={r.predicted_grade ?? sg?.predicted ?? ""} disabled={ro}><option value="">—</option>{scale(9).map((n) => <option key={n} value={n}>{n}</option>)}</select></label></>}
-          {!ro && <div className="wr-acts">
-            <button className="abtn sm" type="submit" name="one" value={`${r.id}:0`}>Save draft</button>
-            <button className="abtn sm pri" type="submit" name="one" value={`${r.id}:1`}>Submit</button></div>}
+        {/* 1 Nov: the scores stacked on the left (2 × 2), the comment on the right with Save draft / Submit above it */}
+        <div className="wr-body">
+          <div className="wr-scores">
+            <label className="fld">Progress<select name={`progress_${r.id}`} defaultValue={r.progress_override ?? ""} disabled={ro}><option value="">{r.auto_progress ? `From marks (${r.auto_progress})` : "Choose"}</option>{scale(5).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+            <label className="fld">Effort<select name={`effort_${r.id}`} defaultValue={r.effort ?? ""} disabled={ro}><option value="">Choose</option>{scale(5).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+            {h.gcse && <><label className="fld">Working grade<select name={`working_${r.id}`} defaultValue={r.working_grade ?? sg?.working ?? ""} disabled={ro}><option value="">—</option>{scale(9).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
+              <label className="fld">Predicted grade<select name={`predicted_${r.id}`} defaultValue={r.predicted_grade ?? sg?.predicted ?? ""} disabled={ro}><option value="">—</option>{scale(9).map((n) => <option key={n} value={n}>{n}</option>)}</select></label></>}
+            {sg?.working != null && r.working_grade == null && !ro && <p className="wr-sug">Grades suggested from Classroom marks ({sg.basis}), using typical Edexcel iGCSE boundaries. Check them before saving.</p>}
+          </div>
+          <div className="aid-wrap">
+            <div className="wr-chead"><label className="fld" htmlFor={`comment_${r.id}`}>Comment and targets</label>
+              {!ro && <div className="wr-acts">
+                <button className="abtn sm" type="submit" name="one" value={`${r.id}:0`}>Save draft</button>
+                <button className="abtn sm pri" type="submit" name="one" value={`${r.id}:1`}>Submit</button></div>}</div>
+            <div className="aid-box"><textarea id={`comment_${r.id}`} name={`comment_${r.id}`} defaultValue={r.comment ?? ""} rows={7} maxLength={2000} disabled={ro} className="mini" style={{ width: "100%" }} />
+              {!ro && <AiDraft id={r.id} auto={r.auto_progress ?? null} has={!!r.comment} />}</div></div>
         </div>
-        {sg?.working != null && r.working_grade == null && !ro && <p className="wr-sug">Suggested grades from Classroom marks ({sg.basis}), using typical Edexcel iGCSE boundaries. Check them before saving.</p>}
-        <div className="aid-wrap"><label className="fld" htmlFor={`comment_${r.id}`}>Comment and targets</label>
-          <textarea id={`comment_${r.id}`} name={`comment_${r.id}`} defaultValue={r.comment ?? ""} rows={5} maxLength={2000} disabled={ro} className="mini" style={{ width: "100%" }} />
-          {!ro && <AiDraft id={r.id} auto={r.auto_progress ?? null} />}</div>
       </section>; })}
     </form>}
   </>;

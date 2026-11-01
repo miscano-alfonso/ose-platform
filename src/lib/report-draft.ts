@@ -13,13 +13,14 @@ type Ctx = {
   previous: { cycle: string; klass: string; comment: string; effort: number | null; working: number | null; predicted: number | null }[];
   work: { title: string; due: string | null; max: number | null; points: number | null; state: string; late: boolean; missing: boolean; rubric: unknown }[];
   rewards: { points: number; reason: string; on: string }[];
-  att: number | null; lessons: number;
+  att: number | null; lessons: number; gender: string | null;
+  style: string[];   // the teacher's own writing (their earlier report comments, messages to families, class-chat posts), to match their voice
 };
 
 async function context(actor: { id: string; role: string }, entryId: string): Promise<Ctx | null> {
   return withSchool(async (q) => {
-    const e = (await q<Omit<Ctx, "previous" | "work" | "rewards"> & { student_id: string }>(`
-      select e.student_id, s.first_name || ' ' || s.last_name as student, coalesce(nullif(s.known_as, ''), s.first_name) as first, l.name || ' ' || sj.name as klass,
+    const e = (await q<Omit<Ctx, "previous" | "work" | "rewards" | "style"> & { student_id: string; teacher_user: string | null; teacher_id: string | null }>(`
+      select e.student_id, nullif(s.gender, '') as gender, t.user_id as teacher_user, t.id as teacher_id, s.first_name || ' ' || s.last_name as student, coalesce(nullif(s.known_as, ''), s.first_name) as first, l.name || ' ' || sj.name as klass,
         c.name as cycle, coalesce(tu.name, '') as teacher, (l.name ilike '%GCSE%' and l.name not ilike 'Pre-%') as gcse, e.group_id, c.marks_from::text, c.comments_due::text,
         (select round(100.0 * count(*) filter (where m.mark in ('present','late')) / nullif(count(*) filter (where m.mark <> 'approved_absence'), 0))::int
            from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id where ev.group_id = e.group_id and m.student_id = e.student_id and ev.lesson_date >= c.marks_from - 14) as att,
@@ -41,7 +42,15 @@ async function context(actor: { id: string; role: string }, entryId: string): Pr
       order by cw.due_at nulls last limit 25`, [e.student_id, e.group_id, e.marks_from, e.comments_due]);
     const rewards = await q<Ctx["rewards"][number]>(`select points, reason, awarded_on::text as on from reward_points
       where student_id = $1 and group_id = $2 and awarded_on >= $3::date - 14 order by awarded_on desc limit 15`, [e.student_id, e.group_id, e.marks_from]);
-    return { ...e, previous, work, rewards };
+    // the teacher's own words, newest first: report comments for other students, messages to parents, class-chat posts
+    const style = e.teacher_id ? (await q<{ t: string }>(`
+      (select x.comment as t, coalesce(x.submitted_at, now() - interval '1 year') as at from report_entries x join course_groups g2 on g2.id = x.group_id
+         where (x.teacher_id = $1 or (x.teacher_id is null and g2.teacher_id = $1)) and x.student_id <> $2 and coalesce(x.comment, '') <> '' order by 2 desc limit 6)
+      union all (select m.body, m.created_at from messages m join message_threads th on th.id = m.thread_id
+         where th.teacher_id = $1 and m.sender = 'teacher' and char_length(m.body) > 60 order by m.created_at desc limit 4)
+      union all (select cm.body, cm.created_at from student_chat_messages cm where cm.sender_teacher_id = $1 and char_length(cm.body) > 40 order by cm.created_at desc limit 4)
+      order by 2 desc limit 10`, [e.teacher_id, e.student_id]).catch(() => [])).map((r) => r.t.slice(0, 500)) : [];
+    return { ...e, previous, work, rewards, style };
   });
 }
 
@@ -52,7 +61,8 @@ Write ONE comment for the student, as the teacher, in British English: warm, spe
 - If there is a previous report, build on it: note progress on earlier targets where the evidence shows it, and don't repeat its wording.
 - Use the effort and progress scores the teacher has chosen as the overall tone.
 - Only use facts given to you. Never invent marks, events, quotes or diagnoses. Don't mention SEND, attendance percentages or reward point totals by number.
-- Use the student's first name, and they/their unless the previous reports clearly use he or she.
+- Use the student's first name, and the pronouns given with the student (he/him/his, she/her or they/their). If none are given, use they/their.
+- Write in the teacher's own voice: when examples of their writing are given, match their tone, warmth, sentence length and the way they phrase praise and targets (without copying sentences).
 Reply with the comment only.`;
 
 /** A first draft of the comment for one report entry. `scores` are what the teacher has picked on the page right now. */
@@ -72,13 +82,14 @@ export async function draftComment(actor: { id: string; role: string }, entryId:
   const chat = demo ? [] : await studentChatLines(c.group_id, [c.student, c.first], c.marks_from, 25).catch(() => []);
   const pct = (w: Ctx["work"][number]) => w.points != null && w.max ? ` ${w.points}/${w.max} (${Math.round(w.points / w.max * 100)}%)` : "";
   const facts = [
-    `Student: ${c.first} (${c.student}). Class: ${c.klass}. Report: ${c.cycle}. Teacher: ${c.teacher || "the class teacher"}.`,
+    `Student: ${c.first} (${c.student}). Pronouns: ${c.gender === "Male" ? "he/him/his" : c.gender === "Female" ? "she/her" : "they/their"}. Class: ${c.klass}. Report: ${c.cycle}. Teacher: ${c.teacher || "the class teacher"}.`,
     `Scores chosen by the teacher (1-5, 5 = exceeding): effort ${scores.effort ?? "not chosen yet"}, progress ${scores.progress ?? "not chosen yet"}.${c.gcse ? ` GCSE grades: working ${scores.working ?? "-"}, predicted ${scores.predicted ?? "-"}.` : ""}`,
     c.lessons ? `Attendance this term: ${c.att != null && c.att >= 95 ? "excellent" : c.att != null && c.att >= 85 ? "good" : "some lessons missed"} (${c.lessons} lessons registered).` : "",
     c.work.length ? `Classroom work this term:\n${c.work.map((w) => `- "${w.title}"${w.due ? `, due ${w.due}` : ""}: ${w.state === "returned" ? `marked${pct(w)}` : w.state === "turned_in" ? "handed in, not marked yet" : w.missing ? "not handed in" : "not due yet"}${w.late ? ", handed in late" : ""}${w.rubric ? `; rubric: ${JSON.stringify(w.rubric).slice(0, 400)}` : ""}`).join("\n")}` : "No Classroom work recorded this term.",
     c.rewards.length ? `Reward points from the teacher, with reasons:\n${c.rewards.map((r) => `- ${r.on}: +${r.points} for "${r.reason}"`).join("\n")}` : "",
     chat.length ? `Things ${c.first} wrote in the lesson chat (Google Meet) recently, as evidence of how they take part:\n${chat.map((l) => `- ${l.day}: "${l.text}"`).join("\n")}` : "",
     c.previous.length ? `Earlier reports:\n${c.previous.map((p) => `- ${p.cycle}, ${p.klass}${p.effort ? `, effort ${p.effort}` : ""}${p.working ? `, working grade ${p.working}` : ""}${p.predicted ? `, predicted ${p.predicted}` : ""}: "${p.comment.slice(0, 900)}"`).join("\n")}` : "No earlier reports.",
+    c.style.length ? `Examples of how ${c.teacher || "this teacher"} writes (match this voice; don't copy sentences or details about other students):\n${c.style.map((t) => `- "${t.replace(/\s+/g, " ")}"`).join("\n")}` : "",
   ].filter(Boolean).join("\n\n");
   try {
     const res = await fetch(process.env.ANTHROPIC_API_URL || "https://api.anthropic.com/v1/messages", {
