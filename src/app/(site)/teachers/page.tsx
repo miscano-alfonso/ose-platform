@@ -1,24 +1,4 @@
-import type { Metadata } from "next";
-import Link from "@/app/(site)/HoverLink";
-import { getTeachers } from "@/lib/data";
-import { siteText } from "@/lib/site-content";
+import { permanentRedirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "Teachers", description: "Meet the OH-SO ED teachers: experienced secondary subject specialists teaching live online lessons." };
-
-export default async function Teachers() {
-  const [ts, txt] = await Promise.all([getTeachers(), siteText()]);
-  return (<>
-    <section className="s-phead"><div className="wrap"><h1>Our Teachers</h1><p>{txt.teachers_intro}</p></div></section>
-    <section className="s-sec"><div className="wrap"><div className="tgrid tcols" style={{ ["--cols" as string]: Math.min(Math.max(ts.length, 1), 5) }}>{ts.map((t) =>
-      <Link className="tcard tlink" key={t.slug} href={`/teachers/${t.slug}`}>
-        {t.photo
-          // eslint-disable-next-line @next/next/no-img-element
-          ? <img className="tphoto" src={t.photo} alt="" width={640} height={480} loading="lazy" />
-          : <div className="tav" aria-hidden="true">{t.name.split(" ").map((p) => p[0]).join("")}</div>}
-        <h2>{t.name}</h2><p className="role">{t.designation}</p>{t.subjects?.length ? <p className="subs">{t.subjects.join(" · ")}</p> : null}
-        <span className="tmore">Read more →</span></Link>)}</div>
-      <div className="tjoin-tile"><div><p className="k">Join our team</p><h2>{txt.teach_title}</h2>{txt.teach_text && <p>{txt.teach_text}</p>}</div>
-        <Link className="btn btn-brand" href="/jobs">{txt.teach_button} →</Link></div></div></section>
-  </>);
-}
+// The Teachers page is now People (1 Nov). Teachers' own profile pages stay at /teachers/<name>.
+export default function Teachers() { permanentRedirect("/people"); }

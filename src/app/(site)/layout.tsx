@@ -22,7 +22,7 @@ import "./bento.css";
 export const dynamic = "force-dynamic";
 
 // same order as the current website's menu
-const NAV = [["Courses", "/courses"], ["More", "/other-services"], ["Term dates", "/term-dates"], ["Teachers", "/teachers"],
+const NAV = [["Courses", "/courses"], ["More", "/other-services"], ["Term dates", "/term-dates"], ["People", "/people"],
   ["Prices", "/pricing"], ["Timetable", "/timetable"], ["Contact", "/contact"]];
 // on the home page as tiles and in the footer, not in the top menu
 const MORE = [["FAQs", "/faq"], ["New to Home Ed?", "/home-ed"]];

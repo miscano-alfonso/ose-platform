@@ -72,7 +72,7 @@ export async function setRunStatus(actorId: string, runId: string, to: "approved
 }
 
 // ---------- the prototype's Payroll view: one term at a time ----------
-const RATE = (lvl: string, tch: string, d: string) => `coalesce(
+export const RATE = (lvl: string, tch: string, d: string) => `coalesce(
   (select r.rate_pence from pay_rates r where r.level_id = ${lvl} and r.teacher_id = ${tch} and r.valid_from <= ${d} order by r.valid_from desc limit 1),
   (select r.rate_pence from pay_rates r where r.level_id = ${lvl} and r.teacher_id is null and r.valid_from <= ${d} order by r.valid_from desc limit 1), 0)`;
 export type PayTermOpt = { id: string; number: number; name: string; starts_on: string; ends_on: string; pay_date: string; run_id: string | null; status: string | null };

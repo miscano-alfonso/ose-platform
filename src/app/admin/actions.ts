@@ -276,7 +276,7 @@ export async function setClassTeacherAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const mins = Math.max(15, Math.min(180, parseInt(str(f, "minutes", 3), 10) || 45));
   const err = await setClassTeacher(me.id, str(f, "group", 40), str(f, "teacher", 40) || null, mins);
-  revalidatePath("/admin/timetable"); revalidatePath("/admin/timetable-setup"); revalidatePath("/teachers"); revalidatePath("/courses");
+  revalidatePath("/admin/timetable"); revalidatePath("/admin/timetable-setup"); revalidatePath("/teachers"); revalidatePath("/people"); revalidatePath("/courses");
   back("/admin/timetable-setup", err, "Class updated.");
 }
 
@@ -501,15 +501,41 @@ export async function saveTeacherAction(f: FormData): Promise<void> {
     if (e2) return back("err", e2);
     linked = true;
   }
-  revalidatePath("/admin/teachers"); revalidatePath("/teachers", "layout");
+  revalidatePath("/admin/teachers"); revalidatePath("/teachers", "layout"); revalidatePath("/people");
   back(err ? "err" : "ok", err ?? (linked ? `Profile saved and joined to the admin account ${email}. Open it from Viewing as → Teacher: ${name} (bottom of the menu).` : "Profile saved."));
 }
 export async function archiveTeacherAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const id = str(f, "id", 40);
   await setTeacherArchived(me.id, id, str(f, "archive", 1) === "1");
-  revalidatePath("/admin/teachers"); revalidatePath("/teachers", "layout");
+  revalidatePath("/admin/teachers"); revalidatePath("/teachers", "layout"); revalidatePath("/people");
   redirect(`/admin/teachers/${id}`);
+}
+
+// ---------- the People page: people who aren't teachers (1 Nov) ----------
+export async function savePersonAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const back = (k: string, m: string) => redirect(`/admin/teachers?${k}=${encodeURIComponent(m)}#people`);
+  if (me.role !== "school_admin") return back("err", "Only a school admin can change this.");
+  const file = f.get("photo");
+  let photo: { data: Buffer; type: string } | null = null;
+  if (file instanceof File && file.size > 0) {
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) return back("err", "The photo must be a JPG, PNG or WebP.");
+    if (file.size > 3 * 1024 * 1024) return back("err", "The photo must be under 3 MB.");
+    photo = { data: Buffer.from(await file.arrayBuffer()), type: file.type };
+  }
+  const id = str(f, "id", 40);
+  const { savePerson } = await import("@/lib/people");
+  const err = await savePerson(me.id, { id: /^[0-9a-f-]{36}$/.test(id) ? id : undefined, name: str(f, "name", 80), role: str(f, "role", 80),
+    sortOrder: Math.max(-1, Math.min(99, parseInt(str(f, "sort", 3), 10) || 0)), hidden: f.get("hidden") === "on", photo, removePhoto: f.get("remove_photo") === "on" });
+  revalidatePath("/admin/teachers"); revalidatePath("/people");
+  back(err ? "err" : "ok", err ?? "Saved. It shows on the People page.");
+}
+export async function removePersonAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  if (me.role === "school_admin") { const id = str(f, "id", 40); if (/^[0-9a-f-]{36}$/.test(id)) { const { removePerson } = await import("@/lib/people"); await removePerson(me.id, id); } }
+  revalidatePath("/admin/teachers"); revalidatePath("/people");
+  redirect("/admin/teachers?ok=Removed.#people");
 }
 
 // ---------- workshops: create and edit ----------
@@ -1307,6 +1333,15 @@ export async function recCfgAction(f: FormData): Promise<void> {
     mode: f.get("mode") === "live" ? "live" : "watch",
     minBytes: Math.max(256 * 1024, Math.round(Number(str(f, "minMb", 6) || 5) * 1024 * 1024)) });
   recBack("settings", "Settings saved.");
+}
+// Year-end clear-out of lesson chat records and transcripts (1 Nov)
+export async function yearClearAction(f: FormData): Promise<void> {
+  const me = await recAdmin("privacy"); const R = await import("@/lib/retention");
+  const what = str(f, "do", 10);
+  if (what === "on" || what === "off") { await R.setClearOn(what === "on", me.email); recBack("privacy", what === "on" ? "Switched on. It runs once a day and only acts once an academic year has ended." : "Switched off."); }
+  if (what === "check") recBack("privacy", null, null, "&check=1");
+  if (what === "now") { const r = await R.runClear(me.email, true); recBack("privacy", r.problems.length ? null : r.moved ? `Moved ${r.moved} file${r.moved === 1 ? "" : "s"} to the bin. Each is listed below.` : "Nothing to clear.", r.problems.length ? `${r.moved} moved; ${r.problems.length} couldn’t be: ${r.problems[0]}` : null); }
+  recBack("privacy");
 }
 export async function recLessonAction(f: FormData): Promise<void> {
   await recAdmin("settings"); const R = await import("@/lib/recordings");

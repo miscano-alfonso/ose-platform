@@ -12,9 +12,9 @@ export type Course = {
   page_slug: string; teacher_slug: string | null; teacher_photo: string | null;
 };
 export type Term = { year_label: string; is_next: boolean; year_start: string; number: number; name: string; starts_on: string; ends_on: string; bills_on: string; break_start: string | null; break_end: string | null };
-export type Teacher = { name: string; slug: string; designation: string | null; bio: string | null; subjects: string[] | null; qualifications: string[]; photo: string | null };
+export type Teacher = { name: string; slug: string; designation: string | null; bio: string | null; subjects: string[] | null; qualifications: string[]; photo: string | null; sort_order?: number };
 // a photo uploaded in the admin is served from the database; otherwise the file in public/teachers
-const TEACHER_SQL = `select u.name, t.slug, t.designation, t.bio, t.qualifications,
+const TEACHER_SQL = `select u.name, t.slug, t.designation, t.bio, t.qualifications, t.sort_order,
     case when t.photo is not null then '/teacher-photo/' || t.slug || '?v=' || extract(epoch from t.photo_updated_at)::bigint else t.photo_asset end as photo,
     (select array_agg(distinct sj.name order by sj.name) from course_groups g join subjects sj on sj.id = g.subject_id
       where g.teacher_id = t.id and g.status not in ('hidden', 'closed')) as subjects

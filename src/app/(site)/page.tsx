@@ -64,7 +64,7 @@ async function BentoHome({ txt }: { txt: Record<string, string> }) {
       </section>
       <Link className="bh-t bh-pop bh-half" href="/taster"><p className="k">Free taster</p><b>Try a real lesson this week →</b></Link>
       <Link className="bh-t" href="/pricing"><p className="k">{from ? `${from.level} from` : "Prices"}</p><p className="v">{from ? from.per : "£"}<small>{from ? " a lesson" : ""}</small></p><span className="go">Price calculator →</span></Link>
-      <Link className="bh-t" href="/teachers"><p className="k">Specialist teachers</p>
+      <Link className="bh-t" href="/people"><p className="k">Specialist teachers</p>
         <div className="bh-faces">{teachers.slice(0, 6).map((t, i) => <span key={t.slug} style={{ background: COLOURS[i % COLOURS.length] }}>{t.photo
           // eslint-disable-next-line @next/next/no-img-element
           ? <img src={t.photo} alt={t.name} /> : t.name.slice(0, 1)}</span>)}</div>

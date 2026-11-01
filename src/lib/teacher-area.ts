@@ -1,7 +1,7 @@
 import "server-only";
 import { withSchool } from "./db";
 import { ensureLessonDates } from "./ops";
-import { termPayRows } from "./payroll";
+import { termPayRows, RATE } from "./payroll";
 
 // What a teacher sees in their own area (as in the prototype's teacher view: My day, 1:1s and workshops,
 // Messages, Class chats, Reward points, Reports to write, My timetable, My pay). Every query is limited to
@@ -152,6 +152,42 @@ export async function myPay(userId: string) {
     const tut = await q<{ level: string; pay: number }>(`select distinct on (l.id) l.name as level, r.teacher_pay_pence as pay from tutoring_rates r join levels l on l.id = r.level_id
       where r.minutes = 45 and r.valid_from <= current_date order by l.id, r.valid_from desc`).catch(() => []);
     return { rates, rows, tut, levels };
+  });
+}
+
+/** My pay, itemised (1 Nov): for each term this year, the lessons by class (how many, at what rate, cover lessons apart),
+ *  each 1:1 and workshop with its date, who or what, and pay, and any adjustment the office added, so a teacher can see
+ *  exactly how each term's figure is made up. The same rules as termPayRows (Payroll), so the totals agree. */
+export type PayItems = {
+  lessons: { cls: string; level: string; cover: boolean; n: number; taught: number; rate: number; pay: number }[];
+  extras: { at: string; kind: "1:1" | "workshop"; what: string; minutes: number; status: string; pay: number }[];
+};
+export async function myPayItems(userId: string): Promise<Record<string, PayItems>> {
+  return withSchool(async (q) => {
+    const lessons = await q<{ term_id: string; cls: string; level: string; cover: boolean; n: number; taught: number; rate: number; pay: number }>(`
+      select e.term_id, l.name || ' ' || sj.name as cls, l.name as level, (e.teacher_id is distinct from s.teacher_id) as cover,
+        count(*)::int as n, count(*) filter (where e.status = 'taught')::int as taught, ${RATE("g.level_id", "e.teacher_id", "e.lesson_date")}::int as rate,
+        sum(${RATE("g.level_id", "e.teacher_id", "e.lesson_date")})::int as pay
+      from lesson_events e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+        left join lesson_slots s on s.id = e.slot_id
+      where e.teacher_id = ${ME} and e.status <> 'cancelled' and e.term_id in (select id from terms where academic_year_id = ${YEAR_NOW})
+      group by e.term_id, l.sort_order, l.name, sj.name, 4, 7 order by l.sort_order, sj.name, 4`, [userId]);
+    // 1:1s and workshops, each paid with the term that ends next after it (as teacher_term_extras)
+    const extras = await q<{ term_id: string; at: string; kind: "1:1" | "workshop"; what: string; minutes: number; status: string; pay: number }>(`
+      with x as (
+        select b.starts_at, '1:1' as kind, b.student_name || ' · ' || coalesce(l.name || ' ', '') || sj.name as what, b.minutes, b.status::text as status, b.teacher_pay_pence as pay
+          from tutoring_bookings b join subjects sj on sj.id = b.subject_id left join levels l on l.id = b.level_id
+          where b.teacher_id = ${ME} and b.status in ('completed', 'no_show')
+        union all
+        select w.starts_at, 'workshop', w.title, w.minutes, w.status::text, w.teacher_pay_pence from workshops w where w.teacher_id = ${ME} and w.status = 'completed')
+      select (select t2.id from terms t2 where t2.ends_on >= (x.starts_at at time zone (select timezone from schools where id = current_school()))::date order by t2.ends_on limit 1) as term_id,
+        x.starts_at::text as at, x.kind, x.what, x.minutes, x.status, coalesce(x.pay, 0)::int as pay
+      from x order by x.starts_at`, [userId]).catch(() => []);
+    const out: Record<string, PayItems> = {};
+    const of = (id: string) => (out[id] ??= { lessons: [], extras: [] });
+    for (const l of lessons) of(l.term_id).lessons.push(l);
+    for (const x of extras) if (x.term_id) of(x.term_id).extras.push(x);
+    return out;
   });
 }
 

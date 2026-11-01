@@ -17,7 +17,7 @@ export default async function TeacherProfile({ params }: { params: Promise<{ slu
   const first = t.name.split(" ")[0];
   const paras = (t.bio ?? "").split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
   return (<>
-    <section className="s-phead"><div className="wrap"><p className="eyebrow"><Link href="/teachers">← Our teachers</Link></p><h1>{t.name}</h1><p>{t.designation}</p></div></section>
+    <section className="s-phead"><div className="wrap"><p className="eyebrow"><Link href="/people">← Our people</Link></p><h1>{t.name}</h1><p>{t.designation}</p></div></section>
     <section className="s-sec"><div className="wrap tprofile tp3">
       <div className="tp-left">
         {t.photo

@@ -23,7 +23,7 @@ export async function middleware(req: NextRequest) {
   }
   if (!pass) return next();
   // pictures and link previews that Facebook and Instagram fetch for Social posts stay reachable
-  if (/^\/api\/cron\/|^\/api\/stripe\/webhook$|^\/(social-img|s|newsletter|teacher-photo|workshop-image|brand|join|cal)\/|^\/teachers\/[\w.-]+\.(webp|jpe?g|png)$|^\/ose-(logo|logo-blue|logo-white|logo-duo|icon)\.(png|svg)$/.test(path)) return next();
+  if (/^\/api\/cron\/|^\/api\/stripe\/webhook$|^\/(social-img|s|newsletter|teacher-photo|people-photo|workshop-image|brand|join|cal)\/|^\/teachers\/[\w.-]+\.(webp|jpe?g|png)$|^\/ose-(logo|logo-blue|logo-white|logo-duo|icon)\.(png|svg)$/.test(path)) return next();
   // 31 Oct: the preview password is off everywhere. The website and the dashboards are open; the dashboards still need each
   // person's own sign-in (admin, parent, student), and nothing is indexed by search engines while SITE_PASSWORD is set.
   return robots(next());

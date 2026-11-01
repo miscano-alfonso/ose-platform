@@ -4,7 +4,7 @@ import { STYLE_GROUPS, FONTS, WEIGHTS, scheme, stylesCss, fontsHref, type Device
 import { saveStylesAction } from "../../actions";
 
 const SITE_PAGES: [string, string][] = [["Homepage", "/"], ["Courses", "/courses"], ["Other services", "/other-services"], ["Term dates", "/term-dates"],
-  ["Teachers", "/teachers"], ["Prices", "/pricing"], ["Calculator", "/calculator"], ["Timetable", "/timetable"], ["FAQs", "/faq"], ["Contact", "/contact"]];
+  ["People", "/people"], ["Prices", "/pricing"], ["Calculator", "/calculator"], ["Timetable", "/timetable"], ["FAQs", "/faq"], ["Contact", "/contact"]];
 const WIDTH: Record<Device, number> = { desktop: 1440, phone: 390 };
 const DASH_PAGES: [string, string][] = [["Admin dashboard", "/admin"], ["Families", "/admin/families"], ["Payments", "/admin/payments"], ["Classes", "/admin/classes"],
   ["Timetable", "/admin/timetable"], ["Jobs", "/admin/jobs"], ["Registers", "/admin/attendance"], ["Messages", "/admin/messages"]];

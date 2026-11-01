@@ -25,7 +25,7 @@ export default async function About() {
     <section className="s-phead"><div className="wrap">
       <h1>{txt.about_title}</h1>
       {hello && <p className="ab-hello">{hello}</p>}
-      <div className="cd-hbtns"><Link href="/taster">Book a taster</Link><Link href="/teachers">Meet the team</Link><Link href="/courses">Our courses</Link></div>
+      <div className="cd-hbtns"><Link href="/taster">Book a taster</Link><Link href="/people">Meet the team</Link><Link href="/courses">Our courses</Link></div>
     </div></section>
     <section className="s-sec ab-sec"><div className="wrap ab-grid">
       <article className="ab-tile ab-lead">
@@ -44,7 +44,7 @@ export default async function About() {
           {k === "Our courses" && !site.demo && <div className="ab-rds" aria-hidden="true">{SUBJECTS.map((s) => { const f = roundelFace(s);
             return <span key={s} className="cd-rtext" style={{ ["--rbg" as string]: f.bg }}><span>OH–SO</span><span>{f.word}</span></span>; })}</div>}
           {k === "Our courses" && <Link className="ab-more" href="/courses">See all courses →</Link>}
-          {k === "Our team" && <Link className="ab-more" href="/teachers">Meet the team →</Link>}
+          {k === "Our team" && <Link className="ab-more" href="/people">Meet the team →</Link>}
         </article>;
       })}
       {(taster || signOff) && <article className="ab-tile ab-taster">

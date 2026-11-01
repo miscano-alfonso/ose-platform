@@ -1,7 +1,8 @@
 import Link from "next/link";
 import "./recordings.css";
 import { recordingsView, recStatus, recLessons, type RecRow } from "@/lib/recordings";
-import { runRecordingsAction, recCfgAction, recLessonAction, editCardAction, approveCardsAction, postAnywayAction, disconnectRecAction, importRecordingsAction } from "../../actions";
+import { runRecordingsAction, recCfgAction, recLessonAction, editCardAction, approveCardsAction, postAnywayAction, disconnectRecAction, importRecordingsAction, yearClearAction } from "../../actions";
+import { clearState, clearLogs, clearPreview, clearCutoff, nextClear } from "@/lib/retention";
 
 export const dynamic = "force-dynamic";
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri"];
@@ -14,21 +15,23 @@ const CL: Record<string, [string, string]> = { posted: ["good", "In Classroom"],
 const CS: Record<string, [string, string]> = { awaiting: ["warn", "Awaiting approval"], queued: ["info", "Approved – queued"], processing: ["info", "Processing…"], done: ["good", "Done ✓"],
   error: ["bad", "Error"], edited: ["warn", "Edited – check the preview"] };
 
-export default async function Recordings({ searchParams }: { searchParams: Promise<{ tab?: string; w?: string; ok?: string; err?: string }> }) {
+export default async function Recordings({ searchParams }: { searchParams: Promise<{ tab?: string; w?: string; ok?: string; err?: string; check?: string }> }) {
   const sp = await searchParams;
-  const tab = ["week", "cards", "look", "settings"].includes(sp.tab ?? "") ? sp.tab! : "week";
+  const tab = ["week", "cards", "look", "settings", "privacy"].includes(sp.tab ?? "") ? sp.tab! : "week";
   const base = /^\d{4}-\d\d-\d\d$/.test(sp.w ?? "") ? new Date(sp.w + "T12:00:00Z") : new Date();
   const mon = new Date(base); mon.setUTCDate(base.getUTCDate() - ((base.getUTCDay() + 6) % 7)); const fri = new Date(mon); fri.setUTCDate(mon.getUTCDate() + 4);
   const days = DAYS.map((_, i) => { const d = new Date(mon); d.setUTCDate(mon.getUTCDate() + i); return iso(d); });
   const prev = new Date(mon); prev.setUTCDate(mon.getUTCDate() - 7); const next = new Date(mon); next.setUTCDate(mon.getUTCDate() + 7);
   const [{ rows, lessons }, st] = await Promise.all([recordingsView(days[0], days[4]), recStatus()]);
   const all = tab === "settings" ? await recLessons() : [];
+  const yc = tab === "privacy" ? await Promise.all([clearState(), clearLogs(), clearCutoff().catch(() => null), nextClear().catch(() => null),
+    sp.check && st.connected ? clearPreview() : Promise.resolve(null)]) : null;
   const filed = rows.filter((r) => r.status === "filed");
   const week = filed.filter((r) => r.day >= days[0] && r.day <= days[4]);
   const toApprove = filed.filter((r) => r.card_status === "awaiting" || r.card_status === "edited" || r.card_status === "error");
   const look = rows.filter((r) => ["short", "duplicate", "outside_term", "unfiled"].includes(r.status) || r.over_expected || (r.status === "filed" && ["waiting", "error", "gave_up"].includes(r.classroom)));
   const cards = filed.filter((r) => r.card_status && (r.card_status !== "done" || r.day >= days[0]));
-  const TABS: [string, string][] = [["week", "This week"], ["cards", `Title cards${toApprove.length ? ` (${toApprove.length})` : ""}`], ["look", `Needs a look${look.length ? ` (${look.length})` : ""}`], ["settings", "Settings"]];
+  const TABS: [string, string][] = [["week", "This week"], ["cards", `Title cards${toApprove.length ? ` (${toApprove.length})` : ""}`], ["look", `Needs a look${look.length ? ` (${look.length})` : ""}`], ["settings", "Settings"], ["privacy", "Year-end clear-out"]];
   // one link per recording, coloured by its Classroom post: green = in Classroom, orange = waiting, red = a problem, plain = filed earlier
   const tone = (r: RecRow) => r.classroom === "posted" || r.classroom === "already" ? "var(--good)" : r.classroom === "waiting" ? "var(--warn)" : ["error", "gave_up", "no_course"].includes(r.classroom) ? "var(--bad)" : "inherit";
   const cell = (r: RecRow) => <div key={r.id} className="rec-cell"><a href={drive(r.file_id)} target="_blank" rel="noopener"
@@ -90,6 +93,31 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
         <td>{r.status === "filed" && ["waiting", "error", "gave_up"].includes(r.classroom) && <form action={postAnywayAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit" title="Posts “🎥 T· Lesson ·” in Classroom now, under the teacher’s topic if there is one. Never posts twice.">Post now</button></form>}</td></tr>)}
     </tbody></table></div>)}
 
+    {tab === "privacy" && yc && (() => { const [state, logs, cutoff, next, preview] = yc; const day = (s: string) => new Date(s.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+      const kind = (k: string) => k === "spoken" ? "Spoken transcript" : "Chat transcript";
+      return <>
+      <section className="card"><h2>Year-end clear-out {state.on ? <span className="pill good">On</span> : <span className="pill mute">Off</span>}</h2>
+        <p className="cs">The privacy notice tells families that lesson chat records and lesson transcripts are deleted at the end of each academic year. This does that, in the recordings account’s ({st.account || "ose@"}) Google Drive: once an academic year has ended, the Meet chat transcripts and Meet’s spoken transcripts from that year or earlier are moved to Drive’s bin. Google empties the bin after 30 days, so there’s a month to restore one. Recordings, marks and reports aren’t touched.</p>
+        <p className="cs"><b>To keep a file</b> (for example, when it’s needed under the safeguarding policy), star it in {st.account || "ose@"}’s Drive. Starred files are never cleared.</p>
+        <p className="cs">{cutoff ? <>Clears files made on or before <b>{day(cutoff.day)}</b>, the end of {cutoff.label}.</> : "No academic year has ended yet."} {next ? <>Next: from <b>{day(next.day)}</b>, after {next.label} ends.</> : null}
+          {state.on && state.since ? <> Switched on {when(state.since)}{state.by ? ` by ${state.by}` : ""}.</> : null}{state.last ? <> Last run {when(state.last.at)}: {state.last.count} file{state.last.count === 1 ? "" : "s"} moved.</> : null}</p>
+        {!st.connected ? <p className="note msg">Connect the recordings account under <Link href="/admin/recordings?tab=settings">Settings</Link> first.</p>
+        : <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+          <form action={yearClearAction}><input type="hidden" name="do" value="check" /><button className="abtn" type="submit">Check what would be cleared</button></form>
+          <form action={yearClearAction}><input type="hidden" name="do" value={state.on ? "off" : "on"} /><button className={`abtn${state.on ? "" : " pri"}`} type="submit">{state.on ? "Switch off" : "Switch on"}</button></form>
+        </div>}
+      </section>
+      {preview && <section className="card"><h2>Would be cleared now · {preview.files.length}</h2>
+        {preview.error ? <p className="note msg bad">{preview.error}</p> : preview.files.length === 0 ? <p className="empty">Nothing to clear{preview.cutoff ? "" : " until an academic year has ended"}.</p> : <>
+          <div className="tw"><table><thead><tr><th>File</th><th>Kind</th><th>Made</th></tr></thead><tbody>{preview.files.map((f) =>
+            <tr key={f.id}><td><a href={`https://drive.google.com/file/d/${f.id}/view`} target="_blank" rel="noopener">{f.name}</a></td><td>{kind(f.kind)}</td><td>{day(f.created)}</td></tr>)}</tbody></table></div>
+          <form action={yearClearAction} style={{ marginTop: 10 }}><input type="hidden" name="do" value="now" /><button className="abtn" type="submit">Clear these now</button>
+            <span className="muted" style={{ marginLeft: 8 }}>Star any to keep in Drive first, then check again.</span></form></>}
+      </section>}
+      <section className="card"><h2>Log</h2>
+        {logs.length === 0 ? <p className="empty">Nothing cleared yet.</p> : logs.map((l) => <details key={l.at} className="yc-log"><summary><b>{when(l.at)}</b> · {l.files.length} file{l.files.length === 1 ? "" : "s"} moved to the bin · up to {day(l.cutoff)} · {l.by === "auto" ? "automatic" : l.by}{l.problems.length ? ` · ${l.problems.length} problem${l.problems.length === 1 ? "" : "s"}` : ""}</summary>
+          <ul>{l.files.map((f) => <li key={f.id}>{f.name} <span className="muted">· {kind(f.kind)} · made {day(f.created)}</span></li>)}{l.problems.map((x) => <li key={x} className="bad">{x}</li>)}</ul></details>)}
+      </section></>; })()}
     {tab === "settings" && <>
       <section className="card"><h2>Recordings account</h2>
         {st.connected ? <><p>Connected as <b>{st.account}</b> by {st.by}. This account renames and files the recordings and posts them in Classroom, so it must own the Meet recordings and be a teacher on every class (ose@ohsoed.co.uk). It also sends students their Classroom invitations (Classes).</p>
