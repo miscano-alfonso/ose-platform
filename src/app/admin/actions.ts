@@ -413,10 +413,14 @@ export async function saveWriteSheetAction(f: FormData): Promise<void> {
   const n = (k: string, max: number) => { const v = parseInt(str(f, k, 2), 10); return v >= 1 && v <= max ? v : null; };
   const rows: WriteInput[] = f.getAll("ids").map(String).slice(0, 200).map((id) => ({ id, progress: n(`progress_${id}`, 5), effort: n(`effort_${id}`, 5),
     working: n(`working_${id}`, 9), predicted: n(`predicted_${id}`, 9), comment: str(f, `comment_${id}`, 2000), noAssessment: f.has(`noassess_${id}`) ? str(f, `noassess_${id}`, 200) : undefined }));
-  const submit = str(f, "submit", 1) === "1";
-  const err = await saveWriteSheet(me, cycle, group, rows, submit);
+  // 31 Oct: each report has its own Save draft / Submit buttons (name="one", value "<id>:0|1"): only that report is saved
+  const [oneId, oneSubmit] = str(f, "one", 60).split(":");
+  const one = /^[0-9a-f-]{36}$/.test(oneId ?? "") ? rows.filter((r) => r.id === oneId) : null;
+  const submit = one ? oneSubmit === "1" : str(f, "submit", 1) === "1";
+  const err = await saveWriteSheet(me, cycle, group, one ?? rows, submit);
   revalidatePath(`/admin/reports/${cycle}`);
-  redirect(`/admin/write/${cycle}/${group}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(submit ? "Submitted for approval." : "Drafts saved.")}`);
+  const ok = one ? (submit ? "Report submitted for approval." : "Draft saved.") : submit ? "Submitted for approval." : "Drafts saved.";
+  redirect(`/admin/write/${cycle}/${group}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok)}${one ? `&r=${oneId}#r-${oneId}` : ""}`);
 }
 
 // ---------- 1:1 tutoring ----------

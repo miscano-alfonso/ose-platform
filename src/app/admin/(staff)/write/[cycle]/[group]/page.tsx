@@ -10,7 +10,7 @@ const scale = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
 const AS: Record<string, [string, string]> = { marked: ["good", "Marked"], handed_in: ["info", "Handed in · waiting for your mark"], set: ["warn", "Not handed in yet"],
   not_set: ["warn", "Not set in Classroom yet"], unknown: ["mute", "Assessment status comes from Google Classroom once it’s connected"] };
 
-export default async function Write({ params, searchParams }: { params: Promise<{ cycle: string; group: string }>; searchParams: Promise<{ ok?: string; err?: string }> }) {
+export default async function Write({ params, searchParams }: { params: Promise<{ cycle: string; group: string }>; searchParams: Promise<{ ok?: string; err?: string; r?: string }> }) {
   const [{ cycle, group }, sp, me] = await Promise.all([params, searchParams, requireViewer()]);
   const sheet = await getWriteSheet(cycle, group);
   if (!sheet || (me.role !== "school_admin" && sheet.head.teacher_user !== me.id)) notFound();
@@ -19,12 +19,12 @@ export default async function Write({ params, searchParams }: { params: Promise<
   return <>
     <p className="backlink"><a className="abtn sm" href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a></p>
     <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · comments due {day(h.comments_due)}</div></div></div>
-    {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+    {!sp.r && sp.ok && <p className="note msg">{sp.ok}</p>}{!sp.r && sp.err && <p className="note msg bad">{sp.err}</p>}
     <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters. A report can be submitted once the term’s assessment is marked in Classroom, or once you’ve said why there isn’t one.</p>
     {rows.length === 0 ? <p className="empty">No reports for this class yet.</p> :
     <form action={saveWriteSheetAction}>
       <input type="hidden" name="cycle" value={cycle} /><input type="hidden" name="group" value={group} />
-      {rows.map((r) => { const ro = locked || r.status === "approved"; return <section className="card" key={r.id}>
+      {rows.map((r) => { const ro = locked || r.status === "approved"; const here = sp.r === r.id; return <section className="card wr-card" key={r.id} id={`r-${r.id}`}>
         <input type="hidden" name="ids" value={r.id} />
         <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>{r.student}</h2><span className={`pill ${PILL[r.status][1]}`}>{PILL[r.status][0]}</span>
           {r.avg_pct && <span className="muted">Marks average {r.avg_pct}% ({r.marked} pieces)</span>}</div>
@@ -34,24 +34,21 @@ export default async function Write({ params, searchParams }: { params: Promise<
           {r.assess !== "marked" && r.assess !== "unknown" && <label className="fld" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>No assessment because
             <input name={`noassess_${r.id}`} defaultValue={r.no_assessment ?? ""} placeholder="e.g. absent, joined late" maxLength={200} disabled={ro} className="mini" style={{ width: 220 }} /></label>}</div>
         {r.status === "returned" && r.review_note && <p className="note msg bad">Sent back: {r.review_note}</p>}
-        <div className="eform" style={{ margin: "10px 0" }}>
+        {here && (sp.ok || sp.err) && <p className={`note msg${sp.err ? " bad" : ""}`} role="status">{sp.err ?? sp.ok}</p>}
+        <div className="eform wr-row" style={{ margin: "10px 0" }}>
           <label className="fld">Progress<select name={`progress_${r.id}`} defaultValue={r.progress_override ?? ""} disabled={ro}><option value="">{r.auto_progress ? `From marks (${r.auto_progress})` : "Choose"}</option>{scale(5).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
           <label className="fld">Effort<select name={`effort_${r.id}`} defaultValue={r.effort ?? ""} disabled={ro}><option value="">Choose</option>{scale(5).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
           {h.gcse && <><label className="fld">Working grade<select name={`working_${r.id}`} defaultValue={r.working_grade ?? ""} disabled={ro}><option value="">—</option>{scale(9).map((n) => <option key={n} value={n}>{n}</option>)}</select></label>
             <label className="fld">Predicted grade<select name={`predicted_${r.id}`} defaultValue={r.predicted_grade ?? ""} disabled={ro}><option value="">—</option>{scale(9).map((n) => <option key={n} value={n}>{n}</option>)}</select></label></>}
+          {!ro && <div className="wr-acts">
+            <button className="abtn sm" type="submit" name="one" value={`${r.id}:0`}>Save draft</button>
+            <button className="abtn sm pri" type="submit" name="one" value={`${r.id}:1`}>Submit</button></div>}
         </div>
         <div className="aid-wrap"><label className="fld" htmlFor={`comment_${r.id}`}>Comment and targets</label>
           <textarea id={`comment_${r.id}`} name={`comment_${r.id}`} defaultValue={r.comment ?? ""} rows={5} maxLength={2000} disabled={ro} className="mini" style={{ width: "100%" }} />
           {!ro && <AiDraft id={r.id} auto={r.auto_progress ?? null} />}</div>
       </section>; })}
-      {!locked && <div style={{ display: "flex", gap: 10, position: "sticky", bottom: 0, padding: "12px 0", background: "var(--bg)" }}>
-        <button className="abtn" type="submit" name="submit" value="0">Save drafts</button>
-        <SubmitAll /></div>}
     </form>}
   </>;
 }
 
-// a second submit button can't rely on its own value (it may be sent before the page has loaded), so it posts a flag via formAction
-function SubmitAll() {
-  return <button className="abtn pri" type="submit" formAction={async (f: FormData) => { "use server"; f.set("submit", "1"); const { saveWriteSheetAction } = await import("../../../../actions"); return saveWriteSheetAction(f); }}>Save and submit for approval</button>;
-}
