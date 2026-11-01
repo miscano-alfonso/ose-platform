@@ -45,7 +45,11 @@ export default async function Register({ searchParams }: { searchParams: Promise
         <ChildFields />
         {!parent && <>
           <label className="bk-check"><input type="checkbox" name="marketing" /><span>Email me about new courses, workshops and spaces (a few times a term)</span></label>
-          <label className="bk-check"><input type="checkbox" name="terms" required /><span>I agree to the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a></span></label></>}
+          {/* 1 Nov: how a child's lesson information is used for reports, and when it's deleted */}
+          <div className="reg-privacy"><p className="ab-k">How we use your child’s lesson information</p>
+            <p>To write accurate, personal reports, your child’s teachers draw on how they take part in lessons: their classwork and marks, what they write in the lesson chat and, where a lesson is transcribed, what they say. We use this only to support your child’s learning and wellbeing. It is seen only by their teachers and the school, is never used for advertising, and is only shared with the services that run our lessons.</p>
+            <p>Lesson chat records and transcripts are deleted at the end of each academic year. Your child’s marks and reports stay on their record. Any concern about a child’s safety is handled under our safeguarding policy. See our <a href="/privacy#lessons" target="_blank" rel="noopener noreferrer">Privacy notice</a>.</p></div>
+          <label className="bk-check"><input type="checkbox" name="terms" required /><span>I agree to the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a> and have read how my child’s lesson information is used</span></label></>}
         <label className="hp" aria-hidden="true">Leave this empty<input name="website" tabIndex={-1} autoComplete="off" /></label>
         <button className="wk-go bk-go" type="submit">{parent ? "Add child" : "Create my account"}</button>
         {!parent && <p className="note">We’ll email you a link to confirm your address. You always sign in with an emailed link, so there’s no password to remember.</p>}

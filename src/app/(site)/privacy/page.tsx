@@ -46,6 +46,7 @@ export default async function Privacy() {
         <tr><td>Take registers from Google Meet, write reports, mark progress, share recordings with the class</td><td>Contract, and our legitimate interest in running a good school</td></tr>
         <tr><td>Keep payment and accounting records</td><td>Legal obligation (HMRC requires six years)</td></tr>
         <tr><td>Follow up tasters and enquiries, keep the waiting list, keep class chats safe (blocked words, reporting and moderation)</td><td>Legitimate interests</td></tr>
+        <tr><td>Use how your child takes part in lessons (classwork and marks, lesson chat and, where a lesson is transcribed, what they say) to help teachers write accurate reports</td><td>Our legitimate interest in reporting on each child’s progress, which we’ve balanced against their privacy (see “Lesson information and reports” below)</td></tr>
         <tr><td>Record and share SEND details with your child’s teachers</td><td>Your explicit consent, which you can withdraw at any time</td></tr>
         <tr><td>Send our newsletter</td><td>Your consent. Every newsletter has an unsubscribe link</td></tr>
         <tr><td>Show a student’s first name and initial on the rewards leaderboard</td><td>Your choice in your account settings (you can hide it)</td></tr>
@@ -56,6 +57,10 @@ export default async function Privacy() {
       <p>Most of our students are under 18, so we take extra care. We collect only what we need to teach them, we never use their information for advertising, and we never sell it to anyone. Parents and guardians book and manage everything for their children.</p>
       <p><b>If you’re a student:</b> we use your name and Google account so you can join your classes, see your work and get reminders. Your teachers can see your work, attendance and reward points. Your parent or guardian can see your timetable, attendance, work and reports. Messages in class chats can be seen by the school so we can keep everyone safe. If you’re worried about anything, or want to know what we keep about you, ask your parent or email us.</p>
       <p><b>Tasters:</b> a child booked for a taster lesson is invited to that class’s Google Classroom and taken out 3 days after the lesson, unless the family books the course.</p>
+
+      <h3 id="lessons">Lesson information and reports</h3>
+      <p>Reports are most useful when they reflect what a child actually does in class. So, alongside marked work, teachers can draw on what your child writes in the lesson chat and, where a lesson is transcribed, what they say during it. We use this only to describe your child’s progress, participation and wellbeing in their reports. It is seen only by their teachers and the school, and an AI assistant may help a teacher draft the wording, which the teacher then checks.</p>
+      <p>Lesson chat records and lesson transcripts are deleted at the end of each academic year. Marks and the reports themselves stay on your child’s record (see “How long we keep it”). If anything in a lesson raises a concern about a child’s safety, we follow our safeguarding policy, which can mean keeping the relevant record for longer and sharing it with the people who need to know. You can ask us not to use your child’s lesson chat or transcripts for reports: contact us and we’ll note it on their record.</p>
 
       <h2 id="share">Who we share it with</h2>
       <p>We only share information with companies that help us run the school, under contracts that require them to protect it and use it only for us:</p>
@@ -73,7 +78,7 @@ export default async function Privacy() {
       {kept.length > 0 ? <div className="legal-tw"><table><thead><tr><th>Information</th><th>Kept for</th><th>Counted from</th></tr></thead><tbody>
         {kept.map((k) => <tr key={k.data_kind}><td>{KEPT[k.data_kind] ?? k.data_kind}</td><td>{months(k.keep_months)}</td><td>{k.after_event}</td></tr>)}
       </tbody></table></div> : <p>Student records are kept for 3 years after a student’s last course, payment records for 6 years, and enquiries and tasters for 12 months if you don’t book.</p>}
-      <p>Lesson recordings are kept in the class’s Google Classroom and Drive for the length of the course.</p>
+      <p>Lesson recordings are kept in the class’s Google Classroom and Drive for the length of the course. Lesson chat records and lesson transcripts are deleted at the end of each academic year.</p>
 
       <h2 id="rights">Your rights</h2>
       <p>You can ask us to: give you a copy of the information we hold about you or your child; correct anything that’s wrong; delete information we no longer need; restrict or object to how we use it; and send it to you in a format you can take elsewhere. Where we rely on your consent, you can withdraw it at any time. We’ll reply within one month. There’s no charge.</p>
