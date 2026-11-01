@@ -998,12 +998,10 @@
 /* 31 Oct: hover and keyboard focus on the hero's buttons (highlight colour fills, dark text; checked for contrast) */
 .adm .fx .dx-hero .fx-btns a,.adm .fx .dx-hero .fx-btns .fx-nomeet{transition:background-color .15s,color .15s,border-color .15s}
 .adm .fx .dx-hero .fx-btns a.fx-att:hover,.adm .fx .dx-hero .fx-btns a.fx-att:focus-visible,
-.adm .fx .dx-hero .fx-btns a.go.fx-meet.wait:hover,.adm .fx .dx-hero .fx-btns a.go.fx-meet.wait:focus-visible{background:var(--pop,#e9f56a);color:var(--pop-ink,#0d0f1c);border-color:var(--pop,#e9f56a)}
 .adm .fx .dx-hero .fx-btns a.go.fx-meet:not(.wait):hover,.adm .fx .dx-hero .fx-btns a.go.fx-meet:not(.wait):focus-visible{background:#fff;color:var(--pop-ink,#0d0f1c);border-color:#fff}
 .adm .fx .dx-hero .fx-btns .fx-nomeet{cursor:help}
 .adm .fx .dx-hero .fx-btns .fx-nomeet:hover{border-color:rgba(255,255,255,.75);color:#fff;background:rgba(255,255,255,.08)}
 .adm[data-palette=demo] .fx .dx-hero .fx-btns a.fx-att:hover,.adm[data-palette=demo] .fx .dx-hero .fx-btns a.fx-att:focus-visible,
-.adm[data-palette=demo] .fx .dx-hero .fx-btns a.go.fx-meet.wait:hover,.adm[data-palette=demo] .fx .dx-hero .fx-btns a.go.fx-meet.wait:focus-visible{background:#ffb3c6;color:#3d0d1a;border-color:#ffb3c6}
 .adm .fx .dx-hero .fx-btns a:focus-visible{outline:2px solid #fff;outline-offset:3px}
 .adm .fx .dx-hero .fx-live .fx-live-k{color:#fff}   /* "Next lesson" white, the day and time in the highlight colour (like Hello + name) */
 
@@ -1115,3 +1113,5 @@
 .adm .payi-t th:nth-child(n+2),.adm .payi-t td.n{width:110px}
 .adm details.payi>summary{cursor:pointer;list-style:none;margin-bottom:0}.adm details.payi>summary::-webkit-details-marker{display:none}
 .adm details.payi>summary::before{content:"▸";color:var(--muted);margin-right:2px}.adm details.payi[open]>summary::before{content:"▾"}.adm details.payi[open]>summary{margin-bottom:10px}
+/* 2 Nov: until 5 minutes before the lesson the lesson button is only a countdown: not a link, no hover */
+.adm .fx .dx-hero .fx-btns a.go.fx-meet.wait{cursor:default}
