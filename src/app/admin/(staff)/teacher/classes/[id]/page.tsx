@@ -2,7 +2,6 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
 import { myClasses, myStudents, classWork } from "@/lib/teacher-area";
-import { joinLabel } from "@/lib/video";
 import { StudentRows, StudentTable, ViewSwitch, sortOf, sortStudents } from "../../StudentRows";
 import { ClassWorkList } from "./ClassWork";
 import { DAY, dm } from "../../fmt";
@@ -27,7 +26,6 @@ export default async function MyClass({ params, searchParams }: { params: Promis
       <div className="sub">{(c.slots ?? []).map((s) => `${DAY[s.d]} ${s.t}–${s.e}`).join(" · ")} · {c.students} student{c.students === 1 ? "" : "s"}{c.att !== null ? ` · ${c.att}% attendance` : ""}</div></div>
       <span className="grow" /><div className="acts">
         {c.next && <Link className="abtn sm pri" href={`/admin/register/${c.next.id}`}>Next register · {dm(c.next.d)}</Link>}
-        {c.meet_url && <a className="abtn sm" href={c.meet_url} target="_blank" rel="noopener">{joinLabel(c.meet_url)}</a>}
         {c.classroom && <a className="abtn sm" href={c.classroom} target="_blank" rel="noopener">Classroom</a>}
         <Link className="abtn sm" href="/admin/teacher/chats">Class chat</Link></div></div>
     {list.length > 0 && <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}><ViewSwitch view={view} href={(w) => qs(w === "cards" ? { view: "cards" } : {})} /></div>}

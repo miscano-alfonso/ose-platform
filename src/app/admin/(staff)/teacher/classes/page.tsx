@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { requireViewer } from "@/lib/auth";
 import { myClasses } from "@/lib/teacher-area";
-import { joinLabel } from "@/lib/video";
 import { DAY, dm } from "../fmt";
 import { ViewSwitch } from "../StudentRows";
 import type { MyClass } from "@/lib/teacher-area";
@@ -9,13 +8,12 @@ import type { MyClass } from "@/lib/teacher-area";
 export const dynamic = "force-dynamic";
 
 // My classes (31 Oct): each class the teacher takes this year as a tile, with its times, students, attendance, SEND count,
-// the next lesson's register, and the class's Meet and Classroom links. A list by default; tiles with ?view=cards.
+// the next lesson's register, and the class's Classroom link (the lesson link is only on My day). A list by default; tiles with ?view=cards.
 const nextOf = (c: MyClass) => c.next ? `${DAY[new Date(c.next.d + "T12:00:00Z").getUTCDay() || 7]} ${dm(c.next.d)}, ${c.next.t}` : null;
 const Acts = ({ c }: { c: MyClass }) => <>
   <Link className="abtn sm pri" href={`/admin/teacher/classes/${c.id}`}>Students</Link>
   <Link className="abtn sm" href={`/admin/teacher/classes/${c.id}#assignments`}>Assignments</Link>
   {c.next && <Link className="abtn sm" href={`/admin/register/${c.next.id}`}>Register</Link>}
-  {c.meet_url && <a className="abtn sm" href={c.meet_url} target="_blank" rel="noopener">{joinLabel(c.meet_url)}</a>}
   {c.classroom && <a className="abtn sm" href={c.classroom} target="_blank" rel="noopener">Classroom</a>}</>;
 const attPill = (p: number | null) => p === null ? <span className="muted">—</span> : <span className={`pill ${p >= 90 ? "good" : p >= 75 ? "warn" : "bad"}`}>{p}%</span>;
 
