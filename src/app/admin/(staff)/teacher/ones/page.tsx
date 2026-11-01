@@ -1,5 +1,6 @@
 import { requireViewer } from "@/lib/auth";
 import { myOnes } from "@/lib/teacher-area";
+import { teacherOneWork, type OneWork } from "@/lib/one-courses";
 import { markOneTaughtAction, addMyHoursAction, removeMyHoursAction } from "../../../actions";
 import { DAYLONG, dlong, hm, gbp } from "../fmt";
 
@@ -7,7 +8,7 @@ export const dynamic = "force-dynamic";
 
 export default async function Ones({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
   const [sp, me] = await Promise.all([searchParams, requireViewer()]);
-  const d = await myOnes(me.id);
+  const [d, work] = await Promise.all([myOnes(me.id), teacherOneWork(me.id)]);
   return <>
     <div className="top"><div><h1>1:1s and workshops</h1><div className="sub">Your bookings, and the hours you offer for 1:1s</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
@@ -24,6 +25,12 @@ export default async function Ones({ searchParams }: { searchParams: Promise<{ o
           <span className="on-when"><span>{dlong(w.at)}</span><b>{hm(w.at)}</b></span>
           <div className="t on-lines"><b>{w.title}</b><span>{w.minutes} min</span><span>{w.booked} booked</span></div></div>)}</section>
     </div>
+    {work.length > 0 && <section className="card ow"><h2>1:1 work</h2><p className="cs">From each student’s 1:1 Classroom. Mark and comment in Classroom: each piece of work opens there, on the student’s own work and its private comments.</p>
+      <div className="ow-grid">{work.map((c) => <div key={c.id} className="ow-col"><div className="ow-head"><b>{c.student}</b><span className="muted">{c.subject ?? c.name ?? "1:1"}</span>
+          {c.link && <a className="abtn sm" href={c.link} target="_blank" rel="noopener">Classroom</a>}</div>
+        {c.items.length === 0 ? <p className="empty" style={{ textAlign: "left" }}>No work set yet.</p>
+          : c.items.map((w) => <a key={w.id} className="ow-item" href={w.link ?? c.link ?? "#"} target="_blank" rel="noopener" title="Opens in Google Classroom, with the private comments">
+            <span className="t"><b>{w.title}</b><span>{w.due_at ? `Due ${dlong(w.due_at)}` : "No due date"}</span></span><WorkPill w={w} /></a>)}</div>)}</div></section>}
     <section className="card"><h2>My 1:1 hours</h2><p className="cs">Parents can book you in these hours, except when you’re teaching. Changes don’t affect 1:1s already booked.</p>
       {d.hours.length === 0 ? <p className="empty">You don’t offer any 1:1 hours yet.</p> : d.hours.map((h) => <div className="li" key={h.id}>
         <div className="t"><b>{DAYLONG[h.weekday]}</b><span>{h.from}–{h.to}</span></div>
@@ -36,4 +43,12 @@ export default async function Ones({ searchParams }: { searchParams: Promise<{ o
       <p className="note" style={{ marginTop: 10 }}>1:1s are paid with your lessons once marked as taught{d.bookings.length ? "" : ""}.</p>
     </section></div>
   </>;
+}
+
+/** How a piece of 1:1 work stands, for the teacher. */
+function WorkPill({ w }: { w: OneWork }) {
+  if (w.status === "returned") return <span className="pill good">{w.points != null && w.max ? `${w.points}/${w.max}` : "Returned"}</span>;
+  if (w.status === "handed_in") return <span className="pill warn">{w.late ? "Handed in late · to mark" : "Handed in · to mark"}</span>;
+  if (w.status === "missing") return <span className="pill bad">Missing</span>;
+  return <span className="pill mute">{w.status === "due" ? "Not handed in yet" : "Set"}</span>;
 }

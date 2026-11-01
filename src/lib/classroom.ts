@@ -93,9 +93,68 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
       }
     });
   }
+  await syncOneCourses(token, info);
   info.problems = info.problems!.slice(0, 12);
   await googleKvSet("classroom", info);
   return info;
+}
+
+/** 2 Nov: each linked 1:1 Classroom course (one_courses): its work and the 1:1 student's hand-ins and marks, kept like a class's. */
+async function syncOneCourses(token: string, info: ClassroomInfo) {
+  const ones = await withSchool((q) => q<{ id: string; course: string; student_id: string; email: string | null; label: string }>(`
+    select oc.id, oc.google_course_id as course, oc.student_id, lower(s.email::text) as email, s.first_name || ' ' || s.last_name as label
+    from one_courses oc join students s on s.id = oc.student_id`)).catch(() => []);
+  for (const o of ones) {
+    const cid = encodeURIComponent(o.course);
+    const [roster, work, subs] = await Promise.all([all<Student>(token, `/courses/${cid}/students`, "students"),
+      all<Work>(token, `/courses/${cid}/courseWork?courseWorkStates=PUBLISHED`, "courseWork"), all<Sub>(token, `/courses/${cid}/courseWork/-/studentSubmissions`, "studentSubmissions")]);
+    if (!roster.ok || !work.ok || !subs.ok) { info.problems!.push(`1:1 ${o.label}: couldn’t read its Classroom (${!roster.ok ? roster.status : !work.ok ? work.status : (subs as { status: number }).status})`); continue; }
+    // the 1:1 student in the course, by their Google account
+    const uids = new Set(roster.items.filter((s) => o.email && (s.profile?.emailAddress ?? "").toLowerCase() === o.email).map((s) => s.userId));
+    await withSchool(async (q) => {
+      const wid = new Map<string, string>();
+      for (const w of work.items) {
+        const [row] = await q<{ id: string }>(`insert into classroom_coursework (school_id, group_id, one_course_id, coursework_id, title, due_at, max_points, link) values (current_school(), null, $1, $2, $3, $4, $5, $6)
+          on conflict (coursework_id) do update set group_id = null, one_course_id = excluded.one_course_id, title = excluded.title, due_at = excluded.due_at, max_points = excluded.max_points, link = excluded.link returning id`,
+          [o.id, w.id, (w.title ?? "Untitled").slice(0, 300), dueOf(w), w.maxPoints && w.maxPoints > 0 ? w.maxPoints : null, w.alternateLink ?? null]);
+        wid.set(w.id, row.id); info.work!++;
+      }
+      await q(`delete from classroom_coursework where one_course_id = $1 and not (coursework_id = any($2::text[]))`, [o.id, work.items.map((w) => w.id)]);
+      for (const s of subs.items) {
+        const cw = wid.get(s.courseWorkId); if (!cw || !uids.has(s.userId)) continue;
+        const st = STATE[s.state ?? ""] ?? "assigned";
+        const turned = [...(s.submissionHistory ?? [])].reverse().find((h) => h.stateHistory?.state === "TURNED_IN")?.stateHistory?.stateTimestamp ?? null;
+        const pts = st === "returned" && typeof s.assignedGrade === "number" ? s.assignedGrade : null;
+        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8)
+          on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points, link = excluded.link,
+            graded_at = case when excluded.points is null then null else coalesce(classroom_submissions.graded_at, excluded.graded_at) end`,
+          [cw, o.student_id, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null]);
+        info.submissions!++;
+      }
+    });
+  }
+}
+
+/** A Classroom course's numeric id from what an admin pastes: the id itself, or a classroom.google.com/c/<id> link (the id there is base64). */
+export function courseIdFrom(input: string): string | null {
+  const t = input.trim();
+  if (/^[0-9]{5,20}$/.test(t)) return t;
+  const m = /classroom\.google\.com\/(?:u\/\d+\/)?c\/([A-Za-z0-9_-]+)/.exec(t);
+  if (!m) return null;
+  if (/^[0-9]{5,20}$/.test(m[1])) return m[1];
+  try { const d = Buffer.from(m[1].replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8"); return /^[0-9]{5,20}$/.test(d) ? d : null; } catch { return null; }
+}
+
+/** The course's name and link, to check it can be read before it's linked. */
+export async function courseInfo(courseId: string): Promise<{ name: string; link: string | null } | { error: string }> {
+  try {
+    const token = await googleAccess("google");
+    const r = await fetch(`${API()}/courses/${encodeURIComponent(courseId)}`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) });
+    if (r.status === 404) return { error: "There’s no Classroom with that link." };
+    if (!r.ok) return { error: `Google wouldn’t share that Classroom (${r.status}).` };
+    const j = (await r.json()) as { name?: string; section?: string; alternateLink?: string };
+    return { name: [j.name, j.section].filter(Boolean).join(" · ").slice(0, 200) || "Classroom", link: j.alternateLink ?? null };
+  } catch (e) { return { error: e instanceof MeetError ? e.message : "Couldn’t reach Google." }; }
 }
 
 /** Runs with the Meet sync: at most every 6 hours. */

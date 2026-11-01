@@ -463,6 +463,24 @@ export async function setTutoringStatusAction(f: FormData): Promise<void> {
   revalidatePath("/admin/tutoring"); revalidatePath("/admin/payroll");
 }
 
+// ---------- 1:1 Classrooms (2 Nov): link each 1:1 student's Classroom course so its work shows on the dashboards ----------
+export async function linkOneCourseAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const back = (k: string, m: string) => redirect(`/admin/tutoring-setup?${k}=${encodeURIComponent(m)}#one-courses`);
+  if (me.role !== "school_admin") return back("err", "Only a school admin can change this.");
+  const { linkOneCourse } = await import("@/lib/one-courses");
+  const err = await linkOneCourse(me.id, { student: str(f, "student", 40), teacher: str(f, "teacher", 40), subject: str(f, "subject", 40), course: str(f, "course", 300) });
+  if (!err) { const { syncClassroom } = await import("@/lib/classroom"); await syncClassroom(me.email).catch(() => null); }   // its work straight away
+  revalidatePath("/admin/tutoring-setup"); revalidatePath("/admin/teacher/ones");
+  back(err ? "err" : "ok", err ?? "Linked. Its work now shows on the teacher’s 1:1s page and the student’s and parent’s dashboards.");
+}
+export async function unlinkOneCourseAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  if (me.role === "school_admin") { const id = str(f, "id", 40); if (/^[0-9a-f-]{36}$/.test(id)) { const { unlinkOneCourse } = await import("@/lib/one-courses"); await unlinkOneCourse(me.id, id); } }
+  revalidatePath("/admin/tutoring-setup");
+  redirect("/admin/tutoring-setup?ok=Unlinked.#one-courses");
+}
+
 // ---------- teachers ----------
 export async function addTeacherAction(f: FormData): Promise<void> {
   const me = await requireStaff();

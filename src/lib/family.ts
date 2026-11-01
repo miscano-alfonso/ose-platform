@@ -76,9 +76,10 @@ export async function cancelAbsence(parentId: string, id: string) {
 // ---------- assignments (from Google Classroom) ----------
 export async function assignments(studentIds: string[]) {
   return withSchool((q) => q<{ student_id: string; title: string; due_at: string | null; link: string | null; class: string; colour: string; status: string; points: number | null; max: number | null; late: boolean }>(`
-    select a.student_id, a.title, a.due_at::text, a.link, l.name || ' ' || sj.name as class, coalesce(sj.colour,'#8494c2') as colour, a.parent_status as status,
-      a.points::float as points, a.max_points::float as max, a.late
-    from student_assignments a join course_groups g on g.id = a.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+    select a.student_id, a.title, a.due_at::text, a.link, coalesce(l.name || ' ' || sj.name, '1:1 ' || coalesce(osj.name, oc.name, '')) as class,
+      coalesce(sj.colour, osj.colour, '#8494c2') as colour, a.parent_status as status, a.points::float as points, a.max_points::float as max, a.late
+    from student_assignments a left join course_groups g on g.id = a.group_id left join levels l on l.id = g.level_id left join subjects sj on sj.id = g.subject_id
+      left join one_courses oc on oc.id = a.one_course_id left join subjects osj on osj.id = oc.subject_id   -- 2 Nov: 1:1 work too
     where a.student_id = any($1::uuid[]) order by a.due_at nulls last`, [studentIds]));
 }
 

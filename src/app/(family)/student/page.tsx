@@ -4,6 +4,7 @@ import { LessonClock, LessonCountdown } from "../../LessonClock";
 const ldate = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Europe/London" });
 import { requireStudent } from "@/lib/family-auth";
 import { studentHome, studentNextOne } from "@/lib/family";
+import { studentOneCourses } from "@/lib/one-courses";
 import { studentLastSlides } from "@/lib/lesson-slides";
 import { boardLayout } from "@/lib/dashboard-layout";
 import { BOARD_MODULES } from "@/lib/dash-modules";
@@ -15,7 +16,7 @@ import { Ico, IC, ordinal, whenText } from "../../admin/DashBits";
 // The student's home, Bento style: the next lesson up top with Join, reward points in lime, a coloured tile per class.
 export default async function StudentHome() {
   const f = await requireStudent();
-  const [h, last, one] = await Promise.all([studentHome(f.id), studentLastSlides(f.id).catch(() => new Map()), studentNextOne(f.id).catch(() => null)]);
+  const [h, last, one, ones] = await Promise.all([studentHome(f.id), studentLastSlides(f.id).catch(() => new Map()), studentNextOne(f.id).catch(() => null), studentOneCourses(f.id)]);
   const now = Date.now();
   const next = h.classes.filter((c) => c.next).sort((a, b) => Date.parse(a.next!) - Date.parse(b.next!))[0];
   const soon = !!next?.next && Date.parse(next.next) - now < 20 * 60e3;
@@ -47,7 +48,9 @@ export default async function StudentHome() {
         <span>{rank && pts ? `${ordinal(rank)} in the school →` : "Earn points for great work →"}</span></Link> },
     { id: "classes", title: "My classes", size: "full", node: <div className="fx-tiles">{h.classes.map((c) => <Link key={c.group_id} href={`/student/class/${c.group_id}`} className="fx-cls c4" style={{ ["--c" as string]: c.colour }}>
         <small>{c.level}</small><b>{c.subject}</b>{c.invited && <em>Accept your Classroom invitation</em>}
-        <span>{c.next ? `${dlong(c.next)} ${hm(c.next)}` : c.slots ?? "Times to follow"}</span></Link>)}</div> },
+        <span>{c.next ? `${dlong(c.next)} ${hm(c.next)}` : c.slots ?? "Times to follow"}</span></Link>)}
+        {ones.map((o) => <Link key={o.id} href={`/student/one/${o.id}`} className="fx-cls c4" style={{ ["--c" as string]: "#8494c2" }}>
+          <small>1:1</small><b>{o.subject ?? "My 1:1"}</b><span>{one && one.subject === o.subject ? `${dlong(one.at)} ${hm(one.at)}` : `With ${o.teacher}`}</span></Link>)}</div> },
     { id: "chat", title: "Chat", node: <section className="dx-card c4"><header><h2>Chat</h2>{!chatOff && <Link className="dx-more" href="/student/chat">Open →</Link>}</header>
         <div className="fx-ringv"><Ico d={IC.chat} /><span>{chatOff ? "Chat is off. Ask your parent to turn it on." : h.me.chat_access === "class" ? "Talk with your classes and teachers." : "Talk with your classes, teachers and friends."}</span></div></section> },
   ];
