@@ -12,6 +12,7 @@ const TERM_NOW = `(select id from terms where ends_on >= current_date order by s
 const YEAR_NOW = `(select id from academic_years where ends_on >= current_date order by starts_on limit 1)`;
 
 export type WeekLesson = { id: string; d: string; time: string; name: string; code: string; status: string; meet_url: string | null; students: number;
+  /** class (a lesson_events row), 1:1 (tutoring_bookings) or workshop (1 Nov: these show on My day too) */ kind?: "class" | "one" | "workshop"; detail?: string | null;
   not_in_classroom: number; tasters: string[]; absent: string[]; marked: number; slides_url?: string | null;
   course_id?: string | null; lesson_no?: number | null; term_start?: string | null; slides_folder?: string | null; term_no?: number | null;
   /** slides found in Classroom or Drive (when the teacher hasn't pasted a link) */
@@ -84,6 +85,27 @@ export async function myDay(userId: string): Promise<MyDay> {
         -- the rest of the teaching week (Monday to Sunday) that holds the teacher's next lesson, so a week starting after half term shows in full
         and ev.lesson_date <= (select date_trunc('week', min(e2.lesson_date))::date + 6 from lesson_events e2 where e2.teacher_id = ${ME} and e2.status <> 'cancelled' and e2.lesson_date >= current_date)
       order by ev.lesson_date, sl.starts_at`, [userId]));
+    // 1:1s and workshops this teacher takes, in the same week as the next teaching (1 Nov)
+    const extra = await q<WeekLesson>(`
+      select b.id, (b.starts_at at time zone 'Europe/London')::date::text as d, to_char(b.starts_at at time zone 'Europe/London', 'HH24:MI') as time,
+        '1:1 · ' || b.student_name as name, '1:1' as code, 'scheduled' as status, null::text as meet_url, 1 as students, 0 as not_in_classroom,
+        '{}'::text[] as tasters, '{}'::text[] as absent, 0 as marked, 'one' as kind,
+        concat_ws(' · ', l.name || ' ' || sj.name, b.minutes || ' min', nullif(b.focus, '')) as detail, '[]'::json as birthdays, '{}'::text[] as send
+      from tutoring_bookings b left join levels l on l.id = b.level_id left join subjects sj on sj.id = b.subject_id
+      where b.teacher_id = ${ME} and b.status = 'booked' and b.starts_at >= now() - interval '1 hour' and b.starts_at < now() + interval '15 days'
+      union all
+      select w.id, (w.starts_at at time zone 'Europe/London')::date::text, to_char(w.starts_at at time zone 'Europe/London', 'HH24:MI'),
+        'Workshop · ' || w.title, 'Workshop', 'scheduled', null, (select count(*)::int from workshop_bookings wb where wb.workshop_id = w.id and wb.status <> 'cancelled'), 0,
+        '{}', '{}', 0, 'workshop', w.minutes || ' min', '[]'::json, '{}'
+      from workshops w where w.teacher_id = ${ME} and w.status = 'published' and w.starts_at >= now() - interval '1 hour' and w.starts_at < now() + interval '15 days'`, [userId]).catch(() => [] as WeekLesson[]);
+    if (extra.length) {
+      week.forEach((l) => { l.kind = "class"; });
+      const first = [...week, ...extra].map((l) => l.d).sort()[0];
+      const mon = new Date(first + "T12:00:00Z"); mon.setUTCDate(mon.getUTCDate() - ((mon.getUTCDay() + 6) % 7));
+      const sun = new Date(mon); sun.setUTCDate(mon.getUTCDate() + 6); const end = sun.toISOString().slice(0, 10);
+      const all = [...week, ...extra].filter((l) => l.d <= end).sort((a, b) => (a.d + a.time).localeCompare(b.d + b.time));
+      week.splice(0, week.length, ...all);
+    }
     const [{ registers }] = await q<{ registers: number }>(`select count(*)::int as registers from lesson_events ev where ev.teacher_id = ${ME} and ev.status = 'scheduled'
       and ev.lesson_date < current_date and ev.lesson_date > current_date - 60`, [userId]);
     const cycle = reports[0]?.cycle_id;

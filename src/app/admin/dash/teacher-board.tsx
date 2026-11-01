@@ -34,8 +34,8 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
   const modules: BoardModule[] = [
     { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">
         <p className={`fx-live${isToday ? "" : " next"}`}>{isToday && <i />}{next ? (isToday ? `Today · ${next.time.slice(0, 5)}` : <><span className="fx-live-k">Next lesson</span> · {wd(next.d)} {dm(next.d)} · {next.time.slice(0, 5)}</>) : d.term?.name ?? "My day"} <NotifyBell settingsHref="/admin/teacher/notifications" /></p>
-        <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {me.name.split(" ")[0]}</span>{next && <><br /><Link className="fx-title-link" href={`/admin/register/${next.id}`} title="The lesson: who’s expected, SEND, tasters and the register">{next.name}</Link></>}</h1>
-        <div className="fx-sub-row"><p className="fx-hero-s">{next ? <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>{next && <SlidesButton eventId={next.id} url={next.slides_url ?? null} found={found.get(next.id) ?? null} n={next.lesson_no} />}</div>
+        <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {me.name.split(" ")[0]}</span>{next && <><br /><Link className="fx-title-link" href={next.kind && next.kind !== "class" ? "/admin/teacher/ones" : `/admin/register/${next.id}`} title={next.kind && next.kind !== "class" ? "Your 1:1s and workshops" : "The lesson: who’s expected, SEND, tasters and the register"}>{next.name}</Link></>}</h1>
+        <div className="fx-sub-row"><p className="fx-hero-s">{next ? next.kind === "one" ? next.detail : next.kind === "workshop" ? `${next.students} booked · ${next.detail}` : <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>{next && next.kind !== "one" && next.kind !== "workshop" && <SlidesButton eventId={next.id} url={next.slides_url ?? null} found={found.get(next.id) ?? null} n={next.lesson_no} />}</div>
       </div>{next && <div className="fx-side"><LessonClock date={next.d} time={next.time} />
 </div>}
       <div className="fx-foot">{next && (next.birthdays?.length || next.send?.length) ? <div className="fx-notes">{!!next.birthdays?.length && <p className="fx-bday"><span className="fx-nh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 1.2 1.5 2.1 1.5 2.8a1.5 1.5 0 0 1-3 0c0-.7.5-1.6 1.5-2.8zM11.2 8h1.6v3h-1.6zM4 13a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.2c-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-.7.6-1.3.9-2 .9zM4 17.5c.7 0 1.4-.2 2-.7 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 .6.5 1.3.7 2 .7V21H4z" fill="currentColor"/></svg><span className="sr-only">Birthdays</span></span>
@@ -44,7 +44,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
           <span className="fx-nh"><span className="fx-sicon" aria-hidden="true">S</span><span className="sr-only">SEND in this class</span></span>
           <span className="fx-lines">{next.send.map((x, i) => { const m = /^(.*?) \((.*)\)$/.exec(x);
             return <span key={i}><b className="fx-nm">{m ? m[1] : x}</b>{m ? ` · ${m[2]}` : ""}</span>; })}</span></div>}</div> : null}
-        {next && <div className="fx-btns fx-btns-r"><LessonLinkButton date={next.d} time={next.time} url={next.meet_url ?? null} title={next.meet_url ? joinLabel(next.meet_url) : undefined} />
+        {next && <div className="fx-btns fx-btns-r"><LessonLinkButton date={next.d} time={next.time} url={next.meet_url ?? null} title={next.meet_url ? joinLabel(next.meet_url) : undefined} none={next.kind && next.kind !== "class" ? "The Google Meet invitation is in your Google Calendar" : undefined} />
           {next.tasters.length > 0 && <div className="fx-bday fx-tasters"><span className="fx-nh"><span className="fx-sicon fx-ticon" aria-hidden="true">T</span><span className="sr-only">Tasters in this lesson</span></span>
             <span className="fx-lines">{next.tasters.map((t, i) => <span key={i}><b>{t}</b> · taster</span>)}</span></div>}
         </div>}</div></section> },
@@ -59,12 +59,13 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
     { id: "week", title: "This week", node: <section className="dx-card c7 dx-tall"><header><h2>This week</h2><Link className="dx-more" href="/admin/teacher/timetable">Timetable →</Link></header>
         {d.week.length === 0 ? <p className="empty">No lessons coming up.</p> : <div className="dx-scroll">{d.week.map((l) => <div className="fx-row" key={l.id}>
           <span className="fx-when">{wd(l.d)} {dm(l.d)}</span>
-          <div className="t"><b>{l.time} · {l.name}</b><span>{l.students} student{l.students === 1 ? "" : "s"}
+          {l.kind === "one" || l.kind === "workshop" ? <div className="t"><b>{l.time} · {l.name}</b><span>{l.kind === "workshop" ? `${l.students} booked · ` : ""}{l.detail}</span></div>
+          : <div className="t"><b>{l.time} · {l.name}</b><span>{l.students} student{l.students === 1 ? "" : "s"}
             {l.not_in_classroom ? ` · ${l.not_in_classroom} not in Classroom yet` : ""}
             {l.tasters.length ? ` · ${l.tasters.length} taster${l.tasters.length > 1 ? "s" : ""}: ${l.tasters.join(", ")}` : ""}
-            {l.absent.length ? ` · away: ${l.absent.join(", ")}` : ""}</span></div>
-          {l.id !== next?.id && <SlidesButton compact eventId={l.id} url={l.slides_url ?? null} found={found.get(l.id) ?? null} />}
-          {(l.d < today || l.status !== "scheduled") && <Link className="abtn sm" href={`/admin/register/${l.id}`}>Attendance</Link>}{/* the lesson link is only in the hero */}
+            {l.absent.length ? ` · away: ${l.absent.join(", ")}` : ""}</span></div>}
+          {l.id !== next?.id && l.kind !== "one" && l.kind !== "workshop" && <SlidesButton compact eventId={l.id} url={l.slides_url ?? null} found={found.get(l.id) ?? null} />}
+          {l.kind !== "one" && l.kind !== "workshop" && (l.d < today || l.status !== "scheduled") && <Link className="abtn sm" href={`/admin/register/${l.id}`}>Attendance</Link>}{/* the lesson link is only in the hero */}
         </div>)}</div>}
       </section> },
     { id: "reports", title: "Reports progress", node: <section className="dx-card c5 dx-tall"><header><h2>{d.reportCycle ?? "Reports"}</h2><Link className="dx-more" href="/admin/teacher/reports">Write →</Link></header>
