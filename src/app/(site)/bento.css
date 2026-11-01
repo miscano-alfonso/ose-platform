@@ -1250,3 +1250,18 @@ html:not([data-theme=dark]) .bt .rg-warn{color:#b3392a}
 /* 1 Nov: registration: how a child's lesson information is used */
 .bt .reg-privacy{border:1px solid var(--line,rgba(255,255,255,.18));border-radius:14px;padding:14px 16px;margin:6px 0 4px;font-size:14.5px;line-height:1.55}
 .bt .reg-privacy p{margin:0 0 8px}.bt .reg-privacy p:last-child{margin:0}.bt .reg-privacy .ab-k{margin-bottom:6px}
+/* 2 Nov: Guides (/guides): a part each for teachers, parents and students, each guide a card that opens the presentation */
+.bt .gd-jump{display:flex;flex-wrap:wrap;gap:10px;margin-top:22px}
+.bt .gd-jump a{padding:10px 20px;border-radius:999px;border:1.5px solid rgba(255,255,255,.45);color:#fff;text-decoration:none;font-weight:600}
+.bt .gd-jump a:hover,.bt .gd-jump a:focus-visible{background:var(--b-pop);border-color:var(--b-pop);color:var(--b-pop-ink)}
+.bt .gd-wrap{display:grid;gap:56px}
+.bt .gd-sec{scroll-margin-top:96px;display:grid;gap:20px}
+.bt .gd-head h2{margin:0 0 6px}.bt .gd-head p{margin:0;color:var(--b-muted)}
+.bt .gd-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:18px}
+.bt .gd-card{display:flex;flex-direction:column;gap:10px;padding:26px;border-radius:22px;background:var(--b-tile);border:1px solid var(--b-line);color:var(--b-ink);text-decoration:none;transition:transform .2s,box-shadow .2s,border-color .2s}
+.bt .gd-card:hover,.bt .gd-card:focus-visible{transform:translateY(-4px);box-shadow:0 18px 36px -22px rgba(5,15,45,.55);border-color:var(--b-sky)}
+.bt .gd-card h3{margin:0;font-size:22px;line-height:1.25}.bt .gd-card p{margin:0;color:var(--b-muted);line-height:1.5}
+.bt .gd-k{align-self:flex-start;font-size:13px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 10px;border-radius:999px;background:var(--b-inset);color:var(--b-ink)}
+.bt .gd-go{margin-top:auto;padding-top:6px;font-weight:600;color:var(--b-ink)}
+.bt .gd-soon{margin:0;padding:22px 26px;border-radius:22px;border:1.5px dashed var(--b-line);color:var(--b-muted)}
+@media (prefers-reduced-motion:reduce){.bt .gd-card,.bt .gd-card:hover{transform:none}}

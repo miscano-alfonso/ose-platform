@@ -538,6 +538,25 @@ export async function removePersonAction(f: FormData): Promise<void> {
   redirect("/admin/teachers?ok=Removed.#people");
 }
 
+// ---------- Guides: presentations for teachers, parents and students (2 Nov) ----------
+export async function saveGuideAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const back = (k: string, m: string) => redirect(`/admin/guides?${k}=${encodeURIComponent(m)}`);
+  if (me.role !== "school_admin") return back("err", "Only a school admin can change this.");
+  const id = str(f, "id", 40);
+  const { saveGuide } = await import("@/lib/guides");
+  const err = await saveGuide(me.id, { id: /^[0-9a-f-]{36}$/.test(id) ? id : undefined, audience: str(f, "audience", 12), title: str(f, "title", 120),
+    description: str(f, "description", 400), url: str(f, "url", 600), kind: str(f, "kind", 10), sortOrder: Math.max(0, Math.min(99, parseInt(str(f, "sort", 2), 10) || 0)), hidden: f.get("hidden") === "on" });
+  revalidatePath("/guides"); revalidatePath("/admin/guides");
+  back(err ? "err" : "ok", err ?? "Saved. It shows on the Guides page.");
+}
+export async function deleteGuideAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  if (me.role === "school_admin") { const id = str(f, "id", 40); if (/^[0-9a-f-]{36}$/.test(id)) { const { deleteGuide } = await import("@/lib/guides"); await deleteGuide(me.id, id); } }
+  revalidatePath("/guides"); revalidatePath("/admin/guides");
+  redirect("/admin/guides?ok=Removed.");
+}
+
 // ---------- workshops: create and edit ----------
 export async function saveWorkshopAction(f: FormData): Promise<void> {
   const me = await requireStaff();

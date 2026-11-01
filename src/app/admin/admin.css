@@ -1115,3 +1115,15 @@
 .adm details.payi>summary::before{content:"▸";color:var(--muted);margin-right:2px}.adm details.payi[open]>summary::before{content:"▾"}.adm details.payi[open]>summary{margin-bottom:10px}
 /* 2 Nov: until 5 minutes before the lesson the lesson button is only a countdown: not a link, no hover */
 .adm .fx .dx-hero .fx-btns a.go.fx-meet.wait{cursor:default}
+/* 2 Nov: Admin → Guides: one row per guide (fields, then actions); wraps on narrow screens */
+.adm .gd-list{display:grid;gap:10px;margin-bottom:12px}
+.adm .gd-row{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end;padding:12px 0;border-top:1px solid var(--line)}
+.adm .gd-list .gd-row:first-child{border-top:0;padding-top:0}
+.adm .gd-row.is-hidden{opacity:.6}
+.adm .gd-fields{flex:1 1 560px;min-width:0;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr) minmax(0,1fr) 80px;gap:8px 12px}
+.adm .gd-fields .gd-wide{grid-column:1/-1}
+.adm .gd-acts{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}
+.adm .gd-acts .chk{display:flex;gap:6px;align-items:center;font-size:15px}
+.adm .gd-add>summary{list-style:none;display:inline-flex}.adm .gd-add>summary::-webkit-details-marker{display:none}
+.adm .gd-add[open]>summary{margin-bottom:10px}
+@media (max-width:700px){.adm .gd-fields{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
