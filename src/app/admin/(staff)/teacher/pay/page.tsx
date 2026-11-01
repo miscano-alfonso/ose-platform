@@ -13,7 +13,7 @@ export default async function MyPay() {
   const shown = rows.filter((r) => r.gross || r.adj || items[r.id]?.lessons.length || items[r.id]?.extras.length);
   const link = (id: string, body: React.ReactNode) => shown.some((r) => r.id === id) ? <a className="lnk" href={`#t-${id}`}>{body}</a> : body;
   return <>
-    <div className="top"><div><h1>My pay</h1><div className="sub">Lessons at each level, 1:1s and workshops, and anything else added, for each term. Every item is listed below the table.</div></div></div>
+    <div className="top"><div><h1>My pay</h1><div className="sub">Lessons at each level, 1:1s and workshops, and anything else added, for each term. Every item is listed under the table: open a term to see it.</div></div></div>
     <div className="tw"><table><thead><tr><th>Term</th><th>Pay day</th>{levels.map((l) => <th key={l} className="n">{l}</th>)}<th className="n">1:1s &amp; workshops</th><th className="n">Other</th><th className="n">Gross pay</th><th>Status</th></tr></thead>
       <tbody>{rows.map((r) => { const none = r.status === "Upcoming" && !r.gross; return <tr key={r.id}><td>{link(r.id, r.name)}</td><td>{dm(r.pay_date)}</td>
         {levels.map((l) => <td key={l} className="n">{none ? "—" : r.by_level[l] ?? 0}</td>)}
@@ -27,6 +27,8 @@ export default async function MyPay() {
       <p>This term’s figure grows as lessons are taught.</p>
     </div>
 
+    {/* a total in the table opens its term below */}
+    <script dangerouslySetInnerHTML={{ __html: "(function(){function o(){var d=location.hash&&document.getElementById(location.hash.slice(1));if(d&&d.tagName==='DETAILS')d.open=true}addEventListener('hashchange',o);document.addEventListener('click',function(e){var a=e.target.closest&&e.target.closest('a[href^=\"#t-\"]');if(a){var d=document.getElementById(a.getAttribute('href').slice(1));if(d)d.open=true}});o()})()" }} />
     {shown.map((r) => { const it = items[r.id] ?? { lessons: [], extras: [] };
       const lessonPay = it.lessons.reduce((a, l) => a + l.pay, 0), extraPay = it.extras.reduce((a, x) => a + x.pay, 0), sum = lessonPay + extraPay + r.adj;
       const ongoing = r.status === "This term";
@@ -46,9 +48,7 @@ export default async function MyPay() {
           <tr className="payi-sum"><td colSpan={3}>Gross pay{r.status === "Approved" || r.status === "Paid" ? " (as approved)" : ""}</td><td className="n">{gbp(r.gross)}</td></tr>
         </tbody></table></div>
         {sum !== r.gross && <p className="note" style={{ margin: "8px 0 0" }}>The items add up to {gbp(sum)}; the approved figure is {gbp(r.gross)} because lessons changed after the office approved this term. Ask the office if anything looks wrong.</p>}</>;
-      // terms still to come are what's planned so far: folded, open one to see it
-      return r.status === "Upcoming"
-        ? <details key={r.id} className="card payi" id={`t-${r.id}`} open={it.extras.length > 0 || r.adj !== 0}><summary className="payi-head">{head}</summary>{body}</details>
-        : <section key={r.id} className="card payi" id={`t-${r.id}`}><div className="payi-head">{head}</div>{body}</section>; })}
+      // every term folds; the one being taught or checked starts open
+      return <details key={r.id} className="card payi" id={`t-${r.id}`} open={r.status === "This term" || r.status === "Being checked"}><summary className="payi-head">{head}</summary>{body}</details>; })}
   </>;
 }
