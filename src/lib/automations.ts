@@ -30,6 +30,10 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "child", "class", "book_link", "school"],
     subject: "How did {{child}}’s taster go?",
     body: "Dear {{parent}},\n\nThank you for bringing {{child}} to the {{class}} taster lesson. We hope they enjoyed it.\n\nIf you’d like {{child}} to join the class, you can book a place here: {{book_link}}\n\nPlaces are limited, so do get in touch if you have any questions.\n\n{{school}}" },
+  { key: "taster_missed", name: "Taster missed: book another date", when: "After a taster lesson the child didn’t join (from Google Meet attendance).", timing: { label: "hours after the lesson ends", unit: "hours", default: 3 }, to_parent: true, to_student: false,
+    fields: ["parent", "child", "class", "date", "time", "taster_link", "school"],
+    subject: "We missed {{child}} at the taster lesson",
+    body: "Dear {{parent}},\n\nWe didn’t see {{child}} at the {{class}} taster lesson on {{date}}. We hope everything is all right.\n\nIf {{child}} would still like to try a lesson, you can book another date here: {{taster_link}}\n\nIf something went wrong joining, just reply to this email and we’ll help.\n\nKind regards,\n{{school}}" },
   { key: "waitlist_open", name: "Waiting list: places are open", when: "When a course reaches its waiting-list target and the families on the list can book first.", timing: null, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "book_link", "hours", "school"],
     subject: "{{class}} is opening: book {{child}}’s place first",
@@ -109,7 +113,7 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
     const saved = await q<Cfg & { key: string }>(`select key, enabled, subject, body, minutes, to_parent, to_student from automations where enabled`);
     const cfg = (key: string) => saved.find((s) => s.key === key) ?? null;
     const [sc] = await q<{ name: string; base: string | null }>(`select name, (select value #>> '{}' from social_kv where key = 'base') as base from schools where id = current_school()`).catch(() => [{ name: "OH-SO ED", base: null }]);
-    const school = sc?.name ?? "OH-SO ED", base = (process.env.SITE_URL || sc?.base || "").replace(/\/$/, ""), book = base ? `${base}/courses` : "our website";
+    const school = sc?.name ?? "OH-SO ED", base = (process.env.SITE_URL || sc?.base || "").replace(/\/$/, ""), book = base ? `${base}/courses` : "our website", tasterLink = base ? `${base}/taster` : "our website";
     const now = Date.now(), horizon = 48 * 3600e3;
 
     // lesson reminders: every student in the class, the set number of minutes before each lesson
@@ -134,7 +138,8 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
       }
     }
 
-    // tasters: thank-you now, joining link before the lesson, invitation to book after it
+    // tasters: thank-you now, joining link before the lesson, then (from Meet attendance) an invitation to book, or another date if they missed it
+    await q(`select settle_tasters()`).catch((e) => console.error("settle tasters", e));
     const tasters = await q<{ id: string; status: string; starts: string; ends: string; class: string; teacher: string | null; meet: string | null; child: string; cemail: string; parent: string; pemail: string; created: string }>(`
       select b.id, b.status::text, ((e.lesson_date + s.starts_at) at time zone sc.timezone)::text as starts, ((e.lesson_date + s.ends_at) at time zone sc.timezone)::text as ends,
         l.name || ' ' || sj.name as class, u.name as teacher, g.meet_url as meet, r.child_name as child, r.child_email::text as cemail, r.parent_first_name as parent, r.parent_email::text as pemail, b.created_at::text as created
@@ -151,6 +156,9 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
       if (c && t.status === "booked" && Date.parse(t.starts) > now && Date.parse(t.created) > now - 7 * 864e5) await deliver(q, "taster_booked", c, { ref: t.id, to: who(c), vars }, budget);
       c = cfg("taster_link");
       if (c && t.status === "booked") { const at = Date.parse(t.starts) - (c.minutes ?? 30) * 60e3; if (at > now + 60e3 && at < now + horizon) await deliver(q, "taster_link", c, { ref: t.id, to: who(c), vars, at: new Date(at) }, budget); }
+      c = cfg("taster_missed");
+      if (c && t.status === "no_show") { const at = Date.parse(t.ends) + (c.minutes ?? 3) * 3600e3;
+        if (at < now + horizon) await deliver(q, "taster_missed", c, { ref: t.id, to: who(c), vars: { ...vars, taster_link: tasterLink }, at: at > now + 60e3 ? new Date(at) : undefined }, budget); }
       c = cfg("taster_follow_up");
       if (c && t.status === "attended") { const at = Date.parse(t.ends) + (c.minutes ?? 2) * 3600e3;
         if (at < now + horizon) { await deliver(q, "taster_follow_up", c, { ref: t.id, to: who(c), vars, at: at > now + 60e3 ? new Date(at) : undefined }, budget); await q(`update taster_bookings set followed_up_at = coalesce(followed_up_at, now()) where id = $1`, [t.id]); } }

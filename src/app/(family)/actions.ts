@@ -1,4 +1,5 @@
 "use server";
+import { cookies } from "next/headers";
 import { threadFields } from "@/lib/chat-threads";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -13,16 +14,23 @@ const VIEWING = "You’re viewing as this family, so nothing can be changed or s
 async function parent(back: string) { try { return await actingParent(); } catch { return go(back, null, VIEWING); } }
 async function student(back: string) { try { return await actingStudent(); } catch { return go(back, null, VIEWING); } }
 
+/** Where a parent was heading when they went to sign in or register (only the taster page so far), kept for an hour. */
+const NEXT_COOKIE = "ose_next";
+export async function rememberNext(next: string) {
+  if (next === "/taster" || next === "taster") (await cookies()).set(NEXT_COOKIE, "/taster", { httpOnly: true, sameSite: "lax", path: "/", maxAge: 3600, secure: process.env.VERCEL === "1" });
+}
 export async function sendLinkAction(f: FormData): Promise<void> {
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`;
   const err = await sendSignInLink(str(f, "email", 200), await siteBase(origin));
+  await rememberNext(str(f, "next", 40));
   redirect(err ? `/account?err=${encodeURIComponent(err)}` : "/account?sent=1");
 }
 export async function redeemLinkAction(f: FormData): Promise<void> {
   const kind = await redeemSignInLink(str(f, "t", 100));
   const { cartCodes } = await import("@/lib/cart");
-  redirect(kind === "parent" ? ((await cartCodes()).length ? "/cart" : "/parent") : kind === "student" ? "/student" : "/account?expired=1");
+  const jar = await cookies(), back = jar.get(NEXT_COOKIE)?.value; if (back) jar.delete(NEXT_COOKIE);
+  redirect(kind === "parent" ? (back === "/taster" ? "/taster" : (await cartCodes()).length ? "/cart" : "/parent") : kind === "student" ? "/student" : "/account?expired=1");
 }
 export async function familySignOutAction(): Promise<void> {
   const f = await currentFamily();

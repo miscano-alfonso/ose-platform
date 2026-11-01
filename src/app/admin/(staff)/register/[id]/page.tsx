@@ -67,9 +67,9 @@ export default async function RegisterPage({ params, searchParams }: { params: P
           <input type="radio" name={`m_${s.id}`} value={m} defaultChecked={(s.mark ?? (s.notice ? "approved_absence" : "present")) === m} />{LABEL[m]}</label>)}
       </fieldset>)}
       {r.tasters.map((t) => <fieldset key={t.id} className="regrow">
-        <legend><b>{t.child}</b> <span className="pill mute">Taster</span></legend>
+        <legend><b>{t.child}</b> <span className="pill mute">Taster</span>{t.status === "booked" && <span className="muted" style={{ fontSize: 13.5, marginLeft: 8 }}>Worked out from Google Meet after the lesson</span>}</legend>
         {(["attended", "no_show"] as const).map((m) => <label key={m} className="regopt">
-          <input type="radio" name={`t_${t.id}`} value={m} defaultChecked={(t.status === "booked" ? "attended" : t.status) === m} />{m === "attended" ? "Attended" : "Didn’t come"}</label>)}
+          <input type="radio" name={`t_${t.id}`} value={m} defaultChecked={t.status === m} />{m === "attended" ? "Attended" : "Didn’t come"}</label>)}
       </fieldset>)}
       <label className="fld" style={{ marginTop: 12 }}>Lesson note (optional)<input name="note" maxLength={300} placeholder="e.g. Covered by Jade" defaultValue={r.note ?? ""} /></label>
       <label style={{ display: "flex", gap: 8, alignItems: "center", margin: "12px 0" }}><input type="checkbox" name="taught" defaultChecked /> This lesson was taught</label>

@@ -12,7 +12,7 @@ import { setTestModeAction, clearHeldAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 const when = (s?: string) => s ? new Date(s).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : "";
-const TAG: Record<string, string> = { "auto-lesson_reminder": "Lesson reminder", "auto-taster_booked": "Taster booked", "auto-taster_link": "Taster joining link", "auto-taster_follow_up": "After a taster",
+const TAG: Record<string, string> = { "auto-lesson_reminder": "Lesson reminder", "auto-taster_booked": "Taster booked", "auto-taster_missed": "Taster missed", "auto-taster_link": "Taster joining link", "auto-taster_follow_up": "After a taster",
   "auto-waitlist_open": "Waiting list open", "auto-payment_reminder": "Payment reminder", "auto-payment_failed": "Payment failed", "auto-report_published": "Report ready",
   "auto-booked": "Booked reminder taken back", "admin-message": "Email from the admin", marketing: "Marketing email", "social-report": "Report email" };
 const tagName = (t: string | null) => (t && TAG[t]) || (t ? t.replace(/^auto-/, "").replace(/[-_]/g, " ") : "Email");

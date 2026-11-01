@@ -14,7 +14,7 @@ const HEARD = ["Facebook", "Instagram", "Google", "A friend or family member", "
 export default async function Register({ searchParams }: { searchParams: Promise<{ next?: string; error?: string; check?: string }> }) {
   const [sp, fam, codes] = await Promise.all([searchParams, currentFamily(), cartCodes()]);
   const parent = fam?.kind === "parent" ? fam : null;
-  const next = sp.next && /^\/(cart|parent)/.test(sp.next) ? sp.next : codes.length ? "/cart" : "/parent";
+  const next = sp.next && /^\/(cart|parent|taster)/.test(sp.next) ? sp.next : codes.length ? "/cart" : "/parent";
   if (sp.check && !parent) return (<>
     <section className="s-phead"><div className="wrap"><h1>Check your email</h1><p>One last step: confirm your email address.</p></div></section>
     <section className="s-sec"><div className="wrap rg-wrap"><div className="bk-tile bk-done" role="status">

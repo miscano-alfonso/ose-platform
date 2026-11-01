@@ -6,7 +6,7 @@ import { siteBase } from "@/lib/social";
 import { NEEDS } from "@/lib/send";
 import { registerFamily, addChildren, checkChild, checkChildEmails, GENDERS, type ChildIn } from "@/lib/registration";
 
-const safeNext = (n: string) => (/^\/(cart|parent)(\/|$|\?)/.test(n) ? n : "/cart");
+const safeNext = (n: string) => (/^\/(cart|parent|taster)(\/|$|\?)/.test(n) ? n : "/cart");
 
 function readChildren(f: FormData): Promise<ChildIn[]> {
   const n = Math.min(8, Math.max(1, parseInt(String(f.get("count") ?? "1"), 10) || 1));
@@ -48,5 +48,6 @@ export async function registerAction(f: FormData): Promise<void> {
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`;
   const sent = await sendVerifyLink(id, await siteBase(origin));
+  if (next.startsWith("/taster")) { const { rememberNext } = await import("../../(family)/actions"); await rememberNext("/taster"); }
   redirect(`/register?check=${encodeURIComponent(p.email)}${sent.ok ? "" : "&error=" + encodeURIComponent("We couldn’t send the email just now. Use “I already have an account” to get a new link.")}`);
 }

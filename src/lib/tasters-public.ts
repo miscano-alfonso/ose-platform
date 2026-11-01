@@ -33,7 +33,7 @@ const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const longDay = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
 const addDays = (d: string, n: number) => { const x = new Date(d + "T12:00:00Z"); x.setUTCDate(x.getUTCDate() + n); return x.toISOString().slice(0, 10); };
 
-export type TasterForm = { parentFirst: string; parentLast: string; parentEmail: string; childName: string; childEmail: string; message: string | null; lessons: string[] };
+export type TasterForm = { parentFirst: string; parentLast: string; parentEmail: string; childName: string; childEmail: string; message: string | null; lessons: string[]; parentId?: string | null; studentId?: string | null };
 
 /** Books the tasters, emails the family and sends the Classroom invitations. Returns an error message, or null. */
 export async function bookTastersFromWebsite(f: TasterForm): Promise<string | null> {
@@ -45,9 +45,9 @@ export async function bookTastersFromWebsite(f: TasterForm): Promise<string | nu
       // a light brake on repeated sign-ups from one address
       const recent = (await q<{ n: number }>(`select count(*)::int as n from taster_requests where parent_email = $1::citext and created_at > now() - interval '1 day'`, [f.parentEmail]))[0].n;
       if (recent >= 3) throw new Error("too many");
-      const r = (await q<{ id: string }>(`insert into taster_requests (school_id, child_name, child_email, parent_first_name, parent_last_name, parent_email, message, parent_id, source)
-        values (current_school(), $1, $2, $3, $4, $5, $6, (select id from parents where email = $5::citext), 'website') returning id`,
-        [f.childName, f.childEmail, f.parentFirst, f.parentLast, f.parentEmail, f.message]))[0];
+      const r = (await q<{ id: string }>(`insert into taster_requests (school_id, child_name, child_email, parent_first_name, parent_last_name, parent_email, message, parent_id, student_id, source)
+        values (current_school(), $1, $2, $3, $4, $5, $6, coalesce($7::uuid, (select id from parents where email = $5::citext)), $8::uuid, 'website') returning id`,
+        [f.childName, f.childEmail, f.parentFirst, f.parentLast, f.parentEmail, f.message, f.parentId ?? null, f.studentId ?? null]))[0];
       requestId = r.id;
       for (const id of f.lessons) await q(`insert into taster_bookings (school_id, request_id, lesson_event_id) values (current_school(), $1, $2)`, [r.id, id]);
     });
@@ -89,4 +89,10 @@ async function confirmTasters(requestId: string) {
     <p>See you soon,<br>${esc(site.name)}</p></div>`;
   const { sendHtml } = await import("./email");
   await sendHtml(`${r.child}’s taster ${rows.length === 1 ? "lesson is" : "lessons are"} booked`, html, [r.parent_email, r.child_email].filter((x, i, a) => x && a.indexOf(x) === i), "taster-booked");
+}
+
+/** A signed-in parent's children, for the taster form (1 Nov: tasters are booked by registered parents). */
+export async function parentKids(parentId: string): Promise<{ id: string; first: string; name: string; email: string | null }[]> {
+  return withSchool((q) => q<{ id: string; first: string; name: string; email: string | null }>(`select id, coalesce(nullif(known_as, ''), first_name) as first,
+    first_name || ' ' || last_name as name, email::text from students where parent_id = $1 order by created_at`, [parentId]));
 }
