@@ -101,8 +101,8 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
         : !stream.connected ? <p className="empty">The Classroom stream shows here once the office connects the recordings account.</p>
         : stream.items.length === 0 ? <p className="empty">No posts in your Classroom courses yet.</p>
         : <MoreList className="dx-list" limit={5}>{stream.items.map((it) => { const inner = <><span className="t"><span className={`pill ${it.kind === "work" ? "warn" : it.kind === "material" ? "info" : "mute"}`}>{it.kind === "work" ? "Assignment" : it.kind === "material" ? "Material" : "Post"}</span>
-            <b>{it.title || "(no title)"}</b>{it.text && <span>{it.text.length > 120 ? it.text.slice(0, 120) + "…" : it.text}</span>}<span style={{ fontSize: 13 }}>{it.course}{it.at ? ` · ${dm(it.at.slice(0, 10))}` : ""}</span></span>{it.link && <span className="go" aria-hidden="true">→</span>}</>;
-          return it.link ? <a key={it.id} className="dx-item info" href={it.link} target="_blank" rel="noopener" style={it.colour ? { borderLeftColor: it.colour } : undefined}>{inner}</a> : <div key={it.id} className="dx-item info">{inner}</div>; })}</MoreList>}
+            <b>{it.title || "(no title)"}</b>{it.text && <span>{it.text.length > 120 ? it.text.slice(0, 120) + "…" : it.text}</span>}<span style={{ fontSize: 13 }}>{it.course}{it.at ? ` · ${dm(it.at.slice(0, 10))}` : ""}</span></span>{it.link && <span className="go" aria-hidden="true">{it.video ? "▶" : "→"}</span>}</>;
+          return it.link ? <a key={it.id} className="dx-item info" href={it.link} target="_blank" rel="noopener" title={it.video ? "Watch the video" : "Open in Google Classroom"} style={it.colour ? { borderLeftColor: it.colour } : undefined}>{inner}</a> : <div key={it.id} className="dx-item info">{inner}</div>; })}</MoreList>}
     </section> },
   ];
   // messaging families and class chats switched off for the school: those modules are shown greyed out
