@@ -1054,3 +1054,10 @@
 .adm .fx .dx-hero .fx-tasters .fx-nh{display:flex;align-items:center}
 .adm .fx .dx-hero .fx-tasters .fx-lines{display:grid;gap:2px}
 .adm .fx-ticon{background:#fff;color:#0d0f1c}
+.adm .wr-sug{margin:-4px 0 10px;font-size:13.5px;color:var(--muted)}
+/* 1 Nov: the Tasters box matches the birthday and SEND boxes: same height, and on wide screens the same width as the birthday box */
+.adm .fx .dx-hero .fx-foot{align-items:stretch}
+.adm .fx .dx-hero .fx-foot .fx-btns-r{align-self:stretch;align-items:flex-end;flex-wrap:nowrap}
+.adm .fx .dx-hero .fx-foot .fx-btns-r .fx-tasters{align-self:stretch;min-width:200px;align-content:start}
+@media (min-width:1251px){.adm .bb-cell.s-xl .dx-hero.has-clock .fx-foot .fx-btns-r .fx-tasters{width:calc(2 * var(--c) + 16px);min-width:0}}
+@media (max-width:640px){.adm .fx .dx-hero .fx-foot .fx-btns-r{flex-wrap:wrap}}

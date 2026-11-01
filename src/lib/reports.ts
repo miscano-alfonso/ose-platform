@@ -96,7 +96,8 @@ export async function publishCycle(actorId: string, cycleId: string): Promise<st
 // ---------- writing (teachers, or an admin for any class) ----------
 export type WriteRow = { id: string; student: string; avg_pct: string | null; marked: number | null; auto_progress: number | null; progress_override: number | null;
   effort: number | null; working_grade: number | null; predicted_grade: number | null; comment: string | null; status: string; review_note: string | null;
-  assess: string; assess_pct: number | null; assess_title: string | null; no_assessment: string | null };
+  assess: string; assess_pct: number | null; assess_title: string | null; no_assessment: string | null;
+  marks?: { pct: number; at: string; term: boolean; assess: boolean }[] };
 
 export async function getWriteSheet(cycleId: string, groupId: string) {
   return withSchool(async (q) => {
@@ -108,8 +109,14 @@ export async function getWriteSheet(cycleId: string, groupId: string) {
     if (!head) return null;
     const rows = await q<WriteRow>(`select e.id, s.first_name || ' ' || s.last_name as student, rl.avg_pct::text, rl.marked,
         progress_score(e.school_id, rl.avg_pct) as auto_progress, e.progress_override, e.effort, e.working_grade, e.predicted_grade, e.comment, e.status::text, e.review_note,
-        a.state as assess, a.pct::float as assess_pct, a.title as assess_title, e.no_assessment
-      from report_entries e join report_lines rl on rl.id = e.id join students s on s.id = e.student_id cross join lateral report_assessment(e.id) a
+        a.state as assess, a.pct::float as assess_pct, a.title as assess_title, e.no_assessment,
+        -- every marked piece in this class this school year up to the report window's end, for suggested grades
+        coalesce((select json_agg(json_build_object('pct', round(cs.points / cw.max_points * 100, 1), 'at', coalesce(cw.due_at, cs.graded_at)::date::text,
+            'term', cs.graded_at::date between c.marks_from and c.marks_to, 'assess', a.title is not null and cw.title = a.title) order by coalesce(cw.due_at, cs.graded_at))
+          from classroom_submissions cs join classroom_coursework cw on cw.id = cs.coursework_id
+          where cw.group_id = e.group_id and cs.student_id = e.student_id and cs.state = 'returned' and cs.points is not null and cw.max_points is not null
+            and cs.graded_at::date <= c.marks_to and cs.graded_at::date >= c.marks_to - 330), '[]') as marks
+      from report_entries e join report_cycles c on c.id = e.cycle_id join report_lines rl on rl.id = e.id join students s on s.id = e.student_id cross join lateral report_assessment(e.id) a
       where e.cycle_id = $1 and e.group_id = $2 order by s.first_name, s.last_name`, [cycleId, groupId]);
     return { head, rows };
   });

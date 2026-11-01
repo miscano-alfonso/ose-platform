@@ -83,11 +83,14 @@ export async function draftComment(actor: { id: string; role: string }, entryId:
   try {
     const res = await fetch(process.env.ANTHROPIC_API_URL || "https://api.anthropic.com/v1/messages", {
       method: "POST", headers: { "x-api-key": ai.key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
-      body: JSON.stringify({ model: ai.model || "claude-sonnet-5-5", max_tokens: 600, system: SYSTEM, messages: [{ role: "user", content: facts }] }), signal: AbortSignal.timeout(60000),
+      body: JSON.stringify({ model: ai.model || "claude-sonnet-5-5", max_tokens: 4000, system: SYSTEM, messages: [{ role: "user", content: facts }] }), signal: AbortSignal.timeout(60000),
     });
-    const j = await res.json().catch(() => ({})) as { content?: { type: string; text?: string }[]; error?: { message?: string } };
+    const j = await res.json().catch(() => ({})) as { content?: { type: string; text?: string }[]; error?: { message?: string }; stop_reason?: string; model?: string };
     if (!res.ok) return { error: `Claude couldn’t draft it just now${j.error?.message ? `: ${j.error.message.slice(0, 120)}` : ""}.` };
     const text = (j.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim();
-    return text ? { text: text.slice(0, 2000) } : { error: "Claude didn’t return a draft. Try again." };
+    if (!text) console.error("report draft: no text", j.model, j.stop_reason, (j.content ?? []).map((b) => b.type).join(","));
+    return text ? { text: text.slice(0, 2000) }
+      : { error: j.stop_reason === "refusal" ? "Claude declined to write this one. Try again, or write it yourself."
+          : `Claude didn’t return a draft (${j.stop_reason ?? "no reason given"}${j.model ? `, ${j.model}` : ""}). Try again.` };
   } catch { return { error: "Couldn’t reach Claude. Try again in a moment." }; }
 }
