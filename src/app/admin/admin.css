@@ -1039,3 +1039,9 @@
 .adm .wr-row{align-items:flex-end}
 .adm .wr-acts{margin-left:auto;display:flex;gap:8px;align-self:flex-end}
 .adm .wr-card{scroll-margin-top:16px}
+/* report writing: the heading (Back, class, due date, the note) stays at the top while scrolling */
+.adm .wr-head{position:sticky;top:0;z-index:20;background:var(--bg);margin:0 -4px;padding:12px 4px 4px;border-bottom:1px solid var(--line)}
+.adm .wr-head .top{margin-bottom:8px}.adm .wr-head .backlink{margin:0 0 8px}.adm .wr-head>.note:last-child{margin:0 0 10px}
+.adm #wr-form{margin-top:14px}
+.adm .wr-card{scroll-margin-top:240px}
+@media (min-width:821px){.adm:has(>.viewbar) .wr-head{top:46px}.adm:has(>.viewbar) .wr-card{scroll-margin-top:290px}}   /* below the sticky "Viewing as" bar */

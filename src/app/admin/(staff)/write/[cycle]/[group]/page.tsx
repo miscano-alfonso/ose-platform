@@ -17,12 +17,17 @@ export default async function Write({ params, searchParams }: { params: Promise<
   const { head: h, rows } = sheet;
   const locked = h.status === "published";
   return <>
+    {/* 31 Oct: the page heading stays at the top while scrolling, with Submit all */}
+    <div className="wr-head">
     <p className="backlink"><a className="abtn sm" href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a></p>
-    <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · comments due {day(h.comments_due)}</div></div></div>
-    {!sp.r && sp.ok && <p className="note msg">{sp.ok}</p>}{!sp.r && sp.err && <p className="note msg bad">{sp.err}</p>}
-    <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters. A report can be submitted once the term’s assessment is marked in Classroom, or once you’ve said why there isn’t one.</p>
+      <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · comments due {day(h.comments_due)}</div></div>
+        <span className="grow" />{!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
+          <SubmitAll /></div>}</div>
+      {!sp.r && sp.ok && <p className="note msg">{sp.ok}</p>}{!sp.r && sp.err && <p className="note msg bad">{sp.err}</p>}
+      <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters. A report can be submitted once the term’s assessment is marked in Classroom, or once you’ve said why there isn’t one.</p>
+    </div>
     {rows.length === 0 ? <p className="empty">No reports for this class yet.</p> :
-    <form action={saveWriteSheetAction}>
+    <form action={saveWriteSheetAction} id="wr-form">
       <input type="hidden" name="cycle" value={cycle} /><input type="hidden" name="group" value={group} />
       {rows.map((r) => { const ro = locked || r.status === "approved"; const here = sp.r === r.id; return <section className="card wr-card" key={r.id} id={`r-${r.id}`}>
         <input type="hidden" name="ids" value={r.id} />
@@ -52,3 +57,8 @@ export default async function Write({ params, searchParams }: { params: Promise<
   </>;
 }
 
+// "Submit all": saves every report on the page and submits the ones that are ready (the others stay as drafts, with a note).
+// It sits in the sticky heading, outside the form, so it's tied to it with form="wr-form"; it posts a flag via formAction.
+function SubmitAll() {
+  return <button className="abtn sm pri" type="submit" form="wr-form" formAction={async (f: FormData) => { "use server"; f.set("submit", "1"); f.delete("one"); const { saveWriteSheetAction } = await import("../../../../actions"); return saveWriteSheetAction(f); }}>Submit all</button>;
+}
