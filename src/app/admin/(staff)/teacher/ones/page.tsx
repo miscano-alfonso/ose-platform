@@ -12,11 +12,11 @@ export default async function Ones({ searchParams }: { searchParams: Promise<{ o
     <div className="top"><div><h1>1:1s and workshops</h1><div className="sub">Your bookings, and the hours you offer for 1:1s</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <div className="dgrid"><div className="dstack">
-      <section className="card"><h2>Booked 1:1s</h2>
+      <section className="card"><h2>Booked 1:1s</h2><p className="cs">Teach each 1:1 from its own Meet link (in your Google Calendar and on My day), signed in with your school account: Google Meet’s log then marks it taught, and it goes into your pay, within a couple of hours.</p>
         {d.bookings.length === 0 ? <p className="empty">No 1:1s booked.</p> : d.bookings.map((b) => <div className="li" key={b.id}>
           <span className="on-when"><span>{dlong(b.at)}</span><b>{hm(b.at)}</b></span>
           <div className="t on-lines"><b>{b.child}</b><span>{b.level} {b.subject}</span><span>{b.minutes} min{b.audience === "public" ? " · new family" : ""}</span>{b.focus && <span>“{b.focus}”</span>}</div>
-          {b.past ? <form action={markOneTaughtAction}><input type="hidden" name="id" value={b.id} /><button className="abtn sm" type="submit">Taught</button></form>
+          {b.past ? <form action={markOneTaughtAction}><input type="hidden" name="id" value={b.id} /><span className="pill mute" title="Meet’s log marks it taught within a couple of hours">Logging from Meet</span> <button className="abtn sm" type="submit" title="Only if Meet hasn’t logged it, for example you joined with another account">Mark taught</button></form>
             : <span className="pill info" title="The Meet invitation is in your Google Calendar">Meet in your calendar</span>}
         </div>)}</section>
       <section className="card"><h2>Workshops</h2>

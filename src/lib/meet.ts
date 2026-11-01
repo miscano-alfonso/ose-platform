@@ -207,6 +207,14 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
       left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id
       where e.status <> 'cancelled' and e.lesson_date between $1::date - 1 and $2::date + 1`, [new Date(from).toISOString().slice(0, 10), until.toISOString().slice(0, 10)]);
     const L = lessons.map((l) => ({ ...l, s: Date.parse(l.starts), e: Date.parse(l.ends), code: codeOf(l.code_url) }));
+    // 2 Nov: 1:1s, each with its own Meet (made by ose@): joins to them are kept against the booking, not a lesson
+    const ones = (await q<{ id: string; meet_url: string; starts: string; minutes: number; teacher_email: string | null }>(`
+      select b.id, b.meet_url, b.starts_at::text as starts, b.minutes, lower(u.email::text) as teacher_email
+      from tutoring_bookings b join teachers t on t.id = b.teacher_id join users u on u.id = t.user_id
+      where b.meet_url is not null and b.status in ('booked', 'completed', 'no_show') and b.starts_at between $1::timestamptz - interval '1 day' and $2::timestamptz`,
+      [new Date(from).toISOString(), until.toISOString()]).catch(() => []))
+      .map((b) => ({ ...b, code: codeOf(b.meet_url), s: Date.parse(b.starts), e: Date.parse(b.starts) + b.minutes * 60e3 }));
+    let oneJoins = 0;
     const students = new Map((await q<{ id: string; email: string }>(`select id, lower(email::text) as email from students where email is not null`)).map((s) => [s.email, s.id]));
     const aliases = (await kvGet<Record<string, string>>("aliases", q)) ?? {};
     const notLessons = new Set((await kvGet<string[]>("not_lessons", q)) ?? []);
@@ -222,6 +230,14 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
       const js = +j.joined, je = +j.left;
       const near = (l: (typeof L)[number]) => js < l.e + 30 * 60e3 && je > l.s - 30 * 60e3;
       const ov = (l: (typeof L)[number]) => Math.min(je, l.e) - Math.max(js, l.s - 15 * 60e3);
+      const one = j.code ? ones.find((o) => o.code === j.code && js < o.e + 60 * 60e3 && je > o.s - 60 * 60e3) : undefined;
+      if (one) {
+        const r = await q(`insert into one_meet_joins (school_id, booking_id, external_id, participant_email, display_name, is_teacher, joined_at, left_at)
+          values (current_school(), $1, $2, $3, $4, $5, $6, $7) on conflict (external_id) do nothing returning id`,
+          [one.id, j.ext, j.email, j.name, !!j.email && j.email === one.teacher_email, j.joined.toISOString(), j.left.toISOString()]);
+        if (r.length) oneJoins++;
+        continue;
+      }
       let cand = j.code ? L.filter((l) => l.code === j.code && near(l)) : [];
       if (!cand.length && j.organizer) cand = L.filter((l) => l.teacher_email === j.organizer && near(l));
       if (!cand.length) {
@@ -246,6 +262,7 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
     for (const id of await matchByName(q, aliases)) touched.add(id);
     await kvSet("aliases", aliases, q);
     for (const id of touched) await recompute(q, id);
+    await settleOnes(q).catch((e) => console.error("1:1s from Meet", e));
     const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_sessions ms where ms.student_id is null and not ms.ignored and ms.participant_email is distinct from ms.organizer_email
       and not exists (select 1 from users u where lower(u.email::text) = lower(ms.participant_email::text))
       and split_part(lower(coalesce(ms.participant_email::text, '')), '@', 2) is distinct from split_part(lower(coalesce(ms.organizer_email::text, '-@-')), '@', 2)
@@ -264,6 +281,25 @@ export async function syncMeet(by = "auto", fromDate?: string): Promise<SyncInfo
     await kvSet("sync", info, q);
     return info;
   });
+}
+
+/** 2 Nov: booked 1:1s that ended over 90 minutes ago (in the last 30 days) and that their teacher joined in Meet are logged
+ *  as taught: "completed" when someone other than the teacher and ose@ was there for 5 minutes or more, else "no_show".
+ *  Both are paid. A 1:1 the teacher's school account didn't join stays booked (Taught on the 1:1s page, or the office). */
+export async function settleOnes(q: Q): Promise<number> {
+  const rows = await q<{ id: string; status: string }>(`
+    with j as (
+      select b.id, bool_or(oj.is_teacher) as teacher,
+        coalesce(sum(extract(epoch from (oj.left_at - oj.joined_at))) filter (where not oj.is_teacher
+          and coalesce(lower(oj.participant_email::text), '') not like 'ose@%'), 0) as others
+      from tutoring_bookings b join one_meet_joins oj on oj.booking_id = b.id
+      where b.status = 'booked' and b.starts_at + make_interval(mins => b.minutes + 90) < now() and b.starts_at > now() - interval '30 days'
+      group by b.id)
+    update tutoring_bookings b set status = case when j.others >= 300 then 'completed' else 'no_show' end::tutoring_status
+    from j where j.id = b.id and j.teacher returning b.id, b.status::text`);
+  for (const r of rows) await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), null, 'status', 'tutoring_booking', $1, $2)`,
+    [r.id, JSON.stringify({ status: r.status, by: "meet" })]);
+  return rows.length;
 }
 
 /** Marks for one lesson from its Meet joins; approved absences stay approved; a lesson anyone joined counts as taught. */
