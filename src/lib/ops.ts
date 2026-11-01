@@ -141,7 +141,7 @@ export async function makeLessonDates(actorId: string, termId: string): Promise<
 
 export type RegisterStudent = { id: string; name: string; mark: string | null; notice: string | null; send?: boolean; send_details?: string | null; adjustments?: string | null; needs?: string[] | null };
 export type Register = { id: string; lesson_date: string; starts_at: string; ends_at: string; code: string; name: string; status: string; note: string | null;
-  teacher: string | null; teacher_user: string | null; link: string | null; start_at: string; end_at: string; students: RegisterStudent[]; tasters: { id: string; child: string; status: string }[] };
+  teacher: string | null; teacher_user: string | null; link: string | null; start_at: string; end_at: string; students: RegisterStudent[]; tasters: { id: string; child: string; status: string; email: string | null; message: string | null }[] };
 
 export async function getRegister(eventId: string): Promise<Register | null> {
   return withSchool(async (q) => {
@@ -161,7 +161,7 @@ export async function getRegister(eventId: string): Promise<Register | null> {
       left join student_support sup on sup.student_id = st.id
       where x.group_id = $2 and not x.is_taster and (x.status = 'active' or m.id is not null) and x.enrolled_at::date <= $3::date
       order by st.first_name, st.last_name`, [eventId, ev.group_id, ev.lesson_date]);
-    const tasters = await q<{ id: string; child: string; status: string }>(`select b.id, r.child_name as child, b.status::text from taster_bookings b
+    const tasters = await q<{ id: string; child: string; status: string; email: string | null; message: string | null }>(`select b.id, r.child_name as child, b.status::text, r.child_email::text as email, nullif(r.message, '') as message from taster_bookings b
       join taster_requests r on r.id = b.request_id where b.lesson_event_id = $1 and b.status <> 'cancelled'`, [eventId]);
     return { ...ev, students, tasters };
   });

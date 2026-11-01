@@ -37,7 +37,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {r.note && <p className="note">{r.note}</p>}
     {/* 31 Oct: SEND in a second column beside who's expected and the register (one column on narrow screens) */}
-    <div className={r.students.some((s) => s.send) ? "reg-cols" : undefined}><div className="reg-main">
+    <div className={r.students.some((s) => s.send) || r.tasters.length ? "reg-cols" : undefined}><div className="reg-main">
     {live && <AutoRefresh seconds={45} />}
     {r.status !== "cancelled" && (future
       ? <section className="card"><h2>Who’s expected</h2><p className="cs">{r.students.length} student{r.students.length === 1 ? "" : "s"}{r.tasters.length ? ` and ${r.tasters.length} taster${r.tasters.length === 1 ? "" : "s"}` : ""}. On the day, arrivals show here as students join, and the register opens below.</p>
@@ -78,10 +78,17 @@ export default async function RegisterPage({ params, searchParams }: { params: P
       <button className="abtn pri" type="submit">{r.status === "taught" ? "Update register" : "Save register"}</button>
     </form>}
     </div>
-    {r.students.some((s) => s.send) && <section className="card send-card reg-side"><h2>SEND in this class</h2>
+    {(r.students.some((s) => s.send) || r.tasters.length > 0) && <div className="reg-side">
+    {r.students.some((s) => s.send) && <section className="card send-card"><h2>SEND in this class</h2>
       <p className="cs">Shared by the parents so you can plan for them. Please keep it to yourself.</p>
       {r.students.filter((s) => s.send).map((s) => <div key={s.id} className="li" style={{ alignItems: "flex-start" }}><span className="arr-needs">{sendLabels(s.needs, s.send_details).map((n) => <span key={n} className="pill warn">{n}</span>)}</span>
         <div className="t"><b>{s.name}</b><span>{s.send_details}</span>{s.adjustments && <span><b style={{ fontWeight: 500 }}>What helps:</b> {s.adjustments}</span>}</div></div>)}</section>}
+    {r.tasters.length > 0 && <section className="card taster-card"><h2>Tasters</h2>
+      <p className="cs">Trying a lesson before they book. Let them in to the Meet with the Google account below and make them welcome.</p>
+      {r.tasters.map((t) => <div key={t.id} className="li" style={{ alignItems: "flex-start" }}>
+        <div className="t"><b>{t.child}</b>{t.email && <span>{t.email}</span>}{t.message && <span><b style={{ fontWeight: 500 }}>From the parent:</b> {t.message}</span>}</div>
+        <span className={`pill ${t.status === "attended" ? "good" : t.status === "no_show" ? "bad" : "info"}`}>{t.status === "attended" ? "Came" : t.status === "no_show" ? "Didn’t come" : "Booked"}</span></div>)}</section>}
+    </div>}
     </div>
     {me.role === "school_admin" && r.status === "scheduled" && <form action={cancelLessonAction} className="eform" style={{ marginTop: 16 }}>
       <input type="hidden" name="id" value={r.id} />

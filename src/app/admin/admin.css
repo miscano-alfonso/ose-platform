@@ -1032,7 +1032,7 @@
 /* 31 Oct: the register page: who's expected and the register on the left, SEND in this class on the right */
 .adm .reg-cols{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;align-items:start}
 .adm .reg-cols .reg-main{min-width:0}.adm .reg-cols .reg-main>.card:first-child{margin-top:0}
-.adm .reg-cols .reg-side{margin-top:0;position:sticky;top:16px}
+.adm .reg-cols .reg-side{margin-top:0;position:sticky;top:16px;display:grid;gap:16px}.adm .reg-cols .reg-side>.card{margin:0}
 .adm .reg-cols .reg-side .li{flex-wrap:wrap;gap:8px}
 @media (max-width:1100px){.adm .reg-cols{grid-template-columns:1fr}.adm .reg-cols .reg-side{position:static;order:-1}}
 /* 31 Oct: report writing: Save draft and Submit on each report, at the right of its scores */
@@ -1045,3 +1045,12 @@
 .adm #wr-form{margin-top:14px}
 .adm .wr-card{scroll-margin-top:240px}
 @media (min-width:821px){.adm:has(>.viewbar) .wr-head{top:46px}.adm:has(>.viewbar) .wr-card{scroll-margin-top:290px}}   /* below the sticky "Viewing as" bar */
+/* 31 Oct: the lesson title on the teacher's hero opens the lesson page; a Tasters box beside the lesson button */
+.adm .fx .dx-hero .fx-title-link{color:inherit;text-decoration:none;transition:color .15s}
+.adm .fx .dx-hero .fx-title-link:hover,.adm .fx .dx-hero .fx-title-link:focus-visible{color:var(--pop,#e9f56a)}
+.adm[data-palette=demo] .fx .dx-hero .fx-title-link:hover,.adm[data-palette=demo] .fx .dx-hero .fx-title-link:focus-visible{color:#ffb3c6}
+.adm .fx .dx-hero .fx-btns-r{align-items:flex-end}
+.adm .fx .dx-hero .fx-tasters{display:grid;gap:4px;padding:9px 13px;max-width:none;box-sizing:border-box}
+.adm .fx .dx-hero .fx-tasters .fx-nh{display:flex;align-items:center}
+.adm .fx .dx-hero .fx-tasters .fx-lines{display:grid;gap:2px}
+.adm .fx-ticon{background:#fff;color:#0d0f1c}
