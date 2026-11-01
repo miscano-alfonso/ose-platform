@@ -425,3 +425,14 @@ export async function parentSwap(parentId: string, enrolmentId: string, toGroup:
     });
   } catch (e) { const m = (e as Error).message; return m.includes("clash") ? "That class clashes with another of your child’s classes." : m.includes("full") ? "That class is full." : m.includes("last week") ? "In the last week of term a swap starts next term." : "Couldn’t swap the course. Please message us."; }
 }
+
+/** The student's next 1:1 (1 Nov), with its Google Meet link once ose@ has made it. */
+export async function studentNextOne(studentId: string): Promise<{ id: string; at: string; minutes: number; subject: string; level: string | null; teacher: string; meet: string | null } | null> {
+  return (await withSchool((q) => q<{ id: string; at: string; minutes: number; subject: string; level: string | null; teacher: string; meet: string | null }>(`
+    select b.id, b.starts_at::text as at, b.minutes, sj.name as subject, l.name as level, u.name as teacher, b.meet_url as meet
+    from tutoring_bookings b join students s on s.id = $1 join subjects sj on sj.id = b.subject_id left join levels l on l.id = b.level_id
+      join teachers t on t.id = b.teacher_id join users u on u.id = t.user_id
+    where (b.student_id = s.id or (b.student_id is null and lower(b.student_email::text) = lower(s.email::text)))
+      and b.status = 'booked' and b.starts_at + make_interval(mins => b.minutes) > now()
+    order by b.starts_at limit 1`, [studentId])))[0] ?? null;
+}

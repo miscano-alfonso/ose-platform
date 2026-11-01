@@ -21,7 +21,7 @@ const SCOPE = [G + "admin.reports.audit.readonly", ...CLASSROOM_SCOPES].join(" "
 const GMAIL_SCOPE = G + "gmail.readonly " + G + "gmail.send " + G + "gmail.modify"; // read the inbox; send replies; keep read/unread in step with Gmail (and Mail apps)
 // The recordings account (ose@, which owns the Meet recordings and teaches every Classroom): Drive, and posting recordings to Classroom.
 const REC_SCOPE = ["drive", "classroom.courses.readonly", "classroom.coursework.students", "classroom.courseworkmaterials", "classroom.announcements.readonly",
-  "classroom.rosters.readonly", "classroom.rosters", "classroom.profile.emails"].map((x) => G + x).join(" ");
+  "classroom.rosters.readonly", "classroom.rosters", "classroom.profile.emails", "calendar.events"].map((x) => G + x).join(" ");   // calendar.events: 1:1 Meet links (1 Nov)
 export type GKind = "gmail" | "gmail2" | "rec"; // gmail2: another inbox to read (e.g. a person’s own address next to the school’s)
 const AUTH_URL = () => process.env.GOOGLE_AUTH_URL || "https://accounts.google.com/o/oauth2/v2/auth";
 const TOKEN_URL = () => process.env.GOOGLE_TOKEN_URL || "https://oauth2.googleapis.com/token";
@@ -141,6 +141,11 @@ export async function googleAccess(kind: "google" | GKind): Promise<string> {
   const rt = kind === "gmail" ? (await kvGet<Mailbox>("gmail"))?.refreshToken : kind === "rec" ? (await kvGet<Mailbox>("rec_google"))?.refreshToken : c.refreshToken;
   if (!rt) fail(kind === "gmail" ? "Connect the school inbox first." : kind === "rec" ? "Connect the recordings account (ose@) first." : "Connect Google first.");
   return accessToken({ ...c, refreshToken: rt });
+}
+/** Can the recordings account (ose@) make calendar events (1:1 Meet links)? "none": not connected; "reconnect": connected before that permission was asked for. */
+export async function recCanCalendar(): Promise<"ok" | "reconnect" | "none"> {
+  const m = await kvGet<Mailbox>("rec_google"); if (!m?.refreshToken) return "none";
+  return (m.scopes ?? "").split(/\s+/).includes(G + "calendar.events") ? "ok" : "reconnect";
 }
 /** Can the recordings account (ose@) send and withdraw Classroom invitations? "none": not connected; "reconnect": connected before that permission was asked for. */
 export async function recCanInvite(): Promise<"ok" | "reconnect" | "none"> {

@@ -37,7 +37,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   after(() => checkinsBackground()); // Join-button check-ins become marks once each lesson ends
   after(() => zoomBackground()); // who joined each Zoom lesson (every 3 hours), and new Zoom recordings to Classroom
   after(() => invitesBackground());   // Classroom invitations for new places, removals for ended ones (if switched on)
-  after(() => classroomBackground()); // class work and marks from Google Classroom, every 6 hours
+  after(() => classroomBackground());
+  after(() => import("@/lib/one-meets").then((m) => m.oneMeetsBackground()).catch(() => null));   // 1:1 Meet links // class work and marks from Google Classroom, every 6 hours
   after(() => inboxBackground());
   after(() => recordingsBackground()); // lesson recordings: renamed, filed, posted to Classroom, title cards // families' emails from the school inbox, every 15 minutes
   after(() => automationsBackground()); // lesson reminders, taster emails, payment reminders… // reads new Google Meet joins every few hours, and sends Friday's attendance alert // scheduled Instagram posts and the weekly moments report, after the page is sent

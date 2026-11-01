@@ -20,6 +20,7 @@ export async function GET(req: NextRequest) {
   await checkinsBackground(); // check-ins from Join buttons become marks once each lesson ends
   await zoomBackground(); // who joined each Zoom lesson, and new Zoom recordings to Classroom
   await invitesBackground();
+  await import("@/lib/one-meets").then((m) => m.oneMeetsBackground()).catch((e) => console.error("1:1 meets", e)); // Meet links for 1:1s
   await classroomBackground();
   await inboxBackground();
   await recordingsBackground();

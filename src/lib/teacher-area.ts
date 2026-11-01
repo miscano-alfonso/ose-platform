@@ -88,7 +88,7 @@ export async function myDay(userId: string): Promise<MyDay> {
     // 1:1s and workshops this teacher takes, in the same week as the next teaching (1 Nov)
     const extra = await q<WeekLesson>(`
       select b.id, (b.starts_at at time zone 'Europe/London')::date::text as d, to_char(b.starts_at at time zone 'Europe/London', 'HH24:MI') as time,
-        '1:1 · ' || b.student_name as name, '1:1' as code, 'scheduled' as status, null::text as meet_url, 1 as students, 0 as not_in_classroom,
+        '1:1 · ' || b.student_name as name, '1:1' as code, 'scheduled' as status, b.meet_url, 1 as students, 0 as not_in_classroom,
         '{}'::text[] as tasters, '{}'::text[] as absent, 0 as marked, 'one' as kind,
         concat_ws(' · ', l.name || ' ' || sj.name, b.minutes || ' min', nullif(b.focus, '')) as detail, '[]'::json as birthdays, '{}'::text[] as send
       from tutoring_bookings b left join levels l on l.id = b.level_id left join subjects sj on sj.id = b.subject_id

@@ -453,11 +453,13 @@ export async function bookTutoringAction(f: FormData): Promise<void> {
     studentEmail: EMAIL.test(email) ? email : null, focus: str(f, "focus", 300) || null };
   if (!d.parentId || !d.student || !teacherId || !startsAt) return tutBack("Choose a time, a family and the student’s name.", "");
   const err = await bookTutoring(me.id, d);
+  if (!err) await import("@/lib/one-meets").then((m) => m.syncOneMeets()).catch(() => null);   // its Meet link straight away
   revalidatePath("/admin/tutoring"); tutBack(err, `1:1 booked for ${d.student}.`);
 }
 export async function setTutoringStatusAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   await setTutoringStatus(me.id, str(f, "id", 40), str(f, "status", 12));
+  await import("@/lib/one-meets").then((m) => m.syncOneMeets([str(f, "id", 40)])).catch(() => null);   // a cancelled 1:1 loses its event
   revalidatePath("/admin/tutoring"); revalidatePath("/admin/payroll");
 }
 
