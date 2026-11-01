@@ -3,7 +3,6 @@ import { requireViewer } from "@/lib/auth";
 import { getRegister, lessonJoins } from "@/lib/ops";
 import { saveRegisterAction, cancelLessonAction, refreshJoinsAction } from "../../../actions";
 import { AutoRefresh } from "../../../AutoRefresh";
-import { joinLabel } from "@/lib/video";
 import { sendLabels } from "@/lib/send";
 
 const LABEL: Record<string, string> = { present: "Present", late: "Late", absent: "Absent", approved_absence: "Approved absence" };
@@ -47,7 +46,6 @@ export default async function RegisterPage({ params, searchParams }: { params: P
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>{live ? "Arrivals" : "Who joined"}</h2>
             {live && <span className="dx-live">{now < st ? "Starting soon" : now <= en ? "Live now" : "Just finished"}</span>}
             <span className="pill info">{joinedN} of {r.students.length} joined</span><span style={{ flex: 1 }} />
-            {r.link && live && <a className="abtn sm pri" href={r.link} target="_blank" rel="noopener">{joinLabel(r.link)}</a>}
             <form action={refreshJoinsAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit">Check Meet now</button></form></div>
           <div className="arr" style={{ marginTop: 12 }}>{arrivals.sort((a, b) => order[a.state] - order[b.state]).map(({ s, x, lateBy, state }) => <div key={s.id} className={`arr-row ${state}`}>
             <b>{s.name}</b>

@@ -64,9 +64,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
             {l.tasters.length ? ` · ${l.tasters.length} taster${l.tasters.length > 1 ? "s" : ""}: ${l.tasters.join(", ")}` : ""}
             {l.absent.length ? ` · away: ${l.absent.join(", ")}` : ""}</span></div>
           {l.id !== next?.id && <SlidesButton compact eventId={l.id} url={l.slides_url ?? null} found={found.get(l.id) ?? null} />}
-          {l.d < today || l.status !== "scheduled" ? <Link className="abtn sm" href={`/admin/register/${l.id}`}>Attendance</Link>
-            : l.meet_url ? null // the next lesson's Join button is at the top
-            : <span className="pill mute" title="The office adds the Meet link to the class">No Meet link</span>}
+          {(l.d < today || l.status !== "scheduled") && <Link className="abtn sm" href={`/admin/register/${l.id}`}>Attendance</Link>}{/* the lesson link is only in the hero */}
         </div>)}</div>}
       </section> },
     { id: "reports", title: "Reports progress", node: <section className="dx-card c5 dx-tall"><header><h2>{d.reportCycle ?? "Reports"}</h2><Link className="dx-more" href="/admin/teacher/reports">Write →</Link></header>
