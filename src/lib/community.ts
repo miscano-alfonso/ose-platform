@@ -38,6 +38,7 @@ export async function replyThread(actor: { id: string; role: string }, id: strin
       const isTeacher = th.teacher_user === actor.id;
       if (!isTeacher && actor.role !== "school_admin") return "You can’t reply to this conversation.";
       const sender = isTeacher && !asOffice ? "teacher" : "office";
+      if (sender === "teacher") { const { familyMsgsOn, FAMILY_MSGS_OFF } = await import("./teacher-area"); if (!(await familyMsgsOn())) return FAMILY_MSGS_OFF; }
       if (th.status === "closed" && sender !== "office") return "This conversation is closed.";
       await q(`insert into messages (school_id, thread_id, sender, sender_user_id, body, read_by_teacher_at) values (current_school(), $1, $2, $3, $4, case when $2 = 'teacher' then now() end)`, [id, sender, actor.id, body]);
       await audit(q, actor.id, "reply", "message_thread", id, { sender });
@@ -52,6 +53,8 @@ export async function setThreadStatus(actorId: string, id: string, status: "open
 
 /** A teacher writes to the parent of a student they teach. */
 export async function startThread(actorId: string, studentId: string, subject: string, body: string): Promise<{ id?: string; error?: string }> {
+  const { familyMsgsOn, FAMILY_MSGS_OFF } = await import("./teacher-area");
+  if (!(await familyMsgsOn())) return { error: FAMILY_MSGS_OFF };
   try {
     return await withSchool(async (q) => {
       const r = (await q<{ teacher_id: string; parent_id: string }>(`select t.id as teacher_id, s.parent_id from teachers t, students s where t.user_id = $1 and s.id = $2`, [actorId, studentId]))[0];

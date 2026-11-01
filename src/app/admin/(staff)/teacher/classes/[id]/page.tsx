@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
+import { familyMsgsOn } from "@/lib/teacher-area";
 import { myClasses, myStudents, classWork } from "@/lib/teacher-area";
 import { StudentRows, StudentTable, ViewSwitch, sortOf, sortStudents } from "../../StudentRows";
 import { ClassWorkList } from "./ClassWork";
@@ -13,6 +14,7 @@ export default async function MyClass({ params, searchParams }: { params: Promis
   const sp = await searchParams;
   const view = sp.view === "cards" ? "cards" : "list", so = sortOf(sp);
   const me = await requireViewer();
+  const canMsg = await familyMsgsOn();
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   const c = (await myClasses(me.id)).find((x) => x.id === id);
@@ -27,10 +29,10 @@ export default async function MyClass({ params, searchParams }: { params: Promis
       <span className="grow" /><div className="acts">
         {c.next && <Link className="abtn sm pri" href={`/admin/register/${c.next.id}`}>Next register · {dm(c.next.d)}</Link>}
         {c.classroom && <a className="abtn sm" href={c.classroom} target="_blank" rel="noopener">Classroom</a>}
-        <Link className="abtn sm" href="/admin/teacher/chats">Class chat</Link></div></div>
+        {canMsg ? <Link className="abtn sm" href="/admin/teacher/chats">Class chat</Link> : <span className="abtn sm is-dis" title="Switched off for now">Class chat</span>}</div></div>
     {list.length > 0 && <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}><ViewSwitch view={view} href={(w) => qs(w === "cards" ? { view: "cards" } : {})} /></div>}
-    {list.length === 0 ? <p className="empty">No students in this class yet.</p> : view === "list" ? <StudentTable list={list} showClasses={false} sort={{ ...so, href: (k, d) => qs({ ...(k !== "name" ? { sort: k } : {}), ...(d === "desc" ? { dir: "desc" } : {}) }) }} /> : <StudentRows list={list} showClasses={false} />}
-    <p className="note">SEND details show only where the parent agreed to share them with teachers. To contact a parent, use <Link href="/admin/teacher/messages">Messages</Link>.</p>
+    {list.length === 0 ? <p className="empty">No students in this class yet.</p> : view === "list" ? <StudentTable canMsg={canMsg} list={list} showClasses={false} sort={{ ...so, href: (k, d) => qs({ ...(k !== "name" ? { sort: k } : {}), ...(d === "desc" ? { dir: "desc" } : {}) }) }} /> : <StudentRows canMsg={canMsg} list={list} showClasses={false} />}
+    <p className="note">SEND details show only where the parent agreed to share them with teachers. {canMsg ? <>To contact a parent, use <Link href="/admin/teacher/messages">Messages</Link>.</> : null}</p>
     <ClassWorkList work={work} classroom={c.classroom} />
   </>;
 }

@@ -3,7 +3,7 @@
 // Safe to import on the client: no database access here.
 
 export type MenuArea = "admin" | "teacher" | "parent" | "student";
-export type MenuItem = { label: string; href: string; icon: string };
+export type MenuItem = { label: string; href: string; icon: string; off?: boolean };   // off: shown greyed (switched off for the school)
 export type MenuGroup = { title: string; items: string[] };
 export type MenuConfig = { groups: MenuGroup[]; hidden: string[] };
 export type ResolvedGroup = { title: string; items: MenuItem[] };

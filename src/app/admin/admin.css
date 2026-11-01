@@ -1080,3 +1080,13 @@
   .adm .bb-cell.s-xl .dx-hero.has-clock .fx-foot .fx-btns-r .fx-tasters{grid-column:2;grid-row:1;width:auto;min-width:0}
   .adm .bb-cell.s-xl .dx-hero.has-clock .fx-notes{grid-column:3/5}
 }
+/* 1 Nov: parts switched off for the school (teachers messaging families, class chats) show greyed out, not hidden */
+.adm .is-off{opacity:.45;filter:grayscale(.6);position:relative}
+.adm .is-off a,.adm .is-off button,.adm .is-off input,.adm .is-off textarea,.adm .is-off select{pointer-events:none}
+.adm .is-dis{opacity:.45;cursor:not-allowed;pointer-events:auto}
+.adm .off-note{margin:8px 0 0;font-size:13.5px;color:var(--muted);text-align:center}
+.adm .off-tag{margin-left:10px;font:500 12.5px/1 "Space Grotesk","Jost",sans-serif;padding:4px 9px;border-radius:999px;border:1px solid var(--line);color:var(--muted);vertical-align:middle}
+.adm .nav a.off{opacity:.45}
+/* 1 Nov: teacher 1:1s & workshops: day with the time under it; each detail on its own line */
+.adm .on-when{display:grid;gap:2px;width:100px;flex:none;align-self:flex-start;font-size:14.5px;color:var(--muted)}.adm .on-when b{color:var(--ink);font-weight:600}
+.adm .on-lines{display:grid;gap:2px}

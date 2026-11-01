@@ -52,9 +52,15 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {sch?.is_demo ? <a className="logo" href="/admin/teacher" title="My day" style={{ font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
         : <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>}
-        <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports }} groups={await menuFor("teacher")} />
+        <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports }} groups={await teacherMenu()} />
         <SideFoot theme={theme} signOut={signOutAction} inline toggle />
       </aside>
       <main className="main"><TopBar />{children}</main>
     </div></div>;
+}
+
+/** The teacher menu, with Class chats greyed when messaging families is switched off. */
+async function teacherMenu() {
+  const [groups, on] = await Promise.all([menuFor("teacher"), import("@/lib/teacher-area").then((t) => t.familyMsgsOn())]);
+  return on ? groups : groups.map((g) => ({ ...g, items: g.items.map((i) => i.href === "/admin/teacher/chats" ? { ...i, off: true } : i) }));
 }

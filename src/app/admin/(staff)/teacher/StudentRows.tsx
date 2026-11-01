@@ -7,7 +7,7 @@ const age = (dob: string) => { const b = new Date(dob + "T12:00:00Z"), n = new D
 const attPill = (p: number | null) => p === null ? <span className="muted">—</span> : <span className={`pill ${p >= 90 ? "good" : p >= 75 ? "warn" : "bad"}`}>{p}%</span>;
 
 /** The teacher's students as cards: name, classes with attendance, SEND (shared), Google account, birthday and points. */
-export function StudentRows({ list, showClasses = true }: { list: MyStudent[]; showClasses?: boolean }) {
+export function StudentRows({ list, showClasses = true, canMsg = true }: { list: MyStudent[]; showClasses?: boolean; canMsg?: boolean }) {
   return <div className="ms-grid">{list.map((s) => <article key={s.id} className={`ms-card${s.send ? " has-send" : ""}`} id={`s-${s.id}`}>
     <header><div><b>{s.name}</b>{s.known_as && <span className="muted"> · likes to be called {s.known_as}</span>}</div>
       {s.send && <span className="arr-needs">{sendLabels(s.needs, s.send_details).map((n) => <span key={n} className="pill warn">{n}</span>)}</span>}</header>
@@ -19,7 +19,7 @@ export function StudentRows({ list, showClasses = true }: { list: MyStudent[]; s
       {(s.dob || s.year_group) && <div><dt>Age</dt><dd>{s.dob ? <>{age(s.dob)} · birthday {dm(s.dob)}</> : ""}{s.year_group ? `${s.dob ? " · " : ""}Year ${s.year_group}` : ""}</dd></div>}
       {s.send && <div className="ms-send"><dt>SEND</dt><dd>{s.send_details}{s.adjustments && <><br /><b>What helps:</b> {s.adjustments}</>}</dd></div>}
     </dl>
-    <div className="ms-acts"><Link className="abtn sm" href={`/admin/messages/new?student=${s.id}`}>Message the family</Link></div>
+    <div className="ms-acts">{canMsg ? <Link className="abtn sm" href={`/admin/messages/new?student=${s.id}`}>Message the family</Link> : <span className="abtn sm is-dis" title="Switched off for now">Message the family</span>}</div>
   </article>)}</div>;
 }
 
@@ -52,7 +52,7 @@ function Th({ k, label, sort, n }: { k: SortKey; label: string; sort?: Sort; n?:
 }
 
 /** The same students as a table: one line each, with the Message button. Column headings sort when `sort` is given. */
-export function StudentTable({ list, showClasses = true, sort }: { list: MyStudent[]; showClasses?: boolean; sort?: Sort }) {
+export function StudentTable({ list, showClasses = true, sort, canMsg = true }: { list: MyStudent[]; showClasses?: boolean; sort?: Sort; canMsg?: boolean }) {
   return <div className="tw"><table className="ms-table"><thead><tr><Th k="name" label="Student" sort={sort} />{showClasses && <Th k="class" label="Classes" sort={sort} />}
     <Th k="att" label="Attendance" sort={sort} n /><Th k="points" label="Points" sort={sort} n /><Th k="send" label="SEND" sort={sort} /><Th k="email" label="Google account" sort={sort} /><Th k="bday" label="Birthday" sort={sort} /><th /></tr></thead>
     <tbody>{list.map((s) => <tr key={s.id}>
@@ -62,7 +62,7 @@ export function StudentTable({ list, showClasses = true, sort }: { list: MyStude
       <td>{s.send ? <span className="arr-needs" style={{ justifyContent: "flex-start" }} title={`${s.send_details ?? ""}${s.adjustments ? ` · What helps: ${s.adjustments}` : ""}`}>{sendLabels(s.needs, s.send_details).map((n) => <span key={n} className="pill warn">{n}</span>)}</span> : <span className="muted">—</span>}</td>
       <td>{s.email ?? <span className="muted">Not given</span>}{s.in_classroom === false && <div><span className="pill warn">Not in Classroom</span></div>}</td>
       <td>{s.dob ? <>{dm(s.dob)} <span className="muted">({age(s.dob)})</span></> : <span className="muted">—</span>}</td>
-      <td><Link className="abtn sm" href={`/admin/messages/new?student=${s.id}`}>Message</Link></td></tr>)}</tbody></table></div>;
+      <td>{canMsg ? <Link className="abtn sm" href={`/admin/messages/new?student=${s.id}`}>Message</Link> : <span className="abtn sm is-dis" title="Switched off for now">Message</span>}</td></tr>)}</tbody></table></div>;
 }
 
 /** List (the default) or cards (?view=cards). */

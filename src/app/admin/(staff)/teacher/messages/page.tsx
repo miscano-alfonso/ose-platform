@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { requireViewer } from "@/lib/auth";
 import { listThreads } from "@/lib/community";
-import { teacherEmails, teacherContacts, officeInfo } from "@/lib/teacher-area";
+import { teacherEmails, teacherContacts, officeInfo, familyMsgsOn } from "@/lib/teacher-area";
 import { teacherEmailAction } from "../email/actions";
 
 export const dynamic = "force-dynamic";
@@ -15,8 +15,8 @@ const kb = (n: number) => n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1
 export default async function TeacherMessages({ searchParams }: { searchParams: Promise<{ show?: string; to?: string; school?: string; ok?: string; err?: string }> }) {
   const [sp, me] = await Promise.all([searchParams, requireViewer()]);
   const show = sp.show === "closed" || sp.show === "all" ? sp.show : "open";
-  const [threads, mails, contacts, office] = await Promise.all([listThreads(me.id, show), teacherEmails(me.id), teacherContacts().catch(() => []),
-    officeInfo().catch(() => ({ label: "the office", mailbox: null }))]);
+  const [threads, mails, contacts, office, canMsg] = await Promise.all([listThreads(me.id, show), teacherEmails(me.id), teacherContacts().catch(() => []),
+    officeInfo().catch(() => ({ label: "the office", mailbox: null })), familyMsgsOn()]);
   const labelOf = (name: string | null) => { const c = contacts.find((x) => x.name === name); return name ? `${name}${c ? ` · ${c.label}` : ""}` : office.label; };
   // conversations with the school: one per thread, newest first; inside, oldest first
   const school = [...mails.reduce((m, e) => m.set(e.thread_id, [...(m.get(e.thread_id) ?? []), e]), new Map<string, typeof mails>()).values()].map((t) => [...t].reverse());
@@ -50,7 +50,7 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
 
   return <>
     <div className="top"><div><h1>Messages</h1><div className="sub">Talk to the school, and to the parents of the students you teach. The office can read conversations with families.</div></div>
-      <span className="grow" /><Link className="abtn pri" href="/admin/messages/new">Message a family</Link></div>
+      <span className="grow" />{canMsg ? <Link className="abtn pri" href="/admin/messages/new">Message a family</Link> : <span className="abtn is-dis" title="Switched off for now">Message a family</span>}</div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
 
     <section className="card"><h2>The school</h2>
@@ -73,12 +73,12 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
           {replied ? <span className="pill good">Replied</span> : <span className="pill mute">Sent</span>}<span className="abtn sm">Open</span></Link>; })}</div>}
     </section>
 
-    <section className="card"><div className="tm-head"><h2>Families</h2>
+    {<section className={`card${canMsg ? "" : " is-off"}`}><div className="tm-head"><h2>Families{!canMsg && <span className="off-tag">Switched off for now</span>}</h2>
       <div className="segl" role="group" aria-label="Show">{[["open", "Open"], ["closed", "Closed"], ["all", "All"]].map(([k, l]) =>
         <Link key={k} scroll={false} href={`/admin/teacher/messages?show=${k}`} aria-current={show === k ? "true" : undefined}>{l}</Link>)}</div></div>
       {threads.length === 0 ? <p className="empty">No conversations{show === "open" ? " open" : ""}.</p> : threads.map((t) => <div className="li" key={t.id}>
         <div className="t"><b>{t.subject}</b><span>{t.parent} · about {t.student} · {day(t.last_message_at)} · {t.messages} message{t.messages === 1 ? "" : "s"}</span></div>
         {t.last_sender === "parent" && t.status === "open" && <span className="pill warn">Waiting for your reply</span>}
-        <Link className={`abtn sm${t.last_sender === "parent" ? " pri" : ""}`} href={`/admin/messages/${t.id}`}>Open</Link></div>)}</section>
+        <Link className={`abtn sm${t.last_sender === "parent" ? " pri" : ""}`} href={`/admin/messages/${t.id}`}>Open</Link></div>)}</section>}
   </>;
 }

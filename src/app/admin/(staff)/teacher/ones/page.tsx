@@ -14,15 +14,15 @@ export default async function Ones({ searchParams }: { searchParams: Promise<{ o
     <div className="dgrid"><div className="dstack">
       <section className="card"><h2>Booked 1:1s</h2>
         {d.bookings.length === 0 ? <p className="empty">No 1:1s booked.</p> : d.bookings.map((b) => <div className="li" key={b.id}>
-          <span className="mono" style={{ width: 100, flex: "none" }}>{dlong(b.at)}</span>
-          <div className="t"><b>{hm(b.at)} · {b.child} · {b.level} {b.subject}</b><span>{b.minutes} min · “{b.focus || "No notes"}”{b.audience === "public" ? " · new family" : ""}</span></div>
+          <span className="on-when"><span>{dlong(b.at)}</span><b>{hm(b.at)}</b></span>
+          <div className="t on-lines"><b>{b.child}</b><span>{b.level} {b.subject}</span><span>{b.minutes} min{b.audience === "public" ? " · new family" : ""}</span>{b.focus && <span>“{b.focus}”</span>}</div>
           {b.past ? <form action={markOneTaughtAction}><input type="hidden" name="id" value={b.id} /><button className="abtn sm" type="submit">Taught</button></form>
             : <span className="pill info" title="The Meet invitation is in your Google Calendar">Meet in your calendar</span>}
         </div>)}</section>
       <section className="card"><h2>Workshops</h2>
         {d.workshops.length === 0 ? <p className="empty">None coming up.</p> : d.workshops.map((w) => <div className="li" key={w.id}>
-          <span className="mono" style={{ width: 100, flex: "none" }}>{dlong(w.at)}</span>
-          <div className="t"><b>{hm(w.at)} · {w.title}</b><span>{w.booked} booked · {w.minutes} min</span></div></div>)}</section>
+          <span className="on-when"><span>{dlong(w.at)}</span><b>{hm(w.at)}</b></span>
+          <div className="t on-lines"><b>{w.title}</b><span>{w.minutes} min</span><span>{w.booked} booked</span></div></div>)}</section>
     </div>
     <section className="card"><h2>My 1:1 hours</h2><p className="cs">Parents can book you in these hours, except when you’re teaching. Changes don’t affect 1:1s already booked.</p>
       {d.hours.length === 0 ? <p className="empty">You don’t offer any 1:1 hours yet.</p> : d.hours.map((h) => <div className="li" key={h.id}>

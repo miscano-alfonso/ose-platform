@@ -15,7 +15,7 @@ export function MenuNav({ id, label, groups, counts = {}, root, alias = {} }: {
   const holds = (g: ResolvedGroup) => g.items.some((x) => here(x.href));
   const start = groups.find(holds) ?? groups.find((g) => g.title === "Main menu") ?? [...groups].sort((a, b) => b.items.length - a.items.length)[0];
   const [section, setSection] = useState(start?.title ?? "");
-  const list = (g: ResolvedGroup) => <div className="ngrp-list">{g.items.map((x) => <Link key={x.href} href={x.href} aria-current={here(x.href) ? "page" : undefined} onClick={() => setOpen(false)}>
+  const list = (g: ResolvedGroup) => <div className="ngrp-list">{g.items.map((x) => <Link key={x.href} href={x.href} aria-current={here(x.href) ? "page" : undefined} onClick={() => setOpen(false)} className={x.off ? "off" : undefined} title={x.off ? "Switched off for now" : undefined}>
     <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[x.icon] ?? ICONS.home} /></svg>
     <span>{x.label}</span>{counts[x.href] ? <b className="cnt">{counts[x.href]}</b> : null}</Link>)}</div>;
   return <>

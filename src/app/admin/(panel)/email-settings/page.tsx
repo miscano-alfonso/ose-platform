@@ -2,9 +2,9 @@ import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
 import { inboxStatus, signatureFor, inboxEveryone, inboxEvery, EVERY_CHOICES } from "@/lib/inbox";
-import { teacherContacts, officeInfo } from "@/lib/teacher-area";
+import { teacherContacts, officeInfo, familyMsgsOn } from "@/lib/teacher-area";
 import { disconnectInboxAction, replyFromAction, signatureAction, inboxEveryoneAction, inboxEveryAction } from "../../actions";
-import { teacherContactsAction } from "../teacher-contacts/actions";
+import { teacherContactsAction, familyMsgsAction } from "../teacher-contacts/actions";
 import { SigPreview } from "../../InboxReply";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +13,7 @@ const when = (s: string) => new Date(s).toLocaleString("en-GB", { day: "numeric"
 // Settings → Email: your signature, the connected inboxes (and which one replies come from), and who teachers can email.
 export default async function EmailSettings({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
   const [sp, me] = await Promise.all([searchParams, requireStaff()]);
+  const msgsOn = await familyMsgsOn();
   const [box, sig, admins, list, office] = await Promise.all([inboxStatus(), signatureFor(me), withSchool((q) => q<{ id: string; name: string; email: string }>(
     `select id, name, email::text from users where role = 'school_admin' and disabled_at is null order by name`)), teacherContacts(), officeInfo()]);
   const [everyone, every] = await Promise.all([inboxEveryone(), inboxEvery()]);
@@ -58,6 +59,11 @@ export default async function EmailSettings({ searchParams }: { searchParams: Pr
         <button className={`abtn sm${everyone ? "" : " pri"}`} type="submit">{everyone ? "Turn off" : "Turn on"}</button></form>
       <p className="note" style={{ marginTop: 8 }}>Replies are sent through the Reply from address’s Gmail, in the same conversation for the family. That address must be one of the inboxes above. Inboxes connected before sending was added need to be disconnected and connected again (tick the box to send email).</p></>}
     </section>
+
+    <section className="card" id="family-msgs"><h2>Teachers messaging families</h2>
+      <p className="cs">{msgsOn ? "On: teachers can message parents about their students and post in their classes’ chats." : "Off: teachers can’t message parents or post in class chats (those parts of their dashboard are hidden). They can still message the school, below. The office can still message families."}</p>
+      <form action={familyMsgsAction}><input type="hidden" name="on" value={msgsOn ? "0" : "1"} />
+        <button className={`abtn sm${msgsOn ? "" : " pri"}`} type="submit">{msgsOn ? "Turn off" : "Turn on"}</button></form></section>
 
     <section className="card"><h2>Who teachers can message</h2>
       <p className="cs">On their Messages page (“The school”), teachers write to the people ticked here. Each message shows in Email → Inbox, tagged with who it’s for, and that person also gets it by email.</p>

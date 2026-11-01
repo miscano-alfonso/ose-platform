@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireViewer } from "@/lib/auth";
+import { familyMsgsOn } from "@/lib/teacher-area";
 import { myStudents, myClasses } from "@/lib/teacher-area";
 import { StudentRows, StudentTable, ViewSwitch, sortOf, sortStudents } from "../StudentRows";
 
@@ -9,6 +10,7 @@ export const dynamic = "force-dynamic";
 // Google account and birthday. Filter by class or SEND, search by name, or sort by any column heading in the list.
 export default async function MyStudents({ searchParams }: { searchParams: Promise<{ q?: string; show?: string; view?: string; sort?: string; dir?: string }> }) {
   const me = await requireViewer();
+  const canMsg = await familyMsgsOn();
   const sp = await searchParams;
   const [all, classes] = await Promise.all([myStudents(me.id), myClasses(me.id)]);
   const q = (sp.q ?? "").trim().toLowerCase(), show = sp.show ?? "all", view = sp.view === "cards" ? "cards" : "list";
@@ -33,7 +35,7 @@ export default async function MyStudents({ searchParams }: { searchParams: Promi
         <button className="abtn sm" type="submit" style={{ marginLeft: 6 }}>Show</button></form>
       <span style={{ flex: 1 }} /><ViewSwitch view={view} href={(w) => href(show, w)} />
     </div>
-    {list.length === 0 ? <p className="empty">{all.length ? "No students match." : "No students in your classes yet."}</p> : view === "list" ? <StudentTable list={list} sort={{ ...so, href: (k, d) => href(show, "list", { ...(k !== "name" ? { sort: k } : {}), ...(d === "desc" ? { dir: "desc" } : {}) }) }} /> : <StudentRows list={list} />}
-    <p className="note">SEND details show only where the parent agreed to share them with teachers. To contact a parent, use <Link href="/admin/teacher/messages">Messages</Link>.</p>
+    {list.length === 0 ? <p className="empty">{all.length ? "No students match." : "No students in your classes yet."}</p> : view === "list" ? <StudentTable canMsg={canMsg} list={list} sort={{ ...so, href: (k, d) => href(show, "list", { ...(k !== "name" ? { sort: k } : {}), ...(d === "desc" ? { dir: "desc" } : {}) }) }} /> : <StudentRows canMsg={canMsg} list={list} />}
+    <p className="note">SEND details show only where the parent agreed to share them with teachers. {canMsg ? <>To contact a parent, use <Link href="/admin/teacher/messages">Messages</Link>.</> : null}</p>
   </>;
 }

@@ -180,6 +180,7 @@ export async function teacherOwnsChat(userId: string, chatId: string) {
   return withSchool(async (q) => (await q(`select 1 from student_chats c join course_groups g on g.id = c.group_id where c.id = $2 and g.teacher_id = ${ME}`, [userId, chatId])).length > 0);
 }
 export async function teacherPost(userId: string, chatId: string, body: string, th: { parent: string | null; topic: string | null } = { parent: null, topic: null }): Promise<string | null> {
+  if (!(await familyMsgsOn())) return FAMILY_MSGS_OFF;
   try {
     return await withSchool(async (q) => {
       const r = await q(`insert into student_chat_messages (school_id, chat_id, sender_teacher_id, body, parent_id, topic)
@@ -429,3 +430,14 @@ export async function classWork(groupId: string, limit = 25): Promise<ClassWork[
     });
   });
 }
+
+/** Can teachers message families and post in class chats? (Settings → Email; meet_kv teacher_family_msgs, missing = on.) */
+export async function familyMsgsOn(): Promise<boolean> {
+  const v = (await withSchool((q) => q<{ v: unknown }>(`select value as v from meet_kv where key = 'teacher_family_msgs'`)).catch(() => []))[0]?.v;
+  return v !== false;
+}
+export async function setFamilyMsgs(on: boolean) {
+  await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), 'teacher_family_msgs', $1::jsonb)
+    on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [JSON.stringify(on)]));
+}
+export const FAMILY_MSGS_OFF = "Messaging families and class chats are switched off for now. You can still message the school.";

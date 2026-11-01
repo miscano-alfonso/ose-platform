@@ -40,10 +40,10 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
 </div>}
       <div className="fx-foot">{next && (next.birthdays?.length || next.send?.length) ? <div className="fx-notes">{!!next.birthdays?.length && <p className="fx-bday"><span className="fx-nh"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3c1 1.2 1.5 2.1 1.5 2.8a1.5 1.5 0 0 1-3 0c0-.7.5-1.6 1.5-2.8zM11.2 8h1.6v3h-1.6zM4 13a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2.2c-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-1.4 1.2-2.6 1.2-4 0-.7.6-1.3.9-2 .9zM4 17.5c.7 0 1.4-.2 2-.7 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 1.4 1.2 2.6 1.2 4 0 .6.5 1.3.7 2 .7V21H4z" fill="currentColor"/></svg><span className="sr-only">Birthdays</span></span>
           <span className="fx-lines">{[...next.birthdays].sort((x, y) => x.d.localeCompare(y.d)).map((b, i) => <span key={i}><b>{b.name}</b> · {b.d === today ? "today" : wd(b.d)} · turns {b.age}</span>)}</span></p>}
-        {!!next.send?.length && <Link className="fx-bday fx-send" href={`/admin/register/${next.id}`} title="SEND in this class: open the class list">
+        {!!next.send?.length && <div className="fx-bday fx-send">
           <span className="fx-nh"><span className="fx-sicon" aria-hidden="true">S</span><span className="sr-only">SEND in this class</span></span>
           <span className="fx-lines">{next.send.map((x, i) => { const m = /^(.*?) \((.*)\)$/.exec(x);
-            return <span key={i}><b className="fx-nm">{m ? m[1] : x}</b>{m ? ` · ${m[2]}` : ""}</span>; })}</span></Link>}</div> : null}
+            return <span key={i}><b className="fx-nm">{m ? m[1] : x}</b>{m ? ` · ${m[2]}` : ""}</span>; })}</span></div>}</div> : null}
         {next && <div className="fx-btns fx-btns-r"><LessonLinkButton date={next.d} time={next.time} url={next.meet_url ?? null} title={next.meet_url ? joinLabel(next.meet_url) : undefined} />
           {next.tasters.length > 0 && <div className="fx-bday fx-tasters"><span className="fx-nh"><span className="fx-sicon fx-ticon" aria-hidden="true">T</span><span className="sr-only">Tasters in this lesson</span></span>
             <span className="fx-lines">{next.tasters.map((t, i) => <span key={i}><b>{t}</b> · taster</span>)}</span></div>}
@@ -104,7 +104,10 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
           return it.link ? <a key={it.id} className="dx-item info" href={it.link} target="_blank" rel="noopener" style={it.colour ? { borderLeftColor: it.colour } : undefined}>{inner}</a> : <div key={it.id} className="dx-item info">{inner}</div>; })}</MoreList>}
     </section> },
   ];
-  return modules;
+  // messaging families and class chats switched off for the school: those modules are shown greyed out
+  const { familyMsgsOn } = await import("@/lib/teacher-area");
+  if (await familyMsgsOn()) return modules;
+  return modules.map((m) => m.id === "messages" || m.id === "chats" ? { ...m, node: <div className="is-off" title="Switched off for now">{m.node}<p className="off-note">Switched off for now</p></div> } : m);
 }
 
 export const TEACHER_BUILT_IN: { id: string; size: "s" | "q" | "m" | "l" | "xl" | "full"; h?: "s" | "m" | "l" }[] = [
