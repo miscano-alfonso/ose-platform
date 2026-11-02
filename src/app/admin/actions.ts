@@ -299,6 +299,17 @@ export async function saveRegisterAction(f: FormData): Promise<void> {
   revalidatePath("/admin/attendance");
   redirect(`/admin/register/${id}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Register saved.")}`);
 }
+/** 2 Nov: correct a mark Meet got wrong (now and then, with a reason). */
+export async function correctMarksAction(f: FormData): Promise<void> {
+  const me = await requireSignedIn();
+  const id = str(f, "id", 40), marks: Record<string, string> = {};
+  for (const [k, v] of f.entries()) if (typeof v === "string" && k.startsWith("m_") && f.get("o" + k.slice(1)) !== v) marks[k.slice(2)] = v;   // only the rows changed
+  const { correctMarks } = await import("@/lib/ops");
+  const r = await correctMarks(me, id, marks, str(f, "reason", 300));
+  revalidatePath("/admin/attendance");
+  if (r.error) redirect(`/admin/register/${id}?fix=1&err=${encodeURIComponent(r.error)}`);
+  redirect(`/admin/register/${id}?ok=${encodeURIComponent(r.changed ? `${r.changed} mark${r.changed === 1 ? "" : "s"} corrected.` : "Nothing changed.")}`);
+}
 export async function cancelLessonAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const id = str(f, "id", 40);

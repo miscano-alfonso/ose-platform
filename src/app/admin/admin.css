@@ -1134,3 +1134,7 @@
 .adm .ow-item{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:10px 12px;border-radius:12px;border:1px solid var(--line);color:var(--ink);text-decoration:none}
 .adm .ow-item .t{display:grid;gap:2px;min-width:0}.adm .ow-item .t span{font-size:13.5px;color:var(--muted)}
 .adm .ow-item:hover,.adm .ow-item:focus-visible{border-color:var(--brand);background:var(--panel)}
+/* 2 Nov: register: attendance comes from Meet; "Correct a mark" adds a choice at the end of each row and a reason below */
+.adm .arr-row .arr-fix{margin-left:auto;min-width:170px}
+.adm .fix-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.adm .fix-bar .fld{flex:1 1 320px}

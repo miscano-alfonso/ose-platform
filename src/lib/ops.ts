@@ -139,7 +139,7 @@ export async function makeLessonDates(actorId: string, termId: string): Promise<
   });
 }
 
-export type RegisterStudent = { id: string; name: string; mark: string | null; notice: string | null; send?: boolean; send_details?: string | null; adjustments?: string | null; needs?: string[] | null };
+export type RegisterStudent = { id: string; name: string; mark: string | null; notice: string | null; mark_source?: string | null; correction_note?: string | null; corrected_by_name?: string | null; send?: boolean; send_details?: string | null; adjustments?: string | null; needs?: string[] | null };
 export type Register = { id: string; lesson_date: string; starts_at: string; ends_at: string; code: string; name: string; status: string; note: string | null;
   teacher: string | null; teacher_user: string | null; link: string | null; start_at: string; end_at: string; students: RegisterStudent[]; tasters: { id: string; child: string; status: string; email: string | null; message: string | null }[] };
 
@@ -151,7 +151,8 @@ export async function getRegister(eventId: string): Promise<Register | null> {
       from lesson_events e join lesson_slots s on s.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join schools sc on sc.id = e.school_id
       join subjects sj on sj.id = g.subject_id left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id where e.id = $1`, [eventId]))[0];
     if (!ev) return null;
-    const students = await q<RegisterStudent>(`select st.id, st.first_name || ' ' || st.last_name as name, m.mark::text as mark,
+    const students = await q<RegisterStudent>(`select st.id, st.first_name || ' ' || st.last_name as name, m.mark::text as mark, m.source as mark_source, m.correction_note,
+        (select cu.name from users cu where cu.id = m.corrected_by) as corrected_by_name,
         (select n.reason from absence_notices n where n.student_id = st.id and n.lesson_event_id = $1 and n.cancelled_at is null) as notice,
         coalesce(sup.has_send = 'yes' and sup.share_with_teachers, false) as send,
         case when sup.has_send = 'yes' and sup.share_with_teachers then sup.details end as send_details,
@@ -168,6 +169,28 @@ export async function getRegister(eventId: string): Promise<Register | null> {
 }
 
 const MARKS = ["present", "late", "absent", "approved_absence"];
+/** 2 Nov: attendance comes from Google Meet's log; a teacher (or the office) only corrects a mark now and then, with a reason.
+ *  Only marks that change are saved; they're kept as the teacher's (or office's), so later Meet syncs leave them alone. */
+export async function correctMarks(actor: { id: string; role: string }, eventId: string, marks: Record<string, string>, reason: string): Promise<{ error?: string; changed: number }> {
+  return withSchool(async (q) => {
+    const ev = (await q<{ teacher_user: string | null; started: boolean }>(`select t.user_id as teacher_user, (e.lesson_date + s.starts_at) at time zone sc.timezone <= now() as started
+      from lesson_events e join lesson_slots s on s.id = e.slot_id join schools sc on sc.id = e.school_id left join teachers t on t.id = e.teacher_id where e.id = $1`, [eventId]))[0];
+    if (!ev) return { error: "That lesson wasn’t found.", changed: 0 };
+    if (actor.role !== "school_admin" && ev.teacher_user !== actor.id) return { error: "Only the lesson’s teacher or the office can correct this.", changed: 0 };
+    if (!ev.started) return { error: "Marks can be corrected once the lesson has started.", changed: 0 };
+    const cur = new Map((await q<{ student_id: string; mark: string }>(`select student_id, mark::text from attendance_marks where lesson_event_id = $1`, [eventId])).map((r) => [r.student_id, r.mark]));
+    const changes = Object.entries(marks).filter(([sid, m]) => MARKS.includes(m) && /^[0-9a-f-]{36}$/.test(sid) && cur.get(sid) !== m);
+    if (!changes.length) return { changed: 0 };
+    if (reason.trim().length < 3) return { error: "Say briefly why you’re correcting it.", changed: 0 };
+    for (const [sid, mark] of changes)
+      await q(`insert into attendance_marks (school_id, lesson_event_id, student_id, mark, source, corrected_by, correction_note) values (current_school(), $1, $2, $3::text::attendance_mark, $4, $5, $6)
+        on conflict (lesson_event_id, student_id) do update set mark = excluded.mark, source = excluded.source, corrected_by = excluded.corrected_by, correction_note = excluded.correction_note`,
+        [eventId, sid, mark, actor.role === "school_admin" ? "admin" : "teacher", actor.id, reason.trim().slice(0, 300)]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'correct', 'attendance', $2, $3)`,
+      [actor.id, eventId, JSON.stringify({ changes: Object.fromEntries(changes.map(([sid, m]) => [sid, { from: cur.get(sid) ?? null, to: m }])), reason: reason.trim().slice(0, 300) })]);
+    return { changed: changes.length };
+  });
+}
 export async function saveRegister(actor: { id: string; role: string }, eventId: string, marks: Record<string, string>, tasterMarks: Record<string, string>, taught: boolean, note: string | null): Promise<string | null> {
   return withSchool(async (q) => {
     const ev = (await q<{ teacher_user: string | null; lesson_date: string }>(`select t.user_id as teacher_user, e.lesson_date::text from lesson_events e
