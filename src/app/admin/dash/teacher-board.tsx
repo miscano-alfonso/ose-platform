@@ -1,6 +1,6 @@
 import { NotifyBell } from "../../NotifyBell";
 import Link from "next/link";
-import { LessonClock, LessonLinkButton } from "../../LessonClock";
+import { LessonClock, LessonLinkButton, RefreshAt } from "../../LessonClock";
 import { myDay, teacherEmails, myChats, pointsGiven } from "@/lib/teacher-area";
 import { teacherStream } from "@/lib/classroom-stream";
 import { SlidesButton } from "../(staff)/teacher/SlidesButton";
@@ -26,13 +26,13 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
     findSlides(d.week.map((l) => ({ id: l.id, course: l.course_id ?? null, n: l.lesson_no ?? null, termStart: l.term_start ?? null, folder: l.slides_folder ?? null, term: l.term_no ?? null }))).catch(() => new Map())]);
   const top = [...new Map(pclasses.flatMap((c) => c.students.map((st) => [st.id, { name: st.name, pts: st.term_points }] as const))).values()].filter((x) => x.pts > 0).sort((a, b) => b.pts - a.pts).slice(0, 3);
   const today = new Date().toISOString().slice(0, 10);
-  const next = d.week.find((l) => l.d > today || (l.d === today && l.status === "scheduled")) ?? d.week[0];
+  const next = d.week[0];   // 2 Nov: My day only holds lessons that haven’t ended yet, so the first is the next one
   const done = d.reportBars.reduce((a, r) => a + r.done, 0), total = d.reportBars.reduce((a, r) => a + r.total, 0);
   const rpct = total ? Math.round(done / total * 100) : null;
   const isToday = next?.d === today;
   const waiting = threads.filter((t) => t.last_sender === "parent").length;
   const modules: BoardModule[] = [
-    { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">
+    { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">{next && <RefreshAt at={next.ends_at} />}
         <p className={`fx-live${isToday ? "" : " next"}`}>{isToday && <i />}{next ? (isToday ? `Today · ${next.time.slice(0, 5)}` : <><span className="fx-live-k">Next lesson</span> · {wd(next.d)} {dm(next.d)} · {next.time.slice(0, 5)}</>) : d.term?.name ?? "My day"} <NotifyBell settingsHref="/admin/teacher/notifications" /></p>
         <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {me.name.split(" ")[0]}</span>{next && <><br /><Link className="fx-title-link" href={next.kind && next.kind !== "class" ? "/admin/teacher/ones" : `/admin/register/${next.id}`} title={next.kind && next.kind !== "class" ? "Your 1:1s and workshops" : "The lesson: who’s expected, SEND, tasters and the register"}>{next.name}</Link></>}</h1>
         <div className="fx-sub-row"><p className="fx-hero-s">{next ? next.kind === "one" ? next.detail : next.kind === "workshop" ? `${next.students} booked · ${next.detail}` : <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>{next && next.kind !== "one" && next.kind !== "workshop" && <SlidesButton eventId={next.id} url={next.slides_url ?? null} found={found.get(next.id) ?? null} n={next.lesson_no} />}</div>

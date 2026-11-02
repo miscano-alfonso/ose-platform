@@ -50,7 +50,7 @@ export async function parentAttendance(parentId: string) {
         l.name || ' ' || sj.name as class, (select n.id::text from absence_notices n where n.lesson_event_id = e.id and n.student_id = s.id and n.cancelled_at is null) as absent
       from students s join enrolments x on x.student_id = s.id and x.status = 'active' and not x.is_taster join lesson_events e on e.group_id = x.group_id
       join lesson_slots sl on sl.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where s.parent_id = $1 and e.status = 'scheduled' and e.lesson_date >= current_date and e.lesson_date <= current_date + 28 order by e.lesson_date, sl.starts_at`, [parentId]),
+      where s.parent_id = $1 and e.status = 'scheduled' and (e.lesson_date + sl.ends_at) at time zone 'Europe/London' > now() and e.lesson_date <= current_date + 28 order by e.lesson_date, sl.starts_at`, [parentId]),
     notices: await q<{ id: string; student: string; date: string; time: string; class: string; reason: string; note: string | null; upcoming: boolean }>(`select n.id, s.first_name as student, e.lesson_date::text as date,
         to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as class, n.reason, n.note, e.lesson_date > current_date as upcoming
       from absence_notices n join students s on s.id = n.student_id join lesson_events e on e.id = n.lesson_event_id join lesson_slots sl on sl.id = e.slot_id
@@ -297,10 +297,12 @@ export async function studentHome(studentId: string) {
   return withSchool(async (q) => ({
     me: (await q<{ first: string; chat_access: string }>(`select first_name as first, chat_access from students where id = $1`, [studentId]))[0],
     classes: await q<{ group_id: string; subject: string; level: string; colour: string; teacher: string | null; slots: string | null; meet: string | null; invited: boolean;
-      next: string | null; next_id: string | null }>(`select g.id as group_id, sj.name as subject, l.name as level, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, ${SLOTS} as slots, g.meet_url as meet,
+      next: string | null; next_end: string | null; next_id: string | null }>(`select g.id as group_id, sj.name as subject, l.name as level, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, ${SLOTS} as slots, g.meet_url as meet,
         exists (select 1 from classroom_memberships m where m.group_id = g.id and m.student_id = $1 and m.state = 'invited') as invited,
         (select ((e.lesson_date + s.starts_at) at time zone sc.timezone)::text from lesson_events e join lesson_slots s on s.id = e.slot_id join schools sc on sc.id = e.school_id
           where e.group_id = g.id and e.status = 'scheduled' and (e.lesson_date + s.ends_at) at time zone sc.timezone > now() order by e.lesson_date, s.starts_at limit 1) as next,
+        (select ((e.lesson_date + s.ends_at) at time zone sc.timezone)::text from lesson_events e join lesson_slots s on s.id = e.slot_id join schools sc on sc.id = e.school_id
+          where e.group_id = g.id and e.status = 'scheduled' and (e.lesson_date + s.ends_at) at time zone sc.timezone > now() order by e.lesson_date, s.starts_at limit 1) as next_end,
         null as next_id
       from enrolments x join course_groups g on g.id = x.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id where x.student_id = $1 and x.status = 'active' and not x.is_taster order by l.sort_order, sj.name`, [studentId]),

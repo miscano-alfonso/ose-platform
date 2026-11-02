@@ -1,6 +1,6 @@
 import { NotifyBell } from "../../NotifyBell";
 import Link from "next/link";
-import { LessonClock, LessonCountdown } from "../../LessonClock";
+import { LessonClock, LessonCountdown, RefreshAt } from "../../LessonClock";
 const ldate = (iso: string) => new Date(iso).toLocaleDateString("en-CA", { timeZone: "Europe/London" });
 import { requireStudent } from "@/lib/family-auth";
 import { studentHome, studentNextOne } from "@/lib/family";
@@ -32,6 +32,8 @@ export default async function StudentHome() {
       <div className="fx-btns">{one.meet ? <a className={oneSoon ? "go" : undefined} href={one.meet} target="_blank" rel="noopener">Join the 1:1</a> : <span className="fx-nomeet" title="The Google Meet invitation comes to your Google account">Meet link to follow</span>}
         <LessonCountdown date={ldate(one.at)} time={hm(one.at)} /></div>
     </div><div className="fx-side"><LessonClock date={ldate(one.at)} time={hm(one.at)} /><NotifyBell settingsHref="/student/notifications" /></div></section>;
+  // 2 Nov: when the lesson (or 1:1) at the top ends, the page moves on to the next one by itself
+  const heroEnds = oneFirst && one ? new Date(Date.parse(one.at) + one.minutes * 60e3).toISOString() : next?.next_end ?? null;
   const modules: BoardModule[] = [
     { id: "hero", title: "Next lesson", node: oneFirst && oneHero ? oneHero : <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.subject}, ${hm(next.next!)}` : undefined}>
         {next ? <><div className="fx-main">
@@ -55,7 +57,7 @@ export default async function StudentHome() {
         <div className="fx-ringv"><Ico d={IC.chat} /><span>{chatOff ? "Chat is off. Ask your parent to turn it on." : h.me.chat_access === "class" ? "Talk with your classes and teachers." : "Talk with your classes, teachers and friends."}</span></div></section> },
   ];
   const b = await boardLayout("student-home", null, BOARD_MODULES["student-home"], BUILT_IN);
-  return <div className="fx fx-board">
+  return <div className="fx fx-board"><RefreshAt at={heroEnds} />
     <BentoBoard page="student-home" modules={modules} layout={b.layout} defaults={BUILT_IN}
       saved={b.std} scope="standard" locked={!f.viewer || b.mirrored} audience="students" />
   </div>;

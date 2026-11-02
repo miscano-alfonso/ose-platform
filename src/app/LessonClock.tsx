@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 // The My day panel's clock (a classic dial with the time now) and, beside the Join button, how long until the next lesson starts. Times are the
 // lesson's date and start time in the UK, read in the viewer's own clock.
@@ -72,4 +73,17 @@ export function LessonLinkButton({ date, time, url, title, none }: { date: strin
   return url ? soon ? <a className="go fx-meet" href={url} target="_blank" rel="noopener" title={title}>{txt}</a>
       : <a className="go fx-meet wait" aria-disabled="true" title="The lesson link opens 5 minutes before the start">{txt}</a>
     : <span className="fx-nomeet fx-meet" title={none ?? "The office adds the lesson link to the class"}>{txt}</span>;
+}
+
+/** 2 Nov: reloads the page's data when a lesson ends (plus a minute), so My day moves on to the next lesson by itself. */
+export function RefreshAt({ at }: { at: string | null | undefined }) {
+  const router = useRouter();
+  useEffect(() => {
+    if (!at) return;
+    const ms = Date.parse(at) + 60e3 - Date.now();
+    if (!(ms > 0) || ms > 24 * 3600e3) return;
+    const t = setTimeout(() => router.refresh(), ms);
+    return () => clearTimeout(t);
+  }, [at, router]);
+  return null;
 }

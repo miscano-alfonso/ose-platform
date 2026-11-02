@@ -11,7 +11,7 @@ const ME = `(select id from teachers where user_id = $1)`;
 const TERM_NOW = `(select id from terms where ends_on >= current_date order by starts_on limit 1)`;
 const YEAR_NOW = `(select id from academic_years where ends_on >= current_date order by starts_on limit 1)`;
 
-export type WeekLesson = { id: string; d: string; time: string; name: string; code: string; status: string; meet_url: string | null; students: number;
+export type WeekLesson = { id: string; d: string; time: string; /** when it ends (2 Nov: it leaves My day then) */ ends_at?: string; name: string; code: string; status: string; meet_url: string | null; students: number;
   /** class (a lesson_events row), 1:1 (tutoring_bookings) or workshop (1 Nov: these show on My day too) */ kind?: "class" | "one" | "workshop"; detail?: string | null;
   not_in_classroom: number; tasters: string[]; absent: string[]; marked: number; slides_url?: string | null;
   course_id?: string | null; lesson_no?: number | null; term_start?: string | null; slides_folder?: string | null; term_no?: number | null;
@@ -47,7 +47,7 @@ export async function myDay(userId: string): Promise<MyDay> {
       and starts_at >= date_trunc('day', now()) and starts_at < date_trunc('day', now()) + interval '8 days'`, [userId]);
     const pay = term ? await myTermPay(q, userId, term.id) : 0;
     const week = await q<WeekLesson>(`
-      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id, g.slides_folder, (select number from terms t where t.id = ev.term_id) as term_no,
+      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, ((ev.lesson_date + sl.ends_at) at time zone 'Europe/London')::text as ends_at, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id, g.slides_folder, (select number from terms t where t.id = ev.term_id) as term_no,
         (select starts_on::text from terms t where t.id = ev.term_id) as term_start,
         (select count(*)::int from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.group_id = ev.group_id and e2.term_id = ev.term_id
           and e2.status <> 'cancelled' and (e2.lesson_date, s2.starts_at) <= (ev.lesson_date, sl.starts_at)) as lesson_no,
@@ -69,11 +69,11 @@ export async function myDay(userId: string): Promise<MyDay> {
           where e.group_id = g.id and e.status in ('pending','active') and ss.has_send = 'yes' and ss.share_with_teachers), '{}') as send
       from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where ev.teacher_id = ${ME} and ev.status <> 'cancelled' and ev.lesson_date >= current_date
+      where ev.teacher_id = ${ME} and ev.status <> 'cancelled' and (ev.lesson_date + sl.ends_at) at time zone 'Europe/London' > now()   -- 2 Nov: a lesson leaves My day once it has ended
         -- the rest of the teaching week (Monday to Sunday) that holds the teacher's next lesson, so a week starting after half term shows in full
-        and ev.lesson_date <= (select date_trunc('week', min(e2.lesson_date))::date + 6 from lesson_events e2 where e2.teacher_id = ${ME} and e2.status <> 'cancelled' and e2.lesson_date >= current_date)
+        and ev.lesson_date <= (select date_trunc('week', min(e2.lesson_date))::date + 6 from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.teacher_id = ${ME} and e2.status <> 'cancelled' and (e2.lesson_date + s2.ends_at) at time zone 'Europe/London' > now())
       order by ev.lesson_date, sl.starts_at`, [userId]).catch(() => q<WeekLesson>(`
-      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id, g.slides_folder, (select number from terms t where t.id = ev.term_id) as term_no,
+      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, ((ev.lesson_date + sl.ends_at) at time zone 'Europe/London')::text as ends_at, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id, g.slides_folder, (select number from terms t where t.id = ev.term_id) as term_no,
         (select starts_on::text from terms t where t.id = ev.term_id) as term_start,
         (select count(*)::int from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.group_id = ev.group_id and e2.term_id = ev.term_id
           and e2.status <> 'cancelled' and (e2.lesson_date, s2.starts_at) <= (ev.lesson_date, sl.starts_at)) as lesson_no,
@@ -81,23 +81,23 @@ export async function myDay(userId: string): Promise<MyDay> {
         '{}'::text[] as tasters, '{}'::text[] as absent, (select count(*)::int from attendance_marks m where m.lesson_event_id = ev.id) as marked
       from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where ev.teacher_id = ${ME} and ev.status <> 'cancelled' and ev.lesson_date >= current_date
+      where ev.teacher_id = ${ME} and ev.status <> 'cancelled' and (ev.lesson_date + sl.ends_at) at time zone 'Europe/London' > now()   -- 2 Nov: a lesson leaves My day once it has ended
         -- the rest of the teaching week (Monday to Sunday) that holds the teacher's next lesson, so a week starting after half term shows in full
-        and ev.lesson_date <= (select date_trunc('week', min(e2.lesson_date))::date + 6 from lesson_events e2 where e2.teacher_id = ${ME} and e2.status <> 'cancelled' and e2.lesson_date >= current_date)
+        and ev.lesson_date <= (select date_trunc('week', min(e2.lesson_date))::date + 6 from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.teacher_id = ${ME} and e2.status <> 'cancelled' and (e2.lesson_date + s2.ends_at) at time zone 'Europe/London' > now())
       order by ev.lesson_date, sl.starts_at`, [userId]));
     // 1:1s and workshops this teacher takes, in the same week as the next teaching (1 Nov)
     const extra = await q<WeekLesson>(`
-      select b.id, (b.starts_at at time zone 'Europe/London')::date::text as d, to_char(b.starts_at at time zone 'Europe/London', 'HH24:MI') as time,
+      select b.id, (b.starts_at at time zone 'Europe/London')::date::text as d, to_char(b.starts_at at time zone 'Europe/London', 'HH24:MI') as time, (b.starts_at + make_interval(mins => b.minutes))::text as ends_at,
         '1:1 · ' || b.student_name as name, '1:1' as code, 'scheduled' as status, b.meet_url, 1 as students, 0 as not_in_classroom,
         '{}'::text[] as tasters, '{}'::text[] as absent, 0 as marked, 'one' as kind,
         concat_ws(' · ', l.name || ' ' || sj.name, b.minutes || ' min', nullif(b.focus, '')) as detail, '[]'::json as birthdays, '{}'::text[] as send
       from tutoring_bookings b left join levels l on l.id = b.level_id left join subjects sj on sj.id = b.subject_id
-      where b.teacher_id = ${ME} and b.status = 'booked' and b.starts_at >= now() - interval '1 hour' and b.starts_at < now() + interval '15 days'
+      where b.teacher_id = ${ME} and b.status = 'booked' and b.starts_at + make_interval(mins => b.minutes) > now() and b.starts_at < now() + interval '15 days'
       union all
-      select w.id, (w.starts_at at time zone 'Europe/London')::date::text, to_char(w.starts_at at time zone 'Europe/London', 'HH24:MI'),
+      select w.id, (w.starts_at at time zone 'Europe/London')::date::text, to_char(w.starts_at at time zone 'Europe/London', 'HH24:MI'), (w.starts_at + make_interval(mins => w.minutes))::text,
         'Workshop · ' || w.title, 'Workshop', 'scheduled', null, (select count(*)::int from workshop_bookings wb where wb.workshop_id = w.id and wb.status <> 'cancelled'), 0,
         '{}', '{}', 0, 'workshop', w.minutes || ' min', '[]'::json, '{}'
-      from workshops w where w.teacher_id = ${ME} and w.status = 'published' and w.starts_at >= now() - interval '1 hour' and w.starts_at < now() + interval '15 days'`, [userId]).catch(() => [] as WeekLesson[]);
+      from workshops w where w.teacher_id = ${ME} and w.status = 'published' and w.starts_at + make_interval(mins => w.minutes) > now() and w.starts_at < now() + interval '15 days'`, [userId]).catch(() => [] as WeekLesson[]);
     if (extra.length) {
       week.forEach((l) => { l.kind = "class"; });
       const first = [...week, ...extra].map((l) => l.d).sort()[0];
@@ -423,7 +423,7 @@ export async function myClasses(userId: string): Promise<MyClass[]> {
       (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students,
       (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at,'HH24:MI'), 'e', to_char(s.ends_at,'HH24:MI')) order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id) as slots,
       (select json_build_object('id', ev.id, 'd', ev.lesson_date::text, 't', to_char(sl.starts_at,'HH24:MI')) from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id
-        where ev.group_id = g.id and ev.status <> 'cancelled' and ev.lesson_date >= current_date order by ev.lesson_date, sl.starts_at limit 1) as next,
+        where ev.group_id = g.id and ev.status <> 'cancelled' and (ev.lesson_date + sl.ends_at) at time zone 'Europe/London' > now() order by ev.lesson_date, sl.starts_at limit 1) as next,
       (select round(100.0 * count(*) filter (where m.mark in ('present','late')) / nullif(count(*) filter (where m.mark <> 'approved_absence'), 0))::int
         from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id where ev.group_id = g.id) as att,
       (select count(*)::int from enrolments e join student_support ss on ss.student_id = e.student_id where e.group_id = g.id and e.status in ('pending','active')

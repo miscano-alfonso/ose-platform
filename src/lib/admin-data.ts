@@ -240,7 +240,7 @@ export async function pendingInvites(): Promise<PendingInvite[]> {
   return withSchool((q) => q<PendingInvite>(`select m.id, s.first_name || ' ' || s.last_name as student, s.email::text, l.name || ' ' || sj.name as class,
       m.invited_at::date::text as invited_at, m.last_reminded_at::date::text as reminded,
       (select to_char(ev.lesson_date, 'Dy DD Mon') || ' ' || to_char(sl.starts_at, 'HH24:MI') from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id
-        where ev.group_id = g.id and ev.lesson_date >= current_date and ev.status = 'scheduled' order by ev.lesson_date, sl.starts_at limit 1) as next
+        where ev.group_id = g.id and (ev.lesson_date + sl.ends_at) at time zone 'Europe/London' > now() and ev.status = 'scheduled' order by ev.lesson_date, sl.starts_at limit 1) as next
     from classroom_memberships m join students s on s.id = m.student_id join course_groups g on g.id = m.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
     join enrolments e on e.group_id = m.group_id and e.student_id = m.student_id and e.status = 'active'
     where m.state = 'invited' and g.academic_year_id = (select id from academic_years where ends_on >= current_date order by starts_on limit 1)
