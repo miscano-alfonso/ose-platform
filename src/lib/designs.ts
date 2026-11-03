@@ -93,7 +93,7 @@ type Canva = { clientId?: string; clientSecret?: string; refreshToken?: string; 
   pending?: { state: string; verifier: string; exp: number } };
 const API = () => process.env.CANVA_API_URL || "https://api.canva.com/rest/v1";
 const AUTH = () => process.env.CANVA_AUTH_URL || "https://www.canva.com/api/oauth/authorize";
-const SCOPES = "design:meta:read design:content:read folder:read asset:write folder:write";
+const SCOPES = "design:meta:read design:content:read folder:read asset:read asset:write folder:write";
 export const canvaRedirect = (base: string) => `${base}/admin/design-api?action=canvacallback`;
 const b64u = (b: Buffer) => b.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
@@ -103,7 +103,7 @@ export async function canvaStatus(base: string) {
     folderId: c.folderId ?? "", folderName: c.folderName ?? "", redirect: canvaRedirect(base), canUpload: canvaCanUpload(c) };
 }
 /** Connections made before 3 Nov only asked Canva for read access: those need Connect Canva again before drawings can be sent. */
-const canvaCanUpload = (c: Canva) => !!c.refreshToken && /asset:write/.test(c.scope ?? "");
+const canvaCanUpload = (c: Canva) => !!c.refreshToken && /asset:read/.test(c.scope ?? "") && /asset:write/.test(c.scope ?? "");   // checking an upload needs asset:read too
 export async function canvaUploadStatus() {
   const c = (await kvGet<Canva>("canva")) ?? {};
   return { connected: !!c.refreshToken, canUpload: canvaCanUpload(c), folder: c.folderId ? (c.folderName || "your Canva folder") : null };
@@ -210,19 +210,22 @@ export async function canvaImport(by: string, designId: string, title: string, k
 export async function canvaUploadImage(name: string, png: Buffer): Promise<{ folder: string | null; moved: boolean }> {
   const c0 = (await kvGet<Canva>("canva")) ?? {};
   if (!c0.refreshToken) fail("Connect Canva first: Social › Pictures & Canva › Connect Canva.");
-  if (!canvaCanUpload(c0)) fail("Canva was connected before uploads were added. In the Canva Developer Portal tick asset write and folder write for the app, then press Connect Canva again (Social › Pictures & Canva).");
+  if (!canvaCanUpload(c0)) fail("Canva needs one more permission. In the Canva Developer Portal tick asset Read and Write and folder Write for the app, then press Connect Canva again (Social › Pictures & Canva).");
   if (png.length < 100 || png.length > 25_000_000 || png.subarray(1, 4).toString() !== "PNG") fail("That picture couldn’t be read.");
   const at = await access();
   const meta = { name_base64: Buffer.from(name.replace(/[^\w .,()&'-]+/g, " ").trim().slice(0, 50) || "Sketch Studio drawing").toString("base64") };
   const r = await fetch(`${API()}/asset-uploads`, { method: "POST", signal: AbortSignal.timeout(60000),
     headers: { authorization: `Bearer ${at}`, "content-type": "application/octet-stream", "asset-upload-metadata": JSON.stringify(meta) }, body: new Uint8Array(png) });
-  if (r.status === 403) fail("Canva didn’t allow the upload. Tick asset write and folder write for the app in the Canva Developer Portal, then press Connect Canva again.");
+  if (r.status === 403) fail("Canva didn’t allow the upload. Tick asset Read and Write and folder Write for the app in the Canva Developer Portal, then press Connect Canva again.");
   if (!r.ok) fail(`Canva wouldn’t take the picture (${r.status}).`);
   type Job = { id: string; status: string; asset?: { id: string }; error?: { message?: string } };
   let job = ((await r.json()) as { job: Job }).job;
   for (let i = 0; i < 30 && job.status === "in_progress"; i++) {
     await new Promise((ok) => setTimeout(ok, 1000));
-    job = (await get<{ job: Job }>(at, `/asset-uploads/${encodeURIComponent(job.id)}`)).job;
+    const g = await fetch(`${API()}/asset-uploads/${encodeURIComponent(job.id)}`, { headers: { authorization: `Bearer ${at}` }, signal: AbortSignal.timeout(20000) });
+    if (g.status === 403) fail("The picture went to your Canva uploads, but Canva wouldn’t let the site check it. Tick asset Read (as well as Write) for the app in the Canva Developer Portal, then press Connect Canva again.");
+    if (!g.ok) fail(`Canva answered ${g.status} while checking the upload.`);
+    job = ((await g.json()) as { job: Job }).job;
   }
   if (job.status !== "success" || !job.asset?.id) fail(job.error?.message ? `Canva: ${job.error.message}` : "Canva is still processing the picture. It will appear in your Canva uploads shortly.");
   const assetId = job.asset!.id;
