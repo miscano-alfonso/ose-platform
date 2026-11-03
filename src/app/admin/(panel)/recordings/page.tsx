@@ -2,6 +2,7 @@ import Link from "next/link";
 import "./recordings.css";
 import { recordingsView, recStatus, recLessons, type RecRow } from "@/lib/recordings";
 import { runRecordingsAction, recCfgAction, recLessonAction, editCardAction, approveCardsAction, postAnywayAction, disconnectRecAction, importRecordingsAction, yearClearAction } from "../../actions";
+import { recCanLive, recCanCalendar } from "@/lib/meet";
 import { clearState, clearLogs, clearPreview, clearCutoff, nextClear } from "@/lib/retention";
 
 export const dynamic = "force-dynamic";
@@ -24,6 +25,7 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
   const prev = new Date(mon); prev.setUTCDate(mon.getUTCDate() - 7); const next = new Date(mon); next.setUTCDate(mon.getUTCDate() + 7);
   const [{ rows, lessons }, st] = await Promise.all([recordingsView(days[0], days[4]), recStatus()]);
   const all = tab === "settings" ? await recLessons() : [];
+  const [canLive, canCal] = tab === "settings" ? await Promise.all([recCanLive().catch(() => "none" as const), recCanCalendar().catch(() => "none" as const)]) : ["ok", "ok"];
   const yc = tab === "privacy" ? await Promise.all([clearState(), clearLogs(), clearCutoff().catch(() => null), nextClear().catch(() => null),
     sp.check && st.connected ? clearPreview() : Promise.resolve(null)]) : null;
   const filed = rows.filter((r) => r.status === "filed");
@@ -121,7 +123,10 @@ export default async function Recordings({ searchParams }: { searchParams: Promi
     {tab === "settings" && <>
       <section className="card"><h2>Recordings account</h2>
         {st.connected ? <><p>Connected as <b>{st.account}</b> by {st.by}. This account renames and files the recordings and posts them in Classroom, so it must own the Meet recordings and be a teacher on every class (ose@ohsoed.co.uk). It also sends students their Classroom invitations (Classes).</p>
-          {!st.canInvite && <p className="note msg">To send Classroom invitations, ose@ needs one more permission: press <a href="/admin/meet-api?action=login&what=rec"><b>Connect ose@ again</b></a>, sign in as ose@ and tick every box. Recordings keep working meanwhile.</p>}
+          {(!st.canInvite || canLive !== "ok" || canCal !== "ok") && <p className="note msg">ose@ is missing {[!st.canInvite && "Classroom invitations", canLive !== "ok" && "seeing who’s in a lesson’s Meet (live arrivals)", canCal !== "ok" && "1:1 calendar invites with Meet links"].filter(Boolean).join(", ")}.
+            Press <b>Connect ose@ again</b> below, sign in as ose@ and <b>tick every box</b> on Google’s screen (Google lists them separately; an unticked one isn’t given). Recordings keep working meanwhile.</p>}
+          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 10 }}><a className={`abtn${!st.canInvite || canLive !== "ok" || canCal !== "ok" ? " pri" : ""}`} href="/admin/meet-api?action=login&what=rec">Connect ose@ again</a>
+            <span className="note">Use this when Google adds a permission. Nothing is lost.</span></div>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><form action={importRecordingsAction}><button className="abtn" type="submit">Bring in earlier recordings</button></form>
             <span className="note">Reads the subject and 1:1 folders for recordings the Apps Script already filed (done automatically the first time). Nothing is renamed or moved.</span></div>
           <form action={disconnectRecAction} style={{ marginTop: 8 }}><button className="lnk" type="submit">Disconnect</button></form></>

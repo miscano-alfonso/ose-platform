@@ -79,7 +79,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
           {others.length > 0 && <p className="note" style={{ marginTop: 10 }}>Also in the call: {others.map((o) => `${o.name}${o.left ? "" : " (in now)"}`).join(", ")}.</p>}
           {/* 3 Nov: why the live view has nobody, for the office (also while Viewing as a teacher) */}
           {lv && (me.role === "school_admin" || me.viewing) && (!lv.ok || lv.calls === 0) && <p className="note" style={{ marginTop: 10 }}>
-            <b>Live view (office only):</b> {!lv.ok ? (lv.reason === "reconnect" ? "the recordings account (ose@) was connected without the Google Meet permission. Reconnect it under Admin → Recordings → Settings and allow everything Google lists."
+            <b>Live view (office only):</b> {!lv.ok ? (lv.reason === "reconnect" ? <>the recordings account (ose@) hasn’t been given the Google Meet permission. <a href="/admin/meet-api?action=login&what=rec"><b>Connect ose@ again</b></a>, sign in as ose@ and tick every box Google shows.</>
               : lv.reason === "none" ? "the recordings account (ose@) isn’t connected (Admin → Recordings → Settings)."
               : lv.reason === "no_code" ? "this class has no Google Meet link saved, so there’s no call to look for."
               : `Google answered with an error: ${lv.message ?? "unknown"}.`)
