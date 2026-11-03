@@ -44,7 +44,8 @@ export default async function RegisterPage({ params, searchParams }: { params: P
     <p className="backlink"><a className="abtn sm" href={backHref}>← Back</a></p>
     <div className="top"><div><h1>{r.name}<span className="h1-code">{r.code}</span></h1>
       <div className="sub">{longDay(r.lesson_date)}, {r.starts_at}–{r.ends_at}{r.teacher ? ` · ${r.teacher}` : ""}</div></div>
-      <span className="grow" />{r.status === "taught" ? <span className="pill good">Taught</span> : r.status === "cancelled" ? <span className="pill bad">Cancelled</span> : <span className="pill info">Scheduled</span>}</div>
+      <span className="grow" />{r.status === "cancelled" ? <span className="pill bad">Cancelled</span> : now >= st && now <= en ? <span className="pill good">Live now</span>
+        : now > en ? <span className="pill warn">Finished</span> : <span className="pill info">Scheduled</span>}</div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {r.note && <p className="note">{r.note}</p>}
     {/* 31 Oct: SEND in a second column beside who's expected and the register (one column on narrow screens) */}
@@ -54,9 +55,9 @@ export default async function RegisterPage({ params, searchParams }: { params: P
       ? <section className="card"><h2>Who’s expected</h2><p className="cs">{r.students.length} student{r.students.length === 1 ? "" : "s"}{r.tasters.length ? ` and ${r.tasters.length} taster${r.tasters.length === 1 ? "" : "s"}` : ""}. On the day, arrivals show here as students join; attendance is taken from Google Meet.</p>
           <div className="arr">{r.students.map((s) => <div key={s.id} className={`arr-row ${s.notice ? "away" : "waiting"}`}><b>{s.name}</b><span>{s.notice ? `Away: ${s.notice}` : "Expected"}</span><span className="arr-t" />{s.send && <span className="arr-needs">{sendLabels(s.needs, s.send_details).map((n) => <span key={n} className="pill warn">{n}</span>)}</span>}</div>)}
             {r.tasters.map((t) => <div key={t.id} className="arr-row waiting"><b>{t.child}</b><span>Taster</span></div>)}</div></section>
-      : <section className="card" data-lesson={`${r.name}, ${r.starts_at}`}>
+      : <section className={`card${now > en ? " lesson-done" : now >= st ? " lesson-live" : ""}`} data-lesson={`${r.name}, ${r.starts_at}`}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>{live ? "Arrivals" : "Who joined"}</h2>
-            {live && <span className="dx-live">{now < st ? "Starting soon" : now <= en ? "Live now" : "Just finished"}</span>}
+            {live && <span className={`dx-live${now > en ? " done" : now < st ? " soon" : ""}`}>{now < st ? "Starting soon" : now <= en ? "Live now" : "Just finished"}</span>}
             <span className="pill info">{joinedN} of {r.students.length} joined</span><span style={{ flex: 1 }} />
             {started && !fix && r.status !== "cancelled" && !me.viewing && <a className="abtn sm" href={`/admin/register/${r.id}?fix=1`} title="Only if Meet got someone wrong, e.g. they joined on another account">Correct a mark</a>}
             <form action={refreshJoinsAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit">Check Meet now</button></form></div>

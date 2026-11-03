@@ -1138,3 +1138,8 @@
 .adm .arr-row .arr-fix{margin-left:auto;min-width:170px}
 .adm .fix-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
 .adm .fix-bar .fld{flex:1 1 320px}
+/* 3 Nov: the lesson page shows where the lesson is: live (green edge), finished (orange edge, badge and pill) */
+.adm .card.lesson-live{border-color:var(--good);box-shadow:inset 4px 0 0 var(--good)}
+.adm .card.lesson-done{border-color:var(--warn);box-shadow:inset 4px 0 0 var(--warn)}
+.adm .dx-live.done{color:var(--warn)}.adm .dx-live.done::before{background:var(--warn);animation:none}
+.adm .dx-live.soon{color:var(--muted)}.adm .dx-live.soon::before{background:var(--muted)}
