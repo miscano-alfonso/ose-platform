@@ -1,0 +1,419 @@
+<title>OH-SO ED Sketch Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap">
+<style>
+/* Layout: a working studio — controls on the left, the drawing on a large stage, the gallery of past drawings below. */
+:root {
+  --bg: #F2F4F9; --surface: #FFFFFF; --ink: #0F1747; --muted: #4C567A; --line: #D6DCEA; --chip: #E7ECF6;
+  --accent: #1E4C96; --accent-ink: #FFFFFF; --warn: #9A3B1E; --stage-edge: #C9D2E6;
+  --display: "Jost", "Futura", "Avenir Next", "Century Gothic", sans-serif; --body: "Jost", "Avenir Next", "Segoe UI", sans-serif; --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #050C22; --surface: #0C1534; --ink: #E7EEFB; --muted: #9EADD0; --line: #223061; --chip: #142152;
+  --accent: #68BBE4; --accent-ink: #04102D; --warn: #F0A285; --stage-edge: #223061; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #050C22; --surface: #0C1534; --ink: #E7EEFB; --muted: #9EADD0; --line: #223061; --chip: #142152;
+  --accent: #68BBE4; --accent-ink: #04102D; --warn: #F0A285; --stage-edge: #223061; color-scheme: dark }
+* { box-sizing: border-box }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px }
+.wrap { max-width: 1280px; margin: 0 auto; display: grid; gap: 28px }
+header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px }
+.eyebrow { font: 500 12px/1 var(--body); letter-spacing: .22em; text-transform: uppercase; color: var(--muted) }
+h1 { font: 500 clamp(32px, 5vw, 48px)/1.05 var(--display); letter-spacing: -.01em; margin: 6px 0 0; text-wrap: balance }
+header p { margin: 0; color: var(--muted); max-width: 46ch }
+.grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 28px; align-items: start }
+@media (max-width: 880px) { .grid { grid-template-columns: minmax(0, 1fr) } }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 18px; min-width: 0 }
+label, .lab { font: 500 13px/1.2 var(--body); letter-spacing: .06em; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 8px }
+textarea { width: 100%; min-height: 96px; resize: vertical; font: 400 16px/1.45 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px }
+textarea:focus, button:focus-visible, input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px }
+.chip { font: 400 14px/1 var(--body); color: var(--ink); background: var(--chip); border: 0; border-radius: 999px; padding: 7px 11px; cursor: pointer }
+.chip:hover { outline: 1px solid var(--accent) }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; flex-wrap: wrap }
+.seg label { font: inherit; text-transform: none; letter-spacing: 0; color: inherit; margin: 0; display: block }
+.seg input { position: absolute; opacity: 0; pointer-events: none }
+.seg span { display: block; padding: 8px 13px; font: 500 14px/1 var(--body); cursor: pointer; color: var(--ink) }
+.seg input:checked + span { background: var(--ink); color: var(--bg) }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center }
+.btn { font: 500 15px/1 var(--body); border-radius: 10px; padding: 12px 16px; cursor: pointer; border: 1px solid var(--line); background: var(--surface); color: var(--ink) }
+.btn:hover:not(:disabled) { border-color: var(--accent) }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); padding: 13px 22px }
+.btn:disabled { opacity: .5; cursor: default }
+.file { font: 400 14px/1.3 var(--body); color: var(--muted) }
+.file input { max-width: 100%; font: inherit; color: var(--ink) }
+.swatches { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px }
+.sw { position: relative; display: block; margin: 0 }
+.sw input { position: absolute; opacity: 0; pointer-events: none }
+.sw span { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font: 400 14px/1.1 var(--body); color: var(--ink); text-transform: none; letter-spacing: 0 }
+.sw i { display: inline-flex } .sw b { width: 14px; height: 14px; border-radius: 50%; margin-right: -4px; box-shadow: 0 0 0 1.5px var(--surface) }
+.sw input:checked + span { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink) }
+.sw input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px }
+.chip.starter { background: transparent; border: 1px dashed var(--accent); color: var(--ink) }
+.idealist { display: grid; gap: 6px }
+.idea { text-align: left; font: 400 14px/1.35 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; cursor: pointer }
+.idea:hover { border-color: var(--accent) } .idea b { font-weight: 500; display: block } .idea span { color: var(--muted); font-size: 13px }
+.hint { font: 400 13px/1.4 var(--body); color: var(--muted); margin-top: 6px }
+.status { font: 400 14px/1.4 var(--body); color: var(--muted); min-height: 1.4em }
+.status.err { color: var(--warn) }
+.stagebox { display: grid; gap: 14px; min-width: 0 }
+.stage { border: 1px solid var(--stage-edge); border-radius: 14px; overflow: hidden; background: #FFFFFF; position: relative }
+.stage.navy { background: #040F2D }
+.stage canvas { display: block; width: 100%; height: auto }
+.stage .busy[hidden] { display: none }
+.stage .busy { position: absolute; left: 12px; bottom: 12px; max-width: calc(100% - 24px); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; font: 500 14px/1.3 var(--body); color: var(--ink); padding: 9px 14px; box-shadow: 0 2px 10px rgb(4 15 45 / .18) }
+.caption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline }
+.caption h2 { font: 500 22px/1.2 var(--display); margin: 0 }
+.caption .meta { font: 400 13px/1.3 var(--mono); color: var(--muted) }
+.change { display: grid; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px }
+.change textarea { min-height: 64px }
+section.gal h2 { font: 500 24px/1.2 var(--display); margin: 0 0 4px }
+section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
+.tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; display: grid; grid-template-rows: auto 1fr; min-width: 0 }
+.tile button.open { border: 0; padding: 0; background: none; cursor: pointer; display: block }
+.tile img { display: block; width: 100%; aspect-ratio: 7 / 6; object-fit: cover; background: #fff }
+.tile .info { padding: 10px 12px 12px; display: grid; gap: 4px; min-width: 0 }
+.tile .t { font: 500 15px/1.25 var(--body); overflow-wrap: anywhere }
+.tile .d { font: 400 12px/1.3 var(--mono); color: var(--muted) }
+.tile .acts { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 4px }
+.link { font: 500 13px/1 var(--body); background: none; border: 0; padding: 4px 0; color: var(--accent); cursor: pointer }
+.link.danger { color: var(--warn) }
+.empty { color: var(--muted); padding: 18px; border: 1px dashed var(--line); border-radius: 12px }
+@media (prefers-reduced-motion: no-preference) { .tile { transition: border-color .15s } .tile:hover { border-color: var(--accent) } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div><div class="eyebrow">OH-SO ED · Illustration</div><h1>Sketch Studio</h1></div>
+    <p>Describe an object and Claude draws it in the home page's chalk style: house blue or any subject's duotone, on white or dark, ready to save for the site.</p>
+  </header>
+
+  <div class="grid">
+    <form class="panel" id="drawForm" autocomplete="off">
+      <div>
+        <label for="prompt">What should it draw?</label>
+        <textarea id="prompt" placeholder="A microscope on a lab bench, seen from the side">A vintage typewriter with a sheet of paper in it</textarea>
+        <div class="lab" style="margin:12px 0 0">Starting points</div>
+        <div class="chips" id="starters"></div>
+        <div class="ideas" id="ideasBox" hidden><div class="lab" style="margin:12px 0 6px">Ideas from your text</div><div class="idealist" id="ideas"></div></div>
+      </div>
+      <div>
+        <span class="lab">Background</span>
+        <div class="seg" role="radiogroup" aria-label="Background">
+          <label style="margin:0"><input type="radio" name="bg" id="bgWhite" value="white" checked><span>White</span></label>
+          <label style="margin:0"><input type="radio" name="bg" id="bgNavy" value="navy"><span>Dark</span></label>
+        </div>
+      </div>
+      <div>
+        <span class="lab">Colour</span>
+        <div class="swatches" id="swatches" role="radiogroup" aria-label="Colour"></div>
+      </div>
+      <div>
+        <span class="lab">Highlights</span>
+        <div class="seg" role="radiogroup" aria-label="Highlights">
+          <label><input type="radio" name="hl" id="hlOff" value="off"><span>Off</span></label>
+          <label><input type="radio" name="hl" id="hlSoft" value="soft" checked><span>Soft</span></label>
+          <label><input type="radio" name="hl" id="hlGlow" value="glow"><span>Glow</span></label>
+        </div>
+        <div class="hint">Light catching the edges in the subject's highlight colour, like the girl at the desk on the home page.</div>
+      </div>
+      <div>
+        <span class="lab">Shape</span>
+        <div class="seg" role="radiogroup" aria-label="Shape">
+          <label style="margin:0"><input type="radio" name="size" id="szL" value="1400x1200" checked><span>Landscape</span></label>
+          <label style="margin:0"><input type="radio" name="size" id="szS" value="1200x1200"><span>Square</span></label>
+          <label style="margin:0"><input type="radio" name="size" id="szP" value="1100x1400"><span>Portrait</span></label>
+          <label style="margin:0"><input type="radio" name="size" id="szW" value="1600x900"><span>Wide</span></label>
+        </div>
+      </div>
+      <div id="polishWrap">
+        <span class="lab">Checking</span>
+        <div class="seg" role="radiogroup" aria-label="Checking">
+          <label><input type="radio" name="polish" id="pol0" value="0"><span>Off</span></label>
+          <label><input type="radio" name="polish" id="pol1" value="1"><span>1 round</span></label>
+          <label><input type="radio" name="polish" id="pol2" value="2" checked><span>2 rounds</span></label>
+        </div>
+        <div class="hint">Claude looks at each draft and fixes what's wrong. Better drawings; each round adds about a minute.</div>
+      </div>
+      <div class="file" id="refWrap">
+        <label for="ref">Reference picture (optional)</label>
+        <input type="file" id="ref" accept="image/png,image/jpeg,image/webp,image/gif">
+        <div style="margin-top:6px">A photo or sketch to follow for shape and proportions. It's redrawn in the house style.</div>
+      </div>
+      <div class="row">
+        <button class="btn primary" id="drawBtn" type="submit">Draw it</button>
+        <button class="btn" id="ideasBtn" type="button" title="Turn topics or a course description into objects to draw">Suggest ideas</button>
+        <button class="btn" id="stopBtn" type="button" hidden>Stop</button>
+      </div>
+      <div class="status" id="status" aria-live="polite"></div>
+    </form>
+
+    <div class="stagebox">
+      <div class="stage" id="stage"><canvas id="cv" width="1400" height="1200" aria-label="The current drawing"></canvas><div class="busy" id="busy" hidden></div></div>
+      <div class="caption"><h2 id="capTitle">Studio microphone</h2><span class="meta" id="capMeta">Example drawing</span></div>
+      <div class="row">
+        <button class="btn" id="savePng" type="button">Save PNG</button>
+        <button class="btn" id="saveWebp" type="button">Save WebP</button>
+        <button class="btn" id="saveSvg" type="button">Save SVG</button>
+        <button class="btn" id="reseed" type="button" title="Same shapes, new hand-drawn strokes">Redraw strokes</button>
+        <button class="btn" id="copyJson" type="button">Copy drawing data</button>
+      </div>
+      <div class="status" id="saveStatus" aria-live="polite"></div>
+      <form class="change" id="changeForm" autocomplete="off">
+        <label for="changeText" style="margin:0">Change this drawing</label>
+        <textarea id="changeText" placeholder="Make the lens longer, add a cable going off to the right"></textarea>
+        <div class="row"><button class="btn" id="changeBtn" type="submit">Apply change</button></div>
+      </form>
+    </div>
+  </div>
+
+  <section class="gal">
+    <h2>Your drawings</h2>
+    <p class="sub" id="galSub">Every drawing you make is kept here. Open one to change it or save it again.</p>
+    <div class="tiles" id="tiles"><div class="empty">Loading your drawings…</div></div>
+  </section>
+</div>
+
+<script>/*CHALK*/</script>
+<script>/*EXAMPLES*/</script>
+<script>
+const GUIDE = /*GUIDE*/;
+const $ = (id) => document.getElementById(id);
+const cv = $("cv"), stage = $("stage");
+let cur = { spec: CHALK_EXAMPLES[0], prompt: "", bg: "white", palette: "house", hl: "soft", seed: 7, id: null, example: true };
+const opts = (c = cur) => ({ bg: c.bg, seed: c.seed, palette: c.palette, highlight: c.hl });
+const PAL_KEYS = ["house"].concat(Object.keys(Chalk.SUBJECTS));
+for (const k of PAL_KEYS) {
+  const p = Chalk.palette(k), lab = document.createElement("label"); lab.className = "sw";
+  const inp = document.createElement("input"); inp.type = "radio"; inp.name = "pal"; inp.value = k; inp.id = "pal-" + k; if (k === "house") inp.checked = true;
+  const sp = document.createElement("span"), dots = document.createElement("i");
+  for (const c of p.swatch) { const b = document.createElement("b"); b.style.background = c; dots.append(b); }
+  sp.append(dots, document.createTextNode(" " + p.name)); lab.append(inp, sp); $("swatches").append(lab);
+  inp.addEventListener("change", async () => { if (cur.palette === k) return; cur.palette = k; await render(); if (cur.id) saveCurrent(false); });
+}
+document.querySelectorAll('input[name="hl"]').forEach((r) => r.addEventListener("change", async () => { const v = document.querySelector('input[name="hl"]:checked').value; if (cur.hl === v) return; cur.hl = v; await render(); if (cur.id) saveCurrent(false); }));
+const palVal = () => document.querySelector('input[name="pal"]:checked').value, hlVal = () => document.querySelector('input[name="hl"]:checked').value;
+let sample = null, db = null, downloads = null, ctl = null, drawings = [];
+
+const subjName = () => (cur.palette && cur.palette !== "house" ? Chalk.palette(cur.palette).name : "[subject]");
+const STARTERS = [
+  ["These topics…", () => "Draw one object that sums up these topics:\n- \n- \n- "],
+  ["Course page picture", () => `Draw a picture for the ${subjName()} course page: one strong object a student of ${subjName()} would recognise straight away.`],
+  ["Tool of the trade", () => `Draw the classic tool or instrument used in ${subjName()}, with plenty of real detail.`],
+  ["Still life", () => `Draw a small still life of two or three objects that go together for ${subjName()}: `],
+  ["An event or day", () => "Draw one object for this event or awareness day: "],
+];
+for (const [label, fill] of STARTERS) { const b = document.createElement("button"); b.type = "button"; b.className = "chip starter"; b.textContent = label;
+  b.onclick = () => { const v = fill(), ta = $("prompt"); ta.value = v; ta.focus(); const i = v.indexOf("[subject]"); const j = v.indexOf("- "); const at = i >= 0 ? i : j >= 0 ? j + 2 : v.length; ta.setSelectionRange(at, i >= 0 ? at + 9 : at); };
+  $("starters").append(b); }
+const bgVal = () => document.querySelector('input[name="bg"]:checked').value;
+const sizeVal = () => document.querySelector('input[name="size"]:checked').value.split("x").map(Number);
+const slug = (s) => String(s || "drawing").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "drawing";
+const setStatus = (el, msg, err) => { el.textContent = msg || ""; el.classList.toggle("err", !!err); };
+const when = (iso) => { try { return new Date(iso).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" }); } catch { return ""; } };
+
+async function render() {
+  const built = Chalk.build(cur.spec, opts());
+  stage.style.background = built.bg;
+  await Chalk.raster(built, cv, cur.seed);
+  $("capTitle").textContent = cur.spec.title || "Drawing";
+  const pal = Chalk.palette(cur.palette).name, hlName = { off: "no highlights", soft: "soft highlights", glow: "glowing highlights" }[cur.hl];
+  $("capMeta").textContent = `${cur.example ? "Example · " : `${built.width} × ${built.height} · `}${pal} · ${cur.bg === "navy" ? "dark" : "white"} · ${hlName}`;
+  document.querySelector(`input[name="bg"][value="${cur.bg}"]`).checked = true;
+  document.querySelector(`input[name="hl"][value="${cur.hl}"]`).checked = true;
+  const sw = document.querySelector(`input[name="pal"][value="${cur.palette}"]`); if (sw) sw.checked = true;
+}
+function fixSpec(s, w, h) {
+  if (!s || typeof s !== "object" || !Array.isArray(s.parts) || !s.parts.length) throw { code: "bad_drawing" };
+  s.width = typeof s.width === "number" ? s.width : w; s.height = typeof s.height === "number" ? s.height : h;
+  if (typeof s.title !== "string") s.title = "Drawing";
+  return s;
+}
+function copyFor(code) {
+  return ({ not_granted: "Claude isn't allowed to draw on this page yet. Allow it from the artifact's Permissions menu, then try again.",
+    rate_limited: "Too many drawings at once. Wait a minute, then try again.",
+    invalid_json: "The drawing came back incomplete. Try again, or describe a simpler object.",
+    bad_drawing: "That drawing came back empty. Try again with a little more description.",
+    images_unavailable: "Reference pictures can't be sent from this view. Remove the picture and try again.",
+    cancelled: "Stopped." })[code] || "Couldn't draw that. Try again in a moment.";
+}
+function busy(on, msg) { $("busy").hidden = !on; $("busy").textContent = msg || ""; for (const b of ["drawBtn", "changeBtn", "reseed", "ideasBtn"]) $(b).disabled = on; $("stopBtn").hidden = !on; }
+
+async function ask(input, opts, statusEl, label = "Drawing") {
+  ctl = new AbortController(); const t0 = Date.now(); let chars = 0;
+  const tick = setInterval(() => { const s = Math.round((Date.now() - t0) / 1000); const m = chars ? `${label}… ${s}s · ${(chars / 1000).toFixed(1)}k of shapes written` : `${label}: thinking… ${s}s`; $("busy").textContent = m; setStatus(statusEl, m); }, 500);
+  busy(true, `${label}: thinking…`);
+  try {
+    return await sample.json(input, Object.assign({ modelTier: "complex", cache: false, signal: ctl.signal, onText: ({ text }) => { chars = text.length; } }, opts));
+  } finally { clearInterval(tick); busy(false); }
+}
+
+let canImages = false;
+const roundsVal = () => +document.querySelector('input[name="polish"]:checked').value;
+async function snapshot() {
+  const k = Math.min(1, 1000 / Math.max(cv.width, cv.height)), c = document.createElement("canvas");
+  c.width = Math.round(cv.width * k); c.height = Math.round(cv.height * k); c.getContext("2d").drawImage(cv, 0, 0, c.width, c.height);
+  const type = canImages && canImages.includes("image/jpeg") ? "image/jpeg" : "image/png";
+  return new Promise((res, rej) => c.toBlob((b) => (b ? res(b) : rej({ code: "bad_request" })), type, 0.88));
+}
+// Claude looks at what its shapes actually rendered as and fixes them, like an illustrator checking a draft
+async function polish(what, rounds, statusEl) {
+  const done = [];
+  for (let r = 1; r <= rounds; r++) {
+    if (!canImages) break;
+    const input = `${GUIDE}\n\nYOU ARE CHECKING YOUR OWN DRAWING. The request was: ${what}\nThe attached picture is exactly how your shapes rendered. Here is the drawing JSON:\n${JSON.stringify(cur.spec)}\n\nLook at the picture critically, as an illustrator would, and fix every problem you see:\n- Is the subject recognisable at a glance? Are its proportions right?\n- Do the parts connect properly: nothing floating, nothing poking through, legs and bases reaching floorY, handles and lids attached?\n- Is the drawing order right, with front parts covering back parts?\n- Is anything cut off by the edge, too small, or squashed into a corner?\n- Is the light consistent: lit from the upper left, darker to the lower right?\n- Are any key details missing that would make it read as this particular object? Is anything cluttered or meaningless?\nThen improve it. Reply with the complete improved JSON in the same format, with one extra field "notes": a short sentence saying what you fixed.`;
+    try {
+      const img = await snapshot();
+      const spec = fixSpec(await ask(input, { images: [img] }, statusEl, rounds > 1 ? `Checking the drawing (${r} of ${rounds})` : "Checking the drawing"), cur.spec.width, cur.spec.height);
+      if (typeof spec.notes === "string" && !done.includes(spec.notes.trim())) done.push(spec.notes.trim()); delete spec.notes;
+      cur.spec = spec; await render();
+    } catch (err) {
+      if (err && err.code === "cancelled") { done.push("Checking stopped; kept the latest version."); break; }
+      done.push("The last check didn't come back, so the previous version is kept."); break;
+    }
+  }
+  return done;
+}
+
+$("drawForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const what = $("prompt").value.trim(); if (!what) { setStatus($("status"), "Describe what to draw first.", true); $("prompt").focus(); return; }
+  if (!sample) { setStatus($("status"), "Drawing needs Claude, which isn't available in this view. Open the page in Claude to draw.", true); return; }
+  const [w, h] = sizeVal(); const file = $("ref").files[0];
+  const input = `${GUIDE}\n\nNOW DRAW: ${what}\nCanvas: width ${w}, height ${h}.${file ? "\nA reference picture is attached: follow its shapes and proportions, but redraw it in this style and leave out any text." : ""}`;
+  try {
+    const spec = fixSpec(await ask(input, file ? { images: [file] } : {}, $("status")), w, h);
+    delete spec.notes;
+    cur = { spec, prompt: what, bg: bgVal(), palette: palVal(), hl: hlVal(), seed: Math.floor(Math.random() * 1e6), id: null, example: false };
+    await render(); await saveCurrent(true);
+    const notes = await polish(what, roundsVal(), $("status"));
+    await saveCurrent(false);
+    setStatus($("status"), "Done. It's in your drawings below." + (notes.length ? " Fixed: " + notes.join(" ") : ""));
+  } catch (err) { setStatus($("status"), copyFor(err && err.code), err && err.code !== "cancelled"); }
+});
+$("stopBtn").onclick = () => ctl && ctl.abort();
+$("ideasBtn").onclick = async () => {
+  const text = $("prompt").value.trim(); if (!text) { setStatus($("status"), "Paste some topics or a course description first.", true); $("prompt").focus(); return; }
+  if (!sample) { setStatus($("status"), "Ideas need Claude, which isn't available in this view.", true); return; }
+  const input = `OH-SO ED is an online school for home-educated secondary students. Here is a list of topics, a course description or a theme for a page on its website:\n\n${text}\n\nSuggest 5 different things to draw as ONE illustration for it, in a hand-drawn chalk style with no text: each a single physical object, or a small still life of two or three objects that belong together, that a student would recognise at a glance and that sums up the topics. Make them varied (a classic object, a modern one, a surprising one). Reply with only a JSON array: [{"idea": "what to draw, 6-16 words, specific enough to draw", "why": "which topics it stands for, under 12 words"}]`;
+  try {
+    const list = await ask(input, { modelTier: "default" }, $("status"), "Finding ideas");
+    const box = $("ideas"); box.replaceChildren();
+    for (const it of (Array.isArray(list) ? list : []).slice(0, 6)) {
+      if (!it || typeof it.idea !== "string") continue;
+      const b = document.createElement("button"); b.type = "button"; b.className = "idea";
+      const i1 = document.createElement("b"); i1.textContent = it.idea; const i2 = document.createElement("span"); i2.textContent = typeof it.why === "string" ? it.why : "";
+      b.append(i1, i2); b.onclick = () => { $("prompt").value = `${it.idea}\n\n(It's for a page about: ${text.replace(/\s+/g, " ").slice(0, 400)})`; setStatus($("status"), "Idea chosen. Press Draw it."); };
+      box.append(b);
+    }
+    $("ideasBox").hidden = !box.children.length; setStatus($("status"), box.children.length ? "Pick an idea, then press Draw it." : "No ideas came back. Try again.", !box.children.length);
+  } catch (err) { setStatus($("status"), copyFor(err && err.code), err && err.code !== "cancelled"); }
+};
+
+$("changeForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const what = $("changeText").value.trim(); if (!what) { setStatus($("saveStatus"), "Say what to change first.", true); return; }
+  if (!sample) { setStatus($("saveStatus"), "Changing a drawing needs Claude, which isn't available in this view.", true); return; }
+  const input = `${GUIDE}\n\nHERE IS THE CURRENT DRAWING${cur.prompt ? ` (originally asked for: ${cur.prompt})` : ""}:\n${JSON.stringify(cur.spec)}\n\nCHANGE IT LIKE THIS: ${what}\nKeep everything else the same unless the change needs it. Reply with the complete updated JSON.`;
+  try {
+    const spec = fixSpec(await ask(input, {}, $("saveStatus")), cur.spec.width, cur.spec.height);
+    delete spec.notes;
+    cur = Object.assign({}, cur, { spec, example: false });
+    await render(); $("changeText").value = ""; await saveCurrent(!cur.id);
+    const notes = await polish((cur.prompt ? cur.prompt + ". " : "") + "Change asked for: " + what, Math.min(1, roundsVal()), $("saveStatus"));
+    await saveCurrent(false);
+    setStatus($("saveStatus"), "Changed." + (notes.length ? " " + notes.join(" ") : ""));
+  } catch (err) { setStatus($("saveStatus"), copyFor(err && err.code), err && err.code !== "cancelled"); }
+});
+
+document.querySelectorAll('input[name="bg"]').forEach((r) => r.addEventListener("change", async () => {
+  if (cur.bg === bgVal()) return; cur.bg = bgVal(); await render(); if (cur.id) saveCurrent(false);
+}));
+$("reseed").onclick = async () => { cur.seed = Math.floor(Math.random() * 1e6); await render(); if (cur.id) saveCurrent(false); };
+
+// ---- saving files
+async function offer(kind) {
+  if (!downloads) { setStatus($("saveStatus"), "Saving files isn't available in this view. Open the page in Claude to save.", true); return; }
+  const name = `${slug(cur.spec.filename || cur.spec.title)}-${cur.palette === "house" ? "" : cur.palette + "-"}${cur.bg === "navy" ? "dark" : "white"}.${kind}`;
+  try {
+    let data;
+    if (kind === "svg") data = Chalk.build(cur.spec, opts()).svg;
+    else data = await new Promise((res, rej) => cv.toBlob((b) => (b ? res(b) : rej({ code: "bad_request" })), kind === "webp" ? "image/webp" : "image/png", 0.88));
+    await downloads.save({ filename: name, data }); setStatus($("saveStatus"), `Saved ${name}.`);
+  } catch (err) {
+    const c = err && err.code; setStatus($("saveStatus"), c === "declined" ? "Not saved." : c === "rate_limited" ? "A save is already waiting for you to confirm." : "Couldn't save that file here.", c !== "declined");
+  }
+}
+$("savePng").onclick = () => offer("png"); $("saveWebp").onclick = () => offer("webp"); $("saveSvg").onclick = () => offer("svg");
+$("copyJson").onclick = async () => {
+  const txt = JSON.stringify(cur.spec, null, 1);
+  try { await navigator.clipboard.writeText(txt); setStatus($("saveStatus"), "Drawing data copied. Paste it to Claude in chat to work on it further."); }
+  catch { setStatus($("saveStatus"), "Your browser blocked copying here.", true); }
+};
+
+// ---- gallery (kept in the page's database)
+async function saveCurrent(isNew) {
+  if (!db || cur.example) return;
+  const doc = { title: cur.spec.title || "Drawing", prompt: cur.prompt || "", bg: cur.bg, palette: cur.palette, hl: cur.hl, seed: cur.seed, spec: JSON.stringify(cur.spec), updatedAt: new Date().toISOString() };
+  try {
+    if (isNew || !cur.id) { doc.createdAt = doc.updatedAt; const ref = await db.collection("drawings").add(doc); cur.id = ref.id; }
+    else await db.doc("drawings/" + cur.id).update(doc);
+  } catch { setStatus($("saveStatus"), "Drawn, but it couldn't be kept in your drawings. Save the file now so it isn't lost.", true); }
+}
+const thumbs = new Map();
+function thumb(item) {
+  const spec = item.spec, k = JSON.stringify([item.id || spec.title, item.updatedAt || "", spec.parts.length, item.bg, item.seed, item.palette, item.hl]);
+  if (!thumbs.has(k)) thumbs.set(k, URL.createObjectURL(new Blob([Chalk.build(spec, opts(item)).svg], { type: "image/svg+xml" })));
+  return thumbs.get(k);
+}
+function tile(item) {
+  const el = document.createElement("div"); el.className = "tile";
+  const open = document.createElement("button"); open.className = "open"; open.type = "button"; open.setAttribute("aria-label", "Open " + item.title);
+  const img = document.createElement("img"); img.alt = ""; img.loading = "lazy";
+  try { img.src = thumb(item); } catch { }
+  open.append(img); open.onclick = async () => { cur = { spec: item.spec, prompt: item.prompt, bg: item.bg, palette: item.palette, hl: item.hl, seed: item.seed, id: item.id, example: !item.id }; await render(); setStatus($("saveStatus"), ""); stage.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); };
+  const info = document.createElement("div"); info.className = "info";
+  const t = document.createElement("div"); t.className = "t"; t.textContent = item.title;
+  const d = document.createElement("div"); d.className = "d"; d.textContent = `${item.id ? when(item.createdAt) : "Example"} · ${Chalk.palette(item.palette).name}`;
+  info.append(t, d);
+  if (item.id) {
+    const acts = document.createElement("div"); acts.className = "acts";
+    const del = document.createElement("button"); del.type = "button"; del.className = "link danger"; del.textContent = "Delete";
+    del.onclick = () => {
+      acts.replaceChildren();
+      const yes = document.createElement("button"); yes.type = "button"; yes.className = "link danger"; yes.textContent = "Delete for good";
+      const no = document.createElement("button"); no.type = "button"; no.className = "link"; no.textContent = "Keep";
+      yes.onclick = async () => { try { await db.doc("drawings/" + item.id).delete(); if (cur.id === item.id) cur.id = null; } catch { d.textContent = "Couldn't delete it."; } };
+      no.onclick = () => { acts.replaceChildren(del); };
+      acts.append(yes, no);
+    };
+    acts.append(del); info.append(acts);
+  }
+  el.append(open, info); return el;
+}
+function paintGallery(note) {
+  const box = $("tiles"); box.replaceChildren();
+  for (const it of drawings) box.append(tile(it));
+  CHALK_EXAMPLES.forEach((s, i) => box.append(tile({ title: s.title, spec: s, bg: i === 1 ? "navy" : "white", palette: i === 1 ? "media" : "house", hl: i === 1 ? "glow" : "soft", seed: 7, id: null })));
+  if (note) { const n = document.createElement("div"); n.className = "empty"; n.textContent = note; box.prepend(n); }
+}
+
+(async () => {
+  try { await render(); } catch { }
+  const use = window.claude && window.claude.use ? (n) => window.claude.use(n).catch(() => null) : async () => null;
+  [sample, db, downloads] = await Promise.all([use("sample"), use("db"), use("downloads")]);
+  if (!sample) setStatus($("status"), "Drawing needs Claude, which isn't available in this view. You can still open and save drawings.");
+  if (!downloads) for (const b of ["savePng", "saveWebp", "saveSvg"]) $(b).hidden = true;
+  if (sample) { try { const lim = await sample.limits(); canImages = lim.images ? lim.images.mediaTypes || ["image/png"] : false; } catch { canImages = false; } }
+  if (!canImages) { $("refWrap").hidden = true; $("polishWrap").hidden = true; }
+  if (!db) { paintGallery("Sign in to Claude to keep your drawings here. Until then, save each one as a file."); return; }
+  const timer = setTimeout(() => paintGallery("Your drawings are taking a while to load."), 10000);
+  db.collection("drawings").orderBy("createdAt", "desc").limit(120).onSnapshot((snap) => {
+    clearTimeout(timer);
+    drawings = snap.docs.map((d) => { const v = d.data(); let spec = null; try { spec = JSON.parse(v.spec); } catch { } return spec ? { id: d.id, title: v.title, prompt: v.prompt, bg: v.bg === "navy" ? "navy" : "white", palette: PAL_KEYS.includes(v.palette) ? v.palette : "house", hl: ["off", "soft", "glow"].includes(v.hl) ? v.hl : "off", seed: v.seed || 7, spec, createdAt: v.createdAt, updatedAt: v.updatedAt } : null; }).filter(Boolean);
+    paintGallery(drawings.length ? "" : "No drawings yet. Describe something above and press Draw it; it will appear here.");
+  }, () => { clearTimeout(timer); paintGallery("Couldn't load your drawings just now."); });
+})();
+</script>

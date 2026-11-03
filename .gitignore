@@ -8,3 +8,4 @@ _archive/
 *.log
 .DS_Store
 *.tsbuildinfo
+scripts/studio/sketch-studio-artifact.html
