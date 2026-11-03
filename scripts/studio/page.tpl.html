@@ -243,7 +243,8 @@ function fixSpec(s, w, h) {
   if (typeof s.title !== "string") s.title = "Drawing";
   return s;
 }
-function copyFor(code) {
+function copyFor(code, msg) {
+  if (code === "server" && typeof msg === "string" && msg.trim()) return msg.trim();   // the server's own reason, e.g. Claude's answer about the account
   return ({ not_granted: "Claude isn't allowed to draw on this page yet. Allow it from the artifact's Permissions menu, then try again.",
     rate_limited: "Too many drawings at once. Wait a minute, then try again.",
     invalid_json: "The drawing came back incomplete. Try again, or describe a simpler object.",
@@ -303,7 +304,7 @@ $("drawForm").addEventListener("submit", async (e) => {
     const notes = await polish(what, roundsVal(), $("status"));
     await saveCurrent(false);
     setStatus($("status"), "Done. It's in your drawings below." + (notes.length ? " Fixed: " + notes.join(" ") : ""));
-  } catch (err) { setStatus($("status"), copyFor(err && err.code), err && err.code !== "cancelled"); }
+  } catch (err) { setStatus($("status"), copyFor(err && err.code, err && err.message), err && err.code !== "cancelled"); }
 });
 $("stopBtn").onclick = () => ctl && ctl.abort();
 $("ideasBtn").onclick = async () => {
@@ -321,7 +322,7 @@ $("ideasBtn").onclick = async () => {
       box.append(b);
     }
     $("ideasBox").hidden = !box.children.length; setStatus($("status"), box.children.length ? "Pick an idea, then press Draw it." : "No ideas came back. Try again.", !box.children.length);
-  } catch (err) { setStatus($("status"), copyFor(err && err.code), err && err.code !== "cancelled"); }
+  } catch (err) { setStatus($("status"), copyFor(err && err.code, err && err.message), err && err.code !== "cancelled"); }
 };
 
 $("changeForm").addEventListener("submit", async (e) => {
@@ -337,7 +338,7 @@ $("changeForm").addEventListener("submit", async (e) => {
     const notes = await polish((cur.prompt ? cur.prompt + ". " : "") + "Change asked for: " + what, Math.min(1, roundsVal()), $("saveStatus"));
     await saveCurrent(false);
     setStatus($("saveStatus"), "Changed." + (notes.length ? " " + notes.join(" ") : ""));
-  } catch (err) { setStatus($("saveStatus"), copyFor(err && err.code), err && err.code !== "cancelled"); }
+  } catch (err) { setStatus($("saveStatus"), copyFor(err && err.code, err && err.message), err && err.code !== "cancelled"); }
 });
 
 document.querySelectorAll('input[name="bg"]').forEach((r) => r.addEventListener("change", async () => {

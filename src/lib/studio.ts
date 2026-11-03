@@ -58,8 +58,11 @@ export async function ask(input: string, images: string[], quick = false): Promi
   if (!res || (!res.ok && [400, 403, 404].includes(res.status))) res = await call(ai.model || "claude-sonnet-5-5").catch(() => null);
   if (!res) throw new StudioError("Couldn’t reach Claude. Try again.", 502);
   if (!res.ok) {
-    const j = (await res.json().catch(() => ({}))) as { error?: { message?: string } };
-    throw new StudioError(res.status === 429 ? "Claude is busy. Wait a minute, then try again." : "Claude said: " + (j.error?.message ?? res.status), res.status === 429 ? 429 : 502);
+    const j = (await res.json().catch(() => ({}))) as { error?: { message?: string; type?: string } };
+    const m = j.error?.message ?? "";
+    if (/credit balance/i.test(m)) throw new StudioError("The school's Anthropic account is out of credit. Top it up at console.anthropic.com (Billing), then try again.", 402);
+    if (res.status === 401) throw new StudioError("Claude didn't accept the school's Anthropic API key. Check it under Social › Connect to Social › AI searches.", 502);
+    throw new StudioError(res.status === 429 || res.status === 529 ? "Claude is busy. Wait a minute, then try again." : "Claude said: " + (m || res.status), res.status === 429 ? 429 : 502);
   }
   const body = res.body!.getReader(), enc = new TextEncoder(), dec = new TextDecoder();
   let buf = "";
@@ -76,7 +79,7 @@ export async function ask(input: string, images: string[], quick = false): Promi
           let j: { type?: string; delta?: { type?: string; text?: string }; error?: { message?: string } };
           try { j = JSON.parse(line.slice(5)); } catch { continue; }
           if (j.type === "content_block_delta" && j.delta?.type === "text_delta" && j.delta.text) out += j.delta.text;
-          if (j.type === "error") out += "\u0000" + (j.error?.message ?? "Claude stopped part-way.");
+          if (j.type === "error") out += "\u0000" + (/overloaded/i.test(j.error?.message ?? "") ? "Claude is very busy right now. Try again in a minute." : (j.error?.message ?? "Claude stopped part-way."));
         }
         if (out) ctl.enqueue(enc.encode(out));
       } catch (e) { ctl.enqueue(enc.encode("\u0000" + ((e as Error).name === "TimeoutError" ? "That took too long." : "The connection to Claude dropped."))); ctl.close(); }
