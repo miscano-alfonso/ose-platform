@@ -4,6 +4,7 @@ import { getRegister, lessonJoins } from "@/lib/ops";
 import { correctMarksAction, cancelLessonAction, refreshJoinsAction } from "../../../actions";
 import { AutoRefresh } from "../../../AutoRefresh";
 import { sendLabels } from "@/lib/send";
+import { liveArrivals, studentFirsts } from "@/lib/meet-live";
 
 const LABEL: Record<string, string> = { present: "Present", late: "Late", absent: "Absent", approved_absence: "Approved absence" };
 const longDay = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -18,15 +19,21 @@ export default async function RegisterPage({ params, searchParams }: { params: P
   const live = r.status !== "cancelled" && now >= st - 30 * 60e3 && now <= en + 15 * 60e3;
   const j = r.lesson_date <= today ? await lessonJoins(r.id) : { joins: [], unknown: [], grace: 5 };
   const hm = (iso: string) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+  // 3 Nov: during (and just after) the lesson, who is in the Meet right now, from the Google Meet API: Meet's log only has people once they leave
+  const firsts = live || (now >= st - 30 * 60e3 && now <= en + 90 * 60e3) ? await studentFirsts(r.students.map((s) => s.id)) : new Map<string, string>();
+  const lv = firsts.size ? await liveArrivals(r.id, r.link, r.start_at, r.students.map((s) => ({ id: s.id, name: s.name, first: firsts.get(s.id) ?? s.name.split(" ")[0] }))) : null;
+  const liveOf = (id: string) => (lv?.ok ? lv.matched[id] : undefined);
   const SRC: Record<string, string> = { meet_api: "Meet", attendlist: "Meet", checkin: "Join button", zoom: "Zoom" };
   const arrivals = r.students.map((s) => {
-    const x = j.joins.find((y) => y.student_id === s.id);
-    const lateBy = x ? Math.round((Date.parse(x.first) - st) / 60e3) : 0;
-    const state = x ? (lateBy > j.grace ? "late" : "in") : s.notice ? "away" : now > st + j.grace * 60e3 ? "missing" : "waiting";
-    return { s, x, lateBy, state };
+    const x = j.joins.find((y) => y.student_id === s.id), lp = x ? undefined : liveOf(s.id);
+    const first = x?.first ?? lp?.joined;
+    const lateBy = first ? Math.round((Date.parse(first) - st) / 60e3) : 0;
+    const state = first ? (lateBy > j.grace ? "late" : "in") : s.notice ? "away" : now > st + j.grace * 60e3 ? "missing" : "waiting";
+    return { s, x, lp, lateBy, state };
   });
+  const others = lv?.ok ? lv.participants.filter((p) => !Object.values(lv.matched).includes(p) && p.name !== r.teacher) : [];
   const order: Record<string, number> = { missing: 0, late: 1, in: 2, waiting: 3, away: 4 };
-  const joinedN = arrivals.filter((a) => a.x).length;
+  const joinedN = arrivals.filter((a) => a.x || a.lp).length;
   const backHref = me.role === "school_admin" ? "/admin/attendance" : "/admin/teacher";
   // 2 Nov: attendance comes from Google Meet's log. A teacher only corrects a mark now and then: "Correct a mark" opens a
   // choice on each row and asks why; nothing here is a daily task.
@@ -54,10 +61,11 @@ export default async function RegisterPage({ params, searchParams }: { params: P
             {started && !fix && r.status !== "cancelled" && !me.viewing && <a className="abtn sm" href={`/admin/register/${r.id}?fix=1`} title="Only if Meet got someone wrong, e.g. they joined on another account">Correct a mark</a>}
             <form action={refreshJoinsAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit">Check Meet now</button></form></div>
           <form action={correctMarksAction} id="fix-form"><input type="hidden" name="id" value={r.id} />
-          <div className="arr" style={{ marginTop: 12 }}>{arrivals.sort((a, b) => order[a.state] - order[b.state]).map(({ s, x, lateBy, state }) => <div key={s.id} className={`arr-row ${corrected(s) && s.mark ? ({ present: "in", late: "late", absent: "missing", approved_absence: "away" } as Record<string, string>)[s.mark] ?? state : state}${fix ? " fixing" : ""}`}>
+          <div className="arr" style={{ marginTop: 12 }}>{arrivals.sort((a, b) => order[a.state] - order[b.state]).map(({ s, x, lp, lateBy, state }) => <div key={s.id} className={`arr-row ${corrected(s) && s.mark ? ({ present: "in", late: "late", absent: "missing", approved_absence: "away" } as Record<string, string>)[s.mark] ?? state : state}${fix ? " fixing" : ""}`}>
             <b>{s.name}</b>
             <span className="arr-st">{corrected(s) && s.mark ? `${LABEL[s.mark]} · corrected` : state === "in" ? "On time" : state === "late" ? `Late · ${lateBy} min` : state === "away" ? `Away: ${s.notice}` : state === "missing" ? "Not joined" : "Not joined yet"}</span>
-            <span className="arr-t">{corrected(s) ? <>By {s.corrected_by_name ?? "the school"}{s.correction_note ? `: ${s.correction_note}` : ""}</> : x ? <>Joined {hm(x.first)}{x.last ? ` · left ${hm(x.last)}` : live ? " · still in" : ""} · {x.minutes} min{x.joins > 1 ? ` · ${x.joins} joins` : ""} · {x.sources.map((y) => SRC[y] ?? y).join(", ")}</> : ""}</span>
+            <span className="arr-t">{corrected(s) ? <>By {s.corrected_by_name ?? "the school"}{s.correction_note ? `: ${s.correction_note}` : ""}</> : x ? <>Joined {hm(x.first)}{x.last ? ` · left ${hm(x.last)}` : live ? " · still in" : ""} · {x.minutes} min{x.joins > 1 ? ` · ${x.joins} joins` : ""} · {x.sources.map((y) => SRC[y] ?? y).join(", ")}</>
+              : lp ? <>Joined {hm(lp.joined)}{lp.left ? ` · left ${hm(lp.left)}` : " · in the lesson now"} · Meet</> : ""}</span>
             {s.send && !fix && <span className="arr-needs">{sendLabels(s.needs, s.send_details).map((n) => <span key={n} className="pill warn">{n}</span>)}</span>}
             {fix && <input type="hidden" name={`o_${s.id}`} value={s.mark ?? fromJoins[state]} />}
             {fix && <select name={`m_${s.id}`} className="mini arr-fix" defaultValue={s.mark ?? fromJoins[state]} aria-label={`${s.name}: mark`}>
@@ -68,8 +76,11 @@ export default async function RegisterPage({ params, searchParams }: { params: P
             <button className="abtn pri" type="submit">Save corrections</button><a className="abtn" href={`/admin/register/${r.id}`}>Cancel</a>
             <p className="muted" style={{ fontSize: 13.5, margin: 0, flexBasis: "100%" }}>Only marks you change are saved, with your name and reason. Google Meet won’t change them back.</p></div>}
           </form>
+          {others.length > 0 && <p className="note" style={{ marginTop: 10 }}>Also in the call: {others.map((o) => `${o.name}${o.left ? "" : " (in now)"}`).join(", ")}.</p>}
+          {lv && !lv.ok && me.role === "school_admin" && (lv.reason === "reconnect" || lv.reason === "error") && <p className="note" style={{ marginTop: 10 }}>{lv.reason === "reconnect"
+            ? <>To show who’s in during the lesson, reconnect the recordings account (ose@) under Admin → Recordings → Settings, so it can read Google Meet.</> : <>Couldn’t read who’s in the call right now: {lv.message}</>}</p>}
           {j.unknown.length > 0 && <p className="note" style={{ marginTop: 10 }}>Also joined, not matched to a student: {j.unknown.map((u) => `${u.name} (${hm(u.at)})`).join(", ")}. Match them under Attendance → Check joins.</p>}
-          <p className="muted" style={{ fontSize: 13.5, margin: "10px 0 0" }}>Attendance is taken from Google Meet’s log, which reaches the site a few minutes to an hour after students join (Check Meet now fetches it); Zoom’s after the lesson. {live && !fix ? "This page updates itself every 45 seconds." : ""}</p>
+          <p className="muted" style={{ fontSize: 13.5, margin: "10px 0 0" }}>{lv?.ok ? "Who’s in the call shows live from Google Meet. " : ""}Attendance is taken from Google Meet’s log, which reaches the site a few minutes to an hour after students leave the call (Check Meet now fetches it); Zoom’s after the lesson. {live && !fix ? "This page updates itself every 45 seconds." : ""}</p>
         </section>)}
     {r.status === "cancelled" && <p className="empty">This lesson was cancelled.</p>}
     </div>
