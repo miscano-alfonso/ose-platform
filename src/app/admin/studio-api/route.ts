@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { currentStaff } from "@/lib/auth";
 import { ask, listDrawings, saveDrawing, deleteDrawing, StudioError } from "@/lib/studio";
+import { canvaUploadImage, canvaUploadStatus } from "@/lib/designs";
 
 // Sketch Studio: ask (draft, check or change a drawing; streamed), list, save, delete. Admins only: drawing uses the school's API credit.
 export const dynamic = "force-dynamic";
@@ -15,7 +16,8 @@ async function admin(req: NextRequest) {
 }
 export async function GET(req: NextRequest) {
   if (!(await admin(req))) return out({ error: "Sign in to the admin again." }, 401);
-  return out({ drawings: await listDrawings() });
+  const [drawings, canva] = await Promise.all([listDrawings(), canvaUploadStatus().catch(() => null)]);
+  return out({ drawings, canva });
 }
 export async function POST(req: NextRequest) {
   const me = await admin(req);
@@ -29,6 +31,12 @@ export async function POST(req: NextRequest) {
     }
     if (action === "save") return out({ id: await saveDrawing(me.id, b) });
     if (action === "delete") { await deleteDrawing(String(b.id ?? "")); return out({ ok: true }); }
+    if (action === "canva") {
+      const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(String(b.png ?? ""));
+      if (!m) return out({ error: "That picture couldn’t be read." }, 400);
+      try { return out(await canvaUploadImage(String(b.name ?? "Sketch Studio drawing"), Buffer.from(m[1], "base64"))); }
+      catch (e) { return out({ error: (e as Error).message || "Canva didn’t take the picture." }, 400); }
+    }
     return out({ error: "Unknown action." }, 400);
   } catch (e) {
     if (e instanceof StudioError) return out({ error: e.message }, e.status);

@@ -158,6 +158,7 @@ section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
         <button class="btn" id="saveWebp" type="button">Save WebP</button>
         <button class="btn" id="saveSvg" type="button">Save SVG</button>
         <button class="btn" id="reseed" type="button" title="Same shapes, new hand-drawn strokes">Redraw strokes</button>
+        <button class="btn" id="sendCanva" type="button" hidden>Send to Canva</button>
         <button class="btn" id="copyJson" type="button">Copy drawing data</button>
       </div>
       <div class="status" id="saveStatus" aria-live="polite"></div>
@@ -346,6 +347,15 @@ async function offer(kind) {
     const c = err && err.code; setStatus($("saveStatus"), c === "declined" ? "Not saved." : c === "rate_limited" ? "A save is already waiting for you to confirm." : "Couldn't save that file here.", c !== "declined");
   }
 }
+$("sendCanva").onclick = async () => {
+  const b = $("sendCanva"); b.disabled = true; setStatus($("saveStatus"), "Sending to Canva…");
+  const name = `${cur.spec.title || "Drawing"} (${Chalk.palette(cur.palette).name}, ${cur.bg === "navy" ? "dark" : "white"})`;
+  try {
+    const r = await window.studioCanva.send(name, cv.toDataURL("image/png"));
+    setStatus($("saveStatus"), r.moved ? `Sent to Canva: it's in ${r.folder}.` : r.folder ? `Sent to Canva. It's in your Canva uploads; it couldn't be moved into ${r.folder}.` : "Sent to Canva. It's in your Canva uploads (no Canva folder is set in the admin).");
+  } catch (err) { setStatus($("saveStatus"), (err && err.message) || "Couldn't send that to Canva.", true); }
+  finally { b.disabled = false; }
+};
 $("savePng").onclick = () => offer("png"); $("saveWebp").onclick = () => offer("webp"); $("saveSvg").onclick = () => offer("svg");
 $("copyJson").onclick = async () => {
   const txt = JSON.stringify(cur.spec, null, 1);
@@ -406,6 +416,7 @@ function paintGallery(note) {
   [sample, db, downloads] = await Promise.all([use("sample"), use("db"), use("downloads")]);
   if (!sample) setStatus($("status"), "Drawing needs Claude, which isn't available in this view. You can still open and save drawings.");
   if (!downloads) for (const b of ["savePng", "saveWebp", "saveSvg"]) $(b).hidden = true;
+  if (window.studioCanva) $("sendCanva").hidden = false;
   if (sample) { try { const lim = await sample.limits(); canImages = lim.images ? lim.images.mediaTypes || ["image/png"] : false; } catch { canImages = false; } }
   if (!canImages) { $("refWrap").hidden = true; $("polishWrap").hidden = true; }
   if (!db) { paintGallery("Sign in to Claude to keep your drawings here. Until then, save each one as a file."); return; }

@@ -35,7 +35,7 @@ const sampleShim = {
 const studioListeners = [];
 async function studioRefresh() {
   const r = await fetch(STUDIO_API, { cache: "no-store" }); if (!r.ok) throw { code: r.status === 401 ? "signed_out" : "server" };
-  const j = await r.json(); const snap = { docs: (j.drawings || []).map((d) => ({ id: d.id, data: () => d })) };
+  const j = await r.json(); if (window.studioCanva) window.studioCanva.info = j.canva || null; const snap = { docs: (j.drawings || []).map((d) => ({ id: d.id, data: () => d })) };
   for (const [next] of studioListeners) next(snap);
 }
 const refreshSoon = () => studioRefresh().catch(() => { });
@@ -51,3 +51,8 @@ const downloadsShim = { async save({ filename, data }) {
   const blob = data instanceof Blob ? data : new Blob([data], { type: filename.endsWith(".svg") ? "image/svg+xml" : "application/octet-stream" });
   const u = URL.createObjectURL(blob), a = document.createElement("a"); a.href = u; a.download = filename; document.body.append(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(u), 5000); return { status: "saved" }; } };
+// Send to Canva: the school's Canva connection uploads the PNG and files it in the Canva folder set in the admin
+window.studioCanva = { info: null, async send(name, png) {
+  let r; try { r = await fetch(STUDIO_API + "?action=canva", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ name, png }) }); }
+  catch { throw new Error("Lost the connection to the server. Try again."); }
+  const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || "Couldn't send that to Canva."); return j; } };

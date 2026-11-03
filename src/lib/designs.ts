@@ -88,19 +88,25 @@ export async function teacherPhoto(id: string): Promise<{ mime: string; data: Bu
   return null;
 }
 
-// ---------- Canva (Connect API, read-only: list your designs, export one as a PNG) ----------
-type Canva = { clientId?: string; clientSecret?: string; refreshToken?: string; by?: string; at?: string; folderId?: string; folderName?: string;
+// ---------- Canva (Connect API: list your designs, export one as a PNG; from 3 Nov, upload Sketch Studio drawings into the folder) ----------
+type Canva = { clientId?: string; clientSecret?: string; refreshToken?: string; by?: string; at?: string; folderId?: string; folderName?: string; scope?: string;
   pending?: { state: string; verifier: string; exp: number } };
 const API = () => process.env.CANVA_API_URL || "https://api.canva.com/rest/v1";
 const AUTH = () => process.env.CANVA_AUTH_URL || "https://www.canva.com/api/oauth/authorize";
-const SCOPES = "design:meta:read design:content:read folder:read";
+const SCOPES = "design:meta:read design:content:read folder:read asset:write folder:write";
 export const canvaRedirect = (base: string) => `${base}/admin/design-api?action=canvacallback`;
 const b64u = (b: Buffer) => b.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 
 export async function canvaStatus(base: string) {
   const c = (await kvGet<Canva>("canva")) ?? {};
   return { hasApp: !!(c.clientId && c.clientSecret), clientId: c.clientId ?? "", connected: !!c.refreshToken, by: c.by ?? "", at: c.at ?? "",
-    folderId: c.folderId ?? "", folderName: c.folderName ?? "", redirect: canvaRedirect(base) };
+    folderId: c.folderId ?? "", folderName: c.folderName ?? "", redirect: canvaRedirect(base), canUpload: canvaCanUpload(c) };
+}
+/** Connections made before 3 Nov only asked Canva for read access: those need Connect Canva again before drawings can be sent. */
+const canvaCanUpload = (c: Canva) => !!c.refreshToken && /asset:write/.test(c.scope ?? "");
+export async function canvaUploadStatus() {
+  const c = (await kvGet<Canva>("canva")) ?? {};
+  return { connected: !!c.refreshToken, canUpload: canvaCanUpload(c), folder: c.folderId ? (c.folderName || "your Canva folder") : null };
 }
 export async function canvaSaveApp(clientId: string, secret: string) {
   clientId = clientId.trim(); secret = secret.trim();
@@ -121,7 +127,7 @@ export async function canvaFolder(link: string) {
   const m = /(?:folder\/|^)(FA[A-Za-z0-9_-]{6,40})/.exec(link.trim());
   if (!m && link.trim()) fail("Paste the folder’s link from Canva (it contains /folder/FA…).");
   const c = (await kvGet<Canva>("canva")) ?? {};
-  c.folderId = m?.[1] ?? undefined; c.folderName = undefined;
+  c.folderId = m?.[1] ?? undefined; c.folderName = undefined;   // the name is looked up the next time a drawing is sent
   await kvSet("canva", c);
 }
 export async function canvaLoginUrl(base: string): Promise<string> {
@@ -146,7 +152,7 @@ export async function canvaCallback(base: string, sp: URLSearchParams, by: strin
   if (sp.get("error")) { await kvSet("canva", c); return "Canva said: " + (sp.get("error") || "").slice(0, 200) + "."; }
   const t = await token(c, { grant_type: "authorization_code", code: sp.get("code") || "", code_verifier: p.verifier, redirect_uri: canvaRedirect(base) });
   if (!t.refresh_token) { await kvSet("canva", c); return "Canva didn’t complete the sign-in" + (t.__error ? `: ${t.__error}` : "") + "."; }
-  c.refreshToken = String(t.refresh_token); c.by = by; c.at = new Date().toISOString();
+  c.refreshToken = String(t.refresh_token); c.by = by; c.at = new Date().toISOString(); c.scope = typeof t.scope === "string" ? t.scope : SCOPES;
   await kvSet("canva", c);
   return null;
 }
@@ -199,3 +205,36 @@ export async function canvaImport(by: string, designId: string, title: string, k
   if (!img.ok) fail("Couldn’t download the export from Canva.");
   return saveAsset(by, title, kind, Buffer.from(await img.arrayBuffer()), designId);
 }
+
+/** Sketch Studio → Canva: upload a PNG as an image asset, then file it in the school's Canva folder (the one "From Canva" reads). */
+export async function canvaUploadImage(name: string, png: Buffer): Promise<{ folder: string | null; moved: boolean }> {
+  const c0 = (await kvGet<Canva>("canva")) ?? {};
+  if (!c0.refreshToken) fail("Connect Canva first: Social › Pictures & Canva › Connect Canva.");
+  if (!canvaCanUpload(c0)) fail("Canva was connected before uploads were added. In the Canva Developer Portal tick asset write and folder write for the app, then press Connect Canva again (Social › Pictures & Canva).");
+  if (png.length < 100 || png.length > 25_000_000 || png.subarray(1, 4).toString() !== "PNG") fail("That picture couldn’t be read.");
+  const at = await access();
+  const meta = { name_base64: Buffer.from(name.replace(/[^\w .,()&'-]+/g, " ").trim().slice(0, 50) || "Sketch Studio drawing").toString("base64") };
+  const r = await fetch(`${API()}/asset-uploads`, { method: "POST", signal: AbortSignal.timeout(60000),
+    headers: { authorization: `Bearer ${at}`, "content-type": "application/octet-stream", "asset-upload-metadata": JSON.stringify(meta) }, body: new Uint8Array(png) });
+  if (r.status === 403) fail("Canva didn’t allow the upload. Tick asset write and folder write for the app in the Canva Developer Portal, then press Connect Canva again.");
+  if (!r.ok) fail(`Canva wouldn’t take the picture (${r.status}).`);
+  type Job = { id: string; status: string; asset?: { id: string }; error?: { message?: string } };
+  let job = ((await r.json()) as { job: Job }).job;
+  for (let i = 0; i < 30 && job.status === "in_progress"; i++) {
+    await new Promise((ok) => setTimeout(ok, 1000));
+    job = (await get<{ job: Job }>(at, `/asset-uploads/${encodeURIComponent(job.id)}`)).job;
+  }
+  if (job.status !== "success" || !job.asset?.id) fail(job.error?.message ? `Canva: ${job.error.message}` : "Canva is still processing the picture. It will appear in your Canva uploads shortly.");
+  const assetId = job.asset!.id;
+  const c = (await kvGet<Canva>("canva")) ?? {};
+  if (!c.folderId) return { folder: null, moved: false };
+  const mv = await fetch(`${API()}/folders/move`, { method: "POST", signal: AbortSignal.timeout(20000),
+    headers: { authorization: `Bearer ${at}`, "content-type": "application/json" }, body: JSON.stringify({ to_folder_id: c.folderId, item_id: assetId }) });
+  if (!c.folderName) {
+    const f = await fetch(`${API()}/folders/${encodeURIComponent(c.folderId)}`, { headers: { authorization: `Bearer ${at}` }, signal: AbortSignal.timeout(15000) }).catch(() => null);
+    const n = f && f.ok ? ((await f.json().catch(() => ({}))) as { folder?: { name?: string } }).folder?.name : undefined;
+    if (n) { c.folderName = n.slice(0, 120); await kvSet("canva", c); }
+  }
+  return { folder: c.folderName || "your Canva folder", moved: mv.ok };
+}
+
