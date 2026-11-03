@@ -8,7 +8,7 @@ import { googleAccess, recCanLive } from "./meet";
 // the name on their Google account. This is only for showing arrivals live: attendance itself still comes from the log.
 const API = () => (process.env.MEET_API_URL || "https://meet.googleapis.com/v2").replace(/\/$/, "");
 export type LiveParticipant = { name: string; joined: string; left: string | null };
-export type LiveArrivals = { ok: true; participants: LiveParticipant[]; matched: Record<string, LiveParticipant> } | { ok: false; reason: "none" | "reconnect" | "no_code" | "error"; message?: string };
+export type LiveArrivals = { ok: true; participants: LiveParticipant[]; matched: Record<string, LiveParticipant>; calls: number; code: string } | { ok: false; reason: "none" | "reconnect" | "no_code" | "error"; message?: string };
 
 const cache = new Map<string, { at: number; v: LiveArrivals }>();
 const norm = (s: string) => s.normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/[^a-z0-9 ]+/g, " ").replace(/\s+/g, " ").trim();
@@ -17,7 +17,8 @@ export const meetingCode = (url: string | null) => { const m = /meet\.google\.co
 
 async function get<T>(token: string, path: string): Promise<T> {
   const r = await fetch(API() + path, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(10000) });
-  if (!r.ok) { const t = await r.text().catch(() => ""); throw new Error(`Google Meet answered ${r.status}${/SERVICE_DISABLED|has not been used/.test(t) ? " (turn on the Google Meet API in Google Cloud)" : ""}`); }
+  if (!r.ok) { const t = await r.text().catch(() => ""); let m = ""; try { m = (JSON.parse(t) as { error?: { message?: string } }).error?.message ?? ""; } catch { /* not JSON */ }
+    throw new Error(`Google Meet answered ${r.status}${/SERVICE_DISABLED|has not been used/.test(t) ? " (turn on the Google Meet API in Google Cloud)" : m ? `: ${m.slice(0, 140)}` : ""}`); }
   return r.json() as Promise<T>;
 }
 
@@ -59,7 +60,7 @@ export async function liveArrivals(key: string, meetUrl: string | null, startIso
       const m = full ?? (firsts.length === 1 ? firsts[0][1] : undefined);
       if (m) matched[s.id] = m;
     }
-    return done({ ok: true, participants: [...byName.values()].sort((a, b) => a.joined.localeCompare(b.joined)), matched });
+    return done({ ok: true, participants: [...byName.values()].sort((a, b) => a.joined.localeCompare(b.joined)), matched, calls: (recs.conferenceRecords ?? []).length, code });
   } catch (e) { return done({ ok: false, reason: "error", message: (e as Error).message.slice(0, 160) }); }
 }
 

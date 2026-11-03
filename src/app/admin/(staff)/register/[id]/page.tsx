@@ -77,8 +77,13 @@ export default async function RegisterPage({ params, searchParams }: { params: P
             <p className="muted" style={{ fontSize: 13.5, margin: 0, flexBasis: "100%" }}>Only marks you change are saved, with your name and reason. Google Meet won’t change them back.</p></div>}
           </form>
           {others.length > 0 && <p className="note" style={{ marginTop: 10 }}>Also in the call: {others.map((o) => `${o.name}${o.left ? "" : " (in now)"}`).join(", ")}.</p>}
-          {lv && !lv.ok && me.role === "school_admin" && (lv.reason === "reconnect" || lv.reason === "error") && <p className="note" style={{ marginTop: 10 }}>{lv.reason === "reconnect"
-            ? <>To show who’s in during the lesson, reconnect the recordings account (ose@) under Admin → Recordings → Settings, so it can read Google Meet.</> : <>Couldn’t read who’s in the call right now: {lv.message}</>}</p>}
+          {/* 3 Nov: why the live view has nobody, for the office (also while Viewing as a teacher) */}
+          {lv && (me.role === "school_admin" || me.viewing) && (!lv.ok || lv.calls === 0) && <p className="note" style={{ marginTop: 10 }}>
+            <b>Live view (office only):</b> {!lv.ok ? (lv.reason === "reconnect" ? "the recordings account (ose@) was connected without the Google Meet permission. Reconnect it under Admin → Recordings → Settings and allow everything Google lists."
+              : lv.reason === "none" ? "the recordings account (ose@) isn’t connected (Admin → Recordings → Settings)."
+              : lv.reason === "no_code" ? "this class has no Google Meet link saved, so there’s no call to look for."
+              : `Google answered with an error: ${lv.message ?? "unknown"}.`)
+              : `Google Meet shows no call on this class’s link (${lv.code}) since an hour before the lesson that ose@ can see. The lesson may be running on a different Meet link (for example one made in Classroom or a teacher’s own calendar), which only its own organiser can read.`}</p>}
           {j.unknown.length > 0 && <p className="note" style={{ marginTop: 10 }}>Also joined, not matched to a student: {j.unknown.map((u) => `${u.name} (${hm(u.at)})`).join(", ")}. Match them under Attendance → Check joins.</p>}
           <p className="muted" style={{ fontSize: 13.5, margin: "10px 0 0" }}>{lv?.ok ? "Who’s in the call shows live from Google Meet. " : ""}Attendance is taken from Google Meet’s log, which reaches the site a few minutes to an hour after students leave the call (Check Meet now fetches it); Zoom’s after the lesson. {live && !fix ? "This page updates itself every 45 seconds." : ""}</p>
         </section>)}
