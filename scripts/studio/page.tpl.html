@@ -78,10 +78,10 @@ textarea:focus, button:focus-visible, input:focus-visible + span { outline: 2px 
 .vleft { display: grid; gap: 10px; flex: 0 1 auto; min-width: 0; width: fit-content; max-width: 100% }
 .vleft .caption { min-width: 0 }
 .exports { margin-top: 42px }
-.exports { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; width: 180px }
+.exports { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; width: 170px }
 .exports .lab { margin: 0 }
 .exports .btn { width: 100%; text-align: center; padding: 10px 12px }
-@media (max-width: 1100px) { .viewer { flex-direction: column } .exports { margin-top: 0 } .exports { width: 100%; flex-direction: row; flex-wrap: wrap } .exports .lab { width: 100% } .exports .btn { width: auto; flex: 1 1 auto } }
+@media (max-width: 700px), (min-width: 881px) and (max-width: 1000px) { .viewer { flex-direction: column } .exports { margin-top: 0 } .exports { width: 100%; flex-direction: row; flex-wrap: wrap } .exports .lab { width: 100% } .exports .btn { width: auto; flex: 1 1 auto } }
 .hint { font: 400 13px/1.4 var(--body); color: var(--muted); margin-top: 6px }
 .status { font: 400 14px/1.4 var(--body); color: var(--muted); min-height: 1.4em }
 .status.err { color: var(--warn) }
