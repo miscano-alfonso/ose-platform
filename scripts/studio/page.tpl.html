@@ -254,14 +254,14 @@ let sample = null, db = null, downloads = null, ctl = null, drawings = [];
 
 const subjName = () => (cur.palette && cur.palette !== "house" ? Chalk.palette(cur.palette).name : "[subject]");
 const STARTERS = [
-  ["These topics…", () => "Draw one object that sums up these topics:\n- \n- \n- "],
+  ["These topics…", () => `Topic: ${cur.palette && cur.palette !== "house" ? Chalk.palette(cur.palette).name : ""}\nDraw one object that sums up these points:\n- \n- \n- `],
   ["Course page picture", () => `Draw a picture for the ${subjName()} course page: one strong object a student of ${subjName()} would recognise straight away.`],
   ["Tool of the trade", () => `Draw the classic tool or instrument used in ${subjName()}, with plenty of real detail.`],
   ["Still life", () => `Draw a small still life of two or three objects that go together for ${subjName()}: `],
   ["An event or day", () => "Draw one object for this event or awareness day: "],
 ];
 for (const [label, fill] of STARTERS) { const b = document.createElement("button"); b.type = "button"; b.className = "chip starter"; b.textContent = label;
-  b.onclick = () => { const v = fill(), ta = $("prompt"); ta.value = v; ta.focus(); const i = v.indexOf("[subject]"); const j = v.indexOf("- "); const at = i >= 0 ? i : j >= 0 ? j + 2 : v.length; ta.setSelectionRange(at, i >= 0 ? at + 9 : at); };
+  b.onclick = () => { const v = fill(), ta = $("prompt"); ta.value = v; ta.focus(); const i = v.indexOf("[subject]"); const tp = v.startsWith("Topic: ") ? v.indexOf("\n") : -1; const j = v.indexOf("- "); const at = i >= 0 ? i : tp >= 0 && tp === 7 ? 7 : j >= 0 ? j + 2 : v.length; ta.setSelectionRange(at, i >= 0 ? at + 9 : at); };
   $("starters").append(b); }
 const bgVal = () => "navy";   // always the subject's colour (white drawings saved earlier open on colour too)
 const sizeVal = () => document.querySelector('input[name="size"]:checked').value.split("x").map(Number);
