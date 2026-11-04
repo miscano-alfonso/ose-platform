@@ -84,6 +84,9 @@ textarea:focus, button:focus-visible, input:focus-visible + span { outline: 2px 
 .exports .lab { margin: 0 }
 .exports .btn { width: 100%; text-align: center; padding: 10px 12px }
 @media (max-width: 700px), (min-width: 881px) and (max-width: 1000px) { .viewer { flex-direction: column } .exports { margin-top: 0 } .exports { width: 100%; flex-direction: row; flex-wrap: wrap } .exports .lab { width: 100% } .exports .btn { width: auto; flex: 1 1 auto } }
+.contrast { display: grid; gap: 6px; margin: 4px 0 0; font: 500 14px/1.2 var(--body); color: var(--ink); text-transform: none; letter-spacing: 0 }
+.contrast span { display: flex; justify-content: space-between } .contrast output { font: 400 13px/1.2 var(--mono); color: var(--muted) }
+.contrast input { width: 100%; accent-color: var(--accent) }
 .hint { font: 400 13px/1.4 var(--body); color: var(--muted); margin-top: 6px }
 .status { font: 400 14px/1.4 var(--body); color: var(--muted); min-height: 1.4em }
 .status.err { color: var(--warn) }
@@ -188,6 +191,8 @@ Draw one object that sums up these points:
           <button class="btn" id="copyJson" type="button">Copy drawing data</button>
           <span class="lab" style="margin-top:8px">Tweak</span>
           <button class="btn" id="reseed" type="button" title="Same shapes, new hand-drawn strokes">Redraw strokes</button>
+          <label class="contrast" for="contrast"><span>Contrast <output id="contrastVal">0</output></span>
+            <input type="range" id="contrast" min="-50" max="100" step="5" value="0"></label>
         </div>
       </div>
       <div class="status" id="saveStatus" aria-live="polite"></div>
@@ -213,7 +218,7 @@ const GUIDE = /*GUIDE*/;
 const $ = (id) => document.getElementById(id);
 const cv = $("cv"), stage = $("stage");
 let cur = { spec: CHALK_EXAMPLES[0], prompt: "", bg: "navy", palette: "house", hl: "glow", seed: 7, id: null, example: true };
-const opts = (c = cur) => ({ bg: "navy", seed: c.seed, palette: c.palette, highlight: "glow" });   // always on the subject colour, always glowing highlights
+const opts = (c = cur) => ({ bg: "navy", seed: c.seed, palette: c.palette, highlight: "glow", contrast: (c.spec && c.spec.contrast) || 0 });   // always on the subject colour, always glowing highlights
 const PAL_KEYS = ["house"].concat(Object.keys(Chalk.SUBJECTS));
 function dots(k) { const i = document.createElement("i"); for (const c of Chalk.palette(k, true).swatch) { const b = document.createElement("b"); b.style.background = c; i.append(b); } return i; }
 for (const k of PAL_KEYS) {
@@ -283,6 +288,7 @@ async function render() {
   const pal = Chalk.palette(cur.palette).name;
   $("capMeta").textContent = `${cur.example ? "Example · " : `${built.width} × ${built.height} · `}${pal}`;
   const sw = document.querySelector(`input[name="pal"][value="${cur.palette}"]`); if (sw) sw.checked = true;
+  const cv0 = (cur.spec && cur.spec.contrast) || 0; $("contrast").value = cv0; $("contrastVal").textContent = (cv0 > 0 ? "+" : "") + cv0;
 }
 function fixSpec(s, w, h) {
   if (!s || typeof s !== "object" || !Array.isArray(s.parts) || !s.parts.length) throw { code: "bad_drawing" };
@@ -384,6 +390,7 @@ $("changeForm").addEventListener("submit", async (e) => {
   try {
     const spec = fixSpec(await ask(input, {}, $("saveStatus")), cur.spec.width, cur.spec.height);
     delete spec.notes;
+    if (cur.spec && cur.spec.contrast) spec.contrast = cur.spec.contrast;
     cur = Object.assign({}, cur, { spec, example: false });
     await render(); $("changeText").value = ""; await saveCurrent(!cur.id);
     const notes = await polish((cur.prompt ? cur.prompt + ". " : "") + "Change asked for: " + what, Math.min(1, roundsVal()), $("saveStatus"));
@@ -392,6 +399,12 @@ $("changeForm").addEventListener("submit", async (e) => {
   } catch (err) { setStatus($("saveStatus"), copyFor(err && err.code, err && err.message), err && err.code !== "cancelled"); }
 });
 
+let contrastT = null;
+$("contrast").addEventListener("input", () => {
+  const v = +$("contrast").value; $("contrastVal").textContent = (v > 0 ? "+" : "") + v;
+  cur.spec = Object.assign({}, cur.spec, { contrast: v }); if (!v) delete cur.spec.contrast;
+  clearTimeout(contrastT); contrastT = setTimeout(async () => { await render(); if (cur.id) saveCurrent(false); }, 120);
+});
 $("reseed").onclick = async () => { cur.seed = Math.floor(Math.random() * 1e6); await render(); if (cur.id) saveCurrent(false); };
 
 // ---- saving files

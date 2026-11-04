@@ -27,7 +27,7 @@ export default async function MyClass({ params, searchParams }: { params: Promis
     <div className="top"><div><h1>{c.level} {c.subject}<span className="h1-code">{c.code}</span></h1>
       <div className="sub">{(c.slots ?? []).map((s) => `${DAY[s.d]} ${s.t}–${s.e}`).join(" · ")} · {c.students} student{c.students === 1 ? "" : "s"}{c.att !== null ? ` · ${c.att}% attendance` : ""}</div></div>
       <span className="grow" /><div className="acts">
-        {c.next && <Link className="abtn sm pri" href={`/admin/register/${c.next.id}`}>Next lesson’s attendance · {dm(c.next.d)}</Link>}
+        {c.next && <Link className="abtn sm pri" href={`/admin/register/${c.next.id}?back=${encodeURIComponent("/admin/teacher/classes/" + c.id)}`}>Next lesson’s attendance · {dm(c.next.d)}</Link>}
         {c.classroom && <a className="abtn sm" href={c.classroom} target="_blank" rel="noopener">Classroom</a>}
         {canMsg ? <Link className="abtn sm" href="/admin/teacher/chats">Class chat</Link> : <span className="abtn sm is-dis" title="Switched off for now">Class chat</span>}</div></div>
     {list.length > 0 && <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: 12 }}><ViewSwitch view={view} href={(w) => qs(w === "cards" ? { view: "cards" } : {})} /></div>}

@@ -13,7 +13,7 @@ const nextOf = (c: MyClass) => c.next ? `${DAY[new Date(c.next.d + "T12:00:00Z")
 const Acts = ({ c }: { c: MyClass }) => <>
   <Link className="abtn sm pri" href={`/admin/teacher/classes/${c.id}`}>Students</Link>
   <Link className="abtn sm" href={`/admin/teacher/classes/${c.id}#assignments`}>Assignments</Link>
-  {c.next && <Link className="abtn sm" href={`/admin/register/${c.next.id}`}>Attendance</Link>}
+  {c.next && <Link className="abtn sm" href={`/admin/register/${c.next.id}?back=%2Fadmin%2Fteacher%2Fclasses`}>Attendance</Link>}
   {c.classroom && <a className="abtn sm" href={c.classroom} target="_blank" rel="noopener">Classroom</a>}</>;
 const attPill = (p: number | null) => p === null ? <span className="muted">—</span> : <span className={`pill ${p >= 90 ? "good" : p >= 75 ? "warn" : "bad"}`}>{p}%</span>;
 

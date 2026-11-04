@@ -65,7 +65,7 @@ export default async function Tasters({ searchParams }: { searchParams: Promise<
 
 function Row({ r, today }: { r: Awaited<ReturnType<typeof getTasters>>["rows"][number]; today: string }) {
   return <tr>
-    <td><b>{day(r.lesson_date)}</b> {r.starts_at}<div className="muted" style={{ fontSize: 14.5 }}><Link href={`/admin/register/${r.lesson_event_id}`}>{r.code}</Link></div></td>
+    <td><b>{day(r.lesson_date)}</b> {r.starts_at}<div className="muted" style={{ fontSize: 14.5 }}><Link href={`/admin/register/${r.lesson_event_id}?back=%2Fadmin%2Ftasters`}>{r.code}</Link></div></td>
     <td><b>{r.child_name}</b>{r.together > 1 && <> <span className="pill mute">{r.together} tasters booked together</span></>}
       <div className="muted" style={{ fontSize: 14.5 }}>{r.parent_name} · <a href={`mailto:${r.parent_email}`}>{r.parent_email}</a></div>{r.message && <div className="muted" style={{ fontSize: 14.5 }}>“{r.message}”</div>}</td>
     <td>{r.level} {r.subject}<div className="muted" style={{ fontSize: 14.5 }}>{r.teacher ?? "No teacher"}</div></td>

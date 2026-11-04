@@ -288,6 +288,8 @@ export async function makeLessonDatesAction(f: FormData): Promise<void> {
   revalidatePath("/admin/attendance");
   redirect(`/admin/attendance?term=${term}&ok=${encodeURIComponent(n ? `${n} lesson dates added.` : "Lesson dates are up to date.")}`);
 }
+/** The register page's "back" address, carried through its forms. */
+const regBack = (f: FormData) => { const b = String(f.get("back") ?? ""); return /^\/admin\/[A-Za-z0-9/_-]*(\?[A-Za-z0-9=&_%.-]*)?$/.test(b) ? "&back=" + encodeURIComponent(b) : ""; };
 export async function saveRegisterAction(f: FormData): Promise<void> {
   const me = await requireSignedIn();
   const id = str(f, "id", 40), marks: Record<string, string> = {}, tasters: Record<string, string> = {};
@@ -297,7 +299,7 @@ export async function saveRegisterAction(f: FormData): Promise<void> {
   }
   const err = await saveRegister(me, id, marks, tasters, f.get("taught") === "on", str(f, "note", 300) || null);
   revalidatePath("/admin/attendance");
-  redirect(`/admin/register/${id}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Register saved.")}`);
+  redirect(`/admin/register/${id}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Register saved.")}${regBack(f)}`);
 }
 /** 2 Nov: correct a mark Meet got wrong (now and then, with a reason). */
 export async function correctMarksAction(f: FormData): Promise<void> {
@@ -307,8 +309,8 @@ export async function correctMarksAction(f: FormData): Promise<void> {
   const { correctMarks } = await import("@/lib/ops");
   const r = await correctMarks(me, id, marks, str(f, "reason", 300));
   revalidatePath("/admin/attendance");
-  if (r.error) redirect(`/admin/register/${id}?fix=1&err=${encodeURIComponent(r.error)}`);
-  redirect(`/admin/register/${id}?ok=${encodeURIComponent(r.changed ? `${r.changed} mark${r.changed === 1 ? "" : "s"} corrected.` : "Nothing changed.")}`);
+  if (r.error) redirect(`/admin/register/${id}?fix=1&err=${encodeURIComponent(r.error)}${regBack(f)}`);
+  redirect(`/admin/register/${id}?ok=${encodeURIComponent(r.changed ? `${r.changed} mark${r.changed === 1 ? "" : "s"} corrected.` : "Nothing changed.")}${regBack(f)}`);
 }
 export async function cancelLessonAction(f: FormData): Promise<void> {
   const me = await requireStaff();
@@ -316,7 +318,7 @@ export async function cancelLessonAction(f: FormData): Promise<void> {
   await cancelLesson(me.id, id, str(f, "note", 200));
   await import("@/lib/automations").then((a) => a.cancelLessonReminders(id)).catch(() => null);
   revalidatePath("/admin/attendance");
-  redirect(`/admin/register/${id}?ok=${encodeURIComponent("Lesson cancelled. Any tasters booked into it were cancelled too.")}`);
+  redirect(`/admin/register/${id}?ok=${encodeURIComponent("Lesson cancelled. Any tasters booked into it were cancelled too.")}${regBack(f)}`);
 }
 
 // ---------- tasters ----------
@@ -1544,7 +1546,7 @@ export async function refreshJoinsAction(f: FormData): Promise<void> {
   const id = String(f.get("id") ?? "").slice(0, 40);
   const { syncMeet } = await import("@/lib/meet");
   const r = await syncMeet(me.name).catch(() => null);
-  redirect(`/admin/register/${id}?` + (r && !("error" in r && r.error) ? "ok=" + encodeURIComponent("Checked Google Meet for new joins.") : "err=" + encodeURIComponent((r as { error?: string } | null)?.error ?? "Couldn’t reach Google Meet.")));
+  redirect(`/admin/register/${id}?` + (r && !("error" in r && r.error) ? "ok=" + encodeURIComponent("Checked Google Meet for new joins.") : "err=" + encodeURIComponent((r as { error?: string } | null)?.error ?? "Couldn’t reach Google Meet.")) + regBack(f));
 }
 // ---------- Stripe, read only (Payments → Stripe payments) ----------
 const stBack = (key: "ok" | "err", msg: string): never => redirect(`/admin/payments/stripe?${key}=${encodeURIComponent(msg)}`);

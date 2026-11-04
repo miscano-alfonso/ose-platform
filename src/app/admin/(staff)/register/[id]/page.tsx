@@ -9,7 +9,7 @@ import { liveArrivals, studentFirsts } from "@/lib/meet-live";
 const LABEL: Record<string, string> = { present: "Present", late: "Late", absent: "Absent", approved_absence: "Approved absence" };
 const longDay = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
 
-export default async function RegisterPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; err?: string; fix?: string }> }) {
+export default async function RegisterPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; err?: string; fix?: string; back?: string }> }) {
   const [{ id }, sp, me] = await Promise.all([params, searchParams, requireViewer()]);
   const r = await getRegister(id);
   if (!r || (me.role !== "school_admin" && r.teacher_user !== me.id)) notFound();
@@ -34,7 +34,11 @@ export default async function RegisterPage({ params, searchParams }: { params: P
   const others = lv?.ok ? lv.participants.filter((p) => !Object.values(lv.matched).includes(p) && p.name !== r.teacher) : [];
   const order: Record<string, number> = { missing: 0, late: 1, in: 2, waiting: 3, away: 4 };
   const joinedN = arrivals.filter((a) => a.x || a.lp).length;
-  const backHref = me.role === "school_admin" ? "/admin/attendance" : "/admin/teacher";
+  // back to wherever the lesson was opened from (the timetable, tasters, a class…), else Attendance or My day
+  const back = /^\/admin\/[A-Za-z0-9/_-]*(\?[A-Za-z0-9=&_%.-]*)?$/.test(sp.back ?? "") && !(sp.back ?? "").startsWith("/admin/register") ? sp.back! : null;
+  const backHref = back ?? (me.role === "school_admin" ? "/admin/attendance" : "/admin/teacher");
+  const bq = back ? `back=${encodeURIComponent(back)}` : "";
+  const backInput = back ? <input type="hidden" name="back" value={back} /> : null;
   // 2 Nov: attendance comes from Google Meet's log. A teacher only corrects a mark now and then: "Correct a mark" opens a
   // choice on each row and asks why; nothing here is a daily task.
   const started = now >= st, fix = sp.fix === "1" && started && r.status !== "cancelled" && !me.viewing;
@@ -59,9 +63,9 @@ export default async function RegisterPage({ params, searchParams }: { params: P
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>{live ? "Arrivals" : "Who joined"}</h2>
             {live && <span className={`dx-live${now > en ? " done" : now < st ? " soon" : ""}`}>{now < st ? "Starting soon" : now <= en ? "Live now" : "Just finished"}</span>}
             <span className="pill info">{joinedN} of {r.students.length} joined</span><span style={{ flex: 1 }} />
-            {started && !fix && r.status !== "cancelled" && !me.viewing && <a className="abtn sm" href={`/admin/register/${r.id}?fix=1`} title="Only if Meet got someone wrong, e.g. they joined on another account">Correct a mark</a>}
-            <form action={refreshJoinsAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit">Check Meet now</button></form></div>
-          <form action={correctMarksAction} id="fix-form"><input type="hidden" name="id" value={r.id} />
+            {started && !fix && r.status !== "cancelled" && !me.viewing && <a className="abtn sm" href={`/admin/register/${r.id}?fix=1${bq ? "&" + bq : ""}`} title="Only if Meet got someone wrong, e.g. they joined on another account">Correct a mark</a>}
+            <form action={refreshJoinsAction}><input type="hidden" name="id" value={r.id} />{backInput}<button className="abtn sm" type="submit">Check Meet now</button></form></div>
+          <form action={correctMarksAction} id="fix-form"><input type="hidden" name="id" value={r.id} />{backInput}
           <div className="arr" style={{ marginTop: 12 }}>{arrivals.sort((a, b) => order[a.state] - order[b.state]).map(({ s, x, lp, lateBy, state }) => <div key={s.id} className={`arr-row ${corrected(s) && s.mark ? ({ present: "in", late: "late", absent: "missing", approved_absence: "away" } as Record<string, string>)[s.mark] ?? state : state}${fix ? " fixing" : ""}`}>
             <b>{s.name}</b>
             <span className="arr-st">{corrected(s) && s.mark ? `${LABEL[s.mark]} · corrected` : state === "in" ? "On time" : state === "late" ? `Late · ${lateBy} min` : state === "away" ? `Away: ${s.notice}` : state === "missing" ? "Not joined" : "Not joined yet"}</span>
@@ -74,7 +78,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
           </div>)}
             {r.tasters.map((t) => <div key={t.id} className={`arr-row ${t.status === "attended" ? "in" : "waiting"}`}><b>{t.child}</b><span className="arr-st">Taster{t.status === "attended" ? " · came" : ""}</span><span className="arr-t" /></div>)}</div>
           {fix && <div className="fix-bar"><label className="fld">Why are you correcting it?<input name="reason" required minLength={3} maxLength={300} placeholder="e.g. Joined on her mum’s account" /></label>
-            <button className="abtn pri" type="submit">Save corrections</button><a className="abtn" href={`/admin/register/${r.id}`}>Cancel</a>
+            <button className="abtn pri" type="submit">Save corrections</button><a className="abtn" href={`/admin/register/${r.id}${bq ? "?" + bq : ""}`}>Cancel</a>
             <p className="muted" style={{ fontSize: 13.5, margin: 0, flexBasis: "100%" }}>Only marks you change are saved, with your name and reason. Google Meet won’t change them back.</p></div>}
           </form>
           {others.length > 0 && <p className="note" style={{ marginTop: 10 }}>Also in the call: {others.map((o) => `${o.name}${o.left ? "" : " (in now)"}`).join(", ")}.</p>}
@@ -103,7 +107,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
     </div>}
     </div>
     {me.role === "school_admin" && r.status === "scheduled" && <form action={cancelLessonAction} className="eform" style={{ marginTop: 16 }}>
-      <input type="hidden" name="id" value={r.id} />
+      <input type="hidden" name="id" value={r.id} />{backInput}
       <label className="fld">Cancel this lesson — reason<input name="note" required maxLength={200} placeholder="e.g. Teacher ill" /></label>
       <button className="abtn" type="submit">Cancel lesson</button></form>}
   </>;
