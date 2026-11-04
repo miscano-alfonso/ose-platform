@@ -122,7 +122,11 @@ section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
     <form class="panel" id="drawForm" autocomplete="off">
       <div>
         <label for="prompt">What should it draw?</label>
-        <textarea id="prompt" placeholder="A microscope on a lab bench, seen from the side">A vintage typewriter with a sheet of paper in it</textarea>
+        <textarea id="prompt" placeholder="A microscope on a lab bench, seen from the side">Topic: 
+Draw one object that sums up these points:
+- 
+- 
+- </textarea>
         <div class="lab" style="margin:12px 0 0">Starting points</div>
         <div class="chips" id="starters"></div>
         <div class="ideas" id="ideasBox" hidden><div class="lab" style="margin:12px 0 6px">Ideas from your text</div><div class="idealist" id="ideas"></div></div>
@@ -465,6 +469,7 @@ function paintGallery(note) {
 }
 
 (async () => {
+  try { const ta = $("prompt"); if (ta.value.startsWith("Topic: \n")) { ta.focus({ preventScroll: true }); ta.setSelectionRange(7, 7); } } catch { }
   try { await render(); } catch { }
   try {
     palStore = window.studioPalettes || null;
