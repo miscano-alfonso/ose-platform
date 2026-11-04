@@ -98,7 +98,7 @@ section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
 <div class="wrap">
   <header>
     <div><div class="eyebrow">OH-SO ED · Illustration</div><h1>Sketch Studio</h1></div>
-    <p>Describe an object and Claude draws it in the home page's chalk style: house blue or any subject's duotone, on white or dark, ready to save for the site.</p>
+    <p>Describe an object and Claude draws it in the home page's chalk style: house blue or any subject's duotone, on white or on the subject's own colour like the course posters, ready to save for the site.</p>
   </header>
 
   <div class="grid">
@@ -114,7 +114,7 @@ section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
         <span class="lab">Background</span>
         <div class="seg" role="radiogroup" aria-label="Background">
           <label style="margin:0"><input type="radio" name="bg" id="bgWhite" value="white" checked><span>White</span></label>
-          <label style="margin:0"><input type="radio" name="bg" id="bgNavy" value="navy"><span>Dark</span></label>
+          <label style="margin:0"><input type="radio" name="bg" id="bgNavy" value="navy"><span>Subject colour</span></label>
         </div>
       </div>
       <div>
@@ -232,7 +232,7 @@ async function render() {
   await Chalk.raster(built, cv, cur.seed);
   $("capTitle").textContent = cur.spec.title || "Drawing";
   const pal = Chalk.palette(cur.palette).name, hlName = { off: "no highlights", soft: "soft highlights", glow: "glowing highlights" }[cur.hl];
-  $("capMeta").textContent = `${cur.example ? "Example · " : `${built.width} × ${built.height} · `}${pal} · ${cur.bg === "navy" ? "dark" : "white"} · ${hlName}`;
+  $("capMeta").textContent = `${cur.example ? "Example · " : `${built.width} × ${built.height} · `}${pal} · ${cur.bg === "navy" ? "on colour" : "white"} · ${hlName}`;
   document.querySelector(`input[name="bg"][value="${cur.bg}"]`).checked = true;
   document.querySelector(`input[name="hl"][value="${cur.hl}"]`).checked = true;
   const sw = document.querySelector(`input[name="pal"][value="${cur.palette}"]`); if (sw) sw.checked = true;
@@ -349,7 +349,7 @@ $("reseed").onclick = async () => { cur.seed = Math.floor(Math.random() * 1e6); 
 // ---- saving files
 async function offer(kind) {
   if (!downloads) { setStatus($("saveStatus"), "Saving files isn't available in this view. Open the page in Claude to save.", true); return; }
-  const name = `${slug(cur.spec.filename || cur.spec.title)}-${cur.palette === "house" ? "" : cur.palette + "-"}${cur.bg === "navy" ? "dark" : "white"}.${kind}`;
+  const name = `${slug(cur.spec.filename || cur.spec.title)}-${cur.palette === "house" ? "" : cur.palette + "-"}${cur.bg === "navy" ? "colour" : "white"}.${kind}`;
   try {
     let data;
     if (kind === "svg") data = Chalk.build(cur.spec, opts()).svg;
@@ -361,7 +361,7 @@ async function offer(kind) {
 }
 $("sendCanva").onclick = async () => {
   const b = $("sendCanva"); b.disabled = true; setStatus($("saveStatus"), "Sending to Canva…");
-  const name = `${cur.spec.title || "Drawing"} (${Chalk.palette(cur.palette).name}, ${cur.bg === "navy" ? "dark" : "white"})`;
+  const name = `${cur.spec.title || "Drawing"} (${Chalk.palette(cur.palette).name}, ${cur.bg === "navy" ? "on colour" : "white"})`;
   try {
     const r = await window.studioCanva.send(name, cv.toDataURL("image/png"));
     setStatus($("saveStatus"), r.moved ? `Sent to Canva: it's in ${r.folder}.` : r.folder ? `Sent to Canva. It's in your Canva uploads; it couldn't be moved into ${r.folder}.` : "Sent to Canva. It's in your Canva uploads (no Canva folder is set in the admin).");

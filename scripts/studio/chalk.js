@@ -9,11 +9,17 @@
   const hx = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const mix = (a, b, t) => "#" + hx(a).map((v, i) => Math.round(v + (hx(b)[i] - v) * t).toString(16).padStart(2, "0")).join("").toUpperCase();
   /** The colours one drawing uses: tones from the subject's shade up to its main colour and lighter tints, its highlight, and the dark background. */
-  function palette(key) {
-    if (!SUBJECTS[key]) return Object.assign({}, TONE, { hl: "#7FD0FF", darkBg: NAVY, glow: "#1F4789", poolLight: "#C7DBF2", poolDark: "#2A5A98", name: "House blue", swatch: ["#4479B8", "#0A1C45", "#7FD0FF"] });
-    const [name, M, S, H] = SUBJECTS[key];
+  /** onColour: the drawing sits on the subject's main colour (like the course posters), so its tones run from the shade
+   *  up to just below the main colour, and the light catches it in tints and the highlight colour. */
+  function palette(key, onColour) {
+    const house = !SUBJECTS[key];
+    const [name, M, S, H] = house ? ["House blue", "#3D86D3", "#0A1C45", "#7FD0FF"] : SUBJECTS[key];
+    if (onColour) return { name, swatch: house ? ["#4479B8", "#0A1C45", "#7FD0FF"] : [M, S, H], bg: M,
+      ink: mix(S, "#000000", 0.5), deep: mix(S, "#000000", 0.25), dark: S, mid: mix(S, M, 0.16), light: mix(S, M, 0.32), pale: mix(S, M, 0.5), hi: mix(M, "#FFFFFF", 0.45),
+      hl: H, pool: mix(M, S, 0.35) };
+    if (house) return Object.assign({}, TONE, { hl: "#7FD0FF", bg: WHITE, pool: "#C7DBF2", name: "House blue", swatch: ["#4479B8", "#0A1C45", "#7FD0FF"] });
     return { name, swatch: [M, S, H], ink: mix(S, "#000000", 0.45), deep: S, dark: mix(S, M, 0.33), mid: mix(S, M, 0.66), light: M, pale: mix(M, "#FFFFFF", 0.45), hi: mix(M, "#FFFFFF", 0.78),
-      hl: H, darkBg: mix(S, "#000000", 0.55), glow: mix(S, M, 0.4), poolLight: mix(M, "#FFFFFF", 0.7), poolDark: mix(S, M, 0.45) };
+      hl: H, bg: WHITE, pool: mix(M, "#FFFFFF", 0.7) };
   }
   const num = (v, d) => (typeof v === "number" && isFinite(v) ? v : d);
   const tone = (t, d) => TONE[t] || TONE[d] || TONE.mid;
@@ -21,9 +27,10 @@
 
   function build(spec, opts) {
     const W = Math.round(Math.min(2400, Math.max(400, num(spec.width, 1400)))), H = Math.round(Math.min(2400, Math.max(400, num(spec.height, 1200))));
-    const TONE = palette(opts.palette), tone = (t, d) => TONE[t] || TONE[d] || TONE.mid;
+    const light = (opts.bg || "white") === "white";   // otherwise ("navy", kept for saved drawings) the subject's main colour
+    const TONE = palette(opts.palette, !light), tone = (t, d) => TONE[t] || TONE[d] || TONE.mid;
     const HL = opts.highlight === "soft" || opts.highlight === "glow" ? opts.highlight : "off", HC = HL === "off" ? TONE.hi : TONE.hl;
-    const light = (opts.bg || "white") === "white"; const BG = light ? WHITE : TONE.darkBg;
+    const BG = TONE.bg;
     const glowAttr = HL === "glow" ? ' filter="url(#hlglow)"' : "";
     const R = rng(num(opts.seed, 7)), U = (a, b) => a + (b - a) * R();
     const out = [], defs = []; let cid = 0; const bb = [1e9, 1e9, -1e9, -1e9];
@@ -85,7 +92,7 @@
       if (kind === "none") return;
       const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]); const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
       const k = "g" + (++cid); const [ax, ay, bx, by] = kind === "tb" ? [0, y0, 0, y1] : kind === "diag" ? [x0, y0, x1, y1] : [x0, 0, x1, 0];
-      defs.push(`<linearGradient id="${k}" gradientUnits="userSpaceOnUse" x1="${f(ax)}" y1="${f(ay)}" x2="${f(bx)}" y2="${f(by)}"><stop offset="0" stop-color="${TONE.hi}" stop-opacity="0.45"/><stop offset="1" stop-color="${TONE.deep}" stop-opacity="0.8"/></linearGradient>`);
+      defs.push(`<linearGradient id="${k}" gradientUnits="userSpaceOnUse" x1="${f(ax)}" y1="${f(ay)}" x2="${f(bx)}" y2="${f(by)}"><stop offset="0" stop-color="${light ? TONE.hi : TONE.pale}" stop-opacity="${light ? 0.45 : 0.35}"/><stop offset="1" stop-color="${TONE.deep}" stop-opacity="0.8"/></linearGradient>`);
       out.push(`<path d="${P(pts)}" fill="url(#${k})"/>`);
     }
     function stripes(pts, s) {
@@ -213,15 +220,14 @@
     // atmosphere: key light (navy), floor shadow and scribbles, light falling off to the lower right
     const x0 = isFinite(bb[0]) ? bb[0] : W * 0.2, y0 = isFinite(bb[1]) ? bb[1] : H * 0.2, x1 = isFinite(bb[2]) ? bb[2] : W * 0.8, y1 = isFinite(bb[3]) ? bb[3] : H * 0.8;
     const fy = num(spec.floorY, null), cxm = (x0 + x1) / 2, rx = Math.max(200, (x1 - x0) * 0.55);
-    if (!light) { defs.push(`<radialGradient id="key" cx="${f(x0 + (x1 - x0) * 0.3)}" cy="${f(y0 + (y1 - y0) * 0.3)}" r="${f(Math.max(x1 - x0, y1 - y0) * 0.85)}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${TONE.glow}" stop-opacity="0.6"/><stop offset="1" stop-color="${BG}" stop-opacity="0"/></radialGradient>`); body.push(`<rect width="${W}" height="${H}" fill="url(#key)"/>`); }
     if (fy !== null) {
-      defs.push(`<radialGradient id="pool" cx="${f(cxm)}" cy="${f(fy)}" r="${f(rx)}" gradientTransform="translate(0 ${f(fy * 0.8)}) scale(1 0.2)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${light ? TONE.poolLight : TONE.poolDark}" stop-opacity="0.6"/><stop offset="1" stop-color="${BG}" stop-opacity="0"/></radialGradient>`);
+      defs.push(`<radialGradient id="pool" cx="${f(cxm)}" cy="${f(fy)}" r="${f(rx)}" gradientTransform="translate(0 ${f(fy * 0.8)}) scale(1 0.2)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${TONE.pool}" stop-opacity="0.6"/><stop offset="1" stop-color="${BG}" stop-opacity="0"/></radialGradient>`);
       body.push(`<rect width="${W}" height="${H}" fill="url(#pool)"/>`);
       for (let i = 0; i < 18; i++) { const y = fy - 10 + i * 8 + U(-3, 3), x = cxm + U(-rx * 0.8, rx * 0.5), L = U(120, 320) * (1 - i / 26);
         body.push(`<path d="${wobbly([x, y], [x + L, y + U(-3, 3)], 1.3, 0, 40)}" stroke="${TONE.light}" stroke-width="1.3" opacity="${(0.25 * (1 - i / 22)).toFixed(2)}" fill="none"/>`); }
     }
     body.push(...drawn);
-    defs.push(`<linearGradient id="fall" gradientUnits="userSpaceOnUse" x1="${f(x0)}" y1="${f(y0)}" x2="${f(x1 + 50)}" y2="${f(y1 + 50)}"><stop offset="0" stop-color="${BG}" stop-opacity="0"/><stop offset="0.5" stop-color="${BG}" stop-opacity="${light ? 0.04 : 0.13}"/><stop offset="1" stop-color="${BG}" stop-opacity="${light ? 0.28 : 0.68}"/></linearGradient>`);
+    defs.push(`<linearGradient id="fall" gradientUnits="userSpaceOnUse" x1="${f(x0)}" y1="${f(y0)}" x2="${f(x1 + 50)}" y2="${f(y1 + 50)}"><stop offset="0" stop-color="${BG}" stop-opacity="0"/><stop offset="0.5" stop-color="${BG}" stop-opacity="${light ? 0.04 : 0.13}"/><stop offset="1" stop-color="${BG}" stop-opacity="${light ? 0.28 : 0.12}"/></linearGradient>`);
     body.push(`<rect width="${W}" height="${H}" fill="url(#fall)"/>`);
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs.join("")}<filter id="hlglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/><feComponentTransfer in="b" result="b2"><feFuncA type="linear" slope="1.5"/></feComponentTransfer><feMerge><feMergeNode in="b2"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/></filter></defs><rect width="${W}" height="${H}" fill="${BG}"/><g filter="url(#rough)">${body.join("")}</g></svg>`;
     return { svg, width: W, height: H, bg: BG };
@@ -244,7 +250,7 @@
         const dr = d[i] - bg[0], dg = d[i + 1] - bg[1], db = d[i + 2] - bg[2]; const lum = (Math.abs(dr) + Math.abs(dg) + Math.abs(db)) / 600;
         const k = 1 + m[j] * 0.5 * Math.min(1, lum * 2.5);
         let r = bg[0] + dr * k, gg = bg[1] + dg * k, b = bg[2] + db * k;
-        if (white && r >= 249 && gg >= 249 && b >= 249) r = gg = b = 255;
+        if (Math.abs(r - bg[0]) <= 3 && Math.abs(gg - bg[1]) <= 3 && Math.abs(b - bg[2]) <= 3) { r = bg[0]; gg = bg[1]; b = bg[2]; }   // a clean, flat background
         d[i] = r; d[i + 1] = gg; d[i + 2] = b;
       }
       g.putImageData(id, 0, 0);
