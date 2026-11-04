@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ICONS, type ResolvedGroup } from "@/lib/menus";
 
@@ -23,13 +23,17 @@ function useSection(groups: ResolvedGroup[], path: string, root: string) {
   const pick = (t: string) => { setSection(t); window.dispatchEvent(new CustomEvent(EV, { detail: t })); };
   return { section, pick, start };
 }
-/** The admin's sections as tabs across the top: choosing one changes the side menu. */
+/** The admin's sections as tabs across the top: choosing one opens its top link and changes the side menu. */
 export function SectionTabs({ groups, counts = {}, root, alias = {} }: { groups: ResolvedGroup[]; counts?: Record<string, number>; root: string; alias?: Record<string, string> }) {
   const path0 = usePathname(), path = alias[path0] ?? path0;
   const { section, pick } = useSection(groups, path, root);
+  const router = useRouter();
   if (groups.length < 2) return null;
+  // the tab opens the section's top link (as listed in the side menu, which leaves out the dashboard: that's the logo)
+  const go = (g: ResolvedGroup) => { pick(g.title); const first = g.items.find((x) => x.href !== root && !x.off && x.href.startsWith("/")) ?? g.items.find((x) => x.href.startsWith("/"));
+    if (first && first.href !== path) router.push(first.href); };
   return <div className="sec-tabs" role="tablist" aria-label="Menu sections">{groups.map((g) => { const n = g.items.reduce((a, x) => a + (counts[x.href] ?? 0), 0);
-    return <button key={g.title} type="button" role="tab" aria-selected={section === g.title} className={section === g.title ? "on" : undefined} onClick={() => pick(g.title)}>
+    return <button key={g.title} type="button" role="tab" aria-selected={section === g.title} className={section === g.title ? "on" : undefined} onClick={() => go(g)}>
       {g.title === "Main menu" ? "Main" : g.title}{n ? <b className="cnt">{n}</b> : null}</button>; })}</div>;
 }
 
