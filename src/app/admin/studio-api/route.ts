@@ -1,6 +1,6 @@
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, after, type NextRequest } from "next/server";
 import { currentStaff } from "@/lib/auth";
-import { ask, listDrawings, saveDrawing, deleteDrawing, getPalettes, savePalettes, StudioError } from "@/lib/studio";
+import { ask, listDrawings, saveDrawing, deleteDrawing, getPalettes, savePalettes, startJob, jobStatus, StudioError } from "@/lib/studio";
 import { canvaUploadImage, canvaUploadStatus } from "@/lib/designs";
 
 // Sketch Studio: ask (draft, check or change a drawing; streamed), list, save, delete. Admins only: drawing uses the school's API credit.
@@ -16,6 +16,8 @@ async function admin(req: NextRequest) {
 }
 export async function GET(req: NextRequest) {
   if (!(await admin(req))) return out({ error: "Sign in to the admin again." }, 401);
+  const job = req.nextUrl.searchParams.get("job");
+  if (job) { const j = await jobStatus(job); return j ? out(j) : out({ error: "That drawing job has gone." }, 404); }
   const [drawings, canva, palettes] = await Promise.all([listDrawings(), canvaUploadStatus().catch(() => null), getPalettes()]);
   return out({ drawings, canva, palettes });
 }
@@ -25,6 +27,12 @@ export async function POST(req: NextRequest) {
   const action = req.nextUrl.searchParams.get("action");
   const b = (await req.json().catch(() => ({}))) as Record<string, unknown>;
   try {
+    if (action === "start") {
+      const imgs = Array.isArray(b.images) ? (b.images as unknown[]).filter((x): x is string => typeof x === "string") : [];
+      const { id, run } = await startJob(me.id, String(b.input ?? ""), imgs, b.quick === true);
+      after(run);   // carries on after this response; the page polls ?job=id
+      return out({ id });
+    }
     if (action === "ask") {
       const stream = await ask(String(b.input ?? ""), Array.isArray(b.images) ? (b.images as unknown[]).filter((x): x is string => typeof x === "string") : [], b.quick === true);
       return new Response(stream, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" } });

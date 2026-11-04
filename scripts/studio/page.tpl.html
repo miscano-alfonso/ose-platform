@@ -294,7 +294,10 @@ function copyFor(code, msg) {
     images_unavailable: "Reference pictures can't be sent from this view. Remove the picture and try again.",
     cancelled: "Stopped." })[code] || "Couldn't draw that. Try again in a moment.";
 }
-function busy(on, msg) { $("busy").hidden = !on; $("busy").textContent = msg || ""; for (const b of ["drawBtn", "changeBtn", "reseed", "ideasBtn"]) $(b).disabled = on; $("stopBtn").hidden = !on; }
+// warn before leaving or refreshing while Claude is drawing, so a drawing isn't lost by accident
+let working = false;
+window.addEventListener("beforeunload", (e) => { if (!working) return; e.preventDefault(); e.returnValue = ""; return ""; });
+function busy(on, msg) { working = on; $("busy").hidden = !on; $("busy").textContent = msg || ""; for (const b of ["drawBtn", "changeBtn", "reseed", "ideasBtn"]) $(b).disabled = on; $("stopBtn").hidden = !on; }
 
 async function ask(input, opts, statusEl, label = "Drawing") {
   ctl = new AbortController(); const t0 = Date.now(); let chars = 0;

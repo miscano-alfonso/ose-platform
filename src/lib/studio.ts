@@ -1,5 +1,5 @@
 import "server-only";
-import { withSchool } from "./db";
+import { withSchool, runAsSchool } from "./db";
 import { getAiConfig } from "./social";
 
 // Sketch Studio (3 Nov): drawings in the home page's chalk style. Claude places shapes (a JSON "spec"); the page draws them.
@@ -68,8 +68,11 @@ export async function ask(input: string, images: string[], quick = false): Promi
   const body = res.body!.getReader(), enc = new TextEncoder(), dec = new TextDecoder();
   let buf = "";
   return new ReadableStream<Uint8Array>({
+    // keep reading until there is text to pass on: a pull that ends without passing anything on is never called again,
+    // and Claude's first events ("message started") carry no text, which used to stall every drawing (4 Nov)
     async pull(ctl) {
       try {
+       for (;;) {
         const { done, value } = await body.read();
         if (done) { ctl.close(); return; }
         buf += dec.decode(value, { stream: true });
@@ -83,7 +86,8 @@ export async function ask(input: string, images: string[], quick = false): Promi
           if (j.type === "error") console.error("studio: Claude stream error", j.error);
           if (j.type === "error") out += "\u0000" + (/overloaded/i.test(j.error?.message ?? "") ? "Claude is very busy right now. Try again in a minute." : (j.error?.message ?? "Claude stopped part-way."));
         }
-        if (out) ctl.enqueue(enc.encode(out));
+        if (out) { ctl.enqueue(enc.encode(out)); return; }
+       }
       } catch (e) { console.error("studio: stream from Claude failed", (e as Error).name, (e as Error).message); ctl.enqueue(enc.encode("\u0000" + ((e as Error).name === "TimeoutError" ? "That took too long." : "The connection to Claude dropped."))); ctl.close(); }
     },
     cancel() { body.cancel().catch(() => {}); },
@@ -105,5 +109,52 @@ export async function savePalettes(v: unknown) {
   }
   await withSchool((q) => q(`insert into design_kv (school_id, key, value) values (current_school(), 'studio_palettes', $1::jsonb)
     on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [JSON.stringify(clean)]));
+}
+
+// ---------- background jobs (4 Nov): start one, then the page polls it ----------
+/** Start a draft, check or change. Returns the job id at once; the work carries on after the response (see the route's after()). */
+export async function startJob(userId: string, input: string, images: string[], quick: boolean): Promise<{ id: string; run: () => Promise<void> }> {
+  if (typeof input !== "string" || !input.trim() || input.length > 250_000) throw new StudioError("Nothing to draw.");
+  const ai = await getAiConfig();
+  if (!ai.key) throw new StudioError("The studio needs the Anthropic API key. Add it under Social › Connect to Social › AI searches.", 503);
+  const { id, slug } = await withSchool(async (q) => {
+    await q(`delete from studio_jobs where created_at < now() - interval '2 days'`);
+    const r = await q<{ id: string }>(`insert into studio_jobs (school_id, created_by) values (current_school(), $1) returning id`, [userId]);
+    const sc = await q<{ slug: string }>(`select slug from schools where id = current_school()`);
+    return { id: r[0].id, slug: sc[0].slug };
+  });
+  const run = () => runAsSchool(slug, async () => {
+    const set = (sql: string, params: unknown[]) => withSchool((q) => q(sql, params)).catch((e) => console.error("studio: job update", e));
+    let text = "", last = Date.now();
+    console.log("studio: job started", id);
+    try {
+      const stream = await ask(input, images, quick);
+      console.log("studio: job streaming", id);
+      const rd = stream.getReader(), dec = new TextDecoder();
+      for (;;) {
+        const { done, value } = await rd.read(); if (process.env.STUDIO_DEBUG) console.log("studio: read", done, value?.length); if (done) break;
+        text += dec.decode(value, { stream: true });
+        if (Date.now() - last > 4000) { last = Date.now(); await set(`update studio_jobs set text = $2, updated_at = now() where id = $1`, [id, text]); }
+      }
+      const k = text.indexOf("\u0000");
+      if (k >= 0) await set(`update studio_jobs set status = 'error', error = $2, text = $3, updated_at = now() where id = $1`, [id, text.slice(k + 1).trim() || "Claude stopped part-way.", text.slice(0, k)]);
+      else if (!text.trim()) await set(`update studio_jobs set status = 'error', error = 'Claude’s answer came back empty.', updated_at = now() where id = $1`, [id]);
+      else await set(`update studio_jobs set status = 'done', text = $2, updated_at = now() where id = $1`, [id, text]);
+      console.log("studio: job finished", id, text.length);
+    } catch (e) {
+      console.error("studio: job failed", e);
+      await set(`update studio_jobs set status = 'error', error = $2, text = $3, updated_at = now() where id = $1`, [id, e instanceof StudioError ? e.message : "Claude couldn’t finish that one.", text]);
+    }
+  });
+  return { id, run };
+}
+export async function jobStatus(id: string): Promise<{ status: string; text: string; error: string | null; age: number } | null> {
+  if (!/^[0-9a-f-]{36}$/.test(id)) return null;
+  const r = await withSchool((q) => q<{ status: string; text: string; error: string | null; age: number }>(
+    `select status, text, error, extract(epoch from now() - updated_at)::int as age from studio_jobs where id = $1`, [id]));
+  const j = r[0]; if (!j) return null;
+  // a job whose server was stopped mid-way never finishes: after 6 quiet minutes, say so
+  if (j.status === "running" && j.age > 360) return { ...j, status: "error", error: "The drawing stopped before Claude finished (the website's time limit). Try again, or set Checking to Off." };
+  return j;
 }
 

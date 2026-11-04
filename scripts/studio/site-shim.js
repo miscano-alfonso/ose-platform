@@ -24,17 +24,27 @@ async function studioPost(action, body, signal) {
   return r;
 }
 const sampleShim = {
+  // each draft, check or change runs as a background job on the server; the page checks back every 2.5 seconds
   async json(input, o = {}) {
     const images = []; for (const f of o.images || []) images.push(await toDataUrl(f));
-    const r = await studioPost("ask", { input, images, quick: o.modelTier && o.modelTier !== "complex" }, o.signal);
-    const rd = r.body.getReader(), dec = new TextDecoder(); let text = "";
-    try {
-      for (;;) { const { done, value } = await rd.read(); if (done) break; text += dec.decode(value, { stream: true });
-        if (text.indexOf("\u0000") < 0 && o.onText) o.onText({ text }); }
-    } catch (e) { throw { code: o.signal && o.signal.aborted ? "cancelled" : "network", message: `The connection dropped after ${Math.round(text.length / 100) / 10}k characters.` }; }
-    const k = text.indexOf("\u0000"); if (k >= 0) throw { code: "server", message: text.slice(k + 1).trim() || "Claude stopped part-way." };
-    if (!text.trim()) throw { code: "server", message: "Claude's answer came back empty." };
-    return parseJsonReply(text);
+    const r = await studioPost("start", { input, images, quick: o.modelTier && o.modelTier !== "complex" }, o.signal);
+    const { id } = await r.json();
+    try { localStorage.setItem("studio_job", JSON.stringify({ id, at: Date.now() })); } catch { }
+    let misses = 0;
+    for (;;) {
+      if (o.signal && o.signal.aborted) throw { code: "cancelled" };
+      await new Promise((ok) => setTimeout(ok, 2500));
+      if (o.signal && o.signal.aborted) throw { code: "cancelled" };
+      let j;
+      try { const g = await fetch(STUDIO_API + "?job=" + encodeURIComponent(id), { cache: "no-store", signal: o.signal });
+        if (g.status === 401) throw { code: "signed_out" };
+        if (!g.ok) throw { code: "server", message: (await g.json().catch(() => ({}))).error || `The website answered ${g.status}.` };
+        j = await g.json(); misses = 0; }
+      catch (e) { if (e && e.code) throw e; if (o.signal && o.signal.aborted) throw { code: "cancelled" }; if (++misses > 8) throw { code: "network", message: "The website stopped answering while Claude was drawing." }; continue; }
+      if (j.text && o.onText) o.onText({ text: j.text });
+      if (j.status === "done") { try { localStorage.removeItem("studio_job"); } catch { } return parseJsonReply(j.text); }
+      if (j.status === "error") { try { localStorage.removeItem("studio_job"); } catch { } throw { code: "server", message: j.error || "Claude couldn't finish that one." }; }
+    }
   },
   async limits() { return { images: { mediaTypes: ["image/jpeg", "image/png"] } }; },
 };
