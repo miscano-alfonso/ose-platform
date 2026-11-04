@@ -75,11 +75,13 @@ textarea:focus, button:focus-visible, input:focus-visible + span { outline: 2px 
 .pe-f input[type=color] { width: 40px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer }
 .pe-f code { font: 400 12px/1 var(--mono); color: var(--ink) }
 .viewer { display: flex; gap: 14px; align-items: flex-start; min-width: 0 }
-.viewer .stage { flex: 0 1 auto; min-width: 0 }
+.vleft { display: grid; gap: 10px; flex: 0 1 auto; min-width: 0; width: fit-content; max-width: 100% }
+.vleft .caption { min-width: 0 }
+.exports { margin-top: 42px }
 .exports { display: flex; flex-direction: column; gap: 8px; flex: 0 0 auto; width: 180px }
 .exports .lab { margin: 0 }
 .exports .btn { width: 100%; text-align: center; padding: 10px 12px }
-@media (max-width: 1100px) { .viewer { flex-direction: column } .exports { width: 100%; flex-direction: row; flex-wrap: wrap } .exports .lab { width: 100% } .exports .btn { width: auto; flex: 1 1 auto } }
+@media (max-width: 1100px) { .viewer { flex-direction: column } .exports { margin-top: 0 } .exports { width: 100%; flex-direction: row; flex-wrap: wrap } .exports .lab { width: 100% } .exports .btn { width: auto; flex: 1 1 auto } }
 .hint { font: 400 13px/1.4 var(--body); color: var(--muted); margin-top: 6px }
 .status { font: 400 14px/1.4 var(--body); color: var(--muted); min-height: 1.4em }
 .status.err { color: var(--warn) }
@@ -167,7 +169,10 @@ section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
 
     <div class="stagebox">
       <div class="viewer">
-        <div class="stage" id="stage"><canvas id="cv" width="1400" height="1200" aria-label="The current drawing"></canvas><div class="busy" id="busy" hidden></div></div>
+        <div class="vleft">
+        <div class="caption"><h2 id="capTitle">Studio microphone</h2><span class="meta" id="capMeta">Example drawing</span></div>
+          <div class="stage" id="stage"><canvas id="cv" width="1400" height="1200" aria-label="The current drawing"></canvas><div class="busy" id="busy" hidden></div></div>
+        </div>
         <div class="exports" aria-label="Export">
           <span class="lab">Export</span>
           <button class="btn primary" id="sendCanva" type="button" hidden>Send to Canva</button>
@@ -179,7 +184,6 @@ section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
           <button class="btn" id="reseed" type="button" title="Same shapes, new hand-drawn strokes">Redraw strokes</button>
         </div>
       </div>
-      <div class="caption"><h2 id="capTitle">Studio microphone</h2><span class="meta" id="capMeta">Example drawing</span></div>
       <div class="status" id="saveStatus" aria-live="polite"></div>
       <form class="change" id="changeForm" autocomplete="off">
         <label for="changeText" style="margin:0">Change this drawing</label>
