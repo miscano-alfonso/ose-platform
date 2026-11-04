@@ -276,7 +276,7 @@ html,body{overflow-x:clip}
 /* price calculator */
 .calc-intro{font-size:18px;margin:0 0 10px}
 .calc-tiers{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:24px}
-.calc-tiers span{background:var(--burst);color:#fff;font-weight:600;border-radius:999px;padding:6px 14px;font-size:15px}
+.calc-tiers span{background:var(--accent);color:var(--navy);font-weight:600;border-radius:999px;padding:6px 14px;font-size:15px}
 .calc-grid{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(min(280px,100%),1fr);gap:clamp(20px,4vw,48px);align-items:start}
 .calc-subjects{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 20px}
 .calc-field{display:grid;gap:6px;font-weight:600}
