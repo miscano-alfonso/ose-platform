@@ -14,11 +14,12 @@
   function palette(key, onColour) {
     const house = !SUBJECTS[key];
     const [name, M, S, H] = house ? ["House blue", "#3D86D3", "#0A1C45", "#7FD0FF"] : SUBJECTS[key];
-    if (onColour) return { name, swatch: house ? ["#4479B8", "#0A1C45", "#7FD0FF"] : [M, S, H], bg: M,
+    if (onColour && house) return Object.assign({}, TONE, { name, swatch: ["#4479B8", "#0A1C45", "#7FD0FF", "#FFFFFF"], bg: NAVY, hl: "#8FD3FF", white: "#EAF6FF", pool: "#2A5A98", key: "#1F4789" });
+    if (onColour) return { name, swatch: [M, S, H, "#FFFFFF"], bg: M, white: mix(H, "#FFFFFF", 0.82),
       ink: mix(S, "#000000", 0.5), deep: mix(S, "#000000", 0.25), dark: S, mid: mix(S, M, 0.16), light: mix(S, M, 0.32), pale: mix(S, M, 0.5), hi: mix(M, "#FFFFFF", 0.45),
       hl: H, pool: mix(M, S, 0.35) };
-    if (house) return Object.assign({}, TONE, { hl: "#7FD0FF", bg: WHITE, pool: "#C7DBF2", name: "House blue", swatch: ["#4479B8", "#0A1C45", "#7FD0FF"] });
-    return { name, swatch: [M, S, H], ink: mix(S, "#000000", 0.45), deep: S, dark: mix(S, M, 0.33), mid: mix(S, M, 0.66), light: M, pale: mix(M, "#FFFFFF", 0.45), hi: mix(M, "#FFFFFF", 0.78),
+    if (house) return Object.assign({}, TONE, { hl: "#7FD0FF", white: "#F2FAFF", bg: WHITE, pool: "#C7DBF2", name: "House blue", swatch: ["#4479B8", "#0A1C45", "#7FD0FF", "#FFFFFF"] });
+    return { name, swatch: [M, S, H, "#FFFFFF"], white: mix(H, "#FFFFFF", 0.82), ink: mix(S, "#000000", 0.45), deep: S, dark: mix(S, M, 0.33), mid: mix(S, M, 0.66), light: M, pale: mix(M, "#FFFFFF", 0.45), hi: mix(M, "#FFFFFF", 0.78),
       hl: H, bg: WHITE, pool: mix(M, "#FFFFFF", 0.7) };
   }
   const num = (v, d) => (typeof v === "number" && isFinite(v) ? v : d);
@@ -55,19 +56,20 @@
     let M = [1, 0, 0, 1, 0, 0];   // current group transform, for the bounding box only
     const tp = (pts) => pts.map(([x, y]) => [M[0] * x + M[2] * y + M[4], M[1] * x + M[3] * y + M[5]]);
 
-    function wobbly(a, b, amp = 1.3, over = 6, step = 18) {
+    function wobbly(a, b, amp = 1.3, over = 6, step = 18, bow = 0) {
       let [x1, y1] = a, [x2, y2] = b; let L = Math.hypot(x2 - x1, y2 - y1) || 1; const ux = (x2 - x1) / L, uy = (y2 - y1) / L;
       x1 -= ux * over * R(); y1 -= uy * over * R(); x2 += ux * over * R(); y2 += uy * over * R();
       L = Math.hypot(x2 - x1, y2 - y1); const n = Math.max(2, Math.floor(L / step)), nx = -uy, ny = ux; const pts = [];
-      for (let i = 0; i <= n; i++) { const j = U(-amp, amp); pts.push([x1 + (x2 - x1) * i / n + nx * j, y1 + (y2 - y1) * i / n + ny * j]); }
+      const bw = bow * L * U(-1, 1);
+      for (let i = 0; i <= n; i++) { const t = i / n, j = U(-amp, amp) + bw * 4 * t * (1 - t); pts.push([x1 + (x2 - x1) * t + nx * j, y1 + (y2 - y1) * t + ny * j]); }
       return "M" + pts.map((p) => f(p[0]) + " " + f(p[1])).join(" L");
     }
-    function outline(pts, col = TONE.ink, w = 2.6, closed = true, passes = 2, op = 0.95, over = 7) {
-      const n = pts.length;
+    function outline(pts, col = TONE.ink, w = 2.6, closed = true, passes = 3, op = 0.95, over = 10) {
+      const n = pts.length, W = [1.35, 0.75, 0.45], O = [1, 0.75, 0.55], J = [1.4, 2.4, 3.2];
       for (let p = 0; p < passes; p++) {
-        const ww = w * (p ? 0.55 : 1), oo = op * (p ? 0.6 : 1);
-        if (n > 16) { const d = "M" + pts.map(([x, y]) => f(x + U(-1.2, 1.2)) + " " + f(y + U(-1.2, 1.2))).join(" L") + (closed ? " Z" : ""); out.push(`<path d="${d}" fill="none" stroke="${col}" stroke-width="${f(ww)}" opacity="${oo.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>`); }
-        else for (let i = 0; i < (closed ? n : n - 1); i++) out.push(`<path d="${wobbly(pts[i], pts[(i + 1) % n], 1.3, over)}" fill="none" stroke="${col}" stroke-width="${f(ww)}" opacity="${oo.toFixed(2)}" stroke-linecap="round"/>`);
+        const ww = w * W[p % 3], oo = op * O[p % 3], jj = J[p % 3];
+        if (n > 16) { const off = [U(-1.5, 1.5), U(-1.5, 1.5)]; const d = "M" + pts.map(([x, y]) => f(x + off[0] + U(-jj, jj) * 0.6) + " " + f(y + off[1] + U(-jj, jj) * 0.6)).join(" L") + (closed ? " Z" : ""); out.push(`<path d="${d}" fill="none" stroke="${col}" stroke-width="${f(ww)}" opacity="${oo.toFixed(2)}" stroke-linecap="round" stroke-linejoin="round"/>`); }
+        else for (let i = 0; i < (closed ? n : n - 1); i++) out.push(`<path d="${wobbly(pts[i], pts[(i + 1) % n], jj, over * (1 + p * 0.5), 16, 0.012)}" fill="none" stroke="${col}" stroke-width="${f(ww)}" opacity="${oo.toFixed(2)}" stroke-linecap="round"/>`);
       }
     }
     function clip(pts) { const k = "c" + (++cid); defs.push(`<clipPath id="${k}"><path d="${P(pts)}"/></clipPath>`); return k; }
@@ -75,15 +77,18 @@
       const ang = num(h.angle, 38), sp = Math.max(3, num(h.spacing, 7)), op = Math.min(1, Math.max(0, num(h.strength, 0.35))), col = HL === "glow" && h.color === "hi" ? TONE.hl : tone(h.color, "pale");
       const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]); const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2;
       const Rr = Math.hypot(Math.max(...xs) - Math.min(...xs), Math.max(...ys) - Math.min(...ys)) / 2 + 10; const lines = [];
-      const lit = h.lit !== false, sx = Math.max(...xs) - Math.min(...xs), sy = Math.max(...ys) - Math.min(...ys);
+      const side = h.side || (h.lit === false ? "all" : "lit"), sx = Math.max(...xs) - Math.min(...xs), sy = Math.max(...ys) - Math.min(...ys);
       for (const a of [ang].concat(typeof h.cross === "number" ? [h.cross] : [])) {
         const ca = Math.cos(a * Math.PI / 180), sa = Math.sin(a * Math.PI / 180);
         for (let t = -Rr; t < Rr; t += sp * U(0.8, 1.25)) {
           const off = t + U(-sp * 0.3, sp * 0.3), L = Rr * U(0.75, 1), st = -Rr + U(0, Rr * 0.25);
           const x1 = cx + ca * st - sa * off, y1 = cy + sa * st + ca * off, x2 = cx + ca * (st + 2 * L) - sa * off, y2 = cy + sa * (st + 2 * L) + ca * off;
           const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
-          if (lit && ((mx - cx) / (sx || 1) + (my - cy) / (sy || 1)) > 0.25) continue;      // keep the hatching on the lit (upper-left) side
-          lines.push(`<path d="${wobbly([x1, y1], [x2, y2], 0.8, 0, 30)}" stroke-width="${(1.4 * U(0.6, 1.2)).toFixed(2)}" opacity="${(op * U(0.5, 1.1)).toFixed(2)}"/>`);
+          const k = (mx - cx) / (sx || 1) + (my - cy) / (sy || 1);
+          if (side === "lit" && k > 0.25 + U(-0.12, 0.12)) continue;      // the lit (upper-left) side
+          if (side === "shadow" && k < -0.05 + U(-0.12, 0.12)) continue;  // the side away from the light
+          const bright = HL !== "off" && side === "lit" && h.color === "hi" && R() < 0.22;
+          lines.push(`<path d="${wobbly([x1, y1], [x2, y2], 1.1, 0, 26, 0.03)}" stroke-width="${(num(h.width, 1.6) * U(0.5, 1.3)).toFixed(2)}" opacity="${(bright ? 0.8 : op * U(0.45, 1.15)).toFixed(2)}"${bright ? ` stroke="${TONE.white}"` : ""}/>`);
         }
       }
       out.push(`<g clip-path="url(#${clip(pts)})" stroke="${col}" fill="none" stroke-linecap="round">${lines.join("")}</g>`);
@@ -93,7 +98,7 @@
       const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]); const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
       const k = "g" + (++cid); const [ax, ay, bx, by] = kind === "tb" ? [0, y0, 0, y1] : kind === "diag" ? [x0, y0, x1, y1] : [x0, 0, x1, 0];
       defs.push(`<linearGradient id="${k}" gradientUnits="userSpaceOnUse" x1="${f(ax)}" y1="${f(ay)}" x2="${f(bx)}" y2="${f(by)}"><stop offset="0" stop-color="${light ? TONE.hi : TONE.pale}" stop-opacity="${light ? 0.45 : 0.35}"/><stop offset="1" stop-color="${TONE.deep}" stop-opacity="0.8"/></linearGradient>`);
-      out.push(`<path d="${P(pts)}" fill="url(#${k})"/>`);
+      out.push(`<g clip-path="url(#${clip(pts)})"><path d="${P(pts)}" fill="url(#${k})" filter="url(#smudge)"/></g>`);
     }
     function stripes(pts, s) {
       const xs = pts.map((p) => p[0]), ys = pts.map((p) => p[1]); const x0 = Math.min(...xs), x1 = Math.max(...xs), y0 = Math.min(...ys), y1 = Math.max(...ys);
@@ -101,7 +106,14 @@
       for (let x = x0 - 300, i = 0; x < x1 + 300; x += w, i++) g.push(`<path d="${P([[x, y1], [x + w, y1], [x + w + sl, y0], [x + sl, y0]])}" fill="${cs[i % cs.length]}"/>`);
       out.push(`<g clip-path="url(#${clip(pts)})">${g.join("")}</g>`);
     }
-    function rim(a, b) { out.push(`<path d="${wobbly(a, b, 1.3, 4)}" stroke="${HC}" stroke-width="${HL === "off" ? 3 : 3.4}" opacity="${HL === "off" ? 0.85 : 0.95}" fill="none" stroke-linecap="round"${glowAttr}/>`); }
+    function rim(a, b) {
+      out.push(`<path d="${wobbly(a, b, 1.6, 4, 16, 0.01)}" stroke="${HC}" stroke-width="${HL === "off" ? 3 : 3.4}" opacity="${HL === "off" ? 0.85 : 0.95}" fill="none" stroke-linecap="round"${glowAttr}/>`);
+      if (HL !== "off") { const t0 = U(0.05, 0.3), t1 = U(0.6, 0.95); out.push(`<path d="${wobbly([a[0] + (b[0] - a[0]) * t0, a[1] + (b[1] - a[1]) * t0], [a[0] + (b[0] - a[0]) * t1, a[1] + (b[1] - a[1]) * t1], 1, 2, 16, 0.01)}" stroke="${TONE.white}" stroke-width="1.5" opacity="0.9" fill="none" stroke-linecap="round"/>`); }
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]); if (L < 40) return; const nx = -(b[1] - a[1]) / L, ny = (b[0] - a[0]) / L;
+      for (let k = 0; k < 2; k++) { const t0 = U(0, 0.5), t1 = Math.min(1, t0 + U(0.25, 0.5)), o = U(2.5, 5) * (k ? -1 : 1);
+        const p0 = [a[0] + (b[0] - a[0]) * t0 + nx * o, a[1] + (b[1] - a[1]) * t0 + ny * o], p1 = [a[0] + (b[0] - a[0]) * t1 + nx * o, a[1] + (b[1] - a[1]) * t1 + ny * o];
+        out.push(`<path d="${wobbly(p0, p1, 1.2, 2, 14, 0.02)}" stroke="${HC}" stroke-width="${U(1.2, 2).toFixed(1)}" opacity="${U(0.45, 0.75).toFixed(2)}" fill="none" stroke-linecap="round"/>`); }
+    }
     // highlight mode: the light catches every edge that faces the upper left, like the rim light on the home page's hero
     function autoRim(pts) {
       let area = 0; for (let i = 0; i < pts.length; i++) { const a = pts[i], b = pts[(i + 1) % pts.length]; area += a[0] * b[1] - b[0] * a[1]; }
@@ -114,7 +126,8 @@
       }
       if (run.length) runs.push(run);
       for (const r of runs) { if (r.length < 2) continue; const d = "M" + r.map(([x, y]) => f(x + U(-0.8, 0.8)) + " " + f(y + U(-0.8, 0.8))).join(" L");
-        out.push(`<path d="${d}" stroke="${TONE.hl}" stroke-width="${HL === "glow" ? 3.2 : 2.4}" opacity="${HL === "glow" ? 0.95 : 0.75}" fill="none" stroke-linecap="round" stroke-linejoin="round"${glowAttr}/>`); }
+        out.push(`<path d="${d}" stroke="${TONE.hl}" stroke-width="${HL === "glow" ? 3.2 : 2.4}" opacity="${HL === "glow" ? 0.95 : 0.75}" fill="none" stroke-linecap="round" stroke-linejoin="round"${glowAttr}/>`);
+        if (r.length > 3) { const cut = r.slice(Math.floor(r.length * U(0.1, 0.3)), Math.ceil(r.length * U(0.6, 0.9))); if (cut.length > 1) out.push(`<path d="M${cut.map(([x, y]) => f(x) + " " + f(y)).join(" L")}" stroke="${TONE.white}" stroke-width="1.3" opacity="0.85" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`); } }
     }
     // a filled shape with the house treatment: fill, light falloff, chalk hatching, stripes, ink outline
     function shape(pts, p, defTone = "mid") {
@@ -122,7 +135,8 @@
       out.push(`<path d="${P(pts)}" fill="${tone(p.tone, defTone)}"/>`);
       if (p.stripes) stripes(pts, p.stripes);
       shade(pts, p.shade || "lr");
-      if (p.hatch !== false) hatch(pts, Object.assign({ strength: { deep: 0.25, dark: 0.3, mid: 0.38, light: 0.45, pale: 0.4, hi: 0.3 }[p.tone] || 0.35 }, p.hatch || {}));
+      if (p.hatch !== false) hatch(pts, Object.assign({ strength: { deep: 0.25, dark: 0.3, mid: 0.42, light: 0.5, pale: 0.45, hi: 0.3 }[p.tone] || 0.38 }, p.hatch || {}));
+      if (p.hatch !== false && p.shadowHatch !== false && p.tone !== "deep") hatch(pts, { angle: num((p.hatch || {}).angle, 38) - 75, spacing: 5, strength: 0.32, color: "ink", side: "shadow", width: 1.5 });
       if (p.outline !== false) outline(pts, TONE.ink, num(p.lineWidth, 2.6));
       if (HL !== "off" && p.rimLight !== false && !["deep", "ink"].includes(p.tone)) autoRim(pts);
     }
@@ -213,13 +227,15 @@
           out.push(`<path d="M${q.map((a) => f(a[0]) + " " + f(a[1])).join(" L")}" stroke="${tone(p.tone, "hi")}" stroke-width="3" fill="none" opacity="0.85" stroke-linecap="round" stroke-linejoin="round"/>`); x += L + U(18, 30); }
         return; }
       if (t === "highlight") { const q = pts(p.points); for (let i = 0; i < q.length - 1; i++) rim(q[i], q[i + 1]); return; }
-      if (t === "glint") { const [x, y] = pt(p.at); out.push(`<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(num(p.rx, 5))}" ry="${f(num(p.ry, 18))}" fill="${HC}" opacity="0.9"${glowAttr}/>`); return; }
+      if (t === "glint") { const [x, y] = pt(p.at); out.push(`<ellipse cx="${f(x)}" cy="${f(y)}" rx="${f(num(p.rx, 5))}" ry="${f(num(p.ry, 18))}" fill="${HC}" opacity="0.9"${glowAttr}/><ellipse cx="${f(x - 1)}" cy="${f(y - 1)}" rx="${f(num(p.rx, 5) * 0.45)}" ry="${f(num(p.ry, 18) * 0.6)}" fill="${TONE.white}" opacity="0.95"/>`); return; }
     }
     const parts = Array.isArray(spec.parts) ? spec.parts : [];
+    const keyLight = !light && TONE.key;
     const body = []; const swap = out; parts.forEach(draw); const drawn = out.splice(0);
     // atmosphere: key light (navy), floor shadow and scribbles, light falling off to the lower right
     const x0 = isFinite(bb[0]) ? bb[0] : W * 0.2, y0 = isFinite(bb[1]) ? bb[1] : H * 0.2, x1 = isFinite(bb[2]) ? bb[2] : W * 0.8, y1 = isFinite(bb[3]) ? bb[3] : H * 0.8;
     const fy = num(spec.floorY, null), cxm = (x0 + x1) / 2, rx = Math.max(200, (x1 - x0) * 0.55);
+    if (keyLight) { defs.push(`<radialGradient id="key" cx="${f(x0 + (x1 - x0) * 0.3)}" cy="${f(y0 + (y1 - y0) * 0.3)}" r="${f(Math.max(x1 - x0, y1 - y0) * 0.85)}" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${TONE.key}" stop-opacity="0.6"/><stop offset="1" stop-color="${BG}" stop-opacity="0"/></radialGradient>`); body.push(`<rect width="${W}" height="${H}" fill="url(#key)"/>`); }
     if (fy !== null) {
       defs.push(`<radialGradient id="pool" cx="${f(cxm)}" cy="${f(fy)}" r="${f(rx)}" gradientTransform="translate(0 ${f(fy * 0.8)}) scale(1 0.2)" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="${TONE.pool}" stop-opacity="0.6"/><stop offset="1" stop-color="${BG}" stop-opacity="0"/></radialGradient>`);
       body.push(`<rect width="${W}" height="${H}" fill="url(#pool)"/>`);
@@ -227,9 +243,9 @@
         body.push(`<path d="${wobbly([x, y], [x + L, y + U(-3, 3)], 1.3, 0, 40)}" stroke="${TONE.light}" stroke-width="1.3" opacity="${(0.25 * (1 - i / 22)).toFixed(2)}" fill="none"/>`); }
     }
     body.push(...drawn);
-    defs.push(`<linearGradient id="fall" gradientUnits="userSpaceOnUse" x1="${f(x0)}" y1="${f(y0)}" x2="${f(x1 + 50)}" y2="${f(y1 + 50)}"><stop offset="0" stop-color="${BG}" stop-opacity="0"/><stop offset="0.5" stop-color="${BG}" stop-opacity="${light ? 0.04 : 0.13}"/><stop offset="1" stop-color="${BG}" stop-opacity="${light ? 0.28 : 0.12}"/></linearGradient>`);
+    defs.push(`<linearGradient id="fall" gradientUnits="userSpaceOnUse" x1="${f(x0)}" y1="${f(y0)}" x2="${f(x1 + 50)}" y2="${f(y1 + 50)}"><stop offset="0" stop-color="${BG}" stop-opacity="0"/><stop offset="0.5" stop-color="${BG}" stop-opacity="${light ? 0.04 : 0.13}"/><stop offset="1" stop-color="${BG}" stop-opacity="${light ? 0.28 : keyLight ? 0.6 : 0.12}"/></linearGradient>`);
     body.push(`<rect width="${W}" height="${H}" fill="url(#fall)"/>`);
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs.join("")}<filter id="hlglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/><feComponentTransfer in="b" result="b2"><feFuncA type="linear" slope="1.5"/></feComponentTransfer><feMerge><feMergeNode in="b2"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/></filter></defs><rect width="${W}" height="${H}" fill="${BG}"/><g filter="url(#rough)">${body.join("")}</g></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}"><defs>${defs.join("")}<filter id="smudge" x="-10%" y="-10%" width="120%" height="120%"><feGaussianBlur stdDeviation="7"/></filter><filter id="hlglow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur in="SourceGraphic" stdDeviation="6" result="b"/><feComponentTransfer in="b" result="b2"><feFuncA type="linear" slope="1.5"/></feComponentTransfer><feMerge><feMergeNode in="b2"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="rough" x="-5%" y="-5%" width="110%" height="110%"><feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="9" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="5" xChannelSelector="R" yChannelSelector="G"/></filter></defs><rect width="${W}" height="${H}" fill="${BG}"/><g filter="url(#rough)">${body.join("")}</g></svg>`;
     return { svg, width: W, height: H, bg: BG };
   }
 
@@ -244,11 +260,14 @@
       const bg = hx(built.bg); const R = rng(seed);
       const n = new Float32Array(w * h); for (let i = 0; i < n.length; i++) n[i] = (R() + R() + R() - 1.5) * 1.4;
       const m = new Float32Array(w * h);
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; const l = x > 0 ? n[i - 1] : n[i], r = x < w - 1 ? n[i + 1] : n[i], u = y > 0 ? n[i - w] : n[i], dn = y < h - 1 ? n[i + w] : n[i]; m[i] = (n[i] * 2 + l + r + u + dn) / 6; }
+      // pencil tooth: noise smeared along the diagonal, like graphite dragged across paper
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = y * w + x; let s2 = n[i] * 2, c = 2;
+        for (let k = 1; k <= 3; k++) { if (x + k < w && y + k < h) { s2 += n[i + k * (w + 1)]; c++; } if (x - k >= 0 && y - k >= 0) { s2 += n[i - k * (w + 1)]; c++; } }
+        m[i] = s2 / c * 1.6; }
       const white = built.bg === WHITE;
       for (let i = 0, j = 0; i < d.length; i += 4, j++) {
         const dr = d[i] - bg[0], dg = d[i + 1] - bg[1], db = d[i + 2] - bg[2]; const lum = (Math.abs(dr) + Math.abs(dg) + Math.abs(db)) / 600;
-        const k = 1 + m[j] * 0.5 * Math.min(1, lum * 2.5);
+        const k = 1 + m[j] * 0.62 * Math.min(1, lum * 2.5);
         let r = bg[0] + dr * k, gg = bg[1] + dg * k, b = bg[2] + db * k;
         if (Math.abs(r - bg[0]) <= 3 && Math.abs(gg - bg[1]) <= 3 && Math.abs(b - bg[2]) <= 3) { r = bg[0]; gg = bg[1]; b = bg[2]; }   // a clean, flat background
         d[i] = r; d[i + 1] = gg; d[i + 2] = b;

@@ -58,7 +58,7 @@ textarea:focus, button:focus-visible, input:focus-visible + span { outline: 2px 
 .sw { position: relative; display: block; margin: 0 }
 .sw input { position: absolute; opacity: 0; pointer-events: none }
 .sw span { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 10px; cursor: pointer; font: 400 14px/1.1 var(--body); color: var(--ink); text-transform: none; letter-spacing: 0 }
-.sw i { display: inline-flex } .sw b { width: 14px; height: 14px; border-radius: 50%; margin-right: -4px; box-shadow: 0 0 0 1.5px var(--surface) }
+.sw i { display: inline-flex } .sw b { width: 14px; height: 14px; border-radius: 50%; margin-right: -4px; box-shadow: 0 0 0 1.5px var(--surface); border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent) }
 .sw input:checked + span { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink) }
 .sw input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px }
 .chip.starter { background: transparent; border: 1px dashed var(--accent); color: var(--ink) }
