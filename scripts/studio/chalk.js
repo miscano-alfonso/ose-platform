@@ -11,11 +11,25 @@
   /** The colours one drawing uses: tones from the subject's shade up to its main colour and lighter tints, its highlight, and the dark background. */
   /** onColour: the drawing sits on the subject's main colour (like the course posters), so its tones run from the shade
    *  up to just below the main colour, and the light catches it in tints and the highlight colour. */
+  // the school's own tweaks to the swatches (main, shade, highlight, white), set from Sketch Studio's colour editor
+  let OVR = {};
+  const isHex = (v) => typeof v === "string" && /^#[0-9A-Fa-f]{6}$/.test(v);
+  function setPalettes(o) { OVR = {}; for (const [k, v] of Object.entries(o || {})) if (v && typeof v === "object") { const c = {}; for (const f of ["main", "shade", "highlight", "white"]) if (isHex(v[f])) c[f] = v[f].toUpperCase(); if (Object.keys(c).length) OVR[k] = c; } }
+  /** The standard swatches, before any tweaks. House blue's "main" is its navy background. */
+  function defaults(key) {
+    if (!SUBJECTS[key]) return { main: NAVY, shade: "#0A1C45", highlight: "#8FD3FF", white: "#EAF6FF" };
+    const [, M, S, H] = SUBJECTS[key]; return { main: M, shade: S, highlight: H, white: mix(H, "#FFFFFF", 0.82) };
+  }
+  const swatch = (key) => Object.assign(defaults(key), OVR[key] || {});
   function palette(key, onColour) {
-    const house = !SUBJECTS[key];
-    const [name, M, S, H] = house ? ["House blue", "#3D86D3", "#0A1C45", "#7FD0FF"] : SUBJECTS[key];
-    if (onColour && house) return Object.assign({}, TONE, { name, swatch: ["#4479B8", "#0A1C45", "#7FD0FF", "#FFFFFF"], bg: NAVY, hl: "#8FD3FF", white: "#EAF6FF", pool: "#2A5A98", key: "#1F4789" });
-    if (onColour) return { name, swatch: [M, S, H, "#FFFFFF"], bg: M, white: mix(H, "#FFFFFF", 0.82),
+    const house = !SUBJECTS[key], sw = swatch(key);
+    const name = house ? "House blue" : SUBJECTS[key][0], M = sw.main, S = sw.shade, H = sw.highlight;
+    if (onColour && house) {
+      const t = Object.assign({}, TONE);
+      if (OVR.house && OVR.house.shade) { t.ink = mix(S, "#000000", 0.55); t.deep = S; t.dark = mix(S, "#4479B8", 0.15); t.mid = mix(S, "#4479B8", 0.55); }
+      return Object.assign(t, { name, swatch: [M, S, H, sw.white], bg: M, hl: H, white: sw.white, pool: mix(M, "#4479B8", 0.35), key: mix(M, "#4479B8", 0.3) });
+    }
+    if (onColour) return { name, swatch: [M, S, H, sw.white], bg: M, white: sw.white,
       ink: mix(S, "#000000", 0.5), deep: mix(S, "#000000", 0.25), dark: S, mid: mix(S, M, 0.16), light: mix(S, M, 0.32), pale: mix(S, M, 0.5), hi: mix(M, "#FFFFFF", 0.45),
       hl: H, pool: mix(M, S, 0.35) };
     if (house) return Object.assign({}, TONE, { hl: "#7FD0FF", white: "#F2FAFF", bg: WHITE, pool: "#C7DBF2", name: "House blue", swatch: ["#4479B8", "#0A1C45", "#7FD0FF", "#FFFFFF"] });
@@ -276,5 +290,5 @@
     } finally { URL.revokeObjectURL(url); }
     return canvas;
   }
-  root.Chalk = { build, raster, TONE, palette, SUBJECTS };
+  root.Chalk = { build, raster, TONE, palette, SUBJECTS, setPalettes, defaults, swatch, overrides: () => JSON.parse(JSON.stringify(OVR)) };
 })(typeof window !== "undefined" ? window : globalThis);

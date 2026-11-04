@@ -16,14 +16,15 @@
   --bg: #050C22; --surface: #0C1534; --ink: #E7EEFB; --muted: #9EADD0; --line: #223061; --chip: #142152;
   --accent: #68BBE4; --accent-ink: #04102D; --warn: #F0A285; --stage-edge: #223061; color-scheme: dark }
 * { box-sizing: border-box }
-body { background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px }
-.wrap { max-width: 1280px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 28px }
+body { background: var(--bg); color: var(--ink); font: 400 16px/1.5 var(--body); padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 48px }
+.wrap { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr); gap: 20px }
 .wrap > * { min-width: 0 }
 header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: 12px 24px }
 .eyebrow { font: 500 12px/1 var(--body); letter-spacing: .22em; text-transform: uppercase; color: var(--muted) }
 h1 { font: 500 clamp(32px, 5vw, 48px)/1.05 var(--display); letter-spacing: -.01em; margin: 6px 0 0; text-wrap: balance }
 header p { margin: 0; color: var(--muted); max-width: 46ch }
-.grid { display: grid; grid-template-columns: minmax(0, 360px) minmax(0, 1fr); gap: 28px; align-items: start }
+.grid { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 24px; align-items: start }
+@media (min-width: 881px) { .stagebox { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 16px) } }
 @media (max-width: 880px) { .grid { grid-template-columns: minmax(0, 1fr) } }
 @media (max-width: 520px) {
   body { padding-block: 18px 40px }
@@ -65,13 +66,22 @@ textarea:focus, button:focus-visible, input:focus-visible + span { outline: 2px 
 .idealist { display: grid; gap: 6px }
 .idea { text-align: left; font: 400 14px/1.35 var(--body); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 9px 11px; cursor: pointer }
 .idea:hover { border-color: var(--accent) } .idea b { font-weight: 500; display: block } .idea span { color: var(--muted); font-size: 13px }
+.labrow { display: flex; justify-content: space-between; align-items: baseline; gap: 10px } .labrow .lab { margin-bottom: 8px }
+.paledit { margin-top: 10px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; display: grid; gap: 12px; background: var(--bg) }
+.pe-head { display: flex; justify-content: space-between; align-items: baseline } .pe-head b { font: 500 15px/1.2 var(--body) }
+.pe-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr)); gap: 10px }
+.pe-f { display: grid; gap: 4px; margin: 0; font: 400 13px/1.2 var(--body); color: var(--muted); text-transform: none; letter-spacing: 0 }
+.pe-f span { display: flex; align-items: center; gap: 8px }
+.pe-f input[type=color] { width: 40px; height: 32px; padding: 0; border: 1px solid var(--line); border-radius: 8px; background: none; cursor: pointer }
+.pe-f code { font: 400 12px/1 var(--mono); color: var(--ink) }
 .hint { font: 400 13px/1.4 var(--body); color: var(--muted); margin-top: 6px }
 .status { font: 400 14px/1.4 var(--body); color: var(--muted); min-height: 1.4em }
 .status.err { color: var(--warn) }
+.status:empty { display: none }
 .stagebox { display: grid; gap: 14px; min-width: 0 }
-.stage { border: 1px solid var(--stage-edge); border-radius: 14px; overflow: hidden; background: #FFFFFF; position: relative }
+.stage { border: 1px solid var(--stage-edge); border-radius: 14px; overflow: hidden; background: #FFFFFF; position: relative; width: fit-content; max-width: 100% }
 .stage.navy { background: #040F2D }
-.stage canvas { display: block; width: 100%; max-width: 100%; height: auto }
+.stage canvas { display: block; width: auto; height: auto; max-width: 100%; max-height: min(58vh, 560px) }
 .stage .busy[hidden] { display: none }
 .stage .busy { position: absolute; left: 12px; bottom: 12px; max-width: calc(100% - 24px); background: var(--surface); border: 1px solid var(--line); border-radius: 999px; font: 500 14px/1.3 var(--body); color: var(--ink); padding: 9px 14px; box-shadow: 0 2px 10px rgb(4 15 45 / .18) }
 .caption { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 16px; align-items: baseline }
@@ -98,7 +108,6 @@ section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
 <div class="wrap">
   <header>
     <div><div class="eyebrow">OH-SO ED · Illustration</div><h1>Sketch Studio</h1></div>
-    <p>Describe an object and Claude draws it in the home page's chalk style: house blue or any subject's duotone, on white or on the subject's own colour like the course posters, ready to save for the site.</p>
   </header>
 
   <div class="grid">
@@ -110,25 +119,20 @@ section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
         <div class="chips" id="starters"></div>
         <div class="ideas" id="ideasBox" hidden><div class="lab" style="margin:12px 0 6px">Ideas from your text</div><div class="idealist" id="ideas"></div></div>
       </div>
-      <div>
-        <span class="lab">Background</span>
-        <div class="seg" role="radiogroup" aria-label="Background">
-          <label style="margin:0"><input type="radio" name="bg" id="bgWhite" value="white" checked><span>White</span></label>
-          <label style="margin:0"><input type="radio" name="bg" id="bgNavy" value="navy"><span>Subject colour</span></label>
-        </div>
+      <div class="row">
+        <button class="btn primary" id="drawBtn" type="submit">Draw it</button>
+        <button class="btn" id="ideasBtn" type="button" title="Turn topics or a course description into objects to draw">Suggest ideas</button>
+        <button class="btn" id="stopBtn" type="button" hidden>Stop</button>
       </div>
+      <div class="status" id="status" aria-live="polite"></div>
       <div>
-        <span class="lab">Colour</span>
+        <div class="labrow"><span class="lab">Colour</span><button class="link" type="button" id="peOpen">Tweak colours</button></div>
         <div class="swatches" id="swatches" role="radiogroup" aria-label="Colour"></div>
-      </div>
-      <div>
-        <span class="lab">Highlights</span>
-        <div class="seg" role="radiogroup" aria-label="Highlights">
-          <label><input type="radio" name="hl" id="hlOff" value="off"><span>Off</span></label>
-          <label><input type="radio" name="hl" id="hlSoft" value="soft" checked><span>Soft</span></label>
-          <label><input type="radio" name="hl" id="hlGlow" value="glow"><span>Glow</span></label>
+        <div class="paledit" id="palEdit" hidden>
+          <div class="pe-head"><b id="peName">Colours</b><button class="link" type="button" id="peClose">Done</button></div>
+          <div class="pe-grid" id="peGrid"></div>
+          <div class="row"><button class="btn" type="button" id="peReset">Back to standard</button><span class="hint" id="peNote" style="margin:0"></span></div>
         </div>
-        <div class="hint">Light catching the edges in the subject's highlight colour, like the girl at the desk on the home page.</div>
       </div>
       <div>
         <span class="lab">Shape</span>
@@ -153,12 +157,6 @@ section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
         <input type="file" id="ref" accept="image/png,image/jpeg,image/webp,image/gif">
         <div style="margin-top:6px">A photo or sketch to follow for shape and proportions. It's redrawn in the house style.</div>
       </div>
-      <div class="row">
-        <button class="btn primary" id="drawBtn" type="submit">Draw it</button>
-        <button class="btn" id="ideasBtn" type="button" title="Turn topics or a course description into objects to draw">Suggest ideas</button>
-        <button class="btn" id="stopBtn" type="button" hidden>Stop</button>
-      </div>
-      <div class="status" id="status" aria-live="polite"></div>
     </form>
 
     <div class="stagebox">
@@ -194,19 +192,50 @@ section.gal p.sub { margin: 0 0 14px; color: var(--muted) }
 const GUIDE = /*GUIDE*/;
 const $ = (id) => document.getElementById(id);
 const cv = $("cv"), stage = $("stage");
-let cur = { spec: CHALK_EXAMPLES[0], prompt: "", bg: "white", palette: "house", hl: "soft", seed: 7, id: null, example: true };
-const opts = (c = cur) => ({ bg: c.bg, seed: c.seed, palette: c.palette, highlight: c.hl });
+let cur = { spec: CHALK_EXAMPLES[0], prompt: "", bg: "navy", palette: "house", hl: "glow", seed: 7, id: null, example: true };
+const opts = (c = cur) => ({ bg: "navy", seed: c.seed, palette: c.palette, highlight: "glow" });   // always on the subject colour, always glowing highlights
 const PAL_KEYS = ["house"].concat(Object.keys(Chalk.SUBJECTS));
+function dots(k) { const i = document.createElement("i"); for (const c of Chalk.palette(k, true).swatch) { const b = document.createElement("b"); b.style.background = c; i.append(b); } return i; }
 for (const k of PAL_KEYS) {
   const p = Chalk.palette(k), lab = document.createElement("label"); lab.className = "sw";
   const inp = document.createElement("input"); inp.type = "radio"; inp.name = "pal"; inp.value = k; inp.id = "pal-" + k; if (k === "house") inp.checked = true;
-  const sp = document.createElement("span"), dots = document.createElement("i");
-  for (const c of p.swatch) { const b = document.createElement("b"); b.style.background = c; dots.append(b); }
-  sp.append(dots, document.createTextNode(" " + p.name)); lab.append(inp, sp); $("swatches").append(lab);
-  inp.addEventListener("change", async () => { if (cur.palette === k) return; cur.palette = k; await render(); if (cur.id) saveCurrent(false); });
+  const sp = document.createElement("span"); sp.append(dots(k), document.createTextNode(" " + p.name)); lab.append(inp, sp); $("swatches").append(lab);
+  inp.addEventListener("change", async () => { if (cur.palette === k) return; cur.palette = k; if (!$("palEdit").hidden) openEditor(); await render(); if (cur.id) saveCurrent(false); });
+  sp.addEventListener("click", () => { if (cur.palette === k && inp.checked) setTimeout(openEditor, 0); });
 }
-document.querySelectorAll('input[name="hl"]').forEach((r) => r.addEventListener("change", async () => { const v = document.querySelector('input[name="hl"]:checked').value; if (cur.hl === v) return; cur.hl = v; await render(); if (cur.id) saveCurrent(false); }));
-const palVal = () => document.querySelector('input[name="pal"]:checked').value, hlVal = () => document.querySelector('input[name="hl"]:checked').value;
+const refreshDots = () => { for (const k of PAL_KEYS) { const sp = document.querySelector(`#pal-${k} + span`); sp.querySelector("i").replaceWith(dots(k)); } };
+// ---- the colour editor: tweak the chosen colour's swatches; saved for everyone who uses the studio
+let palStore = null, palSaveT = null, palDrawT = null;
+const FIELDS = [["main", "Main", "The background"], ["shade", "Shade", "The darkest part of the drawing"], ["highlight", "Highlight", "Edges catching the light"], ["white", "White", "The brightest sparkle"]];
+function openEditor() {
+  const k = cur.palette, sw = Chalk.swatch(k), std = Chalk.defaults(k);
+  $("peName").textContent = Chalk.palette(k).name + " colours"; const g = $("peGrid"); g.replaceChildren();
+  for (const [f, label, hint] of FIELDS) {
+    const l = document.createElement("label"); l.className = "pe-f"; l.title = hint;
+    const inp = document.createElement("input"); inp.type = "color"; inp.id = `pe-${f}`; inp.value = sw[f].toLowerCase();
+    const code = document.createElement("code"); code.textContent = sw[f].toUpperCase();
+    const top = document.createElement("span"); top.append(inp, code);
+    l.append(document.createTextNode(label + (sw[f].toUpperCase() !== std[f].toUpperCase() ? " (changed)" : "")), top);
+    inp.addEventListener("input", () => { code.textContent = inp.value.toUpperCase(); tweak(k, f, inp.value); });
+    g.append(l);
+  }
+  $("peNote").textContent = palStore ? "Changes are saved for everyone." : "Changes last until you leave this page.";
+  $("palEdit").hidden = false;
+}
+function tweak(k, f, v) {
+  const o = Chalk.overrides(); o[k] = Object.assign(o[k] || {}, { [f]: v }); Chalk.setPalettes(o);
+  clearTimeout(palDrawT); palDrawT = setTimeout(async () => { refreshDots(); await render(); paintGallery(); }, 120);
+  clearTimeout(palSaveT); palSaveT = setTimeout(savePalettes, 800);
+}
+async function savePalettes() {
+  if (!palStore) return;
+  try { await palStore.save(Chalk.overrides()); $("peNote").textContent = "Saved for everyone."; }
+  catch { $("peNote").textContent = "Couldn't save the colours. Try again."; }
+}
+$("peOpen").onclick = () => ($("palEdit").hidden ? openEditor() : ($("palEdit").hidden = true));
+$("peClose").onclick = () => { $("palEdit").hidden = true; };
+$("peReset").onclick = async () => { const o = Chalk.overrides(); delete o[cur.palette]; Chalk.setPalettes(o); refreshDots(); openEditor(); await render(); paintGallery(); savePalettes(); };
+const palVal = () => document.querySelector('input[name="pal"]:checked').value, hlVal = () => "glow";
 let sample = null, db = null, downloads = null, ctl = null, drawings = [];
 
 const subjName = () => (cur.palette && cur.palette !== "house" ? Chalk.palette(cur.palette).name : "[subject]");
@@ -220,7 +249,7 @@ const STARTERS = [
 for (const [label, fill] of STARTERS) { const b = document.createElement("button"); b.type = "button"; b.className = "chip starter"; b.textContent = label;
   b.onclick = () => { const v = fill(), ta = $("prompt"); ta.value = v; ta.focus(); const i = v.indexOf("[subject]"); const j = v.indexOf("- "); const at = i >= 0 ? i : j >= 0 ? j + 2 : v.length; ta.setSelectionRange(at, i >= 0 ? at + 9 : at); };
   $("starters").append(b); }
-const bgVal = () => document.querySelector('input[name="bg"]:checked').value;
+const bgVal = () => "navy";   // always the subject's colour (white drawings saved earlier open on colour too)
 const sizeVal = () => document.querySelector('input[name="size"]:checked').value.split("x").map(Number);
 const slug = (s) => String(s || "drawing").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60) || "drawing";
 const setStatus = (el, msg, err) => { el.textContent = msg || ""; el.classList.toggle("err", !!err); };
@@ -231,10 +260,8 @@ async function render() {
   stage.style.background = built.bg;
   await Chalk.raster(built, cv, cur.seed);
   $("capTitle").textContent = cur.spec.title || "Drawing";
-  const pal = Chalk.palette(cur.palette).name, hlName = { off: "no highlights", soft: "soft highlights", glow: "glowing highlights" }[cur.hl];
-  $("capMeta").textContent = `${cur.example ? "Example · " : `${built.width} × ${built.height} · `}${pal} · ${cur.bg === "navy" ? "on colour" : "white"} · ${hlName}`;
-  document.querySelector(`input[name="bg"][value="${cur.bg}"]`).checked = true;
-  document.querySelector(`input[name="hl"][value="${cur.hl}"]`).checked = true;
+  const pal = Chalk.palette(cur.palette).name;
+  $("capMeta").textContent = `${cur.example ? "Example · " : `${built.width} × ${built.height} · `}${pal}`;
   const sw = document.querySelector(`input[name="pal"][value="${cur.palette}"]`); if (sw) sw.checked = true;
 }
 function fixSpec(s, w, h) {
@@ -244,7 +271,8 @@ function fixSpec(s, w, h) {
   return s;
 }
 function copyFor(code, msg) {
-  if (code === "server" && typeof msg === "string" && msg.trim()) return msg.trim();   // the server's own reason, e.g. Claude's answer about the account
+  if (code === "server" && typeof msg === "string" && msg.trim()) return msg.trim();
+  if (code === "network" && typeof msg === "string" && msg.trim()) return "Lost the connection to the server. " + msg.trim() + " Try again, or set Checking to Off to make it quicker.";   // the server's own reason, e.g. Claude's answer about the account
   return ({ not_granted: "Claude isn't allowed to draw on this page yet. Allow it from the artifact's Permissions menu, then try again.",
     rate_limited: "Too many drawings at once. Wait a minute, then try again.",
     invalid_json: "The drawing came back incomplete. Try again, or describe a simpler object.",
@@ -341,15 +369,12 @@ $("changeForm").addEventListener("submit", async (e) => {
   } catch (err) { setStatus($("saveStatus"), copyFor(err && err.code, err && err.message), err && err.code !== "cancelled"); }
 });
 
-document.querySelectorAll('input[name="bg"]').forEach((r) => r.addEventListener("change", async () => {
-  if (cur.bg === bgVal()) return; cur.bg = bgVal(); await render(); if (cur.id) saveCurrent(false);
-}));
 $("reseed").onclick = async () => { cur.seed = Math.floor(Math.random() * 1e6); await render(); if (cur.id) saveCurrent(false); };
 
 // ---- saving files
 async function offer(kind) {
   if (!downloads) { setStatus($("saveStatus"), "Saving files isn't available in this view. Open the page in Claude to save.", true); return; }
-  const name = `${slug(cur.spec.filename || cur.spec.title)}-${cur.palette === "house" ? "" : cur.palette + "-"}${cur.bg === "navy" ? "colour" : "white"}.${kind}`;
+  const name = `${slug(cur.spec.filename || cur.spec.title)}-${cur.palette === "house" ? "house-blue" : cur.palette}.${kind}`;
   try {
     let data;
     if (kind === "svg") data = Chalk.build(cur.spec, opts()).svg;
@@ -361,7 +386,7 @@ async function offer(kind) {
 }
 $("sendCanva").onclick = async () => {
   const b = $("sendCanva"); b.disabled = true; setStatus($("saveStatus"), "Sending to Canva…");
-  const name = `${cur.spec.title || "Drawing"} (${Chalk.palette(cur.palette).name}, ${cur.bg === "navy" ? "on colour" : "white"})`;
+  const name = `${cur.spec.title || "Drawing"} (${Chalk.palette(cur.palette).name})`;
   try {
     const r = await window.studioCanva.send(name, cv.toDataURL("image/png"));
     setStatus($("saveStatus"), r.moved ? `Sent to Canva: it's in ${r.folder}.` : r.folder ? `Sent to Canva. It's in your Canva uploads; it couldn't be moved into ${r.folder}.` : "Sent to Canva. It's in your Canva uploads (no Canva folder is set in the admin).");
@@ -386,7 +411,7 @@ async function saveCurrent(isNew) {
 }
 const thumbs = new Map();
 function thumb(item) {
-  const spec = item.spec, k = JSON.stringify([item.id || spec.title, item.updatedAt || "", spec.parts.length, item.bg, item.seed, item.palette, item.hl]);
+  const spec = item.spec, k = JSON.stringify([item.id || spec.title, item.updatedAt || "", spec.parts.length, item.seed, item.palette, Chalk.swatch(item.palette)]);
   if (!thumbs.has(k)) thumbs.set(k, URL.createObjectURL(new Blob([Chalk.build(spec, opts(item)).svg], { type: "image/svg+xml" })));
   return thumbs.get(k);
 }
@@ -395,7 +420,7 @@ function tile(item) {
   const open = document.createElement("button"); open.className = "open"; open.type = "button"; open.setAttribute("aria-label", "Open " + item.title);
   const img = document.createElement("img"); img.alt = ""; img.loading = "lazy";
   try { img.src = thumb(item); } catch { }
-  open.append(img); open.onclick = async () => { cur = { spec: item.spec, prompt: item.prompt, bg: item.bg, palette: item.palette, hl: item.hl, seed: item.seed, id: item.id, example: !item.id }; await render(); setStatus($("saveStatus"), ""); stage.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); };
+  open.append(img); open.onclick = async () => { cur = { spec: item.spec, prompt: item.prompt, bg: "navy", palette: item.palette, hl: item.hl, seed: item.seed, id: item.id, example: !item.id }; await render(); setStatus($("saveStatus"), ""); stage.scrollIntoView({ behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" }); };
   const info = document.createElement("div"); info.className = "info";
   const t = document.createElement("div"); t.className = "t"; t.textContent = item.title;
   const d = document.createElement("div"); d.className = "d"; d.textContent = `${item.id ? when(item.createdAt) : "Example"} · ${Chalk.palette(item.palette).name}`;
@@ -418,12 +443,18 @@ function tile(item) {
 function paintGallery(note) {
   const box = $("tiles"); box.replaceChildren();
   for (const it of drawings) box.append(tile(it));
-  CHALK_EXAMPLES.forEach((s, i) => box.append(tile({ title: s.title, spec: s, bg: i === 1 ? "navy" : "white", palette: i === 1 ? "media" : "house", hl: i === 1 ? "glow" : "soft", seed: 7, id: null })));
+  CHALK_EXAMPLES.forEach((s, i) => box.append(tile({ title: s.title, spec: s, bg: "navy", palette: i === 1 ? "media" : "house", hl: "glow", seed: 7, id: null })));
   if (note) { const n = document.createElement("div"); n.className = "empty"; n.textContent = note; box.prepend(n); }
 }
 
 (async () => {
   try { await render(); } catch { }
+  try {
+    palStore = window.studioPalettes || null;
+    if (!palStore && window.claude && window.claude.use) { const d = await window.claude.use("db").catch(() => null);
+      if (d) palStore = { async load() { const s = await d.doc("settings/palettes").get(); return s && s.exists ? (s.data().palettes || {}) : {}; }, async save(o) { await d.doc("settings/palettes").set({ palettes: o }); } }; }
+    if (palStore) { Chalk.setPalettes(await palStore.load()); refreshDots(); await render(); }
+  } catch { }
   const use = window.claude && window.claude.use ? (n) => window.claude.use(n).catch(() => null) : async () => null;
   [sample, db, downloads] = await Promise.all([use("sample"), use("db"), use("downloads")]);
   if (!sample) setStatus($("status"), "Drawing needs Claude, which isn't available in this view. You can still open and save drawings.");
@@ -435,7 +466,7 @@ function paintGallery(note) {
   const timer = setTimeout(() => paintGallery("Your drawings are taking a while to load."), 10000);
   db.collection("drawings").orderBy("createdAt", "desc").limit(120).onSnapshot((snap) => {
     clearTimeout(timer);
-    drawings = snap.docs.map((d) => { const v = d.data(); let spec = null; try { spec = JSON.parse(v.spec); } catch { } return spec ? { id: d.id, title: v.title, prompt: v.prompt, bg: v.bg === "navy" ? "navy" : "white", palette: PAL_KEYS.includes(v.palette) ? v.palette : "house", hl: ["off", "soft", "glow"].includes(v.hl) ? v.hl : "off", seed: v.seed || 7, spec, createdAt: v.createdAt, updatedAt: v.updatedAt } : null; }).filter(Boolean);
+    drawings = snap.docs.map((d) => { const v = d.data(); let spec = null; try { spec = JSON.parse(v.spec); } catch { } return spec ? { id: d.id, title: v.title, prompt: v.prompt, bg: "navy", palette: PAL_KEYS.includes(v.palette) ? v.palette : "house", hl: ["off", "soft", "glow"].includes(v.hl) ? v.hl : "off", seed: v.seed || 7, spec, createdAt: v.createdAt, updatedAt: v.updatedAt } : null; }).filter(Boolean);
     paintGallery(drawings.length ? "" : "No drawings yet. Describe something above and press Draw it; it will appear here.");
   }, () => { clearTimeout(timer); paintGallery("Couldn't load your drawings just now."); });
 })();

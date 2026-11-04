@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { currentStaff } from "@/lib/auth";
-import { ask, listDrawings, saveDrawing, deleteDrawing, StudioError } from "@/lib/studio";
+import { ask, listDrawings, saveDrawing, deleteDrawing, getPalettes, savePalettes, StudioError } from "@/lib/studio";
 import { canvaUploadImage, canvaUploadStatus } from "@/lib/designs";
 
 // Sketch Studio: ask (draft, check or change a drawing; streamed), list, save, delete. Admins only: drawing uses the school's API credit.
@@ -16,8 +16,8 @@ async function admin(req: NextRequest) {
 }
 export async function GET(req: NextRequest) {
   if (!(await admin(req))) return out({ error: "Sign in to the admin again." }, 401);
-  const [drawings, canva] = await Promise.all([listDrawings(), canvaUploadStatus().catch(() => null)]);
-  return out({ drawings, canva });
+  const [drawings, canva, palettes] = await Promise.all([listDrawings(), canvaUploadStatus().catch(() => null), getPalettes()]);
+  return out({ drawings, canva, palettes });
 }
 export async function POST(req: NextRequest) {
   const me = await admin(req);
@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       return new Response(stream, { headers: { "content-type": "text/plain; charset=utf-8", "cache-control": "no-store", "x-accel-buffering": "no" } });
     }
     if (action === "save") return out({ id: await saveDrawing(me.id, b) });
+    if (action === "palettes") { await savePalettes(b.palettes); return out({ ok: true }); }
     if (action === "delete") { await deleteDrawing(String(b.id ?? "")); return out({ ok: true }); }
     if (action === "canva") {
       const m = /^data:image\/png;base64,([A-Za-z0-9+/=]+)$/.exec(String(b.png ?? ""));

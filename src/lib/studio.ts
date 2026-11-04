@@ -59,6 +59,7 @@ export async function ask(input: string, images: string[], quick = false): Promi
   if (!res) throw new StudioError("Couldn’t reach Claude. Try again.", 502);
   if (!res.ok) {
     const j = (await res.json().catch(() => ({}))) as { error?: { message?: string; type?: string } };
+    console.error("studio: Claude answered", res.status, j.error);
     const m = j.error?.message ?? "";
     if (/credit balance/i.test(m)) throw new StudioError("The school's Anthropic account is out of credit. Top it up at console.anthropic.com (Billing), then try again.", 402);
     if (res.status === 401) throw new StudioError("Claude didn't accept the school's Anthropic API key. Check it under Social › Connect to Social › AI searches.", 502);
@@ -79,11 +80,30 @@ export async function ask(input: string, images: string[], quick = false): Promi
           let j: { type?: string; delta?: { type?: string; text?: string }; error?: { message?: string } };
           try { j = JSON.parse(line.slice(5)); } catch { continue; }
           if (j.type === "content_block_delta" && j.delta?.type === "text_delta" && j.delta.text) out += j.delta.text;
+          if (j.type === "error") console.error("studio: Claude stream error", j.error);
           if (j.type === "error") out += "\u0000" + (/overloaded/i.test(j.error?.message ?? "") ? "Claude is very busy right now. Try again in a minute." : (j.error?.message ?? "Claude stopped part-way."));
         }
         if (out) ctl.enqueue(enc.encode(out));
-      } catch (e) { ctl.enqueue(enc.encode("\u0000" + ((e as Error).name === "TimeoutError" ? "That took too long." : "The connection to Claude dropped."))); ctl.close(); }
+      } catch (e) { console.error("studio: stream from Claude failed", (e as Error).name, (e as Error).message); ctl.enqueue(enc.encode("\u0000" + ((e as Error).name === "TimeoutError" ? "That took too long." : "The connection to Claude dropped."))); ctl.close(); }
     },
     cancel() { body.cancel().catch(() => {}); },
   });
 }
+
+/** The school's tweaks to Sketch Studio's swatches: { geography: { main, shade, highlight, white }, … }, hex colours only. */
+export async function getPalettes(): Promise<Record<string, Record<string, string>>> {
+  const r = await withSchool((q) => q<{ value: Record<string, Record<string, string>> }>(`select value from design_kv where key = 'studio_palettes'`)).catch(() => []);
+  return r[0]?.value ?? {};
+}
+export async function savePalettes(v: unknown) {
+  const clean: Record<string, Record<string, string>> = {};
+  if (v && typeof v === "object") for (const [k, c] of Object.entries(v as Record<string, unknown>)) {
+    if (!PALETTES.includes(k) || !c || typeof c !== "object") continue;
+    const o: Record<string, string> = {};
+    for (const f of ["main", "shade", "highlight", "white"]) { const x = (c as Record<string, unknown>)[f]; if (typeof x === "string" && /^#[0-9A-Fa-f]{6}$/.test(x)) o[f] = x.toUpperCase(); }
+    if (Object.keys(o).length) clean[k] = o;
+  }
+  await withSchool((q) => q(`insert into design_kv (school_id, key, value) values (current_school(), 'studio_palettes', $1::jsonb)
+    on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [JSON.stringify(clean)]));
+}
+
