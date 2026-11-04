@@ -12,7 +12,7 @@ export async function listDrawings(): Promise<Drawing[]> {
   return withSchool((q) => q<Drawing>(`select id, title, prompt, bg, palette, hl, seed, spec::text as spec, created_at as "createdAt", updated_at as "updatedAt"
     from studio_drawings order by created_at desc limit 120`));
 }
-export async function saveDrawing(userId: string, b: Record<string, unknown>): Promise<string> {
+export async function saveDrawing(userId: string | null, b: Record<string, unknown>): Promise<string> {
   const spec = typeof b.spec === "string" ? b.spec : "";
   if (!spec || spec.length > 400_000) throw new StudioError("That drawing is too big to keep.");
   try { const s = JSON.parse(spec); if (!Array.isArray(s?.parts)) throw 0; } catch { throw new StudioError("That drawing couldn’t be read."); }
@@ -113,12 +113,15 @@ export async function savePalettes(v: unknown) {
 
 // ---------- background jobs (4 Nov): start one, then the page polls it ----------
 /** Start a draft, check or change. Returns the job id at once; the work carries on after the response (see the route's after()). */
-export async function startJob(userId: string, input: string, images: string[], quick: boolean): Promise<{ id: string; run: () => Promise<void> }> {
+export async function startJob(userId: string | null, input: string, images: string[], quick: boolean): Promise<{ id: string; run: () => Promise<void> }> {
   if (typeof input !== "string" || !input.trim() || input.length > 250_000) throw new StudioError("Nothing to draw.");
   const ai = await getAiConfig();
   if (!ai.key) throw new StudioError("The studio needs the Anthropic API key. Add it under Social › Connect to Social › AI searches.", 503);
   const { id, slug } = await withSchool(async (q) => {
     await q(`delete from studio_jobs where created_at < now() - interval '2 days'`);
+    // the studio is behind a shared password, so cap how much it can spend: at most 60 Claude calls an hour for the school
+    const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from studio_jobs where created_at > now() - interval '1 hour'`);
+    if (n >= 60) throw new StudioError("The studio has made a lot of drawings in the last hour. Wait a little, then try again.", 429);
     const r = await q<{ id: string }>(`insert into studio_jobs (school_id, created_by) values (current_school(), $1) returning id`, [userId]);
     const sc = await q<{ slug: string }>(`select slug from schools where id = current_school()`);
     return { id: r[0].id, slug: sc[0].slug };
@@ -156,5 +159,26 @@ export async function jobStatus(id: string): Promise<{ status: string; text: str
   // a job whose server was stopped mid-way never finishes: after 6 quiet minutes, say so
   if (j.status === "running" && j.age > 360) return { ...j, status: "error", error: "The drawing stopped before Claude finished (the website's time limit). Try again, or set Checking to Off." };
   return j;
+}
+
+// ---------- the studio's password (4 Nov): /studio is open to anyone with the password, no admin sign-in ----------
+import { createHmac, createHash, timingSafeEqual } from "node:crypto";
+export const STUDIO_COOKIE = "ose_studio";
+const studioKey = () => process.env.STUDIO_SECRET || process.env.ADMIN_SETUP_KEY || process.env.DATABASE_URL || "ose-studio";
+// the password is "ose" unless STUDIO_PASSWORD is set in Vercel (only its hash is kept here)
+const PASS_HASH = "699a9f9d57b23ee3a86afdc0fe67adf9dafc3e648ad8d3b54687f091b64471cf";
+export function studioPasswordOk(given: string): boolean {
+  const want = process.env.STUDIO_PASSWORD ? createHash("sha256").update(process.env.STUDIO_PASSWORD).digest() : Buffer.from(PASS_HASH, "hex");
+  const got = createHash("sha256").update(String(given ?? "").trim()).digest();
+  return timingSafeEqual(want, got);
+}
+/** The cookie's value: an HMAC of the password's hash, so changing STUDIO_PASSWORD signs everyone out. */
+export function studioToken(): string {
+  const ph = process.env.STUDIO_PASSWORD ? createHash("sha256").update(process.env.STUDIO_PASSWORD).digest("hex") : PASS_HASH;
+  return createHmac("sha256", studioKey()).update("studio:" + ph).digest("base64url");
+}
+export function studioCookieOk(v: string | undefined): boolean {
+  if (!v) return false; const want = studioToken();
+  return v.length === want.length && timingSafeEqual(Buffer.from(v), Buffer.from(want));
 }
 

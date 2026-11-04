@@ -1,5 +1,5 @@
-// On the school's own site: the same page, talking to /admin/studio-api instead of the Claude viewer.
-const STUDIO_API = "/admin/studio-api";
+// On the school's own site: the same page, talking to /studio/api instead of the Claude viewer.
+const STUDIO_API = "/studio/api";
 async function toDataUrl(blob, max = 1400) {
   const bmp = await createImageBitmap(blob); const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
   const c = document.createElement("canvas"); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);

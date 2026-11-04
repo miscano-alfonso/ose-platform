@@ -123,9 +123,26 @@ export async function canvaDisconnect(forget: boolean) {
   if (forget) return kvSet("canva", null);
   delete c.refreshToken; delete c.by; delete c.at; await kvSet("canva", c);
 }
+/** A canva.link share link (Share → Copy link) leads to the folder's full address: follow it to find the folder. */
+async function expandCanvaShortlink(link: string): Promise<string> {
+  if (!/^https?:\/\/(www\.)?canva\.link\/[A-Za-z0-9_-]{4,40}\/?$/.test(link)) return link;
+  let url = link.replace(/^http:/, "https:");
+  for (let i = 0; i < 6; i++) {
+    const r = await fetch(url, { redirect: "manual", signal: AbortSignal.timeout(10000) }).catch(() => null);
+    const loc = r?.headers.get("location"); if (!loc) break;
+    url = new URL(loc, url).toString();
+    if (/\/folder\/FA[A-Za-z0-9_-]{6,40}/.test(decodeURIComponent(url))) return decodeURIComponent(url);
+  }
+  // some share links finish on a page rather than a redirect: look for the folder's address in it
+  const r = await fetch(link, { redirect: "follow", signal: AbortSignal.timeout(10000) }).catch(() => null);
+  if (r) { const final = decodeURIComponent(r.url || ""); if (/\/folder\/FA/.test(final)) return final;
+    const body = await r.text().catch(() => ""); const m = /\/folder\/(FA[A-Za-z0-9_-]{6,40})/.exec(body); if (m) return `https://www.canva.com/folder/${m[1]}`; }
+  return url;
+}
 export async function canvaFolder(link: string) {
+  link = await expandCanvaShortlink(link.trim());
   const m = /(?:folder\/|^)(FA[A-Za-z0-9_-]{6,40})/.exec(link.trim());
-  if (!m && link.trim()) fail("Paste the folder’s link from Canva (it contains /folder/FA…).");
+  if (!m && link.trim()) fail("Paste the folder’s link from Canva: open the folder in Canva in your browser and copy the address (it contains /folder/FA…), or use Share › Copy link.");
   const c = (await kvGet<Canva>("canva")) ?? {};
   c.folderId = m?.[1] ?? undefined; c.folderName = undefined;   // the name is looked up the next time a drawing is sent
   await kvSet("canva", c);
