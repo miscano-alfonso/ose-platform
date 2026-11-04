@@ -1143,3 +1143,28 @@
 .adm .card.lesson-done{border-color:var(--warn);box-shadow:inset 4px 0 0 var(--warn)}
 .adm .dx-live.done{color:var(--warn)}.adm .dx-live.done::before{background:var(--warn);animation:none}
 .adm .dx-live.soon{color:var(--muted)}.adm .dx-live.soon::before{background:var(--muted)}
+
+/* 4 Nov: the admin's menu sections (Main, Marketing, Finance, Settings, Website) are tabs across the top; the side menu
+   shows the chosen section. The logo is the way back to the dashboard and turns light blue on hover. */
+.adm .adm-tabs{position:sticky;top:0;z-index:20;margin:-22px calc(-1 * clamp(16px,3vw,34px)) 18px;padding:10px clamp(16px,3vw,34px);background:var(--bg);border-bottom:1px solid var(--line);flex-wrap:nowrap;min-height:58px}
+.adm .sec-tabs{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;min-width:0}
+.adm .sec-tabs::-webkit-scrollbar{display:none}
+.adm .sec-tabs button{all:unset;box-sizing:border-box;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap;padding:9px 16px;border-radius:999px;font:600 14px/1 var(--font,inherit);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);border:1px solid var(--line);background:var(--panel)}
+.adm .sec-tabs button:hover{color:var(--ink);border-color:color-mix(in srgb,var(--brand) 40%,var(--line))}
+.adm .sec-tabs button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.adm .sec-tabs button:focus-visible{outline:2px solid var(--brand-accent);outline-offset:2px}
+.adm .sec-tabs .cnt{background:var(--brand-accent);color:var(--brand-accent-ink,#0f1747);border-radius:999px;font-size:12px;letter-spacing:0;padding:2px 7px}
+.adm .tm-pill{flex:none;font-size:13.5px;font-weight:600;color:var(--ink);text-decoration:none;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 12px;white-space:nowrap}
+.adm .tm-pill::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:#e8a33a;margin-right:7px;vertical-align:1px}
+.adm .tm-pill:hover{border-color:var(--brand)}
+@media (min-width:821px){.adm .nav.tabbed .ngrp{margin-top:0;border-top:0;padding-top:0}.adm .nav.tabbed .ngrp-h{display:none}}
+@media (max-width:820px){.adm .sec-tabs{display:none}.adm .adm-tabs{position:static;margin:-6px 0 16px;padding:0;border:0;background:none;min-height:0}.adm .adm-tabs:not(:has(.tm-pill)){display:none}}
+.adm .logo .logo-i{position:relative;display:block;width:fit-content;margin:4px 8px 10px}
+.adm .logo .logo-i img{margin:0;transition:opacity .15s}
+.adm .logo .logo-i::after{content:"";position:absolute;inset:0;background:#68BBE4;-webkit-mask:var(--logo) center/contain no-repeat;mask:var(--logo) center/contain no-repeat;opacity:0;transition:opacity .15s}
+.adm .logo:hover .logo-i img,.adm .logo:focus-visible .logo-i img{opacity:0}
+.adm .logo:hover .logo-i::after,.adm .logo:focus-visible .logo-i::after{opacity:1}
+.adm[data-theme=dark] .sec-tabs button.on{background:var(--brand-accent);border-color:var(--brand-accent);color:var(--brand-accent-ink,#0f1747)}
+@media (prefers-color-scheme:dark){.adm:not([data-theme=light]) .sec-tabs button.on{background:var(--brand-accent);border-color:var(--brand-accent);color:var(--brand-accent-ink,#0f1747)}}
+.adm[data-theme=dark] .sec-tabs button.on .cnt{background:var(--brand);color:#fff}
+@media (prefers-color-scheme:dark){.adm:not([data-theme=light]) .sec-tabs button.on .cnt{background:var(--brand);color:#fff}}

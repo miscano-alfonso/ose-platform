@@ -13,7 +13,7 @@ import { zoomBackground } from "@/lib/zoom";
 import { requireStaff, isDemoVisitor } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
 import { signOutAction } from "../actions";
-import { AdminNav } from "../AdminNav";
+import { AdminNav, AdminTabs } from "../AdminNav";
 import { LessonWindow } from "../../LessonWindow";
 import { menuFor } from "@/lib/menu-config";
 import "../admin.css";
@@ -24,7 +24,7 @@ import { schoolPlan, notInPlan, PLAN_NAME, STUDENTS_INCLUDED } from "@/lib/plan"
 import { schoolsFor, siteSchool, SCHOOL_COOKIE } from "@/lib/db";
 import { Switchers } from "../Switchers";
 import { Assistant } from "../Assistant";
-import { TopBar, SideFoot } from "../TopBar";
+import { SideFoot } from "../TopBar";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
@@ -74,16 +74,18 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const school = jar.get(SCHOOL_COOKIE)?.value || siteSchool();
   const views = [{ value: "admin", label: "Admin" }, ...teachers.map((t) => ({ value: `t:${t.id}`, label: `Teacher: ${t.name}` })),
     { value: "p", label: "Parent…" }, { value: "s", label: "Student…" }];
+  const navCounts: Record<string, number> = { "/admin/enquiries": c.enq, "/admin/jobs": c.jobs, "/admin/payments": c.failed, "/admin/tasters": c.tasters, "/admin/reports": x.rep, "/admin/messages": x.msg, "/admin/attendance": x.joins, "/admin/email": inboxUnread, "/admin/student-chat": chatAlerts };
   return <div className="adm" data-theme={theme} data-palette={demo ? "demo" : undefined} style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b"), ["--brand-accent-ink" as string]: inkOn(hex(brand.accent, "#e3cd4b")) }}><DashStyles /><LessonWindow /><NotifyCenter api="/admin/notify-api" role="admin" /><div className="app">
     <aside className="side">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {demo || (pl.plan && !custom.logo) ? <a className="logo" href="/admin" title="Dashboard" style={{ color: "#fff", font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>{demo ? "Demo school" : `${PLAN_NAME[pl.plan!]} plan`}</span></a>
-      : <a className="logo" href="/admin" title="Dashboard"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></a>}
-      <AdminNav counts={{ "/admin/enquiries": c.enq, "/admin/jobs": c.jobs, "/admin/payments": c.failed, "/admin/tasters": c.tasters, "/admin/reports": x.rep, "/admin/messages": x.msg, "/admin/attendance": x.joins, "/admin/email": inboxUnread, "/admin/student-chat": chatAlerts }} groups={menu} />
+      : <a className="logo" href="/admin" title="Back to the dashboard" style={{ ["--logo" as string]: `url("${logo}")` }}><span className="logo-i"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></span></a>}
+      <AdminNav counts={navCounts} groups={menu} />
       <SideFoot theme={theme} signOut={signOutAction} toggle switchers={<Switchers schools={schools.filter((x) => !isDemoVisitor(me.email) || x.slug === school).map((x) => ({ value: x.slug, label: x.name }))} school={school} views={views} view="admin" />}
         site={pl.plan ? [{ href: "/osedtech", label: "OH-SO EdTech" }] : isDemoVisitor(me.email) ? [{ href: "/osedtech/demo/site", label: "View the school’s website" }, { href: "/osedtech", label: "Back to OH-SO EdTech" }] : [{ href: "/", label: "View the website" }]} />
     </aside>
-    <main className="main"><TopBar>{!demo && !pl.plan && testOn ? <><b>Test mode is on:</b> real data is read as normal, but nothing goes to families, students or teachers. <a href="/admin/test-mode">See what’s held</a></> : null}</TopBar>{demo && (isDemoVisitor(me.email) ? <p className="note msg" style={{ marginTop: 0 }}><b>Demo school.</b> Everything here is made up, so click anything: nothing is ever emailed, charged or posted, and the demo is made fresh every day. Try <b>Viewing as</b> (bottom left) to see a teacher’s, parent’s or student’s view. <a href="/osedtech/trial">Start a free trial</a> to get your own school.</p> : <p className="note msg" style={{ marginTop: 0 }}><b>Demo school.</b> Everything here is made up (families, children, payments and messages), so you can click anything safely. Nothing is ever emailed or charged. Switch back with the School menu.</p>)}{pl.plan && <TrialBar plan={PLAN_NAME[pl.plan]} days={pl.daysLeft} ended={pl.ended} students={pl.students} included={STUDENTS_INCLUDED[pl.plan]} />}{pl.ended ? <TrialEnded /> : notInPlan(pl.plan, path) ? <NotInPlan plan={PLAN_NAME[pl.plan!]} /> : <>{pl.plan && path === "/admin" && pl.classes === 0 && <GettingStarted name={sch.name} />}{children}</>}</main>
+    <main className="main"><div className="topbar adm-tabs"><AdminTabs counts={navCounts} groups={menu} /><span className="grow" />
+      {!demo && !pl.plan && testOn ? <a className="tm-pill" href="/admin/test-mode" title="Test mode is on: real data is read as normal, but nothing goes to families, students or teachers. Click to see what’s held.">Test mode on</a> : null}</div>{demo && (isDemoVisitor(me.email) ? <p className="note msg" style={{ marginTop: 0 }}><b>Demo school.</b> Everything here is made up, so click anything: nothing is ever emailed, charged or posted, and the demo is made fresh every day. Try <b>Viewing as</b> (bottom left) to see a teacher’s, parent’s or student’s view. <a href="/osedtech/trial">Start a free trial</a> to get your own school.</p> : <p className="note msg" style={{ marginTop: 0 }}><b>Demo school.</b> Everything here is made up (families, children, payments and messages), so you can click anything safely. Nothing is ever emailed or charged. Switch back with the School menu.</p>)}{pl.plan && <TrialBar plan={PLAN_NAME[pl.plan]} days={pl.daysLeft} ended={pl.ended} students={pl.students} included={STUDENTS_INCLUDED[pl.plan]} />}{pl.ended ? <TrialEnded /> : notInPlan(pl.plan, path) ? <NotInPlan plan={PLAN_NAME[pl.plan!]} /> : <>{pl.plan && path === "/admin" && pl.classes === 0 && <GettingStarted name={sch.name} />}{children}</>}</main>
     {!pl.plan || pl.plan === "school" ? <Assistant /> : null}
   </div></div>;
 }
