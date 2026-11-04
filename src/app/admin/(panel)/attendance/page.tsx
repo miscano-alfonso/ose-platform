@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { attendanceOverview } from "@/lib/attendance";
 import { meetStatus, unmatchedPeople, unplacedCalls, usualTimes } from "@/lib/meet";
+import { joinClues } from "@/lib/meet-clues";
 import { classroomStatus } from "@/lib/classroom";
 import { siteBase } from "@/lib/social";
 import { videoSettings } from "@/lib/checkins";
@@ -18,6 +19,8 @@ const MARK: Record<string, [string, string]> = { present: ["✓", "Present"], la
 export default async function Attendance({ searchParams }: { searchParams: Promise<{ term?: string; tab?: string; cls?: string; low?: string; ok?: string; err?: string }> }) {
   const sp = await searchParams;
   const [d, g, joins, base, unplaced, vid] = await Promise.all([attendanceOverview(sp.term ?? null, sp.cls ?? null), meetStatus(await siteBase()), unmatchedPeople(), siteBase(), unplacedCalls(), videoSettings()]);
+  // on the Check Meet joins tab: what the school's records and connected inboxes say about each person, before asking
+  const clues = (sp.tab ?? "") === "joins" ? await joinClues(joins.people).catch(() => ({} as Awaited<ReturnType<typeof joinClues>>)) : {};
   // where marks come from: Google Meet’s log, Join-button check-ins, or both
   const isMeet = vid.tool === "meet", zoom = vid.tool === "zoom" && (await zoomStatus()).connected;
   const source = isMeet ? (vid.checkins ? "Google Meet and check-ins" : "Google Meet") : zoom ? (vid.checkins ? "Zoom and check-ins" : "Zoom") : vid.checkins ? "Check-ins" : "Registers";
@@ -86,8 +89,15 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
       <section className="card">{joins.people.length === 0 ? <p className="empty">Nothing to check.</p> : joins.people.map((p) => <form key={p.key} action={matchPersonAction} className="li" style={{ flexWrap: "wrap" }}>
         <input type="hidden" name="key" value={p.key} />
         <div className="t"><b>“{p.who}”</b><span>{p.email && p.email !== p.who ? `${p.email} · ` : ""}{p.lessons} lesson{p.lessons === 1 ? "" : "s"} in {p.classes} · {dm(p.first)}{p.last !== p.first ? ` – ${dm(p.last)}` : ""}</span></div>
-        {p.roster.length > 0 && <select name="student" className="mini" aria-label="Who was it?">{p.roster.map((s) => <option key={s.id + s.cls} value={s.id}>{s.name}{p.classes.includes(",") ? ` (${s.cls})` : ""}{s.absent ? ` · marked absent ${s.absent}×` : ""}</option>)}</select>}
-        {p.roster.length > 0 && <button className="abtn sm pri" type="submit">This is them</button>}<button className="abtn sm" type="submit" name="ignore" value="1">Not a student</button></form>)}</section></>}
+        {p.roster.length > 0 && <select name="student" className="mini" aria-label="Who was it?" required defaultValue={clues[p.key]?.suggest && p.roster.some((s) => s.id === clues[p.key]?.suggest) ? clues[p.key]!.suggest! : ""}>
+          <option value="" disabled>Choose who it was…</option>
+          {p.roster.map((s) => <option key={s.id + s.cls} value={s.id}>{s.name}{s.taster ? " (taster)" : ""}{p.classes.includes(",") ? ` (${s.cls})` : ""}{s.absent ? ` · marked absent ${s.absent}×` : ""}</option>)}</select>}
+        {p.roster.length > 0 && <button className="abtn sm pri" type="submit">This is them</button>}<button className="abtn sm" type="submit" name="ignore" value="1">Not a student</button>
+        {clues[p.key] && <div className="muted" style={{ flexBasis: "100%", fontSize: 13, marginTop: 6 }}>
+          {clues[p.key]!.clues.length ? <><b>What the school’s records and emails say:</b><ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{clues[p.key]!.clues.map((c, i) => <li key={i}>{c.href ? <a href={c.href} target={c.kind === "email" ? "_blank" : undefined} rel="noopener">{c.text}</a> : c.text}</li>)}</ul></>
+            : <>Nothing in the taster requests, enquiries, families{clues[p.key]!.searched.length ? ` or the inboxes searched (${clues[p.key]!.searched.join(", ")})` : ""} mentions them.</>}
+          {clues[p.key]!.searched.length > 0 && clues[p.key]!.clues.length > 0 && <div>Inboxes searched: {clues[p.key]!.searched.join(", ")}. To include another (e.g. the principal’s), connect it under Email › Inbox › Connect another inbox.</div>}
+        </div>}</form>)}</section></>}
 
     {tab === "google" && <section className="card"><h2>Google Meet</h2>
       {g.connected ? <>

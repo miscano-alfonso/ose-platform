@@ -96,7 +96,7 @@ async function events(q: Q, o: FeedOwner, site: string): Promise<{ name: string;
     if (teacherId) for (const r of await q<LessonRow>(lessonSql(`left join students st on false where coalesce(e.teacher_id, sl.teacher_id, g.teacher_id) = $1`), [teacherId]))
       evs.push({ uid: `lesson-${r.id}@${host}`, start: r.starts, end: r.ends, title: `${r.name}${r.code ? ` (${r.code})` : ""}`, cancelled: r.status === "cancelled",
         location: r.link ?? undefined, url: `${site}/admin/register/${r.id}`,
-        desc: [r.link && `Lesson link: ${r.link}`, `Register: ${site}/admin/register/${r.id}`, r.course && `Google Classroom: ${classroom(r.course)}`].filter(Boolean).join("\n") });
+        desc: [r.link && `Lesson link: ${r.link}`, `Attendance: ${site}/admin/register/${r.id}`, r.course && `Google Classroom: ${classroom(r.course)}`].filter(Boolean).join("\n") });
   } else {
     const rows = await q<LessonRow>(lessonSql(`${enrolled} where ${o.kind === "student" ? "st.id" : "st.parent_id"} = $1`), [o.id]);
     // a parent with two children in the same class gets one event naming both

@@ -513,17 +513,17 @@ const UNMATCHED = `ms.student_id is null and not ms.ignored and ms.participant_e
       and not exists (select 1 from taster_requests tr where lower(tr.child_email::text) = lower(ms.participant_email::text))`;
 const PKEY = `coalesce('e:' || lower(ms.participant_email::text), 'n:' || lower(ms.display_name), 's:' || ms.id::text)`;
 export type UnmatchedPerson = { key: string; who: string; email: string | null; joins: number; lessons: number; first: string; last: string; classes: string;
-  roster: { id: string; name: string; cls: string; absent: number }[] };
+  roster: { id: string; name: string; cls: string; absent: number; taster: boolean }[] };
 export async function unmatchedPeople(): Promise<{ people: UnmatchedPerson[]; joins: number }> {
   return withSchool(async (q) => {
     const people = await q<UnmatchedPerson>(`with u as (select ms.*, ${PKEY} as k, e.group_id, e.lesson_date from meet_sessions ms join lesson_events e on e.id = ms.lesson_event_id where ${UNMATCHED})
       select k as key, coalesce(mode() within group (order by display_name), max(participant_email::text), 'Someone signed out') as who, max(participant_email::text) as email,
         count(*)::int as joins, count(distinct lesson_event_id)::int as lessons, min(lesson_date)::text as first, max(lesson_date)::text as last,
         (select string_agg(distinct g.code, ', ') from course_groups g where g.id in (select group_id from u u2 where u2.k = u.k)) as classes,
-        coalesce((select json_agg(r order by r.absent desc, r.name) from (select st.id, st.first_name || ' ' || st.last_name as name, g.code as cls,
+        coalesce((select json_agg(r order by r.taster, r.absent desc, r.name) from (select distinct on (st.id, g.code) st.id, st.first_name || ' ' || st.last_name as name, g.code as cls, x.is_taster as taster,
             (select count(*)::int from attendance_marks m where m.student_id = st.id and m.mark = 'absent' and m.lesson_event_id in (select lesson_event_id from u u3 where u3.k = u.k)) as absent
           from enrolments x join students st on st.id = x.student_id join course_groups g on g.id = x.group_id
-          where x.group_id in (select group_id from u u2 where u2.k = u.k) and x.status = 'active' and not x.is_taster) r), '[]') as roster
+          where x.group_id in (select group_id from u u2 where u2.k = u.k) and (x.status = 'active' or x.is_taster)) r), '[]') as roster
       from u group by k order by count(distinct lesson_event_id) desc, k limit 300`);
     const [{ n }] = await q<{ n: number }>(`select count(*)::int as n from meet_sessions ms where ${UNMATCHED}`);
     return { people, joins: n };

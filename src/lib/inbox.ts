@@ -313,3 +313,29 @@ export async function replyInbox(actor: { id: string; name: string; email?: stri
     return null;
   } catch (e) { return e instanceof MeetError ? e.message : "Couldn’t reach Gmail. The reply wasn’t sent."; }
 }
+
+export type MailHit = { mailbox: string; id: string; thread: string; from: string; to: string; subject: string; snippet: string; date: string };
+/** Search every connected inbox (the school's first, then any others, e.g. the principal's) with a Gmail query. Read-only. */
+export async function searchMail(query: string, perBox = 5): Promise<{ hits: MailHit[]; searched: string[] }> {
+  const list = await boxes(); const hits: MailHit[] = []; const searched: string[] = [];
+  for (const [n, box] of list.entries()) {
+    let token: string;
+    try { token = n === 0 ? await googleAccess("gmail") : await mailboxAccess(box.refreshToken!); } catch { continue; }
+    searched.push(box.mailbox ?? "inbox");
+    try {
+      const u = new URL(`${GMAIL_URL()}/users/me/messages`); u.searchParams.set("q", query); u.searchParams.set("maxResults", String(perBox));
+      const r = await fetch(u, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) }); if (!r.ok) continue;
+      const ids = ((await r.json()) as { messages?: { id: string; threadId: string }[] }).messages ?? [];
+      for (const m of ids.slice(0, perBox)) {
+        const g = await fetch(`${GMAIL_URL()}/users/me/messages/${m.id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date`,
+          { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(15000) }); if (!g.ok) continue;
+        const j = (await g.json()) as { snippet?: string; payload?: { headers?: { name: string; value: string }[] }; internalDate?: string };
+        const h = (k: string) => j.payload?.headers?.find((x) => x.name.toLowerCase() === k)?.value ?? "";
+        hits.push({ mailbox: box.mailbox ?? "", id: m.id, thread: m.threadId, from: h("from"), to: h("to"), subject: h("subject"), snippet: (j.snippet ?? "").replace(/&#39;/g, "’").replace(/&quot;/g, '"').replace(/&amp;/g, "&"),
+          date: j.internalDate ? new Date(Number(j.internalDate)).toISOString() : h("date") });
+      }
+    } catch { /* that inbox couldn't be searched */ }
+  }
+  return { hits, searched };
+}
+
