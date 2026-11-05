@@ -189,7 +189,7 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
           <Link href="/admin/students?show=points"><b>{so.totals.points}</b><span>reward points</span></Link>
         </div>
         {worry.length === 0 ? <div className="dx-clear"><Ico d={I.check} /><b>All on track</b><span>No missing work and nobody under 85% attendance {so.term ? `in ${so.term.name}` : "lately"}.</span></div>
-          : <MoreList className="dx-list" limit={4}>{worry.map((r) => <Link key={r.id} className={`dx-item dx-wk ${r.missing >= 2 || (r.att != null && r.att < 70) ? "bad" : "warn"}`} href={`/admin/students?q=${encodeURIComponent(r.name)}#s-${r.id}`}>
+          : <MoreList className="dx-list" limit={4}>{worry.map((r) => <Link key={r.id} className={`dx-item dx-wk ${r.missing >= 2 || (r.att != null && r.att < 70) ? "bad" : "warn"}`} href={`/admin/students/${r.id}`}>
             <span className="t"><b>{r.name}</b><span>{[r.missing && `${r.missing} piece${r.missing === 1 ? "" : "s"} of work missing`, r.att != null && r.held >= 3 && r.att < 85 && `attendance ${r.att}%`].filter(Boolean).join(" · ")}</span>
               {r.missingList[0] && <span style={{ fontSize: 13 }}>Latest: {r.missingList[0].title} · {r.classes.find((c) => c.id === r.missingList[0].gid)?.name ?? r.missingList[0].code}</span>}</span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
         <div className="dx-sync"><span>{so.classroom.granted !== true ? "Google Classroom isn’t connected yet" : so.classroom.linked === 0 ? "No classes linked to Google Classroom yet" : so.classroom.error ? "Classroom couldn’t be read" : so.classroom.at ? `Classroom read ${sAgo(so.classroom.at)}` : "Classroom not read yet"}</span>

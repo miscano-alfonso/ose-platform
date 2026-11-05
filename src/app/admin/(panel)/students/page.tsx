@@ -3,6 +3,7 @@ import LiveSearch from "../../LiveSearch";
 import { studentOverview, type StudentRow } from "@/lib/student-overview";
 import { readClassroomAction } from "../../actions";
 import { StudentsTabs } from "../../StudentsTabs";
+import { RowLink } from "../../RowLink";
 import { withSchool } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -65,8 +66,8 @@ export default async function Students({ searchParams }: { searchParams: Promise
     {list.length === 0 ? <p className="empty">{o.rows.length ? "No students match." : "No students enrolled this year yet."}</p> :
     <div className="tw"><table className="st-table">
       <thead><tr>{th("Student", "name")}<th>Classes</th>{th("Attendance", "att")}{th("Work handed in", "work")}{th("Missing", "missing", "n")}{th("Points", "points", "n")}<th>SEND</th></tr></thead>
-      {list.map((r) => <tbody key={r.id} id={`s-${r.id}`}><tr>
-        <td><b>{r.name}</b><div className="muted" style={{ fontSize: 14 }}><Link href={`/admin/families/${r.parent_id}`}>{r.family}</Link></div></td>
+      {list.map((r) => <tbody key={r.id} id={`s-${r.id}`}><RowLink href={`/admin/students/${r.id}`}>
+        <td><Link href={`/admin/students/${r.id}`} className="row-main"><b>{r.name}</b></Link><div className="muted" style={{ fontSize: 14 }}><Link href={`/admin/families/${r.parent_id}`}>{r.family}</Link></div></td>
         <td style={{ fontSize: 14 }}>{r.classes.map((c) => <div key={c.id} title={c.code}>{c.name}</div>)}</td>
         <td>{r.att == null ? <span className="muted">No lessons marked</span> : <><span className={`pill ${attTone(r.att)}`}>{r.att}%</span> <span className="muted" style={{ fontSize: 13 }}>{r.attended} of {r.held}</span></>}</td>
         <td>{r.due === 0 ? <span className="muted">Nothing due yet</span> : <><div className="st-meter" role="img" aria-label={`${r.handed} of ${r.due} handed in`}><i style={{ width: `${(r.handed / r.due) * 100}%` }} /></div>
@@ -74,7 +75,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
         <td className="n">{r.missing ? <span className="pill bad">{r.missing}</span> : <span className="muted">0</span>}</td>
         <td className="n">{r.points || <span className="muted">0</span>}</td>
         <td>{r.send.map((x) => <span key={x} className="pill warn" style={{ marginRight: 4 }}>{x}</span>)}</td>
-      </tr>
+      </RowLink>
       {r.missing > 0 && <tr className="editrow"><td colSpan={7} style={{ paddingTop: 0 }}>
         <details className="edit"><summary className="abtn sm">Missing work ({r.missing})</summary>
           <ul className="st-miss">{r.missingList.map((m, i) => <li key={i}><b>{m.title}</b> <span className="muted">· {r.classes.find((c) => c.id === m.gid)?.name ?? m.code} · due {day(m.due_at)}</span>
