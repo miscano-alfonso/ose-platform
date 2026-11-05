@@ -1199,3 +1199,11 @@
 .adm .side .side-foot .tm-pill{justify-self:start;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:#fff;font-size:12.5px;padding:6px 11px}
 .adm .side .side-foot .tm-pill:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.4)}
 @media (max-width:820px){.adm .adm-tabs{display:none}}
+/* 5 Nov: the section tabs become a dropdown when they don't fit */
+.adm .sec-wrap{position:relative;flex:1 1 auto;min-width:0;display:flex;align-items:center}
+.adm .sec-tabs.measure{position:absolute;left:0;top:0;visibility:hidden;pointer-events:none;overflow:visible}
+.adm .sec-select{appearance:auto;font:600 12px/1 inherit;letter-spacing:.06em;text-transform:uppercase;color:#fff;background:var(--brand);border:1px solid var(--brand);border-radius:999px;padding:7px 12px;max-width:100%;cursor:pointer}
+.adm .sec-select option{text-transform:none;color:var(--ink);background:var(--panel)}
+.adm[data-theme=dark] .sec-select{background:var(--brand-accent);border-color:var(--brand-accent);color:var(--brand-accent-ink,#0f1747)}
+@media (prefers-color-scheme:dark){.adm:not([data-theme=light]) .sec-select{background:var(--brand-accent);border-color:var(--brand-accent);color:var(--brand-accent-ink,#0f1747)}}
+.adm .sw-top{flex:none;margin-left:auto}

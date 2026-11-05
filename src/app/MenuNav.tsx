@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { ICONS, type ResolvedGroup } from "@/lib/menus";
 
 /** Any dashboard's menu (admin, teacher, parent, student), drawn from the school's arrangement in Admin → Menus.
@@ -28,13 +28,28 @@ export function SectionTabs({ groups, counts = {}, root, alias = {} }: { groups:
   const path0 = usePathname(), path = alias[path0] ?? path0;
   const { section, pick } = useSection(groups, path, root);
   const router = useRouter();
+  // when the tabs don't fit beside the pickers, they turn into a dropdown (5 Nov); measured from the tabs kept hidden for size
+  const wrap = useRef<HTMLDivElement>(null), tabs = useRef<HTMLDivElement>(null);
+  const [compact, setCompact] = useState(false);
+  useLayoutEffect(() => {
+    const w = wrap.current, t = tabs.current; if (!w || !t) return;
+    const check = () => setCompact(t.scrollWidth > w.clientWidth + 1);
+    check(); const ro = new ResizeObserver(check); ro.observe(w); document.fonts?.ready.then(check).catch(() => {});
+    return () => ro.disconnect();
+  }, [groups.length]);
   if (groups.length < 2) return null;
   // the tab opens the section's top link (as listed in the side menu, which leaves out the dashboard: that's the logo)
   const go = (g: ResolvedGroup) => { pick(g.title); const first = g.items.find((x) => x.href !== root && !x.off && x.href.startsWith("/")) ?? g.items.find((x) => x.href.startsWith("/"));
     if (first && first.href !== path) router.push(first.href); };
-  return <div className="sec-tabs" role="tablist" aria-label="Menu sections">{groups.map((g) => { const n = g.items.reduce((a, x) => a + (counts[x.href] ?? 0), 0);
-    return <button key={g.title} type="button" role="tab" aria-selected={section === g.title} className={section === g.title ? "on" : undefined} onClick={() => go(g)}>
-      {g.title === "Main menu" ? "Main" : g.title}{n ? <b className="cnt">{n}</b> : null}</button>; })}</div>;
+  const label = (g: ResolvedGroup) => g.title === "Main menu" ? "Main" : g.title;
+  const count = (g: ResolvedGroup) => g.items.reduce((a, x) => a + (counts[x.href] ?? 0), 0);
+  return <div className="sec-wrap" ref={wrap}>
+    {compact && <select className="sec-select" aria-label="Menu section" value={section} onChange={(e) => { const g = groups.find((x) => x.title === e.target.value); if (g) go(g); }}>
+      {groups.map((g) => { const n = count(g); return <option key={g.title} value={g.title}>{label(g)}{n ? ` (${n})` : ""}</option>; })}</select>}
+    <div ref={tabs} className={`sec-tabs${compact ? " measure" : ""}`} role="tablist" aria-label="Menu sections" aria-hidden={compact || undefined}>{groups.map((g) => { const n = count(g);
+      return <button key={g.title} type="button" role="tab" tabIndex={compact ? -1 : undefined} aria-selected={section === g.title} className={section === g.title ? "on" : undefined} onClick={() => go(g)}>
+        {label(g)}{n ? <b className="cnt">{n}</b> : null}</button>; })}</div>
+  </div>;
 }
 
 export function MenuNav({ id, label, groups, counts = {}, root, alias = {}, tabbed = false }: {
