@@ -3,16 +3,35 @@
 // row of three or more is far taller than the others (1.5×), it keeps its own height and hangs down beside the next
 // rows, and the modules after it move up into the space under its shorter neighbours instead of leaving a gap.
 // A module that hangs down is then stretched to line up with the bottom of the row it ends beside.
+// A module that would start a new row first looks for a gap at least 140px deep that it fits (under a module with
+// a set height, say) and goes there instead.
 export type PackIn = { w: number; h: number; fixed: boolean };
 export type PackOut = { x: number; w: number; top: number; height: number };
 
-export function pack(items: PackIn[], cols = 12, gap = 16, tall = 1.5): { boxes: PackOut[]; height: number } {
+export function pack(items: PackIn[], cols = 12, gap = 16, tall = 1.5, holeMin = 140): { boxes: PackOut[]; height: number } {
   const colBottom = new Array(cols).fill(0) as number[];
   const boxes: PackOut[] = new Array(items.length);
   const hangs: number[] = [];
   const rows: number[][] = [];
   let i = 0;
   while (i < items.length) {
+    // a gap left under a shorter module (one with a set height, or beside a tall one): if the next module fits
+    // its width, it goes into the gap instead of starting a new row, and stretches to line up with the bottom
+    const hole = findHole(colBottom, Math.min(items[i].w, cols), holeMin);
+    if (hole) {
+      const it = items[i], floor = Math.max(...colBottom) - gap;
+      const height = it.fixed ? it.h : Math.max(it.h, floor - hole.top);
+      boxes[i] = { x: hole.x, w: Math.min(it.w, cols), top: hole.top, height };
+      for (let c = hole.x; c < hole.x + Math.min(it.w, cols); c++) colBottom[c] = hole.top + height + gap;
+      // if it ends a little lower than the modules beside it (up to 160px), stretch them so the bottoms line up
+      const end = hole.top + height;
+      if (end > floor && end - floor <= 160) boxes.forEach((b, k) => {
+        if (!b || k === i || items[k].fixed || b.top + b.height !== floor) return;
+        b.height = end - b.top;
+        for (let c = b.x; c < b.x + b.w; c++) colBottom[c] = end + gap;
+      });
+      i++; continue;
+    }
     const row: number[] = []; let used = 0;
     while (i < items.length && (row.length === 0 || used + Math.min(items[i].w, cols) <= cols)) { row.push(i); used += Math.min(items[i].w, cols); i++; }
     rows.push(row);
@@ -57,6 +76,17 @@ export function pack(items: PackIn[], cols = 12, gap = 16, tall = 1.5): { boxes:
   });
   const height = Math.max(0, ...boxes.map((b) => b ? b.top + b.height : 0));
   return { boxes, height };
+}
+
+/** The highest place where w columns side by side all end at least min px above the lowest column (leftmost first). */
+function findHole(colBottom: number[], w: number, min: number): { x: number; top: number } | null {
+  const floor = Math.max(...colBottom);
+  let best: { x: number; top: number } | null = null;
+  for (let x = 0; x + w <= colBottom.length; x++) {
+    const top = Math.max(...colBottom.slice(x, x + w));
+    if (floor - top >= min && (!best || top < best.top)) best = { x, top };
+  }
+  return best;
 }
 
 /** How many of the 12 columns a width takes at this board width (the same steps as the CSS). */
