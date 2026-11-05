@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Fragment } from "react";
 import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/auth";
 import { studentProfile } from "@/lib/student-overview";
@@ -45,10 +46,11 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
               <td>{c.in_classroom == null ? <span className="muted">—</span> : c.in_classroom ? <span className="pill good">In Classroom</span> : <span className="pill warn">Invited</span>}</td></tr>)}
           </tbody></table></div>}</section>
         <section className="card" style={{ margin: 0 }}><h2>Classroom work</h2>
-          {p.work.length === 0 ? <p className="empty">No work from Google Classroom yet.</p> : <ul className="st-work">{p.work.map((w) => <li key={w.id}>
+          {p.work.length === 0 ? <p className="empty">No work from Google Classroom yet.</p> : <ul className="st-work">{p.work.map((w, i) => <Fragment key={w.id}>
+            {(i === 0 || p.work[i - 1].term !== w.term) && <li className="st-term">{w.term ?? (w.due_at ? "Before term" : "No due date")}</li>}<li>
             <span className={`pill ${WORK[w.status][0]}`}>{WORK[w.status][1]}</span>
             <span className="t"><b>{w.title}</b><span>{w.class}{w.due_at ? ` · due ${day(w.due_at)}` : ""}{w.late ? " · late" : ""}{w.points != null ? ` · ${w.points}${w.max ? `/${w.max}` : ""}` : ""}</span></span>
-            {w.link ? <a className="abtn sm" href={w.link} target="_blank" rel="noopener">Open in Classroom</a> : <span />}</li>)}</ul>}</section>
+            {w.link ? <a className="abtn sm" href={w.link} target="_blank" rel="noopener">Open in Classroom</a> : <span />}</li></Fragment>)}</ul>}</section>
       </div>
       <div style={{ display: "grid", gap: 16, alignContent: "start" }}>
         {(s.has_send === "yes" || s.has_send === "discuss") && <section className="card" style={{ margin: 0 }}><h2>SEND</h2>
@@ -58,8 +60,9 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
             <p className="muted" style={{ margin: 0, fontSize: 14 }}>{s.share ? "Shared with teachers." : "Not shared with teachers."}</p></>}
           <p style={{ margin: "8px 0 0" }}><Link href={`/admin/families/${s.parent_id}`}>Edit on the family page</Link></p></section>}
         <section className="card" style={{ margin: 0 }}><h2>Recent lessons</h2>
-          {p.marks.length === 0 ? <p className="empty">No attendance marked yet.</p> : p.marks.map((m, i) => <div key={i} className="li">
-            <span className={`pill ${MARK[m.mark]?.[0] ?? "mute"}`}>{MARK[m.mark]?.[1] ?? m.mark}</span><div className="t"><b>{m.class}</b><span>{day(m.date)}{m.minutes != null ? ` · ${m.minutes} min` : ""}</span></div></div>)}</section>
+          {p.marks.length === 0 ? <p className="empty">No attendance marked yet.</p> : p.marks.map((m, i) => <Fragment key={i}>
+            {(i === 0 || p.marks[i - 1].term !== m.term) && <div className="st-term">{m.term}</div>}
+            <div className="li"><span className={`pill ${MARK[m.mark]?.[0] ?? "mute"}`}>{MARK[m.mark]?.[1] ?? m.mark}</span><div className="t"><b>{m.class}</b><span>Lesson {m.n} · {day(m.date)}{m.minutes != null ? ` · ${m.minutes} min` : ""}</span></div></div></Fragment>)}</section>
         <section className="card" style={{ margin: 0 }}><h2>Reward points</h2>
           {p.points.length === 0 ? <p className="empty">No points yet.</p> : p.points.map((x, i) => <div key={i} className="li">
             <span className="pill good">+{x.points}</span><div className="t"><b>{x.reason}</b><span>{x.class} · {x.teacher} · {day(x.on)}</span></div></div>)}</section>

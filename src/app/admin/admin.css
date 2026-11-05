@@ -1329,3 +1329,16 @@
 .adm .st-mdet[open]{cursor:auto}
 .adm .st-mdet .st-miss li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:start;font-size:14px}
 .adm .st-table td:nth-child(2),.adm .st-table td:nth-child(3){white-space:nowrap}
+.adm .st-unm{margin:12px 0 0;padding:14px 18px}
+.adm .st-unm summary{cursor:pointer}
+.adm .st-unm-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(180px,260px) auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.adm .st-unm-row:first-of-type{margin-top:10px}
+.adm .st-unm-row .t{display:grid;gap:2px;min-width:0}.adm .st-unm-row .t span{font-size:13.5px}
+@media (max-width:700px){.adm .st-unm-row{grid-template-columns:1fr}}
+/* 5 Nov: term dividers on a student's page */
+.adm .st-term{list-style:none;display:flex;align-items:center;gap:10px;margin:14px 0 2px;font:600 12px/1 "Space Grotesk","Jost",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--brand-accent,var(--accent))}
+.adm[data-theme=light] .st-term{color:var(--brand)}
+@media (prefers-color-scheme:light){.adm:not([data-theme=dark]) .st-term{color:var(--brand)}}
+.adm .st-term::after{content:"";flex:1;height:1px;background:var(--line)}
+.adm .st-term:first-child{margin-top:4px}
+.adm .st-work li.st-term{display:flex;border-top:0;padding:0}

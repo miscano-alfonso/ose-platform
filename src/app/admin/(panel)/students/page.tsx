@@ -1,7 +1,7 @@
 import Link from "next/link";
 import LiveSearch from "../../LiveSearch";
 import { studentOverview, type StudentRow } from "@/lib/student-overview";
-import { readClassroomAction } from "../../actions";
+import { readClassroomAction, linkClassroomAction } from "../../actions";
 import { StudentsTabs } from "../../StudentsTabs";
 import { RowLink } from "../../RowLink";
 import { withSchool } from "@/lib/db";
@@ -32,6 +32,9 @@ export default async function Students({ searchParams }: { searchParams: Promise
     .filter(([, v]) => v) as [string, string][]).toString();
   const th = (label: string, k: string, cls?: string) => { const on = sort === k; return <th className={cls} aria-sort={on ? (dir === 1 ? "ascending" : "descending") : undefined}>
     <Link scroll={false} className="thsort" href={href({ sort: k, dir: on && dir === 1 ? "desc" : undefined })}>{label}{on ? (dir === 1 ? " ↓" : " ↑") : ""}</Link></th>; };
+  // Classroom accounts nobody matched, once each (the same person can be in several classes)
+  const unmatched = [...(o.classroom.unmatched ?? []).reduce((m, u) => { const x = m.get(u.userId) ?? { userId: u.userId, name: u.name, email: u.email, gids: [] as string[], codes: [] as string[] };
+    x.gids.push(u.gid); x.codes.push(u.code); return m.set(u.userId, x); }, new Map<string, { userId: string; name: string; email: string | null; gids: string[]; codes: string[] }>()).values()];
   const t = o.totals, rate = t.due ? Math.round((t.handed / t.due) * 100) : null;
   return <>
     <div className="top"><div><h1>Students</h1><div className="sub">{o.term ? `${o.term.name}` : "The last six weeks"} · attendance from Google Meet, work from Google Classroom, reward points. Work due since {day(o.since)}.</div></div>
@@ -56,6 +59,15 @@ export default async function Students({ searchParams }: { searchParams: Promise
     </div>
     {o.classroom.at && <p className="muted" style={{ fontSize: 13.5, margin: "6px 0 0" }}>Last Classroom read {ago(o.classroom.at)}: {o.classroom.classes ?? 0} class{o.classroom.classes === 1 ? "" : "es"} read, {o.classroom.work ?? 0} pieces of work, {o.classroom.submissions ?? 0} hand-ins · {o.classroom.linked} class{o.classroom.linked === 1 ? "" : "es"} this year {o.classroom.linked === 1 ? "has" : "have"} a Classroom link{o.classroom.error ? ` · error: ${o.classroom.error}` : ""}.
       {!!o.classroom.problems?.length && <> Couldn’t read: {o.classroom.problems.slice(0, 5).join("; ")}{o.classroom.problems.length > 5 ? "…" : ""}</>}</p>}
+    {unmatched.length > 0 && <details className="card st-unm" open={unmatched.length <= 6}><summary><b>Classroom accounts to match ({unmatched.length})</b> <span className="muted">· in a Google Classroom, but their name and email don’t match a student here, so their work isn’t counted</span></summary>
+      {unmatched.map((u) => { const inClass = o.rows.filter((r) => r.classes.some((c) => u.gids.includes(c.id)));
+        return <form key={u.userId} action={linkClassroomAction} className="st-unm-row"><input type="hidden" name="user" value={u.userId} /><input type="hidden" name="name" value={u.name} /><input type="hidden" name="email" value={u.email ?? ""} />
+          <div className="t"><b>{u.name}</b><span className="muted">{u.email ?? "no email shared"} · in {u.codes.join(", ")}</span></div>
+          <select name="student" required defaultValue="" className="mini" aria-label={`Who is ${u.name}?`}><option value="" disabled>Who is it?</option>
+            {inClass.length > 0 && <optgroup label="Booked on that class">{inClass.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</optgroup>}
+            <optgroup label="Everyone">{o.rows.filter((r) => !inClass.includes(r)).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</optgroup></select>
+          <button className="abtn sm pri" type="submit">Match</button></form>; })}
+      <p className="note" style={{ margin: "10px 0 0" }}>Matching remembers that Classroom account for every class, then reads Classroom again. Teachers or other adults in the class can be left.</p></details>}
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "14px 0" }}>
       <LiveSearch placeholder="Search student, parent or class" label="Search students" />
       <div className="segl" role="group" aria-label="Show">{[["all", "All"], ["missing", `Missing work (${t.withMissing})`], ["attendance", `Low attendance (${t.lowAtt})`], ["send", "SEND"], ["points", "Points"]].map(([k, l]) =>

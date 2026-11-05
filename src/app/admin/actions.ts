@@ -1362,6 +1362,16 @@ export async function readClassroomAction(f: FormData): Promise<void> {
   revalidatePath(back);
   redirect(`${back}?${r.error ? "err=" + encodeURIComponent(`Classroom couldn’t be read: ${r.error}`) : "ok=" + encodeURIComponent(`Classroom read: ${r.work ?? 0} pieces of work, ${r.submissions ?? 0} hand-ins.`)}`);
 }
+/** Students → "Classroom accounts to match" (5 Nov): this Classroom account is this student; then Classroom is read again. */
+export async function linkClassroomAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { linkClassroomUser, syncClassroom } = await import("@/lib/classroom");
+  const err = await linkClassroomUser(me.id, str(f, "user", 60), str(f, "student", 40), str(f, "name", 200) || null, str(f, "email", 200) || null);
+  if (err) redirect(`/admin/students?err=${encodeURIComponent(err)}`);
+  const r = await syncClassroom(me.name);
+  revalidatePath("/admin/students");
+  redirect(`/admin/students?${r.error ? "err=" + encodeURIComponent(`Matched, but Classroom couldn’t be read: ${r.error}`) : "ok=" + encodeURIComponent(`Matched, and Classroom read again: ${r.submissions ?? 0} hand-ins.`)}`);
+}
 const setBack = (ok?: string | null, err?: string | null) => redirect(`/admin/email-settings` + (err ? `?err=${encodeURIComponent(err)}` : ok ? `?ok=${encodeURIComponent(ok)}` : ""));
 const mailBack = (ok?: string | null, err?: string | null, show?: string) => redirect(`/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
 export async function syncInboxAction(): Promise<void> {

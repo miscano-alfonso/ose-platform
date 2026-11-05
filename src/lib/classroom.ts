@@ -6,7 +6,7 @@ import { googleAccess, googleKv, googleKvSet, classroomGranted, MeetError } from
 // who has accepted their class invitation, the work set in each class, and each student's hand-ins and marks.
 // Parents see this under Assignments; report percentages come from the marks on returned work.
 const API = () => process.env.CLASSROOM_API_URL || "https://classroom.googleapis.com/v1";
-export type ClassroomInfo = { at?: string; classes?: number; work?: number; submissions?: number; joined?: number; problems?: string[]; error?: string; by?: string };
+export type ClassroomInfo = { unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string }[]; at?: string; classes?: number; work?: number; submissions?: number; joined?: number; problems?: string[]; error?: string; by?: string };
 
 type Page<T> = Record<string, T[] | string | undefined> & { nextPageToken?: string };
 async function all<T>(token: string, path: string, key: string): Promise<{ ok: true; items: T[] } | { ok: false; status: number }> {
@@ -40,9 +40,10 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
   let token: string;
   try { token = await googleAccess("google"); }
   catch (e) { const info = { at: new Date().toISOString(), by, error: e instanceof MeetError ? e.message : "Couldn’t reach Google." }; await googleKvSet("classroom", info); return info; }
-  const info: ClassroomInfo = { at: new Date().toISOString(), by, classes: 0, work: 0, submissions: 0, joined: 0, problems: [] };
+  const info: ClassroomInfo = { at: new Date().toISOString(), by, classes: 0, work: 0, submissions: 0, joined: 0, problems: [], unmatched: [] };
   const groups = await withSchool((q) => q<{ id: string; code: string; course: string }>(`select g.id, g.code, g.google_course_id as course from course_groups g join academic_years y on y.id = g.academic_year_id
     where y.ends_on >= current_date and g.google_course_id is not null and g.status <> 'closed' order by g.code`));
+  const matchedSomewhere = new Set<string>();
   for (const g of groups) {
     const cid = encodeURIComponent(g.course);
     const roster = await all<Student>(token, `/courses/${cid}/students`, "students");
@@ -59,7 +60,9 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
       const emails = roster.items.map((s) => (s.profile?.emailAddress ?? "").toLowerCase()).filter(Boolean);
       const known = new Map((await q<{ id: string; email: string }>(`select id, lower(email::text) as email from students where lower(email::text) = any($1::text[])`, [emails])).map((s) => [s.email, s.id]));
       const uid = new Map<string, string>();
-      for (const s of roster.items) { const sid = known.get((s.profile?.emailAddress ?? "").toLowerCase()); if (sid) uid.set(s.userId, sid); }
+      // accounts the office has matched by hand come first (Students → Classroom accounts to match)
+      const linked = new Map((await q<{ u: string; sid: string }>(`select google_user_id as u, student_id as sid from classroom_user_links where google_user_id = any($1::text[])`, [roster.items.map((s) => s.userId)])).map((r) => [r.u, r.sid]));
+      for (const s of roster.items) { const sid = linked.get(s.userId) ?? known.get((s.profile?.emailAddress ?? "").toLowerCase()); if (sid) uid.set(s.userId, sid); }
       // 5 Nov: a student whose Classroom account isn't the email on their record (or whose email Google doesn't share) is matched by
       // name among the students booked on this class, only when exactly one has that name
       const left = roster.items.filter((s) => !uid.has(s.userId));
@@ -73,9 +76,10 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
           const hits = kids.filter((k) => !taken.has(k.id) && [`${k.first} ${k.last}`, k.known ? `${k.known} ${k.last}` : ""].filter(Boolean).map(norm).includes(full));
           if (hits.length === 1) { uid.set(s.userId, hits[0].id); taken.add(hits[0].id); }
         }
-        const still = roster.items.filter((s) => !uid.has(s.userId)).map((s) => s.profile?.name?.fullName).filter(Boolean);
-        if (still.length) info.problems!.push(`${g.code}: in Classroom but not matched to a student here: ${still.slice(0, 6).join(", ")}${still.length > 6 ? "…" : ""}`);
+        const still = roster.items.filter((s) => !uid.has(s.userId));
+        for (const s of still) info.unmatched!.push({ userId: s.userId, name: s.profile?.name?.fullName ?? "(no name)", email: s.profile?.emailAddress ?? null, gid: g.id, code: g.code });
       }
+      for (const u of uid.keys()) matchedSomewhere.add(u);
       // accepted invitations: members of the class
       const sids = [...new Set(uid.values())];
       if (sids.length) {
@@ -111,6 +115,7 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
   }
   await syncOneCourses(token, info);
   info.problems = info.problems!.slice(0, 12);
+  info.unmatched = info.unmatched!.filter((u) => !matchedSomewhere.has(u.userId)).slice(0, 200);   // matched in another of their classes: not a stranger
   await googleKvSet("classroom", info);
   return info;
 }
@@ -182,4 +187,17 @@ export async function classroomBackground() {
     await googleKvSet("classroom", { ...info, at: new Date().toISOString() });   // so two page loads don't both start a sync
     await syncClassroom("auto");
   } catch (e) { console.error("classroom background", e); }
+}
+
+/** Students → "Classroom accounts to match" (5 Nov): this Classroom account is this student. */
+export async function linkClassroomUser(actorId: string, googleUserId: string, studentId: string, name: string | null, email: string | null): Promise<string | null> {
+  if (!/^[\w-]{1,80}$/.test(googleUserId)) return "That Classroom account wasn’t found.";
+  if (!/^[0-9a-f-]{36}$/.test(studentId)) return "Choose the student.";
+  await withSchool(async (q) => {
+    await q(`insert into classroom_user_links (school_id, google_user_id, student_id, name, email, created_by) values (current_school(), $1, $2, $3, $4, $5)
+      on conflict (school_id, google_user_id) do update set student_id = excluded.student_id, name = excluded.name, email = excluded.email, created_by = excluded.created_by, created_at = now()`,
+      [googleUserId, studentId, name?.slice(0, 200) ?? null, email?.slice(0, 200) ?? null, actorId]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'classroom_link', 'student', $2, $3)`, [actorId, studentId, JSON.stringify({ googleUserId, name, email })]);
+  });
+  return null;
 }

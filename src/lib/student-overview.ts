@@ -18,7 +18,7 @@ export type StudentRow = {
 };
 export type Overview = { term: { id: string; name: string; starts_on: string; ends_on: string } | null; since: string; rows: StudentRow[];
   totals: { students: number; due: number; handed: number; missing: number; late: number; withMissing: number; lowAtt: number; points: number };
-  classroom: { at: string | null; error: string | null; linked: number; granted: boolean | null; missing: string[] | null; by: string | null; classes?: number; work?: number; submissions?: number; problems?: string[] } };
+  classroom: { at: string | null; error: string | null; linked: number; granted: boolean | null; missing: string[] | null; by: string | null; classes?: number; work?: number; submissions?: number; problems?: string[]; unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string }[] } };
 
 /** opts.teacherUserId: only that teacher's classes (their own dashboard). */
 export async function studentOverview(opts: { teacherUserId?: string } = {}): Promise<Overview> {
@@ -60,7 +60,7 @@ export async function studentOverview(opts: { teacherUserId?: string } = {}): Pr
       where c.due_at >= $1::date and c.due_at < now() and g.academic_year_id = ${YEAR} and ($2::uuid[] is null or g.id = any($2::uuid[]))
       order by c.due_at desc`, [since, gids]);
     const pts = await q<{ id: string; points: number }>(`select student_id as id, sum(points)::int as points from reward_points where awarded_on between $1::date and $2::date and ($3::uuid[] is null or group_id = any($3::uuid[])) group by student_id`, [pSince, until, gids]);
-    const info = (await q<{ value: { at?: string; error?: string; classes?: number; work?: number; submissions?: number; problems?: string[] } }>(`select value from meet_kv where key = 'classroom' limit 1`).catch(() => []))[0]?.value ?? {};
+    const info = (await q<{ value: { at?: string; error?: string; classes?: number; work?: number; submissions?: number; problems?: string[]; unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string }[] } }>(`select value from meet_kv where key = 'classroom' limit 1`).catch(() => []))[0]?.value ?? {};
     const linked = (await q<{ n: number }>(`select count(*)::int as n from course_groups g where g.academic_year_id = ${YEAR} and g.google_course_id is not null and g.status <> 'closed' and ($1::uuid[] is null or g.id = any($1::uuid[]))`, [gids]))[0]?.n ?? 0;
 
     const A = new Map(att.map((a) => [a.id, a])), P = new Map(pts.map((x) => [x.id, x.points]));
@@ -79,7 +79,7 @@ export async function studentOverview(opts: { teacherUserId?: string } = {}): Pr
     return { term, since, rows,
       totals: { students: rows.length, due: sum("due"), handed: sum("handed"), missing: sum("missing"), late: sum("late"), withMissing: rows.filter((r) => r.missing > 0).length,
         lowAtt: rows.filter((r) => r.att != null && r.held >= 3 && r.att < 85).length, points: sum("points") },
-      classroom: { at: info.at ?? null, error: info.error ?? null, linked, granted, missing, by, classes: info.classes, work: info.work, submissions: info.submissions, problems: info.problems } };
+      classroom: { at: info.at ?? null, error: info.error ?? null, linked, granted, missing, by, classes: info.classes, work: info.work, submissions: info.submissions, problems: info.problems, unmatched: info.unmatched } };
   });
 }
 
@@ -88,8 +88,8 @@ export type StudentProfile = {
   s: { id: string; name: string; known_as: string | null; email: string | null; dob: string | null; year_group: number | null; parent_id: string; family: string; parent_email: string;
     has_send: string | null; needs: string[] | null; details: string | null; adjustments: string | null; share: boolean | null };
   classes: { id: string; name: string; code: string; teacher: string | null; status: string; taster: boolean; attended: number; held: number; in_classroom: boolean | null }[];
-  marks: { date: string; class: string; mark: string; minutes: number | null; source: string }[];
-  work: { id: string; title: string; class: string; gid: string; due_at: string | null; state: string | null; late: boolean; points: number | null; max: number | null; link: string | null; status: "missing" | "handed" | "marked" | "due" | "nodate" }[];
+  marks: { date: string; class: string; mark: string; minutes: number | null; source: string; term: string | null; n: number }[];
+  work: { id: string; title: string; class: string; gid: string; term: string | null; due_at: string | null; state: string | null; late: boolean; points: number | null; max: number | null; link: string | null; status: "missing" | "handed" | "marked" | "due" | "nodate" }[];
   points: { points: number; reason: string; on: string; teacher: string; class: string }[];
   term: { name: string } | null;
 };
@@ -109,10 +109,13 @@ export async function studentProfile(id: string): Promise<StudentProfile | null>
       from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id
       where e.student_id = $1 and g.academic_year_id = ${YEAR} order by (e.status = 'active') desc, l.sort_order, sj.name`, [id, term?.id ?? null]);
-    const marks = await q<StudentProfile["marks"][number]>(`select ev.lesson_date::text as date, l.name || ' ' || sj.name as class, m.mark::text as mark, m.minutes_present as minutes, m.source
-      from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id join course_groups g on g.id = ev.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where m.student_id = $1 order by ev.lesson_date desc limit 20`, [id]);
-    const work = (await q<Omit<StudentProfile["work"][number], "status">>(`select c.id, c.title, l.name || ' ' || sj.name as class, g.id as gid, c.due_at::text, sub.state::text, coalesce(sub.late, false) as late,
+    // each lesson's number in its class that term (cancelled lessons don't count), as on the recordings and slides
+    const marks = await q<StudentProfile["marks"][number]>(`select ev.lesson_date::text as date, l.name || ' ' || sj.name as class, m.mark::text as mark, m.minutes_present as minutes, m.source, t.name as term,
+        (select count(*)::int from lesson_events e2 where e2.group_id = ev.group_id and e2.term_id = ev.term_id and e2.status <> 'cancelled' and e2.lesson_date <= ev.lesson_date) as n
+      from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id join terms t on t.id = ev.term_id join course_groups g on g.id = ev.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+      where m.student_id = $1 order by ev.lesson_date desc, l.name, sj.name limit 40`, [id]);
+    const work = (await q<Omit<StudentProfile["work"][number], "status">>(`select c.id, c.title, l.name || ' ' || sj.name as class, g.id as gid, c.due_at::text,
+        (select tt.name from terms tt where tt.academic_year_id = g.academic_year_id and tt.starts_on <= (c.due_at at time zone 'Europe/London')::date order by tt.starts_on desc limit 1) as term, sub.state::text, coalesce(sub.late, false) as late,
         sub.points::float as points, c.max_points::float as max, coalesce(sub.link, c.link) as link
       from classroom_coursework c join course_groups g on g.id = c.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         join enrolments e on e.group_id = g.id and e.student_id = $1 and not e.is_taster and e.enrolled_at <= coalesce(c.due_at, now())
