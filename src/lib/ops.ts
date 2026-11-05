@@ -36,6 +36,14 @@ export async function classRosters(): Promise<Record<string, string[]>> {
   return Object.fromEntries(rows.map((r) => [r.g, r.s]));
 }
 
+/** Names and family for the students in a clash (5 Nov: Timetable setup lists who's affected). */
+export async function studentsForClashes(ids: string[]): Promise<Record<string, { name: string; parent_id: string | null; family: string | null }>> {
+  if (!ids.length) return {};
+  const rows = await withSchool((q) => q<{ id: string; name: string; parent_id: string | null; family: string | null }>(`select s.id, s.first_name || ' ' || s.last_name as name, s.parent_id,
+      p.first_name || ' ' || p.last_name as family from students s left join parents p on p.id = s.parent_id where s.id = any($1::uuid[])`, [ids]));
+  return Object.fromEntries(rows.map((r) => [r.id, r]));
+}
+
 /** Adds a weekly lesson. Returns an error message the admin can act on (e.g. the teacher is already teaching then). */
 export async function addSlot(actorId: string, groupId: string, weekday: number, start: string, minutes: number, teacherId: string | null): Promise<string | null> {
   try {

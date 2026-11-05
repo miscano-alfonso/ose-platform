@@ -1,11 +1,11 @@
 import Link from "next/link";
-import { getTimetable, classRosters, DAY, type Slot } from "@/lib/ops";
+import { getTimetable, classRosters, studentsForClashes, DAY, type Slot } from "@/lib/ops";
 import { addSlotAction, removeSlotAction, setClassTeacherAction } from "../../actions";
 import { yearLabel } from "@/lib/format";
 
 const mins = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
 const overlap = (a: Slot, b: Slot) => a.weekday === b.weekday && mins(a.starts_at) < mins(b.ends_at) && mins(b.starts_at) < mins(a.ends_at);
-type Clash = { kind: "teacher" | "student" | "level"; a: Slot; b: Slot; shared: number };
+type Clash = { kind: "teacher" | "student" | "level"; a: Slot; b: Slot; shared: number; ids: string[] };
 const KIND = { teacher: "Teacher double-booked", student: "Student clash", level: "Same level" };
 
 export default async function TimetableSetup({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; level?: string; teacher?: string }> }) {
@@ -17,11 +17,12 @@ export default async function TimetableSetup({ searchParams }: { searchParams: P
   const clashes: Clash[] = [];
   slots.forEach((a, i) => slots.slice(i + 1).forEach((b) => {
     if (a.group_id === b.group_id || !overlap(a, b)) return;
-    const shared = (rosters[a.group_id] ?? []).filter((x) => (rosters[b.group_id] ?? []).includes(x)).length;
-    if (a.teacher_id && a.teacher_id === b.teacher_id) clashes.push({ kind: "teacher", a, b, shared });
-    else if (shared) clashes.push({ kind: "student", a, b, shared });
-    else if (a.level === b.level && a.subject !== b.subject) clashes.push({ kind: "level", a, b, shared });
+    const ids = (rosters[a.group_id] ?? []).filter((x) => (rosters[b.group_id] ?? []).includes(x)), shared = ids.length;
+    if (a.teacher_id && a.teacher_id === b.teacher_id) clashes.push({ kind: "teacher", a, b, shared, ids });
+    else if (shared) clashes.push({ kind: "student", a, b, shared, ids });
+    else if (a.level === b.level && a.subject !== b.subject) clashes.push({ kind: "level", a, b, shared, ids });
   }));
+  const who = await studentsForClashes([...new Set(clashes.filter((c) => c.kind === "student").flatMap((c) => c.ids))]);
   const levels = [...new Set(slots.map((s) => s.level))];
   const level = levels.includes(sp.level ?? "") ? sp.level! : "All", teacher = teachers.some((t) => t.id === sp.teacher) ? sp.teacher! : "";
   const shown = slots.filter((s) => (level === "All" || s.level === level) && (!teacher || s.teacher_id === teacher));
@@ -51,8 +52,11 @@ export default async function TimetableSetup({ searchParams }: { searchParams: P
 
     {clashes.length > 0 && <section className="card" id="clashes"><h2>Clashes to fix</h2>
       {clashes.map((c, i) => <div className="li" key={i}><span className={`pill ${c.kind === "level" ? "warn" : "bad"}`}>{KIND[c.kind]}</span>
-        <div className="t"><b>{c.a.name} and {c.b.name}</b><span>{DAY[c.a.weekday]} {c.a.starts_at} and {c.b.starts_at}{c.kind === "student" ? ` · ${c.shared} student${c.shared > 1 ? "s" : ""} take both`
-          : c.kind === "teacher" ? ` · both taught by ${c.a.teacher}` : " · students at this level can’t take both"}</span></div>
+        <div className="t"><b>{c.a.name} and {c.b.name}</b><span>{DAY[c.a.weekday]} {c.a.starts_at} and {c.b.starts_at}{c.kind === "student" ? ` · ${c.shared} student${c.shared > 1 ? "s take" : " takes"} both`
+          : c.kind === "teacher" ? ` · both taught by ${c.a.teacher}` : " · students at this level can’t take both"}</span>
+          {c.kind === "student" && c.ids.length > 0 && <details className="clash-who"><summary>{c.shared === 1 ? "Who is it?" : `Who are they? (${c.shared})`}</summary>
+            <ul>{c.ids.map((id) => { const p = who[id]; return <li key={id}>{p?.parent_id ? <Link href={`/admin/families/${p.parent_id}`}>{p.name}</Link> : <b>{p?.name ?? "A student"}</b>}
+              {p?.family ? <span className="muted"> · {p.family}’s family</span> : null}</li>; })}</ul></details>}</div>
         <a className="abtn sm" href={`#c-${c.a.group_id}`}>Move a lesson</a></div>)}</section>}
 
     <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Classes</h2>
