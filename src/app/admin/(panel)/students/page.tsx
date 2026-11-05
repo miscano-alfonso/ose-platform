@@ -51,6 +51,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
     return { r, score, why, short: same === u.gids.length ? (joinedThere ? "same classes, already in Classroom" : "same classes") : `${same} of ${u.gids.length} classes`, sure: false };
   }).filter((x): x is NonNullable<typeof x> => !!x && x.score > 0).sort((a, b) => b.score - a.score).slice(0, 6)
     .map((g, i, all) => ({ ...g, sure: i === 0 && g.score >= 10 && (all.length === 1 || g.score - all[1].score >= 3) }));
+  const className = new Map(o.rows.flatMap((r) => r.classes.map((c) => [c.id, c.name] as const)));
   const t = o.totals, rate = t.due ? Math.round((t.handed / t.due) * 100) : null;
   return <>
     <div className="top"><div><h1>Students</h1><div className="sub">{o.term ? `${o.term.name}` : "The last six weeks"} · attendance from Google Meet, work from Google Classroom, reward points. Work counts everything due this school year (since {day(o.since)}).</div></div>
@@ -78,7 +79,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
     {unmatched.length > 0 && <details className="card st-unm" open={unmatched.length <= 6}><summary><b>Classroom accounts to match ({unmatched.length})</b> <span className="muted">· in a Google Classroom, but their name and email don’t match a student here, so their work isn’t counted</span></summary>
       {unmatched.map((u) => { const guesses = guess(u); const top = guesses[0] && guesses[0].sure ? guesses[0] : null;
         return <form key={u.userId} action={linkClassroomAction} className="st-unm-row"><input type="hidden" name="user" value={u.userId} /><input type="hidden" name="name" value={u.name} /><input type="hidden" name="email" value={u.email ?? ""} />
-          <div className="t"><b>{u.name}</b><span className="muted">{u.email ?? "no email shared"} · in {u.codes.join(", ")}</span>
+          <div className="t"><b>{u.name}</b><span className="muted">{u.email ?? "no email shared"} · in {u.gids.map((g, i) => <span key={g} title={u.codes[i]}>{i ? ", " : ""}{className.get(g) ?? u.codes[i]}</span>)}</span>
             {guesses[0] && <span className="st-guess">{top ? "Best guess" : "Possible"}: <b>{guesses[0].r.name}</b> · {guesses[0].why}</span>}</div>
           <select name="student" required defaultValue={top?.r.id ?? ""} className="mini" aria-label={`Who is ${u.name}?`}><option value="" disabled>Who is it?</option>
             {guesses.length > 0 && <optgroup label="Best guesses (same classes)">{guesses.map((g) => <option key={g.r.id} value={g.r.id}>{g.r.name} · {g.short}</option>)}</optgroup>}
