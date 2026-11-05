@@ -11,7 +11,7 @@ const YEAR = `(select id from academic_years where school_id = current_school()
 
 export type MissingPiece = { title: string; due_at: string; link: string | null; code: string; gid: string };
 export type StudentRow = {
-  id: string; name: string; parent_id: string; family: string; levels: string; classes: { id: string; code: string; name: string }[];
+  id: string; name: string; parent_id: string; family: string; levels: string; classes: { id: string; code: string; name: string }[]; email: string | null; joined: string[];
   send: string[]; att: number | null; attended: number; held: number;
   due: number; handed: number; missing: number; late: number; marked: number; notInClassroom: number;
   points: number; missingList: MissingPiece[];
@@ -39,15 +39,16 @@ export async function studentOverview(opts: { teacherUserId?: string } = {}): Pr
     const since = yStart && yStart < d28 ? yStart : d28, pSince = tStart ?? d28;
     const until = term && term.ends_on >= pSince ? term.ends_on : new Date().toISOString().slice(0, 10);
     const base = await q<{ id: string; name: string; parent_id: string; family: string; levels: string; classes: { id: string; code: string; name: string }[];
-      has_send: string | null; needs: string[] | null; details: string | null }>(`
+      has_send: string | null; needs: string[] | null; details: string | null; email: string | null; joined: string[] | null }>(`
       select s.id, s.first_name || ' ' || s.last_name as name, s.parent_id, p.first_name || ' ' || p.last_name as family,
         string_agg(distinct l.name, ', ') as levels,
-        json_agg(distinct jsonb_build_object('id', g.id, 'code', g.code, 'name', l.name || ' ' || sj.name)) as classes,
+        json_agg(distinct jsonb_build_object('id', g.id, 'code', g.code, 'name', l.name || ' ' || sj.name)) as classes, s.email::text as email,
+        (select array_agg(cm.group_id::text) from classroom_memberships cm where cm.student_id = s.id and cm.state = 'joined') as joined,
         sup.has_send, sup.needs, sup.details
       from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         join students s on s.id = e.student_id join parents p on p.id = s.parent_id left join student_support sup on sup.student_id = s.id
       where e.status = 'active' and not e.is_taster and g.academic_year_id = ${YEAR} and ($1::uuid[] is null or g.id = any($1::uuid[]))
-      group by s.id, s.first_name, s.last_name, s.parent_id, p.first_name, p.last_name, sup.has_send, sup.needs, sup.details
+      group by s.id, s.first_name, s.last_name, s.email, s.parent_id, p.first_name, p.last_name, sup.has_send, sup.needs, sup.details
       order by s.first_name, s.last_name`, [gids]);
     const att = term ? await q<{ id: string; attended: number; held: number }>(`select m.student_id as id,
         count(*) filter (where m.mark in ('present','late'))::int as attended, count(*) filter (where m.mark <> 'approved_absence')::int as held
@@ -70,7 +71,7 @@ export async function studentOverview(opts: { teacherUserId?: string } = {}): Pr
     const rows: StudentRow[] = base.map((b) => {
       const a = A.get(b.id), ws = W.get(b.id) ?? [];
       const handedIn = ws.filter((w) => w.state === "turned_in" || w.state === "returned"), miss = ws.filter((w) => !(w.state === "turned_in" || w.state === "returned"));
-      return { id: b.id, name: b.name, parent_id: b.parent_id, family: b.family, levels: b.levels, classes: b.classes,
+      return { id: b.id, name: b.name, parent_id: b.parent_id, family: b.family, levels: b.levels, classes: b.classes, email: b.email, joined: b.joined ?? [],
         send: b.has_send === "yes" ? sendLabels(b.needs, b.details) : [],
         att: a && a.held ? Math.round((a.attended / a.held) * 100) : null, attended: a?.attended ?? 0, held: a?.held ?? 0,
         due: ws.length, handed: handedIn.length, missing: miss.length, late: handedIn.filter((w) => w.late).length,

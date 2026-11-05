@@ -1342,3 +1342,4 @@
 .adm .st-term::after{content:"";flex:1;height:1px;background:var(--line)}
 .adm .st-term:first-child{margin-top:4px}
 .adm .st-work li.st-term{display:flex;border-top:0;padding:0}
+.adm .st-guess{color:var(--good);font-size:13.5px}

@@ -35,6 +35,22 @@ export default async function Students({ searchParams }: { searchParams: Promise
   // Classroom accounts nobody matched, once each (the same person can be in several classes)
   const unmatched = [...(o.classroom.unmatched ?? []).reduce((m, u) => { const x = m.get(u.userId) ?? { userId: u.userId, name: u.name, email: u.email, gids: [] as string[], codes: [] as string[] };
     x.gids.push(u.gid); x.codes.push(u.code); return m.set(u.userId, x); }, new Map<string, { userId: string; name: string; email: string | null; gids: string[]; codes: string[] }>()).values()];
+  // 5 Nov: who an unmatched Classroom account probably is: students booked on the same classes (all of them best), not
+  // already in those Classrooms with another account, with a nudge for names or an email that look like theirs
+  const norm = (x: string) => x.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
+  const guess = (u: { name: string; email: string | null; gids: string[] }) => o.rows.map((r) => {
+    const mine = r.classes.map((c) => c.id), same = u.gids.filter((g) => mine.includes(g)).length;
+    if (!same) return null;
+    const joinedThere = u.gids.filter((g) => r.joined.includes(g)).length;
+    const [first, ...rest] = r.name.split(" "), last = rest.join(" ");
+    const hay = norm(u.name) + " " + norm((u.email ?? "").split("@")[0]);
+    const nameHit = [first, last].filter((x) => x && x.length >= 3 && (hay.includes(norm(x)) || (norm(x).length >= 4 && hay.includes(norm(x).slice(0, 4))))).length;
+    const score = (same / u.gids.length) * 10 + nameHit * 4 - joinedThere * 9 - Math.max(0, mine.length - u.gids.length) * 0.5;
+    const why = [same === u.gids.length ? `booked on ${u.gids.length === 1 ? "that class" : `all ${u.gids.length} of those classes`}` : `booked on ${same} of ${u.gids.length} of those classes`,
+      joinedThere ? "but already in that Classroom with another account" : "not in those Classrooms with their own account", nameHit ? "name looks similar" : ""].filter(Boolean).join(", ");
+    return { r, score, why, short: same === u.gids.length ? (joinedThere ? "same classes, already in Classroom" : "same classes") : `${same} of ${u.gids.length} classes`, sure: false };
+  }).filter((x): x is NonNullable<typeof x> => !!x && x.score > 0).sort((a, b) => b.score - a.score).slice(0, 6)
+    .map((g, i, all) => ({ ...g, sure: i === 0 && g.score >= 10 && (all.length === 1 || g.score - all[1].score >= 3) }));
   const t = o.totals, rate = t.due ? Math.round((t.handed / t.due) * 100) : null;
   return <>
     <div className="top"><div><h1>Students</h1><div className="sub">{o.term ? `${o.term.name}` : "The last six weeks"} · attendance from Google Meet, work from Google Classroom, reward points. Work counts everything due this school year (since {day(o.since)}).</div></div>
@@ -60,12 +76,13 @@ export default async function Students({ searchParams }: { searchParams: Promise
     {o.classroom.at && <p className="muted" style={{ fontSize: 13.5, margin: "6px 0 0" }}>Last Classroom read {ago(o.classroom.at)}: {o.classroom.classes ?? 0} class{o.classroom.classes === 1 ? "" : "es"} read, {o.classroom.work ?? 0} pieces of work, {o.classroom.submissions ?? 0} hand-ins · {o.classroom.linked} class{o.classroom.linked === 1 ? "" : "es"} this year {o.classroom.linked === 1 ? "has" : "have"} a Classroom link{o.classroom.error ? ` · error: ${o.classroom.error}` : ""}.
       {!!o.classroom.problems?.length && <> Couldn’t read: {o.classroom.problems.slice(0, 5).join("; ")}{o.classroom.problems.length > 5 ? "…" : ""}</>}</p>}
     {unmatched.length > 0 && <details className="card st-unm" open={unmatched.length <= 6}><summary><b>Classroom accounts to match ({unmatched.length})</b> <span className="muted">· in a Google Classroom, but their name and email don’t match a student here, so their work isn’t counted</span></summary>
-      {unmatched.map((u) => { const inClass = o.rows.filter((r) => r.classes.some((c) => u.gids.includes(c.id)));
+      {unmatched.map((u) => { const guesses = guess(u); const top = guesses[0] && guesses[0].sure ? guesses[0] : null;
         return <form key={u.userId} action={linkClassroomAction} className="st-unm-row"><input type="hidden" name="user" value={u.userId} /><input type="hidden" name="name" value={u.name} /><input type="hidden" name="email" value={u.email ?? ""} />
-          <div className="t"><b>{u.name}</b><span className="muted">{u.email ?? "no email shared"} · in {u.codes.join(", ")}</span></div>
-          <select name="student" required defaultValue="" className="mini" aria-label={`Who is ${u.name}?`}><option value="" disabled>Who is it?</option>
-            {inClass.length > 0 && <optgroup label="Booked on that class">{inClass.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</optgroup>}
-            <optgroup label="Everyone">{o.rows.filter((r) => !inClass.includes(r)).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</optgroup></select>
+          <div className="t"><b>{u.name}</b><span className="muted">{u.email ?? "no email shared"} · in {u.codes.join(", ")}</span>
+            {guesses[0] && <span className="st-guess">{top ? "Best guess" : "Possible"}: <b>{guesses[0].r.name}</b> · {guesses[0].why}</span>}</div>
+          <select name="student" required defaultValue={top?.r.id ?? ""} className="mini" aria-label={`Who is ${u.name}?`}><option value="" disabled>Who is it?</option>
+            {guesses.length > 0 && <optgroup label="Best guesses (same classes)">{guesses.map((g) => <option key={g.r.id} value={g.r.id}>{g.r.name} · {g.short}</option>)}</optgroup>}
+            <optgroup label="Everyone">{o.rows.filter((r) => !guesses.some((g) => g.r.id === r.id)).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</optgroup></select>
           <button className="abtn sm pri" type="submit">Match</button></form>; })}
       <p className="note" style={{ margin: "10px 0 0" }}>Matching remembers that Classroom account for every class, then reads Classroom again. Teachers or other adults in the class can be left.</p></details>}
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "14px 0" }}>
