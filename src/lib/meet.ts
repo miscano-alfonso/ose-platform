@@ -16,6 +16,12 @@ const fail = (m: string): never => { throw new MeetError(m); };
 const G = "https://www.googleapis.com/auth/";
 // The school connection (a Workspace super admin): the Meet log, plus Google Classroom read-only (classes, rosters, work and marks).
 export const CLASSROOM_SCOPES = ["classroom.courses.readonly", "classroom.rosters.readonly", "classroom.coursework.students.readonly", "classroom.profile.emails"].map((x) => G + x);
+// 5 Nov: Google grants coursework.students.readonly under its newer name, student-submissions.students.readonly (the same
+// permission), so a token's scope list may carry either. A scope also counts as granted when its read-write version is.
+const SCOPE_SAME: Record<string, string[]> = { "classroom.coursework.students.readonly": ["classroom.student-submissions.students.readonly", "classroom.coursework.students", "classroom.student-submissions.students"],
+  "classroom.courses.readonly": ["classroom.courses"], "classroom.rosters.readonly": ["classroom.rosters"] };
+const hasScope = (granted: string | undefined, full: string) => { const have = (granted ?? "").split(/\s+/), k = full.replace(G, "");
+  return have.includes(full) || (SCOPE_SAME[k] ?? []).some((a) => have.includes(G + a)); };
 const SCOPE = [G + "admin.reports.audit.readonly", ...CLASSROOM_SCOPES].join(" ");
 // The school inbox (the mailbox families reply to): read-only, so replies from families show in Admin → Email → Inbox.
 const GMAIL_SCOPE = G + "gmail.readonly " + G + "gmail.send " + G + "gmail.modify"; // read the inbox; send replies; keep read/unread in step with Gmail (and Mail apps)
@@ -164,10 +170,10 @@ export async function classroomMissing(): Promise<string[] | null> {
   const c = await conn(); if (!c.refreshToken) return null;
   const names: Record<string, string> = { "classroom.courses.readonly": "see the classes", "classroom.rosters.readonly": "see who is in each class",
     "classroom.coursework.students.readonly": "see the work and hand-ins", "classroom.profile.emails": "see students' Google accounts" };
-  return CLASSROOM_SCOPES.filter((x) => !(c.scopes ?? "").includes(x)).map((x) => names[x.replace(G, "")] ?? x);
+  return CLASSROOM_SCOPES.filter((x) => !hasScope(c.scopes, x)).map((x) => names[x.replace(G, "")] ?? x);
 }
 export async function googleConnectedBy(): Promise<string | null> { return (await conn()).by ?? null; }
-export async function classroomGranted(): Promise<boolean | null> { const c = await conn(); if (!c.refreshToken) return null; return CLASSROOM_SCOPES.every((x) => (c.scopes ?? "").includes(x)); }
+export async function classroomGranted(): Promise<boolean | null> { const c = await conn(); if (!c.refreshToken) return null; return CLASSROOM_SCOPES.every((x) => hasScope(c.scopes, x)); }
 async function accessToken(c: Conn): Promise<string> {
   const t = await token({ client_id: c.clientId!, client_secret: c.clientSecret!, refresh_token: c.refreshToken!, grant_type: "refresh_token" });
   if (!t.access_token) fail(String(t.__error ?? "").includes("invalid_grant") ? "Google’s connection has expired. Press Connect Google again." : "Couldn’t reach Google: " + (t.__error ?? "no token"));
