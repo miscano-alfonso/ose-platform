@@ -6,6 +6,8 @@ import type { Staff } from "@/lib/auth";
 import { inboxList, inboxStatus } from "@/lib/inbox";
 import { listThreads } from "@/lib/community";
 import { officeThreads } from "@/lib/office-messages";
+import { linkOptions, myLinks, DEFAULT_LINKS } from "@/lib/hero-links";
+import { QuickLinks } from "./QuickLinks";
 import { money, dayMonth, yearLabel } from "@/lib/format";
 import { MoreList } from "../MoreList";
 import { notInPlan, type PlanId } from "@/lib/plan";
@@ -40,6 +42,7 @@ const I = {
 export async function adminModules(me: Staff, plan: PlanId | null): Promise<BoardModule[]> {
   const [{ t, attention }, m, flags, box, threads, officeAll] = await Promise.all([getDashboard(), getDashboardMore(LOW), openFlags().catch(() => []), inboxStatus().catch(() => null), listThreads(null, "open").catch(() => []), officeThreads("replies").catch(() => [])]);
   const waitCut = Date.now() - 2 * 864e5, waiting = threads.filter((x) => x.last_sender === "parent" && Date.parse(x.last_message_at) < waitCut).length;
+  const [linkOpts, mine] = await Promise.all([linkOptions((h) => !notInPlan(plan, h)), myLinks(me.id)]);
   const replies = officeAll.filter((x) => x.unread > 0);
   const fromParent = threads.filter((x) => x.last_sender === "parent").length + replies.length;
   const mail = box?.connected ? await inboxList("new").catch(() => ({ rows: [], unread: 0 })) : { rows: [], unread: 0 };
@@ -98,7 +101,7 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
         <span className="dx-big">{m.day.lessons.filter((l) => l.status !== "cancelled").length}</span>
         <span>lesson{m.day.lessons.length === 1 ? "" : "s"} {m.day.today ? "today" : `on ${DAY(m.day.date, { weekday: "long" })}`}</span>
         {nextIdx >= 0 && <small>Next: {m.day.lessons[nextIdx].starts} {m.day.lessons[nextIdx].name}</small>}
-        <div className="dx-acts"><Link href="/admin/timetable">Timetable</Link><Link href="/admin/families">Families</Link><Link href="/admin/messages">Messages</Link>{!notInPlan(plan, "/admin/social") && <Link href="/admin/social">New post</Link>}</div>
+        <QuickLinks links={(mine ?? DEFAULT_LINKS).map((h) => linkOpts.find((o) => o.href === h)).filter((x): x is { href: string; label: string } => !!x)} options={linkOpts} isDefault={!mine} />
       </div>
       {t.students === 0 && <Link className="dx-flag" href="/admin/import">No families imported yet: import them</Link>}
     </section> },

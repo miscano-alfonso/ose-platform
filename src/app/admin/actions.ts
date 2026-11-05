@@ -1492,14 +1492,23 @@ export async function edtechTrialAction(f: FormData): Promise<void> {
   await updateTrial(String(f.get("id") ?? "").slice(0, 40), String(f.get("status") ?? ""), String(f.get("note") ?? ""));
   redirect("/admin/edtech?ok=" + encodeURIComponent("Saved."));
 }
+// ---------- the dashboard greeting's quick links (5 Nov) ----------
+export async function saveQuickLinksAction(hrefs: string[] | null): Promise<void> {
+  const me = await requireStaff();
+  const { linkOptions, saveMyLinks } = await import("@/lib/hero-links"), { schoolPlan, notInPlan } = await import("@/lib/plan");
+  const { plan } = await schoolPlan();
+  await saveMyLinks(me.id, Array.isArray(hrefs) ? hrefs.map(String) : null, await linkOptions((h) => !notInPlan(plan, h)));
+  revalidatePath("/admin");
+}
 // ---------- customisable dashboard ----------
 const DASH_MODULES: Record<string, string[]> = { "admin-home": ["hero", "k-students", "k-places", "k-attendance", "k-collected", "k-next", "k-failed", "today", "attention", "collections", "bookings", "coming", "fullest", "tasters", "quick", "email", "messages"] };   // every module adminModules() offers; one missing here is dropped when the layout is saved
 export async function saveDashLayoutAction(page: string, layout: { id: string; size: string }[] | null): Promise<void> {
   const me = await requireStaff();
-  const known = DASH_MODULES[page]; if (!known) return;
+  const { PAGE_MODULES } = await import("@/lib/dash-pages");
+  const known = DASH_MODULES[page] ?? PAGE_MODULES[page]; if (!known) return;
   const { saveLayout } = await import("@/lib/dashboard-layout");
   await saveLayout(me.id, page, layout as never, known);
-  revalidatePath("/admin");
+  revalidatePath(page === "admin-home" ? "/admin" : `/admin/${page.slice(6)}`);
 }
 // ---------- dashboard menus (Admin → Menus) ----------
 export async function saveMenuAction(area: string, cfg: { groups: { title: string; items: string[] }[]; hidden: string[] } | null): Promise<{ ok: boolean; error?: string }> {

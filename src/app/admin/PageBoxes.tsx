@@ -18,7 +18,7 @@ function Ring({ pct, tone }: { pct: number | null; tone: string }) {
   const r = 26, c = 2 * Math.PI * r, v = Math.max(0, Math.min(100, pct ?? 0));
   return <svg className={`dx-ring ${tone}`} viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="32" r={r} className="trk" /><circle cx="32" cy="32" r={r} className="val" strokeDasharray={`${(v / 100) * c} ${c}`} transform="rotate(-90 32 32)" /></svg>;
 }
-function Tile({ b }: { b: Box }) {
+export function Tile({ b }: { b: Box }) {
   const cls = `dx-kpi${b.ring ? " ring" : ""}${b.tone ? ` ${b.tone}` : ""}`;
   const inner = b.ring ? <><div><span className="k">{b.k}</span><span className="v">{b.v}</span><span className="h">{b.h}</span></div><Ring pct={b.ring.pct} tone={b.ring.tone} /></>
     : <><Ico d={ICONS[b.icon]} /><span className="k">{b.k}</span><span className="v">{b.v}</span>

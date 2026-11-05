@@ -4,42 +4,42 @@ import { getPayments, getPaymentLists } from "@/lib/payments";
 import { buildSchedulesAction, setFamilyTermAction } from "../../actions";
 import { money } from "@/lib/format";
 import { yearLabel } from "@/lib/format";
+import { requireStaff } from "@/lib/auth";
+import { getLayout, mirrorOf } from "@/lib/dashboard-layout";
+import { boxValues } from "@/lib/page-boxes";
+import { PAGE_MODULES, PAGE_DEFAULTS } from "@/lib/dash-pages";
+import { BentoBoard, type BoardModule } from "../../BentoBoard";
+import { Tile } from "../../PageBoxes";
 
 const STATE: Record<string, string> = { paid: "Paid", scheduled: "To collect", failed: "Failed", part: "Part paid", waived: "Waived", none: "" };
 const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const termsLabel = (f: { overdue_terms: { n: number }[] }) => { const ns = [...new Set(f.overdue_terms.map((t) => t.n))].sort((a, b) => a - b); return ns.length ? (ns.length === 1 ? `Term ${ns[0]}` : `Terms ${ns.join(", ")}`) : "Earlier term"; };
 
 export default async function Payments({ searchParams }: { searchParams: Promise<{ built?: string; show?: string; q?: string }> }) {
-  const sp = await searchParams;
-  const [{ year, terms, families, unscheduled }, lists] = await Promise.all([getPayments(), getPaymentLists()]);
+  const [sp, me] = await Promise.all([searchParams, requireStaff()]);
+  const PAGE = "admin-payments", known = PAGE_MODULES[PAGE];
+  const [{ year, terms, families, unscheduled }, lists, saved, mirror] = await Promise.all([getPayments(), getPaymentLists(), getLayout(me.id, PAGE, known), mirrorOf()]);
+  const layout = saved ?? PAGE_DEFAULTS[PAGE];
+  const kpis = await boxValues(["k-collected", "k-next", "k-failed", "k-students"]);
   const [bp, bi, bm] = (sp.built ?? "").split("-").map(Number);
   const q = (sp.q ?? "").toLowerCase().trim();
   const diff = (f: (typeof families)[number]) => f.techsaga_next != null && f.next_due > 0 && Math.abs(f.next_due - f.techsaga_next) > 2;
   const list = families.filter((f) => (!q || `${f.name} ${f.email} ${f.kids ?? ""}`.toLowerCase().includes(q)) &&
     (sp.show !== "attention" || f.overdue > 0 || diff(f) || f.unscheduled > 0));
   const yearTotal = terms.reduce((n, t) => n + t.due, 0), yearPaid = terms.reduce((n, t) => n + t.paid, 0);
-  return <>
-    <div className="top"><div><h1>Payments</h1><div className="sub">{year ? `${yearLabel(year)} · ${money(yearPaid)} paid of ${money(yearTotal)} for the year` : "No school year set up"}</div></div>
-      <span className="grow" /><Link className="abtn" href="/admin/payments/stripe">Stripe payments</Link>
-      {unscheduled > 0 && <form action={buildSchedulesAction}><button className="abtn pri" type="submit">Create payment schedules ({unscheduled} places)</button></form>}</div>
-
-    {sp.built && <p className="note msg">Payment schedules created for {bp} course places: {bi} termly payments, {bm} of them already paid in TechSaga.</p>}
-    {unscheduled > 0 && <p className="note msg">{unscheduled} course places have no payment schedule yet. “Create payment schedules” sets one payment per term at the same price TechSaga charged
-      (the whole course split evenly over its terms, less the 3- or 5-course discount), and marks the terms TechSaga recorded as paid. Nothing is charged.</p>}
-
-    <div className="pgrid2"><div className="dstack" style={{ display: "contents" }}>
-      <section className="card" style={{ margin: 0 }}><h2>Failed payments</h2><p className="cs">Stripe retries automatically after 3 days. You can also contact the family.</p>
+  const modules: BoardModule[] = [
+    ...kpis.map((k) => ({ id: k.id, title: k.k.split(" · ")[0], size: "q" as const, node: <Tile b={k} /> })),
+    { id: "failed", title: "Failed payments list", size: "l", node: <section className="card" style={{ margin: 0 }}><h2>Failed payments</h2><p className="cs">Stripe retries automatically after 3 days. You can also contact the family.</p>
         {lists.failed.length === 0 ? <p className="empty">No failed payments.</p> : lists.failed.map((i) => <div className="li" key={i.id}>
           <span className="pill bad">Failed</span><div className="t"><b>{i.family} · {money(i.amount)}</b><span>{i.student}, {i.course} · Term {i.term} · due {day(i.due_on)}</span></div>
-          <Link className="abtn sm" href={`/admin/families?q=${encodeURIComponent(i.family)}`}>Family</Link></div>)}</section>
-      <section className="card" style={{ margin: 0 }}><h2>Next 60 days</h2><p className="cs">{lists.upcomingCount} instalment{lists.upcomingCount === 1 ? "" : "s"} scheduled.</p>
+          <Link className="abtn sm" href={`/admin/families?q=${encodeURIComponent(i.family)}`}>Family</Link></div>)}</section> },
+    { id: "upcoming", title: "Next 60 days", size: "l", node: <section className="card" style={{ margin: 0 }}><h2>Next 60 days</h2><p className="cs">{lists.upcomingCount} instalment{lists.upcomingCount === 1 ? "" : "s"} scheduled.</p>
         {lists.upcomingCount === 0 ? <p className="empty">{unscheduled ? "Create the payment schedules to see what’s coming." : "Nothing due in the next 60 days."}</p> :
         <div className="tw" style={{ border: 0, marginBottom: 0 }}><table><thead><tr><th>Date</th><th>Family</th><th>Course</th><th className="n">Amount</th></tr></thead><tbody>
           {lists.upcoming.map((i) => <tr key={i.id}><td>{day(i.due_on)}</td><td>{i.family}</td><td>{i.student} · {i.course}</td><td className="n">{money(i.amount)}</td></tr>)}
         </tbody></table></div>}
-        {lists.upcomingCount > 12 && <p className="note">and {lists.upcomingCount - 12} more</p>}</section>
-    </div></div>
-    <section className="card" style={{ marginTop: 16 }}><h2>By term</h2><p className="cs">{year ? yearLabel(year) : ""} totals across every family.</p>
+        {lists.upcomingCount > 12 && <p className="note">and {lists.upcomingCount - 12} more</p>}</section> },
+    { id: "byterm", title: "By term", size: "full", node: <section className="card"><h2>By term</h2><p className="cs">{year ? yearLabel(year) : ""} totals across every family.</p>
       <div className="tw" style={{ border: 0, marginBottom: 0 }}><table>
       <thead><tr><th>Term</th><th>Bills on</th><th className="n">Places</th><th className="n">Billed</th><th className="n">Collected</th><th className="n">Failed</th><th className="n">To come</th></tr></thead>
       <tbody>{terms.map((t) => <tr key={t.number}>
@@ -50,9 +50,8 @@ export default async function Payments({ searchParams }: { searchParams: Promise
         <tr><td><b>Year</b></td><td /><td /><td className="n"><b>{money(yearTotal)}</b></td><td className="n"><b>{money(yearPaid)}</b></td>
           <td className="n"><b>{money(terms.reduce((n, t) => n + t.failed, 0))}</b></td><td className="n"><b>{money(terms.reduce((n, t) => n + t.scheduled, 0))}</b></td></tr></tbody>
       </table></div>
-      <p className="note">Registration fees (£25 per student per year) are collected at checkout and not shown here.</p></section>
-
-    <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Families</h2>
+      <p className="note">Registration fees (£25 per student per year) are collected at checkout and not shown here.</p></section> },
+    { id: "families", title: "Families", size: "full", node: <section className="card pay-fams"><h2>Families</h2>
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
       <LiveSearch placeholder="Search parent, child or email" label="Search families" />
       <div className="segl" role="group" aria-label="Show">{[["", "All families"], ["attention", "Needs attention"]].map(([k, l]) =>
@@ -85,7 +84,18 @@ export default async function Payments({ searchParams }: { searchParams: Promise
         </details></td></tr>}
       </tbody>)}
     </table></div>}
-    <p className="note">The Check column looks back, not forward: it’s about a term whose payment date has <b>already passed</b> (for example Term 2, 19 Oct), never the next payment. Invoices for the next payment aren’t involved. “Paid in Stripe, confirm it” means the family’s card payment is in <Link href="/admin/payments/stripe">Stripe payments</Link> waiting for you to press Confirm. “No payment recorded” means no Stripe payment from them matches yet (they may have paid another way, or it’s in Stripe under a different email). Open “Terms” on a family to mark a term paid or waive it.</p>
+    <p className="note">The Check column looks back, not forward: it’s about a term whose payment date has <b>already passed</b> (for example Term 2, 19 Oct), never the next payment. Invoices for the next payment aren’t involved. “Paid in Stripe, confirm it” means the family’s card payment is in <Link href="/admin/payments/stripe">Stripe payments</Link> waiting for you to press Confirm. “No payment recorded” means no Stripe payment from them matches yet (they may have paid another way, or it’s in Stripe under a different email). Open “Terms” on a family to mark a term paid or waive it.</p></section> },
+  ];
+  return <>
+    <div className="top"><div><h1>Payments</h1><div className="sub">{year ? `${yearLabel(year)} · ${money(yearPaid)} paid of ${money(yearTotal)} for the year` : "No school year set up"}</div></div>
+      <span className="grow" /><Link className="abtn" href="/admin/payments/stripe">Stripe payments</Link>
+      {unscheduled > 0 && <form action={buildSchedulesAction}><button className="abtn pri" type="submit">Create payment schedules ({unscheduled} places)</button></form>}</div>
+
+    {sp.built && <p className="note msg">Payment schedules created for {bp} course places: {bi} termly payments, {bm} of them already paid in TechSaga.</p>}
+    {unscheduled > 0 && <p className="note msg">{unscheduled} course places have no payment schedule yet. “Create payment schedules” sets one payment per term at the same price TechSaga charged
+      (the whole course split evenly over its terms, less the 3- or 5-course discount), and marks the terms TechSaga recorded as paid. Nothing is charged.</p>}
+
+    <BentoBoard page={PAGE} modules={modules} layout={layout} defaults={PAGE_DEFAULTS[PAGE]} saved={!!saved} locked={!!mirror} />
   </>;
 }
 

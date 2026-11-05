@@ -31,6 +31,7 @@ const DEFAULTS: Record<string, string[]> = { payments: ["k-collected", "k-next"]
 export function boxPage(path: string): { page: string; slug: string } | null {
   const m = /^\/admin\/([a-z0-9-]+(?:\/[a-z0-9-]+)?)$/.exec(path.split("?")[0]);
   if (!m || m[1].startsWith("teacher") || m[1].includes("/")) return null;
+  if (["payments", "marketing"].includes(m[1])) return null;   // these pages are customisable boards; their boxes are modules
   const slug = m[1].replace(/[^a-z]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 34);
   return slug ? { page: `box-${slug}`, slug } : null;
 }

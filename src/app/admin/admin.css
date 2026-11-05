@@ -1268,3 +1268,17 @@
 .adm .pb-order button{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:7px;min-width:26px;height:26px;cursor:pointer}
 .adm .pb-order button:disabled{opacity:.35;cursor:default}
 .adm .pb-btns{display:flex;gap:8px;flex-wrap:wrap}
+/* 5 Nov: choose the dashboard greeting's quick links */
+.adm .dx-acts{align-items:center}
+.adm .dx-acts-edit{display:inline-grid;place-items:center;width:32px;height:32px;border-radius:99px;border:1px dashed rgba(255,255,255,.35);background:transparent;color:#fff;cursor:pointer;opacity:.75}
+.adm .dx-acts-edit:hover,.adm .dx-acts-edit:focus-visible{opacity:1;background:rgba(255,255,255,.12)}
+.adm .ql-dlg{border:1px solid var(--line);border-radius:18px;background:var(--panel);color:var(--ink);padding:20px 22px;width:min(440px,calc(100vw - 32px));text-align:left}
+.adm .ql-dlg::backdrop{background:rgba(5,8,25,.55)}
+.adm .ql-dlg h2{margin:0 0 4px;font:600 20px "Space Grotesk","Jost",sans-serif}
+.adm .ql-list{list-style:none;margin:12px 0;padding:0;display:grid;gap:6px}
+.adm .ql-list li{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:10px;padding:6px 6px 6px 12px;background:var(--soft)}
+.adm .ql-list li span{flex:1;min-width:0}
+.adm .ql-list button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:7px;min-width:28px;height:28px;cursor:pointer}
+.adm .ql-list button:disabled{opacity:.35;cursor:default}
+.adm .ql-dlg .fld{margin:8px 0 14px}
+.adm .ql-btns{display:flex;gap:8px;flex-wrap:wrap}

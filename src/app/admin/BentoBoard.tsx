@@ -49,12 +49,13 @@ export function BentoBoard({ page, modules, layout, defaults, saved, scope = "ow
     run();
     const ro = new ResizeObserver(again); ro.observe(g);
     const mo = new MutationObserver(again); mo.observe(g, { childList: true, subtree: true, characterData: true });
+    g.addEventListener("toggle", again, true);   // a <details> opening inside a module changes its height
     document.fonts?.ready.then(again).catch(() => {});
     window.addEventListener("load", again);
-    return () => { ro.disconnect(); mo.disconnect(); cancelAnimationFrame(raf); window.removeEventListener("load", again); };
+    return () => { ro.disconnect(); mo.disconnect(); g.removeEventListener("toggle", again, true); cancelAnimationFrame(raf); window.removeEventListener("load", again); };
   }, [items, editing]);
   const save = (next: Item[] | null) => start(async () => {
-    await (page === "admin-home" ? saveDashLayoutAction : saveBoardAction)(page, next);
+    await (page.startsWith("admin-") ? saveDashLayoutAction : saveBoardAction)(page, next);
     setMsg(next ? (std ? `Saved as the standard for all ${audience ?? "people"}.` : "Saved. This is now your dashboard.") : (std ? "Back to the built-in layout." : "Back to the standard layout."));
     if (!next) setItems(defaults); setEditing(false); });
   return <div className={`bb${editing ? " editing" : ""}`}>
