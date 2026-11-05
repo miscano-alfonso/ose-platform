@@ -34,7 +34,9 @@ export async function studentOverview(opts: { teacherUserId?: string } = {}): Pr
     // what was left undone before the break); attendance and points stay this term's
     const d28 = new Date(Date.now() - 28 * 864e5).toISOString().slice(0, 10);
     const tStart = term && term.starts_on <= new Date().toISOString().slice(0, 10) ? term.starts_on : null;
-    const since = tStart && tStart < d28 ? tStart : d28, pSince = tStart ?? d28;
+    // 5 Nov: work counts for the whole school year, the same as on each student's page (the term dividers there split it)
+    const yStart = (await q<{ s: string }>(`select starts_on::text as s from academic_years where id = ${YEAR}`))[0]?.s ?? null;
+    const since = yStart && yStart < d28 ? yStart : d28, pSince = tStart ?? d28;
     const until = term && term.ends_on >= pSince ? term.ends_on : new Date().toISOString().slice(0, 10);
     const base = await q<{ id: string; name: string; parent_id: string; family: string; levels: string; classes: { id: string; code: string; name: string }[];
       has_send: string | null; needs: string[] | null; details: string | null }>(`

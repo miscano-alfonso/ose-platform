@@ -37,7 +37,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
     x.gids.push(u.gid); x.codes.push(u.code); return m.set(u.userId, x); }, new Map<string, { userId: string; name: string; email: string | null; gids: string[]; codes: string[] }>()).values()];
   const t = o.totals, rate = t.due ? Math.round((t.handed / t.due) * 100) : null;
   return <>
-    <div className="top"><div><h1>Students</h1><div className="sub">{o.term ? `${o.term.name}` : "The last six weeks"} · attendance from Google Meet, work from Google Classroom, reward points. Work due since {day(o.since)}.</div></div>
+    <div className="top"><div><h1>Students</h1><div className="sub">{o.term ? `${o.term.name}` : "The last six weeks"} · attendance from Google Meet, work from Google Classroom, reward points. Work counts everything due this school year (since {day(o.since)}).</div></div>
       <span className="grow" /><Link className="abtn" href="/admin/rewards">Rewards</Link></div>
     <StudentsTabs current="overview" counts={{ joins: joinsN }} />
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
