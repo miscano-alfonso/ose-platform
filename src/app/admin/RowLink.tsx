@@ -7,7 +7,7 @@ import type { ReactNode } from "react";
 export function RowLink({ href, children, className }: { href: string; children: ReactNode; className?: string }) {
   const router = useRouter();
   return <tr className={`row-link${className ? ` ${className}` : ""}`} onClick={(e) => {
-    if ((e.target as HTMLElement).closest("a,button,summary,input,select,label") || window.getSelection()?.toString()) return;
+    if ((e.target as HTMLElement).closest("a,button,summary,input,select,label,details") || window.getSelection()?.toString()) return;
     if (e.metaKey || e.ctrlKey) window.open(href, "_blank"); else router.push(href);
   }}>{children}</tr>;
 }

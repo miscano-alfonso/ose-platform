@@ -70,19 +70,19 @@ export default async function Students({ searchParams }: { searchParams: Promise
         <td><Link href={`/admin/students/${r.id}`} className="row-main"><b>{r.name}</b></Link><div className="muted" style={{ fontSize: 14 }}><Link href={`/admin/families/${r.parent_id}`}>{r.family}</Link></div></td>
         <td style={{ fontSize: 14 }}>{r.classes.map((c) => <div key={c.id} title={c.code}>{c.name}</div>)}</td>
         <td>{r.att == null ? <span className="muted">No lessons marked</span> : <><span className={`pill ${attTone(r.att)}`}>{r.att}%</span> <span className="muted" style={{ fontSize: 13 }}>{r.attended} of {r.held}</span></>}</td>
-        <td>{r.due === 0 ? <span className="muted">Nothing due yet</span> : <><div className="st-meter" role="img" aria-label={`${r.handed} of ${r.due} handed in`}><i style={{ width: `${(r.handed / r.due) * 100}%` }} /></div>
-          <span style={{ fontSize: 13.5 }}>{r.handed} of {r.due}{r.late ? ` · ${r.late} late` : ""}{r.marked ? ` · ${r.marked} marked` : ""}</span></>}</td>
+        <td>{r.due === 0 ? <span className="muted">Nothing due yet</span> : <>
+          <span style={{ fontSize: 13.5 }}>{r.handed} of {r.due}{r.late ? ` · ${r.late} late` : ""}{r.marked ? ` · ${r.marked} marked` : ""}</span>
+          <div className="st-meter" role="img" aria-label={`${r.handed} of ${r.due} handed in`}><i style={{ width: `${(r.handed / r.due) * 100}%` }} /></div></>}
+          {r.missing > 0 && <details className="st-mdet"><summary className="abtn sm">Missing work ({r.missing})</summary>
+            <ul className="st-miss">{r.missingList.map((m, i) => <li key={i}><span><b>{m.title}</b><span className="muted"> · {r.classes.find((c) => c.id === m.gid)?.name ?? m.code} · due {day(m.due_at)}</span></span>
+              {m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>}</li>)}
+              {r.missing > r.missingList.length && <li className="muted">and {r.missing - r.missingList.length} more (see their page)</li>}</ul>
+            {r.notInClassroom > 0 && <p className="note" style={{ margin: "8px 0 0" }}>{r.notInClassroom === r.missing ? "They haven’t joined" : "For some of these they haven’t joined"} the class’s Google Classroom yet, so they may not have seen the work.</p>}
+          </details>}</td>
         <td className="n">{r.missing ? <span className="pill bad">{r.missing}</span> : <span className="muted">0</span>}</td>
         <td className="n">{r.points || <span className="muted">0</span>}</td>
         <td>{r.send.map((x) => <span key={x} className="pill warn" style={{ marginRight: 4 }}>{x}</span>)}</td>
       </RowLink>
-      {r.missing > 0 && <tr className="editrow"><td colSpan={7} style={{ paddingTop: 0 }}>
-        <details className="edit"><summary className="abtn sm">Missing work ({r.missing})</summary>
-          <ul className="st-miss">{r.missingList.map((m, i) => <li key={i}><b>{m.title}</b> <span className="muted">· {r.classes.find((c) => c.id === m.gid)?.name ?? m.code} · due {day(m.due_at)}</span>
-            {m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>}</li>)}
-            {r.missing > r.missingList.length && <li className="muted">and {r.missing - r.missingList.length} more</li>}</ul>
-          {r.notInClassroom > 0 && <p className="note" style={{ margin: "8px 0 0" }}>{r.notInClassroom === r.missing ? "They haven’t joined" : "For some of these they haven’t joined"} the class’s Google Classroom yet, so they may not have seen the work.</p>}
-        </details></td></tr>}
       </tbody>)}
     </table></div>}
     <p className="note">Work counts once its due date has passed: handed in (or marked) in Google Classroom, or missing. Work without a due date isn’t counted. Attendance is this term’s lessons from Google Meet (approved absences don’t count against it).</p>
