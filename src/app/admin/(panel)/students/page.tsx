@@ -33,8 +33,12 @@ export default async function Students({ searchParams }: { searchParams: Promise
   const th = (label: string, k: string, cls?: string) => { const on = sort === k; return <th className={cls} aria-sort={on ? (dir === 1 ? "ascending" : "descending") : undefined}>
     <Link scroll={false} className="thsort" href={href({ sort: k, dir: on && dir === 1 ? "desc" : undefined })}>{label}{on ? (dir === 1 ? " ↓" : " ↑") : ""}</Link></th>; };
   // Classroom accounts nobody matched, once each (the same person can be in several classes)
-  const unmatched = [...(o.classroom.unmatched ?? []).reduce((m, u) => { const x = m.get(u.userId) ?? { userId: u.userId, name: u.name, email: u.email, gids: [] as string[], codes: [] as string[] };
-    x.gids.push(u.gid); x.codes.push(u.code); return m.set(u.userId, x); }, new Map<string, { userId: string; name: string; email: string | null; gids: string[]; codes: string[] }>()).values()];
+  type Un = { userId: string; name: string; email: string | null; gids: string[]; codes: string[]; handed: { gid: string; titles: string[]; set: number | null }[] };
+  const unmatched = [...(o.classroom.unmatched ?? []).reduce((m, u) => { const x = m.get(u.userId) ?? { userId: u.userId, name: u.name, email: u.email, gids: [], codes: [], handed: [] };
+    x.gids.push(u.gid); x.codes.push(u.code); x.handed.push({ gid: u.gid, titles: u.handed ?? [], set: u.set ?? null }); return m.set(u.userId, x); }, new Map<string, Un>()).values()];
+  // parents' emails, for a child using their parent's Google account (this page is admin-only; teachers never see these)
+  const parentEmail = unmatched.some((u) => u.email) ? new Map((await withSchool((q) => q<{ id: string; email: string }>(`select s.id, lower(p.email::text) as email from students s join parents p on p.id = s.parent_id where s.id = any($1::uuid[])`,
+    [o.rows.map((r) => r.id)])).catch(() => [])).map((x) => [x.id, x.email])) : new Map<string, string>();
   // 5 Nov: who an unmatched Classroom account probably is: students booked on the same classes (all of them best), not
   // already in those Classrooms with another account, with a nudge for names or an email that look like theirs
   const norm = (x: string) => x.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z]/g, "");
@@ -44,11 +48,13 @@ export default async function Students({ searchParams }: { searchParams: Promise
     const joinedThere = u.gids.filter((g) => r.joined.includes(g)).length;
     const [first, ...rest] = r.name.split(" "), last = rest.join(" ");
     const hay = norm(u.name) + " " + norm((u.email ?? "").split("@")[0]);
+    const em = (u.email ?? "").toLowerCase(), ownEmail = !!em && (r.email ?? "").toLowerCase() === em, parentHit = !!em && parentEmail.get(r.id) === em;
     const nameHit = [first, last].filter((x) => x && x.length >= 3 && (hay.includes(norm(x)) || (norm(x).length >= 4 && hay.includes(norm(x).slice(0, 4))))).length;
-    const score = (same / u.gids.length) * 10 + nameHit * 4 - joinedThere * 9 - Math.max(0, mine.length - u.gids.length) * 0.5;
+    const score = (same / u.gids.length) * 10 + nameHit * 4 + (ownEmail ? 20 : 0) + (parentHit ? 15 : 0) - joinedThere * 9 - Math.max(0, mine.length - u.gids.length) * 0.5;
     const why = [same === u.gids.length ? `booked on ${u.gids.length === 1 ? "that class" : `all ${u.gids.length} of those classes`}` : `booked on ${same} of ${u.gids.length} of those classes`,
+      ownEmail ? "same email as their record" : parentHit ? `it’s their parent’s email (${r.family})` : "",
       joinedThere ? "but already in that Classroom with another account" : "not in those Classrooms with their own account", nameHit ? "name looks similar" : ""].filter(Boolean).join(", ");
-    return { r, score, why, short: same === u.gids.length ? (joinedThere ? "same classes, already in Classroom" : "same classes") : `${same} of ${u.gids.length} classes`, sure: false };
+    return { r, score, why, short: ownEmail ? "same email" : parentHit ? "parent’s email" : same === u.gids.length ? (joinedThere ? "same classes, already in Classroom" : "same classes") : `${same} of ${u.gids.length} classes`, sure: false };
   }).filter((x): x is NonNullable<typeof x> => !!x && x.score > 0).sort((a, b) => b.score - a.score).slice(0, 6)
     .map((g, i, all) => ({ ...g, sure: i === 0 && g.score >= 10 && (all.length === 1 || g.score - all[1].score >= 3) }));
   const className = new Map(o.rows.flatMap((r) => r.classes.map((c) => [c.id, c.name] as const)));
@@ -80,12 +86,13 @@ export default async function Students({ searchParams }: { searchParams: Promise
       {unmatched.map((u) => { const guesses = guess(u); const top = guesses[0] && guesses[0].sure ? guesses[0] : null;
         return <form key={u.userId} action={linkClassroomAction} className="st-unm-row"><input type="hidden" name="user" value={u.userId} /><input type="hidden" name="name" value={u.name} /><input type="hidden" name="email" value={u.email ?? ""} />
           <div className="t"><b>{u.name}</b><span className="muted">{u.email ?? "no email shared"} · in {u.gids.map((g, i) => <span key={g} title={u.codes[i]}>{i ? ", " : ""}{className.get(g) ?? u.codes[i]}</span>)}</span>
+            {u.handed.map((h) => <span key={h.gid} className="st-handed"><b>{className.get(h.gid) ?? u.codes[u.gids.indexOf(h.gid)]}</b>: {h.titles.length ? <>handed in {h.titles.length}{h.set ? ` of ${h.set}` : ""} · {h.titles.slice(0, 8).join(" · ")}{h.titles.length > 8 ? " …" : ""}</> : "nothing handed in yet"}</span>)}
             {guesses[0] && <span className="st-guess">{top ? "Best guess" : "Possible"}: <b>{guesses[0].r.name}</b> · {guesses[0].why}</span>}</div>
           <select name="student" required defaultValue={top?.r.id ?? ""} className="mini" aria-label={`Who is ${u.name}?`}><option value="" disabled>Who is it?</option>
             {guesses.length > 0 && <optgroup label="Best guesses (same classes)">{guesses.map((g) => <option key={g.r.id} value={g.r.id}>{g.r.name} · {g.short}</option>)}</optgroup>}
             <optgroup label="Everyone">{o.rows.filter((r) => !guesses.some((g) => g.r.id === r.id)).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</optgroup></select>
           <button className="abtn sm pri" type="submit">Match</button></form>; })}
-      <p className="note" style={{ margin: "10px 0 0" }}>Matching remembers that Classroom account for every class, then reads Classroom again. Teachers or other adults in the class can be left.</p></details>}
+      <p className="note" style={{ margin: "10px 0 0" }}>To confirm who an account is: open that class in Google Classroom → Classwork → a piece of work they handed in → <b>Student work</b>. Classroom shows the student’s name there, so the one who handed in the same pieces is this account. Matching remembers that Classroom account for every class, then reads Classroom again. Teachers or other adults in the class can be left.</p></details>}
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "14px 0" }}>
       <LiveSearch placeholder="Search student, parent or class" label="Search students" />
       <div className="segl" role="group" aria-label="Show">{[["all", "All"], ["missing", `Missing work (${t.withMissing})`], ["attendance", `Low attendance (${t.lowAtt})`], ["send", "SEND"], ["points", "Points"]].map(([k, l]) =>

@@ -6,7 +6,7 @@ import { googleAccess, googleKv, googleKvSet, classroomGranted, MeetError } from
 // who has accepted their class invitation, the work set in each class, and each student's hand-ins and marks.
 // Parents see this under Assignments; report percentages come from the marks on returned work.
 const API = () => process.env.CLASSROOM_API_URL || "https://classroom.googleapis.com/v1";
-export type ClassroomInfo = { unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string }[]; at?: string; classes?: number; work?: number; submissions?: number; joined?: number; problems?: string[]; error?: string; by?: string };
+export type ClassroomInfo = { unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number }[]; at?: string; classes?: number; work?: number; submissions?: number; joined?: number; problems?: string[]; error?: string; by?: string };
 
 type Page<T> = Record<string, T[] | string | undefined> & { nextPageToken?: string };
 async function all<T>(token: string, path: string, key: string): Promise<{ ok: true; items: T[] } | { ok: false; status: number }> {
@@ -63,6 +63,14 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
       // accounts the office has matched by hand come first (Students → Classroom accounts to match)
       const linked = new Map((await q<{ u: string; sid: string }>(`select google_user_id as u, student_id as sid from classroom_user_links where google_user_id = any($1::text[])`, [roster.items.map((s) => s.userId)])).map((r) => [r.u, r.sid]));
       for (const s of roster.items) { const sid = linked.get(s.userId) ?? known.get((s.profile?.emailAddress ?? "").toLowerCase()); if (sid) uid.set(s.userId, sid); }
+      // 5 Nov: a child signed in with their parent's Google account: the parent's email, when only one of their children is booked on this class
+      const byParent = emails.length ? await q<{ id: string; email: string }>(`select s.id, lower(p.email::text) as email from enrolments e join students s on s.id = e.student_id join parents p on p.id = s.parent_id
+        where e.group_id = $1 and e.status in ('active', 'pending') and lower(p.email::text) = any($2::text[])`, [g.id, emails]) : [];
+      for (const s of roster.items) {
+        if (uid.has(s.userId)) continue;
+        const kids = byParent.filter((k) => k.email === (s.profile?.emailAddress ?? "").toLowerCase() && ![...uid.values()].includes(k.id));
+        if (kids.length === 1) uid.set(s.userId, kids[0].id);
+      }
       // 5 Nov: a student whose Classroom account isn't the email on their record (or whose email Google doesn't share) is matched by
       // name among the students booked on this class, only when exactly one has that name
       const left = roster.items.filter((s) => !uid.has(s.userId));
@@ -77,7 +85,12 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
           if (hits.length === 1) { uid.set(s.userId, hits[0].id); taken.add(hits[0].id); }
         }
         const still = roster.items.filter((s) => !uid.has(s.userId));
-        for (const s of still) info.unmatched!.push({ userId: s.userId, name: s.profile?.name?.fullName ?? "(no name)", email: s.profile?.emailAddress ?? null, gid: g.id, code: g.code });
+        // what each of them handed in, so the office can check it against the named student work in Classroom
+        const title = new Map(work.items.map((w) => [w.id, (w.title ?? "Untitled").slice(0, 120)]));
+        for (const s of still) {
+          const handed = subs.items.filter((x) => x.userId === s.userId && (x.state === "TURNED_IN" || x.state === "RETURNED") && title.has(x.courseWorkId)).map((x) => title.get(x.courseWorkId)!);
+          info.unmatched!.push({ userId: s.userId, name: s.profile?.name?.fullName ?? "(no name)", email: s.profile?.emailAddress ?? null, gid: g.id, code: g.code, handed: handed.slice(0, 30), set: work.items.length });
+        }
       }
       for (const u of uid.keys()) matchedSomewhere.add(u);
       // accepted invitations: members of the class

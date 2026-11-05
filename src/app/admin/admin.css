@@ -1343,3 +1343,4 @@
 .adm .st-term:first-child{margin-top:4px}
 .adm .st-work li.st-term{display:flex;border-top:0;padding:0}
 .adm .st-guess{color:var(--good);font-size:13.5px}
+.adm .st-unm-row .st-handed{font-size:13.5px;color:var(--ink-2,inherit);line-height:1.4}
