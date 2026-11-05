@@ -60,6 +60,8 @@ export function InviteForm({ teachers }: { teachers: { id: string; name: string;
         <option value="teacher">Teacher</option><option value="school_admin">Admin (full access)</option></select></label>
       {role === "teacher" && teachers.length > 0 && <label className="fld">Teacher record<select name="teacher_id" defaultValue="">
         <option value="">New teacher</option>{teachers.filter((t) => !t.has_account).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
+      {role === "school_admin" && teachers.length > 0 && <label className="fld">Also teaches? <span className="muted" style={{ fontWeight: 400 }}>(their teacher profile becomes this admin account)</span><select name="teacher_id" defaultValue="">
+        <option value="">No, admin only</option>{teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
       <label className="fld">Name<input name="name" required maxLength={120} /></label>
       <label className="fld">Email<input name="email" type="email" required /></label>
       <button className="abtn pri" type="submit" disabled={busy}>{busy ? "Creating…" : "Create invitation"}</button>

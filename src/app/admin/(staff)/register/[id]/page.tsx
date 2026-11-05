@@ -103,9 +103,9 @@ export default async function RegisterPage({ params, searchParams }: { params: P
       {r.students.filter((s) => s.send).map((s) => <div key={s.id} className="li" style={{ alignItems: "flex-start" }}><span className="arr-needs">{sendLabels(s.needs, s.send_details).map((n) => <span key={n} className="pill warn">{n}</span>)}</span>
         <div className="t"><b>{s.name}</b><span>{s.send_details}</span>{s.adjustments && <span><b style={{ fontWeight: 500 }}>What helps:</b> {s.adjustments}</span>}</div></div>)}</section>}
     {r.tasters.length > 0 && <section className="card taster-card"><h2>Tasters</h2>
-      <p className="cs">Trying a lesson before they book. Let them in to the Meet with the Google account below and make them welcome.</p>
+      <p className="cs">Trying a lesson before they book. Let them in to the Meet when they knock and make them welcome.</p>
       {r.tasters.map((t) => <div key={t.id} className="li" style={{ alignItems: "flex-start" }}>
-        <div className="t"><b>{t.child}</b>{t.email && <span>{t.email}</span>}{t.message && <span><b style={{ fontWeight: 500 }}>From the parent:</b> {t.message}</span>}</div>
+        <div className="t"><b>{t.child}</b>{t.email && me.role === "school_admin" && !me.viewing && <span>{t.email}</span>}{t.message && <span><b style={{ fontWeight: 500 }}>From the parent:</b> {t.message}</span>}</div>
         <span className={`pill ${t.status === "attended" ? "good" : t.status === "no_show" ? "bad" : "info"}`}>{t.status === "attended" ? "Came" : t.status === "no_show" ? "Didn’t come" : "Booked"}</span></div>)}</section>}
     </div>}
     </div>

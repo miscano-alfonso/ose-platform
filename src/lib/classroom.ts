@@ -157,12 +157,12 @@ export async function courseInfo(courseId: string): Promise<{ name: string; link
   } catch (e) { return { error: e instanceof MeetError ? e.message : "Couldn’t reach Google." }; }
 }
 
-/** Runs with the Meet sync: at most every 6 hours. */
+/** Runs with the Meet sync: at most every 2 hours (was 6; 5 Nov, so the Students page's missing work stays current). */
 export async function classroomBackground() {
   try {
     const { granted, info } = await classroomStatus();
     if (!granted) return;
-    if (info.at && Date.now() - Date.parse(info.at) < 6 * 3600e3) return;
+    if (info.at && Date.now() - Date.parse(info.at) < 2 * 3600e3) return;
     await googleKvSet("classroom", { ...info, at: new Date().toISOString() });   // so two page loads don't both start a sync
     await syncClassroom("auto");
   } catch (e) { console.error("classroom background", e); }

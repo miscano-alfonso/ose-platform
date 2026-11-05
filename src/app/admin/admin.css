@@ -1294,3 +1294,18 @@
 .adm .tt2 .pop .pa .abtn:hover,.adm .tt2 .pop .pa .abtn:focus-visible{background:#fff;color:var(--pop-ink);border-color:#fff}
 .adm .tt2 .pop .pa .abtn:focus-visible{outline:2px solid var(--pop-ink);outline-offset:2px}
 .adm .tt2 .pop .pill.mute{background:transparent;color:var(--pop-ink);border:1px solid var(--pop-ink)}
+/* 5 Nov: Students page and the dashboard's Students module */
+.adm .dx-mini{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px;margin:0 0 12px}
+.adm .dx-mini a{display:grid;gap:2px;padding:10px 12px;border-radius:12px;background:var(--soft);border:1px solid transparent;color:inherit;text-decoration:none}
+.adm .dx-mini a:hover{border-color:var(--line)}
+.adm .dx-mini b{font:600 22px/1.1 "Space Grotesk","Jost",sans-serif;font-variant-numeric:tabular-nums}
+.adm .dx-mini span{font-size:13px;color:var(--muted)}
+.adm .dx-mini a.bad b{color:var(--bad)}.adm .dx-mini a.warn b{color:var(--warn)}
+.adm .dx-sync{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:13px;color:var(--muted)}
+.adm .st-sync{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:14px}
+.adm .st-meter{height:6px;width:120px;max-width:100%;border-radius:99px;background:var(--track);overflow:hidden;margin:2px 0 4px}
+.adm .st-meter i{display:block;height:100%;background:var(--good);border-radius:99px}
+.adm .st-miss{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.adm .st-miss li{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14.5px}
+.adm .st-table td{vertical-align:middle}
+.adm .dx-wk{color:var(--ink)}.adm .dx-wk .t>span{font-size:13.5px;color:var(--muted)}.adm .dx-wk .t b{color:var(--ink)}

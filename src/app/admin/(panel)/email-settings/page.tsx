@@ -17,6 +17,9 @@ export default async function EmailSettings({ searchParams }: { searchParams: Pr
   const [box, sig, admins, list, office] = await Promise.all([inboxStatus(), signatureFor(me), withSchool((q) => q<{ id: string; name: string; email: string }>(
     `select id, name, email::text from users where role = 'school_admin' and disabled_at is null order by name`)), teacherContacts(), officeInfo()]);
   const [everyone, every] = await Promise.all([inboxEveryone(), inboxEvery()]);
+  // teachers who aren't admins can't be listed (5 Nov): say so, so the principal isn't missing without explanation
+  const notAdmin = await withSchool((q) => q<{ name: string }>(`select u.name from users u join teachers t on t.user_id = u.id where u.role <> 'school_admin' and u.disabled_at is null and t.archived_at is null
+    and (u.name ilike '%leanne%' or exists (select 1 from meet_kv k where k.key = 'sig_' || u.id)) order by u.name`)).catch(() => []);
   const on = new Map(list.map((c) => [c.user_id, c.label]));
   return <>
     <div className="top"><div><h1>Email settings</h1><div className="sub">Your signature, the school inboxes and who teachers can email. Read and answer emails in <Link href="/admin/email">Email</Link>.</div></div></div>
@@ -75,6 +78,9 @@ export default async function EmailSettings({ searchParams }: { searchParams: Pr
             <span><b>{a.name}</b><br /><span className="muted" style={{ fontSize: 14 }}>{a.email}</span></span></label>
           <label className="fld" style={{ flex: "1 1 220px" }}>Shown to teachers as<input name={`label_${a.id}`} defaultValue={on.get(a.id) ?? ""} placeholder="e.g. Principal, IT support" maxLength={60} /></label>
         </div>)}
+        {notAdmin.length > 0 && <p className="note" style={{ margin: 0 }}>{notAdmin.map((x) => x.name).join(", ")} {notAdmin.length === 1 ? "has" : "have"} a teacher account, not an admin one, so can’t be listed yet.
+          In <Link href="/admin/staff">Staff &amp; access</Link>, invite them with Access “Admin”, their own email and “Also teaches?” set to their name; once they’ve accepted, tick them here. They keep their classes.</p>}
+        <p className="muted" style={{ margin: 0, fontSize: 14 }}>With two or more people ticked, teachers also get an “Everyone” choice that sends one message to all of them.</p>
         <div><button className="abtn pri" type="submit">Save</button></div>
       </form></section>
   </>;

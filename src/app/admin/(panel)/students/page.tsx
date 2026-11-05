@@ -1,0 +1,79 @@
+import Link from "next/link";
+import LiveSearch from "../../LiveSearch";
+import { studentOverview, type StudentRow } from "@/lib/student-overview";
+import { readClassroomAction } from "../../actions";
+
+export const dynamic = "force-dynamic";
+export const metadata = { title: "Students" };
+const day = (d: string) => new Date(d.length > 10 ? d : d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
+const ago = (iso: string) => { const m = Math.round((Date.now() - Date.parse(iso)) / 60000); return m < 1 ? "just now" : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`; };
+const attTone = (p: number | null) => p == null ? "mute" : p >= 90 ? "good" : p >= 85 ? "info" : p >= 70 ? "warn" : "bad";
+
+// Admin → Students (5 Nov): every enrolled student this term, with attendance, Classroom work and reward points in one list.
+export default async function Students({ searchParams }: { searchParams: Promise<{ show?: string; q?: string; sort?: string; dir?: string; level?: string; ok?: string; err?: string }> }) {
+  const sp = await searchParams;
+  const o = await studentOverview();
+  const show = ["missing", "attendance", "send", "points"].includes(sp.show ?? "") ? sp.show! : "all";
+  const q = (sp.q ?? "").toLowerCase().trim();
+  const levels = [...new Set(o.rows.flatMap((r) => r.levels.split(", ")))].filter(Boolean).sort();
+  const SORTS: Record<string, (a: StudentRow, b: StudentRow) => number> = {
+    name: (a, b) => a.name.localeCompare(b.name), missing: (a, b) => b.missing - a.missing || b.due - a.due,
+    att: (a, b) => (a.att ?? 999) - (b.att ?? 999), work: (a, b) => (a.due ? a.handed / a.due : 2) - (b.due ? b.handed / b.due : 2), points: (a, b) => b.points - a.points };
+  const sort = sp.sort && SORTS[sp.sort] ? sp.sort : show === "missing" ? "missing" : show === "attendance" ? "att" : show === "points" ? "points" : "name";
+  const dir = sp.dir === "desc" ? -1 : 1;
+  const list = o.rows.filter((r) => (!q || [r.name, r.family, ...r.classes.map((c) => c.code)].some((x) => x.toLowerCase().includes(q)))
+    && (!sp.level || r.levels.split(", ").includes(sp.level))
+    && (show === "all" || (show === "missing" && r.missing > 0) || (show === "attendance" && r.att != null && r.held >= 3 && r.att < 85) || (show === "send" && r.send.length > 0) || (show === "points" && r.points > 0)))
+    .sort((a, b) => SORTS[sort](a, b) * dir || a.name.localeCompare(b.name));
+  const href = (x: Record<string, string | undefined>) => "/admin/students?" + new URLSearchParams(Object.entries({ show: show !== "all" ? show : undefined, q: sp.q, level: sp.level, sort: sp.sort, dir: sp.dir, ...x })
+    .filter(([, v]) => v) as [string, string][]).toString();
+  const th = (label: string, k: string, cls?: string) => { const on = sort === k; return <th className={cls} aria-sort={on ? (dir === 1 ? "ascending" : "descending") : undefined}>
+    <Link scroll={false} className="thsort" href={href({ sort: k, dir: on && dir === 1 ? "desc" : undefined })}>{label}{on ? (dir === 1 ? " ↓" : " ↑") : ""}</Link></th>; };
+  const t = o.totals, rate = t.due ? Math.round((t.handed / t.due) * 100) : null;
+  return <>
+    <div className="top"><div><h1>Students</h1><div className="sub">{o.term ? `${o.term.name}` : "The last six weeks"} · attendance from Google Meet, work from Google Classroom, reward points. Since {day(o.since)}.</div></div>
+      <span className="grow" /><Link className="abtn" href="/admin/attendance">Attendance details</Link><Link className="abtn" href="/admin/rewards">Rewards</Link></div>
+    {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+    <div className="tiles">
+      <div className="tile"><span className="k">Students</span><span className="v">{t.students}</span><span className="h">enrolled this year</span></div>
+      <div className="tile"><span className="k">Work handed in</span><span className="v">{rate == null ? "–" : `${rate}%`}</span><span className="h">{t.handed} of {t.due} pieces due{t.late ? ` · ${t.late} late` : ""}</span></div>
+      <Link href={href({ show: "missing", sort: undefined, dir: undefined })} className={`tile${t.missing ? " alert" : ""}`} style={{ textDecoration: "none", color: "inherit" }}><span className="k">Missing work</span><span className="v">{t.missing}</span><span className="h">{t.withMissing ? `from ${t.withMissing} student${t.withMissing === 1 ? "" : "s"}` : "nothing missing"}</span></Link>
+      <Link href={href({ show: "attendance", sort: undefined, dir: undefined })} className={`tile${t.lowAtt ? " alert" : ""}`} style={{ textDecoration: "none", color: "inherit" }}><span className="k">Attendance under 85%</span><span className="v">{t.lowAtt}</span><span className="h">students, 3+ lessons</span></Link>
+      <Link href={href({ show: "points", sort: undefined, dir: undefined })} className="tile" style={{ textDecoration: "none", color: "inherit" }}><span className="k">Reward points</span><span className="v">{t.points}</span><span className="h">given this term</span></Link>
+    </div>
+    <div className="st-sync">
+      <span className="muted">{o.classroom.linked === 0 ? "No classes are linked to Google Classroom yet." : o.classroom.error ? `Classroom couldn’t be read: ${o.classroom.error}` : o.classroom.at ? `Classroom last read ${ago(o.classroom.at)} (every 2 hours).` : "Classroom hasn’t been read yet."}</span>
+      <form action={readClassroomAction}><input type="hidden" name="back" value="/admin/students" /><button className="abtn sm" type="submit">Read Classroom now</button></form>
+    </div>
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "14px 0" }}>
+      <LiveSearch placeholder="Search student, parent or class" label="Search students" />
+      <div className="segl" role="group" aria-label="Show">{[["all", "All"], ["missing", `Missing work (${t.withMissing})`], ["attendance", `Low attendance (${t.lowAtt})`], ["send", "SEND"], ["points", "Points"]].map(([k, l]) =>
+        <Link key={k} scroll={false} href={href({ show: k === "all" ? undefined : k, sort: undefined, dir: undefined })} aria-current={show === k ? "true" : undefined}>{l}</Link>)}</div>
+      {levels.length > 1 && <div className="segl" role="group" aria-label="Level"><Link scroll={false} href={href({ level: undefined })} aria-current={!sp.level ? "true" : undefined}>All levels</Link>
+        {levels.map((l) => <Link key={l} scroll={false} href={href({ level: l })} aria-current={sp.level === l ? "true" : undefined}>{l}</Link>)}</div>}
+    </div>
+    {list.length === 0 ? <p className="empty">{o.rows.length ? "No students match." : "No students enrolled this year yet."}</p> :
+    <div className="tw"><table className="st-table">
+      <thead><tr>{th("Student", "name")}<th>Classes</th>{th("Attendance", "att")}{th("Work handed in", "work")}{th("Missing", "missing", "n")}{th("Points", "points", "n")}<th>SEND</th></tr></thead>
+      {list.map((r) => <tbody key={r.id} id={`s-${r.id}`}><tr>
+        <td><b>{r.name}</b><div className="muted" style={{ fontSize: 14 }}><Link href={`/admin/families/${r.parent_id}`}>{r.family}</Link></div></td>
+        <td style={{ fontSize: 14 }}>{r.classes.map((c) => c.code).join(", ")}</td>
+        <td>{r.att == null ? <span className="muted">No lessons marked</span> : <><span className={`pill ${attTone(r.att)}`}>{r.att}%</span> <span className="muted" style={{ fontSize: 13 }}>{r.attended} of {r.held}</span></>}</td>
+        <td>{r.due === 0 ? <span className="muted">Nothing due yet</span> : <><div className="st-meter" role="img" aria-label={`${r.handed} of ${r.due} handed in`}><i style={{ width: `${(r.handed / r.due) * 100}%` }} /></div>
+          <span style={{ fontSize: 13.5 }}>{r.handed} of {r.due}{r.late ? ` · ${r.late} late` : ""}{r.marked ? ` · ${r.marked} marked` : ""}</span></>}</td>
+        <td className="n">{r.missing ? <span className="pill bad">{r.missing}</span> : <span className="muted">0</span>}</td>
+        <td className="n">{r.points || <span className="muted">0</span>}</td>
+        <td>{r.send.map((x) => <span key={x} className="pill warn" style={{ marginRight: 4 }}>{x}</span>)}</td>
+      </tr>
+      {r.missing > 0 && <tr className="editrow"><td colSpan={7} style={{ paddingTop: 0 }}>
+        <details className="edit"><summary className="abtn sm">Missing work ({r.missing})</summary>
+          <ul className="st-miss">{r.missingList.map((m, i) => <li key={i}><b>{m.title}</b> <span className="muted">· {m.code} · due {day(m.due_at)}</span>
+            {m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>}</li>)}
+            {r.missing > r.missingList.length && <li className="muted">and {r.missing - r.missingList.length} more</li>}</ul>
+          {r.notInClassroom > 0 && <p className="note" style={{ margin: "8px 0 0" }}>{r.notInClassroom === r.missing ? "They haven’t joined" : "For some of these they haven’t joined"} the class’s Google Classroom yet, so they may not have seen the work.</p>}
+        </details></td></tr>}
+      </tbody>)}
+    </table></div>}
+    <p className="note">Work counts once its due date has passed: handed in (or marked) in Google Classroom, or missing. Work without a due date isn’t counted. Attendance is this term’s lessons from Google Meet (approved absences don’t count against it).</p>
+  </>;
+}

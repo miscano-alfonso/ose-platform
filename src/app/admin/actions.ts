@@ -138,7 +138,7 @@ export async function inviteAction(_: unknown, f: FormData): Promise<{ error?: s
     const pl = await schoolPlan();
     if (pl.plan && pl.teachers >= TEACHER_LIMIT[pl.plan]) return { error: `The ${PLAN_NAME[pl.plan]} plan has up to ${TEACHER_LIMIT[pl.plan]} teachers. Choose a bigger plan to add more.` };
   }
-  const r = await createInvite(me.id, name, email, role, role === "teacher" ? teacherId : null);
+  const r = await createInvite(me.id, name, email, role, teacherId);   // 5 Nov: an admin invite can take over a teacher profile too (e.g. the principal)
   if (r.error) return { error: r.error };
   const h = await headers();
   const host = h.get("x-forwarded-host") || h.get("host") || "ose.miscano.co.uk";
@@ -1337,6 +1337,15 @@ export async function syncClassroomAction(): Promise<void> {
   const r = await syncClassroom(me.name);
   attBack("google", r.error ? null : `Classroom read: ${r.classes ?? 0} class${r.classes === 1 ? "" : "es"}, ${r.work ?? 0} pieces of work, ${r.submissions ?? 0} hand-ins${r.joined ? `, ${r.joined} invitation${r.joined === 1 ? "" : "s"} now accepted` : ""}.${r.problems?.length ? ` ${r.problems.length} class${r.problems.length === 1 ? "" : "es"} couldn’t be read (see below).` : ""}`, r.error ?? null);
 }
+/** "Read Classroom now" on the Students page and the dashboard's Students module (5 Nov): back to where it was pressed. */
+export async function readClassroomAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const back = /^\/admin(\/[a-z0-9-]+)*$/.test(str(f, "back", 80)) ? str(f, "back", 80) : "/admin/students";
+  const { syncClassroom } = await import("@/lib/classroom");
+  const r = await syncClassroom(me.name);
+  revalidatePath(back);
+  redirect(`${back}?${r.error ? "err=" + encodeURIComponent(`Classroom couldn’t be read: ${r.error}`) : "ok=" + encodeURIComponent(`Classroom read: ${r.work ?? 0} pieces of work, ${r.submissions ?? 0} hand-ins.`)}`);
+}
 const setBack = (ok?: string | null, err?: string | null) => redirect(`/admin/email-settings` + (err ? `?err=${encodeURIComponent(err)}` : ok ? `?ok=${encodeURIComponent(ok)}` : ""));
 const mailBack = (ok?: string | null, err?: string | null, show?: string) => redirect(`/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}` + (err ? `&err=${encodeURIComponent(err)}` : ok ? `&ok=${encodeURIComponent(ok)}` : ""));
 export async function syncInboxAction(): Promise<void> {
@@ -1501,7 +1510,7 @@ export async function saveQuickLinksAction(hrefs: string[] | null): Promise<void
   revalidatePath("/admin");
 }
 // ---------- customisable dashboard ----------
-const DASH_MODULES: Record<string, string[]> = { "admin-home": ["hero", "k-students", "k-places", "k-attendance", "k-collected", "k-next", "k-failed", "today", "attention", "collections", "bookings", "coming", "fullest", "tasters", "quick", "email", "messages"] };   // every module adminModules() offers; one missing here is dropped when the layout is saved
+const DASH_MODULES: Record<string, string[]> = { "admin-home": ["hero", "k-students", "k-places", "k-attendance", "k-collected", "k-next", "k-failed", "today", "attention", "collections", "bookings", "coming", "fullest", "tasters", "quick", "email", "messages", "students"] };   // every module adminModules() offers; one missing here is dropped when the layout is saved
 export async function saveDashLayoutAction(page: string, layout: { id: string; size: string }[] | null): Promise<void> {
   const me = await requireStaff();
   const { PAGE_MODULES } = await import("@/lib/dash-pages");

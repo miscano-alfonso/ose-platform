@@ -3,6 +3,12 @@ import { sendLabels } from "@/lib/send";
 import type { MyStudent } from "@/lib/teacher-area";
 import { dm } from "./fmt";
 
+// 5 Nov: teachers see whether a student is in the class's Google Classroom, never their (or their parent's) email address
+function ClassroomState({ s }: { s: MyStudent }) {
+  return !s.has_google ? <span className="muted">No Google account yet</span> : s.in_classroom === false ? <span className="pill warn">Not in Classroom yet</span>
+    : s.in_classroom ? <span className="pill good">In Classroom</span> : <span className="muted">—</span>;
+}
+
 const age = (dob: string) => { const b = new Date(dob + "T12:00:00Z"), n = new Date(); let a = n.getUTCFullYear() - b.getUTCFullYear(); if (n < new Date(Date.UTC(n.getUTCFullYear(), b.getUTCMonth(), b.getUTCDate()))) a--; return a; };
 const attPill = (p: number | null) => p === null ? <span className="muted">—</span> : <span className={`pill ${p >= 90 ? "good" : p >= 75 ? "warn" : "bad"}`}>{p}%</span>;
 
@@ -15,7 +21,7 @@ export function StudentRows({ list, showClasses = true, canMsg = true }: { list:
       {showClasses && <div><dt>Classes</dt><dd>{(s.classes ?? []).map((c) => <span key={c.id} className="ms-cls">{c.name} {attPill(c.lessons ? c.att : null)}</span>)}</dd></div>}
       {!showClasses && <div><dt>Attendance</dt><dd>{attPill((s.classes ?? [])[0]?.lessons ? (s.classes ?? [])[0].att : null)} <span className="muted">in this class</span></dd></div>}
       <div><dt>Points</dt><dd>{s.points} this term</dd></div>
-      <div><dt>Google account</dt><dd>{s.email ?? <span className="muted">Not given</span>}{s.in_classroom === false && <span className="pill warn" style={{ marginLeft: 6 }}>Not in Classroom yet</span>}</dd></div>
+      <div><dt>Classroom</dt><dd><ClassroomState s={s} /></dd></div>
       {(s.dob || s.year_group) && <div><dt>Age</dt><dd>{s.dob ? <>{age(s.dob)} · birthday {dm(s.dob)}</> : ""}{s.year_group ? `${s.dob ? " · " : ""}Year ${s.year_group}` : ""}</dd></div>}
       {s.send && <div className="ms-send"><dt>SEND</dt><dd>{s.send_details}{s.adjustments && <><br /><b>What helps:</b> {s.adjustments}</>}</dd></div>}
     </dl>
@@ -36,7 +42,7 @@ const daysToBirthday = (dob: string | null) => {
 };
 export function sortStudents(list: MyStudent[], key: SortKey, dir: "asc" | "desc"): MyStudent[] {
   const val = (s: MyStudent): string | number | null => key === "name" ? s.name.toLowerCase() : key === "class" ? ((s.classes ?? [])[0]?.name ?? "").toLowerCase()
-    : key === "att" ? s.att : key === "points" ? s.points : key === "send" ? (s.send ? 0 : 1) : key === "email" ? (s.email ?? "").toLowerCase() || null : daysToBirthday(s.dob);
+    : key === "att" ? s.att : key === "points" ? s.points : key === "send" ? (s.send ? 0 : 1) : key === "email" ? (s.in_classroom ? 0 : s.has_google ? 1 : 2) : daysToBirthday(s.dob);
   const m = dir === "desc" ? -1 : 1;
   return [...list].sort((a, b) => {
     const x = val(a), y = val(b);
@@ -54,13 +60,13 @@ function Th({ k, label, sort, n }: { k: SortKey; label: string; sort?: Sort; n?:
 /** The same students as a table: one line each, with the Message button. Column headings sort when `sort` is given. */
 export function StudentTable({ list, showClasses = true, sort, canMsg = true }: { list: MyStudent[]; showClasses?: boolean; sort?: Sort; canMsg?: boolean }) {
   return <div className="tw"><table className="ms-table"><thead><tr><Th k="name" label="Student" sort={sort} />{showClasses && <Th k="class" label="Classes" sort={sort} />}
-    <Th k="att" label="Attendance" sort={sort} n /><Th k="points" label="Points" sort={sort} n /><Th k="send" label="SEND" sort={sort} /><Th k="email" label="Google account" sort={sort} /><Th k="bday" label="Birthday" sort={sort} /><th /></tr></thead>
+    <Th k="att" label="Attendance" sort={sort} n /><Th k="points" label="Points" sort={sort} n /><Th k="send" label="SEND" sort={sort} /><Th k="email" label="Classroom" sort={sort} /><Th k="bday" label="Birthday" sort={sort} /><th /></tr></thead>
     <tbody>{list.map((s) => <tr key={s.id}>
       <td><b>{s.name}</b>{s.known_as && <div className="muted" style={{ fontSize: 13.5 }}>“{s.known_as}”</div>}</td>
       {showClasses && <td>{(s.classes ?? []).map((c) => <div key={c.id} className="ms-line">{c.name}</div>)}</td>}
       <td className="n">{(s.classes ?? []).length ? (s.classes ?? []).map((c) => <div key={c.id} className="ms-line">{attPill(c.lessons ? c.att : null)}</div>) : attPill(s.att)}</td><td className="n">{s.points}</td>
       <td>{s.send ? <span className="arr-needs" style={{ justifyContent: "flex-start" }} title={`${s.send_details ?? ""}${s.adjustments ? ` · What helps: ${s.adjustments}` : ""}`}>{sendLabels(s.needs, s.send_details).map((n) => <span key={n} className="pill warn">{n}</span>)}</span> : <span className="muted">—</span>}</td>
-      <td>{s.email ?? <span className="muted">Not given</span>}{s.in_classroom === false && <div><span className="pill warn">Not in Classroom</span></div>}</td>
+      <td><ClassroomState s={s} /></td>
       <td>{s.dob ? <>{dm(s.dob)} <span className="muted">({age(s.dob)})</span></> : <span className="muted">—</span>}</td>
       <td>{canMsg ? <Link className="abtn sm" href={`/admin/messages/new?student=${s.id}`}>Message</Link> : <span className="abtn sm is-dis" title="Switched off for now">Message</span>}</td></tr>)}</tbody></table></div>;
 }

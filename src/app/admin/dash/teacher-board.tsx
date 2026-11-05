@@ -8,6 +8,7 @@ import { findSlides } from "@/lib/lesson-slides";
 import { classesForPoints } from "@/lib/community";
 import { listThreads } from "@/lib/community";
 import type { BoardModule } from "../BentoBoard";
+import { studentOverview } from "@/lib/student-overview";
 import { MoreList } from "../MoreList";
 import { Ring, Ico, IC } from "../DashBits";
 import { joinLabel } from "@/lib/video";
@@ -31,6 +32,10 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
   const rpct = total ? Math.round(done / total * 100) : null;
   const isToday = next?.d === today;
   const waiting = threads.filter((t) => t.last_sender === "parent").length;
+  // 5 Nov: students behind on their Classroom work in this teacher's classes (this term)
+  const so = await studentOverview({ teacherUserId: me.id }).catch(() => null);
+  const behind = so ? so.rows.filter((r) => r.missing > 0).sort((a, b) => b.missing - a.missing || a.name.localeCompare(b.name)) : [];
+  const dueDay = (s: string) => new Date(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
   const modules: BoardModule[] = [
     { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">{next && <RefreshAt at={next.ends_at} />}
         <p className={`fx-live${isToday ? "" : " next"}`}>{isToday && <i />}{next ? (isToday ? `Today · ${next.time.slice(0, 5)}` : <><span className="fx-live-k">Next lesson</span> · {wd(next.d)} {dm(next.d)} · {next.time.slice(0, 5)}</>) : d.term?.name ?? "My day"} <NotifyBell settingsHref="/admin/teacher/notifications" /></p>
@@ -72,6 +77,15 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
         {d.reportBars.length === 0 ? <p className="empty">No reports to write right now.</p> : <div className="bars">{d.reportBars.map((r) => <div className="brow" key={r.group_id}>
           <span className="lbl">{r.name}</span><div className="track"><i style={{ width: `${r.total ? r.done / r.total * 100 : 0}%` }} /></div><span className="num">{r.done}/{r.total}</span></div>)}</div>}
       </section> },
+    { id: "behind", title: "Behind on assignments", size: "l", node: <section className="dx-card dx-tall"><header><h2>Behind on assignments</h2>{behind.length > 0 && <span className="dx-count">{behind.length}</span>}<Link className="dx-more" href="/admin/teacher/classes">My classes →</Link></header>
+      {!so ? <p className="empty">Couldn’t load the Classroom work.</p> : so.classroom.linked === 0 ? <p className="empty">None of your classes is linked to Google Classroom yet.</p>
+        : behind.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>Nobody behind</b><span>Every piece of work due {so.term ? `in ${so.term.name}` : "lately"} has been handed in.</span></div>
+        : <><p className="cs" style={{ margin: "0 0 10px" }}>{so.totals.missing} piece{so.totals.missing === 1 ? "" : "s"} of work past the due date and not handed in, from {behind.length} student{behind.length === 1 ? "" : "s"}{so.totals.due ? ` · ${Math.round((so.totals.handed / so.totals.due) * 100)}% handed in overall` : ""}.</p>
+          <MoreList className="dx-list" limit={5}>{behind.map((r) => <Link key={r.id} className={`dx-item dx-wk ${r.missing >= 2 ? "bad" : "warn"}`} href={`/admin/teacher/classes/${r.missingList[0]?.gid ?? ""}#assignments`}>
+            <span className="t"><b>{r.name} · {r.missing} missing</b><span>{r.missingList.slice(0, 2).map((m) => `${m.title} (${m.code}, due ${dueDay(m.due_at)})`).join(" · ")}{r.missing > 2 ? ` · and ${r.missing - 2} more` : ""}</span>
+              {r.notInClassroom > 0 && <span style={{ fontSize: 13 }}>Not in the Google Classroom yet</span>}</span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList></>}
+      {so && so.classroom.at && <p className="cs" style={{ margin: "10px 0 0", fontSize: 13 }}>From Google Classroom, read {(() => { const n = Math.round((Date.now() - Date.parse(so.classroom.at!)) / 60000); return n < 60 ? `${Math.max(1, n)} min ago` : n < 1440 ? `${Math.round(n / 60)} h ago` : `${Math.round(n / 1440)} days ago`; })()}.</p>}
+    </section> },
     { id: "messages", title: "Messages", size: "l", node: <section className="dx-card dx-tall"><header><h2>Messages</h2>{waiting > 0 && <span className="dx-count">{waiting}</span>}<Link className="dx-more" href="/admin/teacher/messages">All messages →</Link></header>
       {threads.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No open conversations</b><span>Parents’ messages to you show here.</span></div>
         : <MoreList className="dx-list" limit={4}>{threads.map((t) => <Link key={t.id} className={`dx-item ${t.last_sender === "parent" ? "warn" : "info"}`} href={`/admin/messages/${t.id}`}>
@@ -114,5 +128,5 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
 export const TEACHER_BUILT_IN: { id: string; size: "s" | "q" | "m" | "l" | "xl" | "full"; h?: "s" | "m" | "l" }[] = [
   { id: "hero", size: "xl" }, { id: "reports-pop", size: "m" },
   { id: "k-attendance", size: "m" }, { id: "k-ones", size: "m" }, { id: "k-pay", size: "m" },
-  { id: "week", size: "l", h: "m" }, { id: "reports", size: "l", h: "m" }, { id: "messages", size: "l", h: "m" }, { id: "email", size: "l", h: "m" },
+  { id: "week", size: "l", h: "m" }, { id: "reports", size: "l", h: "m" }, { id: "messages", size: "l", h: "m" }, { id: "email", size: "l", h: "m" }, { id: "behind", size: "l", h: "m" },
 ];

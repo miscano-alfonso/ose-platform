@@ -108,7 +108,7 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
           <span className="ibx-top"><b>{who(m)}</b><span className="ibx-tr"><ReadToggle id={m.id} read={m.read} /><time dateTime={m.received_at}>{shortWhen(m.received_at)}</time></span></span>
           <span className="ibx-subj">{m.subject || "(no subject)"}</span>
           <span className="ibx-snip">{m.snippet}</span>
-          <span className="ibx-tags">{KIND[m.kind] && <span className={`pill ${KIND[m.kind][0]}`}>{KIND[m.kind][1]}</span>}{m.to_name && <span className="pill info">To {m.to_name.split(" ")[0]}</span>}{m.replied_at && <span className="pill good">Replied</span>}{many && m.mailbox && <span className="muted">to {m.mailbox}</span>}</span>
+          <span className="ibx-tags">{KIND[m.kind] && <span className={`pill ${KIND[m.kind][0]}`}>{KIND[m.kind][1]}</span>}{m.to_name && <span className="pill info">To {m.to_name.includes(" & ") ? m.to_name : m.to_name.split(" ")[0]}</span>}{m.replied_at && <span className="pill good">Replied</span>}{many && m.mailbox && <span className="muted">to {m.mailbox}</span>}</span>
         </div>)}</nav>
         {panel && <InboxPanel key={panel.id} m={panel} sig={sig} from={box.replyFrom} opened={!!sp.m} />}
       </div>}

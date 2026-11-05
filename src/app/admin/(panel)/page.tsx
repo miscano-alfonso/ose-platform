@@ -20,6 +20,6 @@ const DEFAULT_LAYOUT: { id: string; size: "s" | "m" | "l" | "xl" | "full" }[] = 
   { id: "k-students", size: "s" }, { id: "k-places", size: "s" }, { id: "k-attendance", size: "s" }, { id: "k-collected", size: "s" }, { id: "k-next", size: "s" }, { id: "k-failed", size: "s" },
   { id: "today", size: "l" }, { id: "attention", size: "l" },
   { id: "collections", size: "m" }, { id: "bookings", size: "m" }, { id: "tasters", size: "m" },
-  { id: "email", size: "l" },
+  { id: "email", size: "l" }, { id: "students", size: "l" },
   { id: "coming", size: "l" }, { id: "fullest", size: "l" },
 ];

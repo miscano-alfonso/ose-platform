@@ -23,7 +23,8 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
   // conversations with the school: one per thread, newest first; inside, oldest first
   const school = [...mails.reduce((m, e) => m.set(e.thread_id, [...(m.get(e.thread_id) ?? []), e]), new Map<string, typeof mails>()).values()].map((t) => [...t].reverse());
   const open = sp.school ? school.find((t) => t[0].thread_id === sp.school) : undefined;
-  const to = contacts.find((c) => c.user_id === sp.to);
+  // "all" (5 Nov): one message to everyone on the school's list
+  const to = sp.to === "all" && contacts.length > 1 ? { user_id: "all", name: contacts.map((c) => c.name.split(" ")[0]).join(" & "), label: "everyone" } : contacts.find((c) => c.user_id === sp.to);
   const off = me.viewing ? <p className="note">You’re viewing as {me.name}: you can read their messages but not send as them.</p> : null;
 
   // a message the office started (5 Nov)
@@ -72,16 +73,18 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
     <section className="card"><h2>The school</h2>
       <div className="tm-contacts">{contacts.length === 0 ? <p className="muted" style={{ margin: 0 }}>No one is set up yet. Ask the office to choose who teachers can message.</p>
         : contacts.map((c) => <Link key={c.user_id} href={`/admin/teacher/messages?to=${c.user_id}#write`} className={`tm-contact${to?.user_id === c.user_id ? " on" : ""}`}>
-          <span className="tm-av" aria-hidden="true">{c.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span><b>{c.name}</b><span className="muted">{c.label}</span></span></Link>)}</div>
+          <span className="tm-av" aria-hidden="true">{c.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span><b>{c.name}</b><span className="muted">{c.label}</span></span></Link>)}
+        {contacts.length > 1 && <Link href="/admin/teacher/messages?to=all#write" className={`tm-contact${to?.user_id === "all" ? " on" : ""}`}>
+          <span className="tm-av" aria-hidden="true">+</span><span><b>Everyone</b><span className="muted">{contacts.map((c) => c.name.split(" ")[0]).join(" & ")}</span></span></Link>}</div>
       {to && <form id="write" action={teacherEmailAction} encType="multipart/form-data" className="tm-form"><input type="hidden" name="to" value={to.user_id} />
-        <p className="ct-k">New message to {to.name} · {to.label}</p>
+        <p className="ct-k">{to.user_id === "all" ? `New message to ${to.name}, together` : `New message to ${to.name} · ${to.label}`}</p>
         <label className="fld">Subject<input name="subject" required maxLength={200} /></label>
         <label className="fld">Message<textarea name="body" required rows={6} maxLength={20000} /></label>
         <details><summary>Attach files or Google Drive links</summary><div className="tm-extra">
           <label className="fld">Files <span className="muted">(up to 5, 3.5 MB in total)</span><input type="file" name="files" multiple /></label>
           <label className="fld">Google Drive links <span className="muted">(one per line)</span><textarea name="links" rows={2} placeholder="https://drive.google.com/…" /></label></div></details>
         <div style={{ display: "flex", gap: 8 }}><button className="abtn pri" type="submit" disabled={!!me.viewing}>Send</button><Link className="abtn" href="/admin/teacher/messages">Cancel</Link></div>{off}
-        <p className="note" style={{ margin: 0 }}>They also get it by email. Their reply shows here and comes to {me.email}.</p>
+        <p className="note" style={{ margin: 0 }}>{to.user_id === "all" ? "Each of them also gets it by email." : "They also get it by email."} Their reply shows here and comes to {me.email}.</p>
       </form>}
       {fromOffice.length > 0 && <div className="tm-list">{fromOffice.map((t) => <Link key={t.id} className="li tm-row" href={`/admin/teacher/messages?office=${t.id}`}>
         <div className="t"><b>{t.subject}</b><span>From {office.label} · {day(t.last_at)}</span></div>

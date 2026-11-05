@@ -321,7 +321,7 @@ export async function saveTeacherContacts(list: { user_id: string; label: string
 }
 export async function teacherEmails(userId: string, limit = 60): Promise<TeacherEmail[]> {
   return withSchool((q) => q<TeacherEmail>(`
-    select m.id, m.thread_id, m.subject, coalesce(m.body, m.snippet) as body, m.received_at::text as at, m.replied_at::text, m.reply_body, m.reply_from::text, m.gmail_id like 'local:%' as local, tu.name as to_name, null::text as to_label, m.links,
+    select m.id, m.thread_id, m.subject, coalesce(m.body, m.snippet) as body, m.received_at::text as at, m.replied_at::text, m.reply_body, m.reply_from::text, m.gmail_id like 'local:%' as local, coalesce((select string_agg(x.name, ' & ' order by array_position(m.to_users, x.id)) from users x where x.id = any(m.to_users)), tu.name) as to_name, null::text as to_label, m.links,
       coalesce((select json_agg(json_build_object('id', f.id, 'name', f.name, 'size', f.size) order by f.created_at) from inbox_attachments f where f.message_id = m.id), '[]'::json) as files
     from inbox_messages m left join users tu on tu.id = m.to_user where m.kind = 'staff' and lower(m.from_email::text) = (select lower(email::text) from users where id = $1)
     order by greatest(m.received_at, coalesce(m.replied_at, m.received_at)) desc limit $2`, [userId, limit])).catch(() => []);
@@ -345,23 +345,27 @@ export async function sendTeacherEmail(user: { id: string; name: string; email: 
     }
     const box = (await q<{ m: string | null }>(`select value->>'mailbox' as m from meet_kv where key = 'gmail'`))[0]?.m ?? null;
     // to one person (must be on the school's list), or the office
-    let toUser: string | null = null, toEmail: string | null = null, toName = "";
-    if (to && /^[0-9a-f-]{36}$/.test(to)) {
-      const c = (await teacherContacts()).find((x) => x.user_id === to);
-      if (!c) return "Choose who to email from the list.";
-      const u = (await q<{ email: string }>(`select email::text from users where id = $1`, [c.user_id]))[0];
-      toUser = c.user_id; toEmail = u?.email ?? null; toName = c.name;
+    // to one person or to everyone on the school's list ("all", 5 Nov); a reply goes to the same people as the first message
+    let toUser: string | null = null, toUsers: string[] | null = null;
+    const copies: { email: string; name: string }[] = [];
+    if (to === "all" || (to && /^[0-9a-f-]{36}$/.test(to))) {
+      const list = await teacherContacts(), pick = to === "all" ? list : list.filter((x) => x.user_id === to);
+      if (!pick.length) return "Choose who to message from the list.";
+      const us = await q<{ id: string; email: string }>(`select id, email::text from users where id = any($1::uuid[])`, [pick.map((c) => c.user_id)]);
+      for (const c of pick) { const e = us.find((u) => u.id === c.user_id)?.email; if (e) copies.push({ email: e, name: c.name }); }
+      toUser = pick[0].user_id; toUsers = pick.length > 1 ? pick.map((c) => c.user_id) : null;
     } else if (!thread) {
-      return "Choose who to email.";
+      return "Choose who to message.";
     } else {
-      toUser = (await q<{ t: string | null }>(`select to_user as t from inbox_messages where thread_id = $1 order by received_at limit 1`, [thread]))[0]?.t ?? null;
+      const first = (await q<{ t: string | null; ts: string[] | null }>(`select to_user as t, to_users as ts from inbox_messages where thread_id = $1 order by received_at limit 1`, [thread]))[0];
+      toUser = first?.t ?? null; toUsers = first?.ts ?? null;
     }
-    const [row0] = await q<{ id: string }>(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, body, received_at, parent_id, kind, mailbox, sent_by, to_user, links)
-      values (current_school(), $1, $2, $3, $4, $5, $6, $7, now(), null, 'staff', $8, $9, $10, $11) returning id`,
-      [`local:${id}`, th, user.name.slice(0, 120), user.email, sub, text.replace(/\s+/g, " ").slice(0, 400), text, box, user.id, toUser, links.length ? links : null]);
+    const [row0] = await q<{ id: string }>(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, body, received_at, parent_id, kind, mailbox, sent_by, to_user, links, to_users)
+      values (current_school(), $1, $2, $3, $4, $5, $6, $7, now(), null, 'staff', $8, $9, $10, $11, $12) returning id`,
+      [`local:${id}`, th, user.name.slice(0, 120), user.email, sub, text.replace(/\s+/g, " ").slice(0, 400), text, box, user.id, toUser, links.length ? links : null, toUsers]);
     for (const b of blobs) await q(`insert into inbox_attachments (school_id, message_id, name, mime, size, data) values (current_school(), $1, $2, $3, $4, $5)`, [row0.id, b.name, b.mime, b.size, b.data]);
     // the person it's for also gets it by email, with a link to reply from the admin's inbox
-    if (toEmail) {
+    for (const { email: toEmail, name: toName } of copies) {
       const { sendOne } = await import("./email");
       const { siteBase } = await import("./social");
       const site = (process.env.SITE_URL || (await siteBase().catch(() => "")) || "").replace(/\/$/, "");
@@ -412,7 +416,7 @@ export async function setClassFolder(userId: string, groupId: string, value: str
 export type MyClass = { id: string; code: string; level: string; subject: string; colour: string; students: number; capacity: number | null;
   slots: { d: number; t: string; e: string }[] | null; meet_url: string | null; classroom: string | null; next: { id: string; d: string; t: string } | null;
   att: number | null; send: number; slides_folder: string | null };
-export type MyStudent = { id: string; name: string; known_as: string | null; email: string | null; dob: string | null; year_group: number | null;
+export type MyStudent = { id: string; name: string; known_as: string | null; has_google: boolean; dob: string | null; year_group: number | null;
   classes: { id: string; name: string; code: string; att: number | null; lessons: number }[]; att: number | null; points: number;
   send: boolean; needs: string[] | null; send_details: string | null; adjustments: string | null; confirmed: boolean; in_classroom: boolean | null };
 
@@ -439,7 +443,7 @@ export async function myStudents(userId: string, groupId?: string): Promise<MySt
     with mine as (select g.id from course_groups g join academic_years y on y.id = g.academic_year_id
       where y.ends_on >= current_date and (g.teacher_id = ${ME} or exists (select 1 from lesson_slots s where s.group_id = g.id and s.teacher_id = ${ME}))
         and ($2::uuid is null or g.id = $2::uuid))
-    select s.id, s.first_name || ' ' || s.last_name as name, nullif(s.known_as, '') as known_as, s.email::text, s.date_of_birth::text as dob, s.year_group,
+    select s.id, s.first_name || ' ' || s.last_name as name, nullif(s.known_as, '') as known_as, s.email is not null as has_google, s.date_of_birth::text as dob, s.year_group,
       coalesce(s.google_account_confirmed, false) as confirmed,
       (select bool_and(cm.state = 'joined') from classroom_memberships cm where cm.student_id = s.id and cm.group_id in (select id from mine)) as in_classroom,
       (select json_agg(json_build_object('id', g.id, 'name', l.name || ' ' || sj.name, 'code', g.code,

@@ -8,6 +8,8 @@ import { listThreads } from "@/lib/community";
 import { officeThreads } from "@/lib/office-messages";
 import { linkOptions, myLinks, DEFAULT_LINKS } from "@/lib/hero-links";
 import { QuickLinks } from "./QuickLinks";
+import { studentOverview } from "@/lib/student-overview";
+import { readClassroomAction } from "../actions";
 import { money, dayMonth, yearLabel } from "@/lib/format";
 import { MoreList } from "../MoreList";
 import { notInPlan, type PlanId } from "@/lib/plan";
@@ -42,7 +44,12 @@ const I = {
 export async function adminModules(me: Staff, plan: PlanId | null): Promise<BoardModule[]> {
   const [{ t, attention }, m, flags, box, threads, officeAll] = await Promise.all([getDashboard(), getDashboardMore(LOW), openFlags().catch(() => []), inboxStatus().catch(() => null), listThreads(null, "open").catch(() => []), officeThreads("replies").catch(() => [])]);
   const waitCut = Date.now() - 2 * 864e5, waiting = threads.filter((x) => x.last_sender === "parent" && Date.parse(x.last_message_at) < waitCut).length;
-  const [linkOpts, mine] = await Promise.all([linkOptions((h) => !notInPlan(plan, h)), myLinks(me.id)]);
+  const [linkOpts, mine, so] = await Promise.all([linkOptions((h) => !notInPlan(plan, h)), myLinks(me.id), studentOverview().catch(() => null)]);
+  const sAgo = (iso: string) => { const n = Math.round((Date.now() - Date.parse(iso)) / 60000); return n < 1 ? "just now" : n < 60 ? `${n} min ago` : n < 1440 ? `${Math.round(n / 60)} h ago` : `${Math.round(n / 1440)} days ago`; };
+  // students needing a nudge: most missing work first, then lowest attendance
+  const worry = so ? so.rows.filter((r) => r.missing > 0 || (r.att != null && r.held >= 3 && r.att < 85))
+    .sort((a, b) => b.missing - a.missing || (a.att ?? 100) - (b.att ?? 100)) : [];
+  const handRate = so && so.totals.due ? Math.round((so.totals.handed / so.totals.due) * 100) : null;
   const replies = officeAll.filter((x) => x.unread > 0);
   const fromParent = threads.filter((x) => x.last_sender === "parent").length + replies.length;
   const mail = box?.connected ? await inboxList("new").catch(() => ({ rows: [], unread: 0 })) : { rows: [], unread: 0 };
@@ -171,6 +178,23 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
               <span className="t"><b>{x.subject}</b><span>{x.parent} ↔ {x.teacher} · about {x.student}</span>
                 <span style={{ fontSize: 13 }}>{x.last_sender === "parent" ? "Parent wrote" : x.last_sender === "teacher" ? "Teacher replied" : x.last_sender === "office" ? "Office replied" : "Started"} {ago(x.last_message_at)}{x.office_copied ? " · passed to the office" : ""}</span></span>
               <span className="go" aria-hidden="true">→</span></Link>; })}</MoreList></>}
+    </section> },
+    { id: "students", title: "Students: work & attendance", node: <section className="dx-card">
+      <header><h2>Students</h2>{so && so.totals.withMissing > 0 && <span className="dx-count">{so.totals.withMissing}</span>}<Link className="dx-more" href="/admin/students">All students →</Link></header>
+      {!so ? <p className="empty">Couldn’t load the students’ work.</p> : <>
+        <div className="dx-mini">
+          <Link href="/admin/students"><b>{handRate == null ? "–" : `${handRate}%`}</b><span>work handed in</span></Link>
+          <Link href="/admin/students?show=missing" className={so.totals.missing ? "bad" : undefined}><b>{so.totals.missing}</b><span>pieces missing</span></Link>
+          <Link href="/admin/students?show=attendance" className={so.totals.lowAtt ? "warn" : undefined}><b>{so.totals.lowAtt}</b><span>under 85% attendance</span></Link>
+          <Link href="/admin/students?show=points"><b>{so.totals.points}</b><span>reward points</span></Link>
+        </div>
+        {worry.length === 0 ? <div className="dx-clear"><Ico d={I.check} /><b>All on track</b><span>No missing work and nobody under 85% attendance {so.term ? `in ${so.term.name}` : "lately"}.</span></div>
+          : <MoreList className="dx-list" limit={4}>{worry.map((r) => <Link key={r.id} className={`dx-item dx-wk ${r.missing >= 2 || (r.att != null && r.att < 70) ? "bad" : "warn"}`} href={`/admin/students?q=${encodeURIComponent(r.name)}#s-${r.id}`}>
+            <span className="t"><b>{r.name}</b><span>{[r.missing && `${r.missing} piece${r.missing === 1 ? "" : "s"} of work missing`, r.att != null && r.held >= 3 && r.att < 85 && `attendance ${r.att}%`].filter(Boolean).join(" · ")}</span>
+              {r.missingList[0] && <span style={{ fontSize: 13 }}>Latest: {r.missingList[0].title} · {r.missingList[0].code}</span>}</span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
+        <div className="dx-sync"><span>{so.classroom.linked === 0 ? "No classes linked to Google Classroom yet" : so.classroom.error ? "Classroom couldn’t be read" : so.classroom.at ? `Classroom read ${sAgo(so.classroom.at)}` : "Classroom not read yet"}</span>
+          <form action={readClassroomAction}><input type="hidden" name="back" value="/admin" /><button className="abtn sm" type="submit">Read now</button></form></div>
+      </>}
     </section> },
     { id: "quick", title: "Quick links", node: <section className="dx-card">
       <header><h2>Quick links</h2></header>
