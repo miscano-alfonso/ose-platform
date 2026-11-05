@@ -9,9 +9,9 @@ export function TopBar({ children }: { children?: React.ReactNode }) {
 
 /** The bottom of the side menu, always in view: the School / Viewing as switchers (admins), then Sign out on the left and,
  *  on the right, the light/dark switch (as on the website) and the button that hides the menu. */
-export function SideFoot({ theme, signOut, switchers, site, preview, inline, toggle }: { theme?: string; signOut?: (f: FormData) => Promise<void>; switchers?: React.ReactNode; site?: { href: string; label: string }[]; preview?: boolean; inline?: boolean; toggle?: boolean }) {
+export function SideFoot({ theme, signOut, switchers, site, preview, inline, toggle, note }: { theme?: string; signOut?: (f: FormData) => Promise<void>; switchers?: React.ReactNode; site?: { href: string; label: string }[]; preview?: boolean; inline?: boolean; toggle?: boolean; note?: React.ReactNode }) {
   return <div className={`side-foot${inline ? " inline" : ""}`}>
-    {switchers}
+    {switchers}{note}
     <div className="sf-row">{signOut && <form action={signOut}><button className="abtn sm" type="submit">Sign out</button></form>}{!signOut && preview && <button className="abtn sm" type="button" disabled title="The parent or student sees Sign out here. You’re only viewing.">Sign out</button>}
       <span className="sf-grow" /><ThemeToggle initial={theme ?? "auto"} />{toggle && <SideToggle />}</div>
     {site && site.length > 0 && <div className="sf-links">{site.map((l) => <a key={l.href} href={l.href}>{l.label}</a>)}</div>}

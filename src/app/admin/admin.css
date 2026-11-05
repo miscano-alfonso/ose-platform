@@ -1188,3 +1188,14 @@
 .adm .logo .logo-i{display:inline-block;line-height:0;width:auto}
 .adm .logo .logo-i::after{-webkit-mask-size:100% 100%;mask-size:100% 100%}
 .adm .logo .logo-i img{max-width:none;width:auto;height:52px}
+/* 5 Nov: a roomier top bar: tabs and pickers about a fifth smaller; Test mode moved to the bottom of the side menu */
+.adm .adm-tabs{min-height:48px;padding-block:8px;gap:10px}
+.adm .sec-tabs{gap:5px}
+.adm .sec-tabs button{padding:7px 13px;font-size:11.5px;gap:6px}
+.adm .sec-tabs .cnt{font-size:10.5px;padding:1px 6px}
+.adm .sw-top .switchers{gap:8px}.adm .sw-top .switchers .sw{gap:6px}
+.adm .sw-top .switchers label{font-size:10px}
+.adm .sw-top .switchers select{padding:5px 10px;font-size:12.5px;max-width:150px}
+.adm .side .side-foot .tm-pill{justify-self:start;background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.22);color:#fff;font-size:12.5px;padding:6px 11px}
+.adm .side .side-foot .tm-pill:hover{background:rgba(255,255,255,.18);border-color:rgba(255,255,255,.4)}
+@media (max-width:820px){.adm .adm-tabs{display:none}}
