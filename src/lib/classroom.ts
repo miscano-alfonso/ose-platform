@@ -22,7 +22,7 @@ async function all<T>(token: string, path: string, key: string): Promise<{ ok: t
   return { ok: true, items };
 }
 
-type Student = { userId: string; profile?: { emailAddress?: string; name?: { fullName?: string } } };
+type Student = { userId: string; profile?: { emailAddress?: string; name?: { fullName?: string; givenName?: string; familyName?: string } } };
 type Work = { id: string; title?: string; dueDate?: { year: number; month: number; day: number }; dueTime?: { hours?: number; minutes?: number }; maxPoints?: number; alternateLink?: string; state?: string };
 type Sub = { courseWorkId: string; userId: string; alternateLink?: string; state?: string; late?: boolean; assignedGrade?: number; updateTime?: string;
   submissionHistory?: { stateHistory?: { state?: string; stateTimestamp?: string } }[] };
@@ -60,6 +60,22 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
       const known = new Map((await q<{ id: string; email: string }>(`select id, lower(email::text) as email from students where lower(email::text) = any($1::text[])`, [emails])).map((s) => [s.email, s.id]));
       const uid = new Map<string, string>();
       for (const s of roster.items) { const sid = known.get((s.profile?.emailAddress ?? "").toLowerCase()); if (sid) uid.set(s.userId, sid); }
+      // 5 Nov: a student whose Classroom account isn't the email on their record (or whose email Google doesn't share) is matched by
+      // name among the students booked on this class, only when exactly one has that name
+      const left = roster.items.filter((s) => !uid.has(s.userId));
+      if (left.length) {
+        const norm = (x: string) => x.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z ]+/g, " ").replace(/\s+/g, " ").trim();
+        const kids = await q<{ id: string; first: string; last: string; known: string | null }>(`select s.id, s.first_name as first, s.last_name as last, nullif(s.known_as, '') as known
+          from enrolments e join students s on s.id = e.student_id where e.group_id = $1 and e.status in ('active', 'pending')`, [g.id]);
+        const taken = new Set(uid.values());
+        for (const s of left) {
+          const full = norm(s.profile?.name?.fullName ?? `${s.profile?.name?.givenName ?? ""} ${s.profile?.name?.familyName ?? ""}`); if (!full) continue;
+          const hits = kids.filter((k) => !taken.has(k.id) && [`${k.first} ${k.last}`, k.known ? `${k.known} ${k.last}` : ""].filter(Boolean).map(norm).includes(full));
+          if (hits.length === 1) { uid.set(s.userId, hits[0].id); taken.add(hits[0].id); }
+        }
+        const still = roster.items.filter((s) => !uid.has(s.userId)).map((s) => s.profile?.name?.fullName).filter(Boolean);
+        if (still.length) info.problems!.push(`${g.code}: in Classroom but not matched to a student here: ${still.slice(0, 6).join(", ")}${still.length > 6 ? "…" : ""}`);
+      }
       // accepted invitations: members of the class
       const sids = [...new Set(uid.values())];
       if (sids.length) {
