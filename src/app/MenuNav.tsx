@@ -39,7 +39,8 @@ export function SectionTabs({ groups, counts = {}, root, alias = {} }: { groups:
   }, [groups.length]);
   if (groups.length < 2) return null;
   // the tab opens the section's top link (as listed in the side menu, which leaves out the dashboard: that's the logo)
-  const go = (g: ResolvedGroup) => { pick(g.title); const first = g.items.find((x) => x.href !== root && !x.off && x.href.startsWith("/")) ?? g.items.find((x) => x.href.startsWith("/"));
+  const go = (g: ResolvedGroup) => { pick(g.title); const first = g.items.some((x) => x.href === root) ? g.items.find((x) => x.href === root)   // the group with the dashboard opens the dashboard
+      : g.items.find((x) => !x.off && x.href.startsWith("/")) ?? g.items.find((x) => x.href.startsWith("/"));
     if (first && first.href !== path) router.push(first.href); };
   const label = (g: ResolvedGroup) => g.title === "Main menu" ? "Main" : g.title;
   const count = (g: ResolvedGroup) => g.items.reduce((a, x) => a + (counts[x.href] ?? 0), 0);
