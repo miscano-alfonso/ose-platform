@@ -200,6 +200,22 @@ export async function revokeInviteAction(f: FormData) {
   revalidatePath("/admin/staff");
 }
 
+/** Staff & access (5 Nov): make a teacher an admin (they keep their classes) or an admin a teacher. Never yourself. */
+export async function setStaffRoleAction(f: FormData) {
+  const me = await requireStaff();
+  const id = str(f, "id", 40), role = str(f, "role") === "school_admin" ? "school_admin" : "teacher";
+  if (id === me.id || !/^[0-9a-f-]{36}$/.test(id)) return;
+  await withSchool(async (q) => {
+    await q(`update users set role = $2::user_role where id = $1 and role in ('school_admin','teacher')`, [id, role]);
+    if (role === "teacher") await q(`insert into teachers (school_id, user_id) select current_school(), $1 where not exists (select 1 from teachers where user_id = $1)`, [id]);
+    // a new admin also goes on the list teachers can message (Settings → Email), when the school has saved its own list
+    if (role === "school_admin") await q(`update meet_kv set value = value || jsonb_build_array(jsonb_build_object('user_id', $1::text, 'label', 'Admin')), updated_at = now()
+      where key = 'teacher_contacts' and jsonb_typeof(value) = 'array' and not exists (select 1 from jsonb_array_elements(value) x where x->>'user_id' = $1::text)`, [id]);
+    await q(`delete from staff_sessions where user_id = $1`, [id]);   // signs them in again with the new access
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'role_changed', 'user', $2, $3)`, [me.id, id, JSON.stringify({ role })]);
+  });
+  revalidatePath("/admin/staff");
+}
 export async function setStaffAccessAction(f: FormData) {
   const me = await requireStaff();
   const id = str(f, "id", 40), on = str(f, "on") === "1";

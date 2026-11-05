@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StudentsTabs } from "../../StudentsTabs";
 import { attendanceOverview } from "@/lib/attendance";
 import { meetStatus, unmatchedPeople, unplacedCalls, usualTimes } from "@/lib/meet";
 import { joinClues } from "@/lib/meet-clues";
@@ -34,9 +35,10 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
   const TABS: [string, string][] = [["students", "Students"], ["lessons", "Lesson by lesson"], ["absences", `Reported absences${upcomingAbs ? ` (${upcomingAbs})` : ""}`],
     ["joins", `Check Meet joins${joins.people.length ? ` (${joins.people.length})` : ""}`], ["google", g.connected ? "Google Meet" : "Connect Google Meet"]];
   return <>
-    <div className="top"><div><h1>Attendance</h1><div className="sub">{d.term ? `${d.term.name} · ` : ""}{isMeet || zoom || vid.checkins ? `taken automatically from ${source === "Check-ins" ? `Join check-ins (${toolById(vid.tool).name})` : source}` : "taken in each lesson’s register"}</div></div>
+    <div className="top"><div><h1>Students</h1><div className="sub">Attendance · {d.term ? `${d.term.name} · ` : ""}{isMeet || zoom || vid.checkins ? `taken automatically from ${source === "Check-ins" ? `Join check-ins (${toolById(vid.tool).name})` : source}` : "taken in each lesson’s register"}</div></div>
       <span className="grow" />
       {g.connected && <form action={syncMeetAction}><input type="hidden" name="tab" value={tab} /><button className="abtn sm" type="submit">Sync now</button></form>}</div>
+    <StudentsTabs current={tab} counts={{ absences: upcomingAbs, joins: joins.people.length }} href={(k) => q({ tab: k })} />
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {isMeet && !g.connected && tab !== "google" && <p className="note msg">Google Meet isn’t connected yet, so there are no marks to show. <Link href={q({ tab: "google" })}>Connect it</Link>.</p>}
 
@@ -53,7 +55,6 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
           <input type="number" name="pct" min={10} max={95} step={5} defaultValue={pct} className="mini" style={{ width: 58 }} />% <button className="abtn sm" type="submit">Save</button></span></form>
     </div>
 
-    <div className="segl" role="tablist" style={{ marginBottom: 14 }}>{TABS.map(([k, l]) => <Link key={k} href={q({ tab: k })} aria-current={tab === k ? "true" : undefined}>{l}</Link>)}</div>
 
 
     {tab === "students" && <>
@@ -92,7 +93,7 @@ export default async function Attendance({ searchParams }: { searchParams: Promi
         {p.roster.length > 0 && <select name="student" className="mini" aria-label="Who was it?" required defaultValue={clues[p.key]?.suggest && p.roster.some((s) => s.id === clues[p.key]?.suggest) ? clues[p.key]!.suggest! : ""}>
           <option value="" disabled>Choose who it was…</option>
           {p.roster.map((s) => <option key={s.id + s.cls} value={s.id}>{s.name}{s.taster ? " (taster)" : ""}{p.classes.includes(",") ? ` (${s.cls})` : ""}{s.absent ? ` · marked absent ${s.absent}×` : ""}</option>)}</select>}
-        {p.roster.length > 0 && <button className="abtn sm pri" type="submit">This is them</button>}<button className="abtn sm" type="submit" name="ignore" value="1">Not a student</button>
+        {p.roster.length > 0 && <button className="abtn sm pri" type="submit">This is them</button>}<button className="abtn sm" type="submit" name="ignore" value="1" formNoValidate>Not a student</button>
         {clues[p.key] && <div className="muted" style={{ flexBasis: "100%", fontSize: 13, marginTop: 6 }}>
           {clues[p.key]!.clues.length ? <><b>What the school’s records and emails say:</b><ul style={{ margin: "4px 0 0", paddingLeft: 18 }}>{clues[p.key]!.clues.map((c, i) => <li key={i}>{c.href ? <a href={c.href} target={c.kind === "email" ? "_blank" : undefined} rel="noopener">{c.text}</a> : c.text}</li>)}</ul></>
             : <>Nothing in the taster requests, enquiries, families{clues[p.key]!.searched.length ? ` or the inboxes searched (${clues[p.key]!.searched.join(", ")})` : ""} mentions them.</>}

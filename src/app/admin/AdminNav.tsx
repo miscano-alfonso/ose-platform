@@ -6,7 +6,7 @@ import type { ResolvedGroup } from "@/lib/menus";
 export function AdminNav({ counts, groups }: { counts: Record<string, number>; groups: ResolvedGroup[] }) {
   return <MenuNav id="adm-nav" label="Admin" root="/admin" groups={groups} counts={counts} alias={ALIAS} tabbed />; // the sections are tabs across the top (AdminTabs)
 }
-const ALIAS = { "/admin/designs": "/admin/social" };   // More designs sits under Social
+const ALIAS = { "/admin/designs": "/admin/social", "/admin/attendance": "/admin/students" };   // Attendance is part of Students (5 Nov)   // More designs sits under Social
 /** The admin's menu sections as tabs along the top of the page (4 Nov): choosing one changes the side menu. */
 export function AdminTabs({ counts, groups }: { counts: Record<string, number>; groups: ResolvedGroup[] }) {
   return <SectionTabs groups={groups} counts={counts} root="/admin" alias={ALIAS} />;

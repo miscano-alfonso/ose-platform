@@ -2,6 +2,8 @@ import Link from "next/link";
 import LiveSearch from "../../LiveSearch";
 import { studentOverview, type StudentRow } from "@/lib/student-overview";
 import { readClassroomAction } from "../../actions";
+import { StudentsTabs } from "../../StudentsTabs";
+import { withSchool } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Students" };
@@ -12,7 +14,7 @@ const attTone = (p: number | null) => p == null ? "mute" : p >= 90 ? "good" : p 
 // Admin → Students (5 Nov): every enrolled student this term, with attendance, Classroom work and reward points in one list.
 export default async function Students({ searchParams }: { searchParams: Promise<{ show?: string; q?: string; sort?: string; dir?: string; level?: string; ok?: string; err?: string }> }) {
   const sp = await searchParams;
-  const o = await studentOverview();
+  const [o, joinsN] = await Promise.all([studentOverview(), withSchool((q) => q<{ n: number }>(`select coalesce((value->>'people')::int, (value->>'unmatched')::int, 0) as n from meet_kv where key = 'sync'`)).then((r) => r[0]?.n ?? 0).catch(() => 0)]);
   const show = ["missing", "attendance", "send", "points"].includes(sp.show ?? "") ? sp.show! : "all";
   const q = (sp.q ?? "").toLowerCase().trim();
   const levels = [...new Set(o.rows.flatMap((r) => r.levels.split(", ")))].filter(Boolean).sort();
@@ -32,7 +34,8 @@ export default async function Students({ searchParams }: { searchParams: Promise
   const t = o.totals, rate = t.due ? Math.round((t.handed / t.due) * 100) : null;
   return <>
     <div className="top"><div><h1>Students</h1><div className="sub">{o.term ? `${o.term.name}` : "The last six weeks"} · attendance from Google Meet, work from Google Classroom, reward points. Work due since {day(o.since)}.</div></div>
-      <span className="grow" /><Link className="abtn" href="/admin/attendance">Attendance details</Link><Link className="abtn" href="/admin/rewards">Rewards</Link></div>
+      <span className="grow" /><Link className="abtn" href="/admin/rewards">Rewards</Link></div>
+    <StudentsTabs current="overview" counts={{ joins: joinsN }} />
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <div className="tiles">
       <div className="tile"><span className="k">Students</span><span className="v">{t.students}</span><span className="h">enrolled this year</span></div>
@@ -42,10 +45,16 @@ export default async function Students({ searchParams }: { searchParams: Promise
       <Link href={href({ show: "points", sort: undefined, dir: undefined })} className="tile" style={{ textDecoration: "none", color: "inherit" }}><span className="k">Reward points</span><span className="v">{t.points}</span><span className="h">given this term</span></Link>
     </div>
     <div className="st-sync">
-      {o.classroom.granted !== true ? <p className="note msg bad" style={{ margin: 0 }}>Google Classroom isn’t connected, so there’s no work to show yet. {o.classroom.granted === null ? "Connect Google" : "Turn on the Google Classroom API and connect Google again"} under <Link href="/admin/attendance?tab=google">Attendance → Google</Link> (read-only).</p>
+      {o.classroom.granted !== true ? <div className="note msg bad" style={{ margin: 0 }}>{o.classroom.granted === null
+        ? <>Google isn’t connected, so there’s no Classroom work to show. Connect it under <Link href="/admin/attendance?tab=google">Students → Google Meet &amp; Classroom</Link>.</>
+        : <>The API being on isn’t enough: the school’s Google connection was made without permission to read Classroom, so the site can’t {o.classroom.missing!.join(", ")}.
+          Press <b>Connect Google again</b>, choose the Google Workspace super admin account used before{o.classroom.by ? ` (it was connected from ${o.classroom.by}’s login)` : ""}, and tick <b>every</b> box on Google’s screen. The site checks that account can still read the Meet log before switching, so attendance can’t break; it stays read-only.
+          <div style={{ marginTop: 8 }}><a className="abtn pri sm" href="/admin/meet-api?action=login">Connect Google again</a></div></>}</div>
       : <><span className="muted">{o.classroom.linked === 0 ? "No classes are linked to a Google Classroom yet (Classes → Classroom link)." : o.classroom.error ? `Classroom couldn’t be read: ${o.classroom.error}` : o.classroom.at ? `Classroom last read ${ago(o.classroom.at)} (every 2 hours).` : "Classroom hasn’t been read yet."}</span>
       <form action={readClassroomAction}><input type="hidden" name="back" value="/admin/students" /><button className="abtn sm" type="submit">Read Classroom now</button></form></>}
     </div>
+    {o.classroom.at && <p className="muted" style={{ fontSize: 13.5, margin: "6px 0 0" }}>Last Classroom read {ago(o.classroom.at)}: {o.classroom.classes ?? 0} class{o.classroom.classes === 1 ? "" : "es"} read, {o.classroom.work ?? 0} pieces of work, {o.classroom.submissions ?? 0} hand-ins · {o.classroom.linked} class{o.classroom.linked === 1 ? "" : "es"} this year {o.classroom.linked === 1 ? "has" : "have"} a Classroom link{o.classroom.error ? ` · error: ${o.classroom.error}` : ""}.
+      {!!o.classroom.problems?.length && <> Couldn’t read: {o.classroom.problems.slice(0, 5).join("; ")}{o.classroom.problems.length > 5 ? "…" : ""}</>}</p>}
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "14px 0" }}>
       <LiveSearch placeholder="Search student, parent or class" label="Search students" />
       <div className="segl" role="group" aria-label="Show">{[["all", "All"], ["missing", `Missing work (${t.withMissing})`], ["attendance", `Low attendance (${t.lowAtt})`], ["send", "SEND"], ["points", "Points"]].map(([k, l]) =>

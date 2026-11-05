@@ -79,7 +79,7 @@ export default async function EmailSettings({ searchParams }: { searchParams: Pr
           <label className="fld" style={{ flex: "1 1 220px" }}>Shown to teachers as<input name={`label_${a.id}`} defaultValue={on.get(a.id) ?? ""} placeholder="e.g. Principal, IT support" maxLength={60} /></label>
         </div>)}
         {notAdmin.length > 0 && <p className="note" style={{ margin: 0 }}>{notAdmin.map((x) => x.name).join(", ")} {notAdmin.length === 1 ? "has" : "have"} a teacher account, not an admin one, so can’t be listed yet.
-          In <Link href="/admin/staff">Staff &amp; access</Link>, invite them with Access “Admin”, their own email and “Also teaches?” set to their name; once they’ve accepted, tick them here. They keep their classes.</p>}
+          Press <b>Make admin</b> beside their name in <Link href="/admin/staff">Staff &amp; access</Link>; they keep their classes and appear here.</p>}
         <p className="muted" style={{ margin: 0, fontSize: 14 }}>With two or more people ticked, teachers also get an “Everyone” choice that sends one message to all of them.</p>
         <div><button className="abtn pri" type="submit">Save</button></div>
       </form></section>

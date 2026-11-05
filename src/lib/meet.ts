@@ -159,6 +159,14 @@ export async function recCanInvite(): Promise<"ok" | "reconnect" | "none"> {
 }
 export async function googleKv<T>(key: string): Promise<T | null> { return kvGet<T>(key); }
 export async function googleKvSet(key: string, v: unknown) { await kvSet(key, v); }
+/** Which Classroom permissions the school's Google connection is missing (5 Nov), in plain words; null when Google isn't connected. */
+export async function classroomMissing(): Promise<string[] | null> {
+  const c = await conn(); if (!c.refreshToken) return null;
+  const names: Record<string, string> = { "classroom.courses.readonly": "see the classes", "classroom.rosters.readonly": "see who is in each class",
+    "classroom.coursework.students.readonly": "see the work and hand-ins", "classroom.profile.emails": "see students' Google accounts" };
+  return CLASSROOM_SCOPES.filter((x) => !(c.scopes ?? "").includes(x)).map((x) => names[x.replace(G, "")] ?? x);
+}
+export async function googleConnectedBy(): Promise<string | null> { return (await conn()).by ?? null; }
 export async function classroomGranted(): Promise<boolean | null> { const c = await conn(); if (!c.refreshToken) return null; return CLASSROOM_SCOPES.every((x) => (c.scopes ?? "").includes(x)); }
 async function accessToken(c: Conn): Promise<string> {
   const t = await token({ client_id: c.clientId!, client_secret: c.clientSecret!, refresh_token: c.refreshToken!, grant_type: "refresh_token" });

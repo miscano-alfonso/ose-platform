@@ -18,12 +18,13 @@ export type StudentRow = {
 };
 export type Overview = { term: { id: string; name: string; starts_on: string; ends_on: string } | null; since: string; rows: StudentRow[];
   totals: { students: number; due: number; handed: number; missing: number; late: number; withMissing: number; lowAtt: number; points: number };
-  classroom: { at: string | null; error: string | null; linked: number; granted: boolean | null } };
+  classroom: { at: string | null; error: string | null; linked: number; granted: boolean | null; missing: string[] | null; by: string | null; classes?: number; work?: number; submissions?: number; problems?: string[] } };
 
 /** opts.teacherUserId: only that teacher's classes (their own dashboard). */
 export async function studentOverview(opts: { teacherUserId?: string } = {}): Promise<Overview> {
-  const { classroomGranted } = await import("./meet");
-  const granted = await classroomGranted().catch(() => null);
+  const { classroomMissing, googleConnectedBy } = await import("./meet");
+  const [missing, by] = await Promise.all([classroomMissing().catch(() => null), googleConnectedBy().catch(() => null)]);
+  const granted = missing == null ? null : missing.length === 0;
   return withSchool(async (q) => {
     const gids = opts.teacherUserId ? (await q<{ id: string }>(`select g.id from course_groups g join teachers t on t.id = g.teacher_id where t.user_id = $1 and g.academic_year_id = ${YEAR}`, [opts.teacherUserId])).map((r) => r.id) : null;
     const term = (await q<{ id: string; name: string; starts_on: string; ends_on: string }>(`select id, name, starts_on::text, ends_on::text from terms where academic_year_id = ${YEAR}
@@ -59,7 +60,7 @@ export async function studentOverview(opts: { teacherUserId?: string } = {}): Pr
       where c.due_at >= $1::date and c.due_at < now() and g.academic_year_id = ${YEAR} and ($2::uuid[] is null or g.id = any($2::uuid[]))
       order by c.due_at desc`, [since, gids]);
     const pts = await q<{ id: string; points: number }>(`select student_id as id, sum(points)::int as points from reward_points where awarded_on between $1::date and $2::date and ($3::uuid[] is null or group_id = any($3::uuid[])) group by student_id`, [pSince, until, gids]);
-    const info = (await q<{ value: { at?: string; error?: string } }>(`select value from meet_kv where key = 'classroom' limit 1`).catch(() => []))[0]?.value ?? {};
+    const info = (await q<{ value: { at?: string; error?: string; classes?: number; work?: number; submissions?: number; problems?: string[] } }>(`select value from meet_kv where key = 'classroom' limit 1`).catch(() => []))[0]?.value ?? {};
     const linked = (await q<{ n: number }>(`select count(*)::int as n from course_groups g where g.academic_year_id = ${YEAR} and g.google_course_id is not null and g.status <> 'closed' and ($1::uuid[] is null or g.id = any($1::uuid[]))`, [gids]))[0]?.n ?? 0;
 
     const A = new Map(att.map((a) => [a.id, a])), P = new Map(pts.map((x) => [x.id, x.points]));
@@ -78,6 +79,6 @@ export async function studentOverview(opts: { teacherUserId?: string } = {}): Pr
     return { term, since, rows,
       totals: { students: rows.length, due: sum("due"), handed: sum("handed"), missing: sum("missing"), late: sum("late"), withMissing: rows.filter((r) => r.missing > 0).length,
         lowAtt: rows.filter((r) => r.att != null && r.held >= 3 && r.att < 85).length, points: sum("points") },
-      classroom: { at: info.at ?? null, error: info.error ?? null, linked, granted } };
+      classroom: { at: info.at ?? null, error: info.error ?? null, linked, granted, missing, by, classes: info.classes, work: info.work, submissions: info.submissions, problems: info.problems } };
   });
 }

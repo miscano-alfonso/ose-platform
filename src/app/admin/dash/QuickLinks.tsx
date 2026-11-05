@@ -22,7 +22,7 @@ export function QuickLinks({ links, options, isDefault, locked }: { links: L[]; 
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" /></svg></button>}
     {root && createPortal(<dialog ref={dlg} className="ql-dlg" aria-labelledby="ql-h">
       <h2 id="ql-h">Your quick links</h2>
-      <p className="cs">Up to 8 links in your greeting. Only you see these.</p>
+      <p className="cs">Up to 8 links in your greeting, or none. Only you see these.</p>
       {pick.length === 0 ? <p className="empty">No links. Add one below.</p> : <ol className="ql-list">{pick.map((h, i) => <li key={h}><span>{label(h)}</span>
         <button type="button" aria-label={`Move ${label(h)} earlier`} disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
         <button type="button" aria-label={`Move ${label(h)} later`} disabled={i === pick.length - 1} onClick={() => move(i, 1)}>↓</button>
