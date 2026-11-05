@@ -1250,3 +1250,21 @@
 .adm .nm-btns{display:flex;gap:8px}
 @media (max-width:600px){.adm .nm-g{min-width:100%}}
 .adm .arr-leave{display:table;margin:4px 0 0;font-weight:500;font-size:12px}
+/* 5 Nov: summary boxes under a page's title, chosen per page with "Boxes" */
+.adm .pb-btn-host{display:contents}
+.adm .top .pb-btn{margin-left:auto;display:inline-flex;align-items:center;gap:6px}
+.adm .top .grow~.pb-btn-host .pb-btn,.adm .top .grow~* .pb-btn{margin-left:0}
+.adm .pb-host:empty{display:none}
+.adm .pb-host{margin:-6px 0 20px;display:grid;gap:12px}
+.adm .pb-strip{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}
+.adm .pb-strip .dx-kpi{max-width:none}
+.adm .pb-edit{border:1px dashed var(--line);border-radius:16px;padding:14px 16px;display:grid;gap:10px;background:var(--panel)}
+.adm .pb-help{margin:0;font-size:14.5px;color:var(--muted)}
+.adm .pb-chips{display:flex;flex-wrap:wrap;gap:6px}
+.adm .pb-chip{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:6px 12px;font:500 14px "Space Grotesk","Jost",sans-serif;cursor:pointer}
+.adm .pb-chip.on{background:var(--rail-on);border-color:var(--rail-on);color:var(--rail-on-ink)}
+.adm .pb-order{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:6px}
+.adm .pb-order li{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--line);border-radius:10px;padding:3px 4px 3px 10px;font-size:13.5px}
+.adm .pb-order button{border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:7px;min-width:26px;height:26px;cursor:pointer}
+.adm .pb-order button:disabled{opacity:.35;cursor:default}
+.adm .pb-btns{display:flex;gap:8px;flex-wrap:wrap}

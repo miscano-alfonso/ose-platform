@@ -25,6 +25,7 @@ import { schoolsFor, siteSchool, SCHOOL_COOKIE } from "@/lib/db";
 import { Switchers } from "../Switchers";
 import { Assistant } from "../Assistant";
 import { SideFoot } from "../TopBar";
+import { PageBoxes } from "../PageBoxes";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Admin", robots: { index: false, follow: false } };
@@ -88,7 +89,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
         site={pl.plan ? [{ href: "/osedtech", label: "OH-SO EdTech" }] : isDemoVisitor(me.email) ? [{ href: "/osedtech/demo/site", label: "View the school’s website" }, { href: "/osedtech", label: "Back to OH-SO EdTech" }] : [{ href: "/", label: "View the website" }]} />
     </aside>
     <main className="main"><div className="topbar adm-tabs"><AdminTabs counts={navCounts} groups={menu} /><div className="sw-top">{switchers("t")}</div>
-</div>{demo && (isDemoVisitor(me.email) ? <p className="note msg" style={{ marginTop: 0 }}><b>Demo school.</b> Everything here is made up, so click anything: nothing is ever emailed, charged or posted, and the demo is made fresh every day. Try <b>Viewing as</b> (bottom left) to see a teacher’s, parent’s or student’s view. <a href="/osedtech/trial">Start a free trial</a> to get your own school.</p> : <p className="note msg" style={{ marginTop: 0 }}><b>Demo school.</b> Everything here is made up (families, children, payments and messages), so you can click anything safely. Nothing is ever emailed or charged. Switch back with the School menu.</p>)}{pl.plan && <TrialBar plan={PLAN_NAME[pl.plan]} days={pl.daysLeft} ended={pl.ended} students={pl.students} included={STUDENTS_INCLUDED[pl.plan]} />}{pl.ended ? <TrialEnded /> : notInPlan(pl.plan, path) ? <NotInPlan plan={PLAN_NAME[pl.plan!]} /> : <>{pl.plan && path === "/admin" && pl.classes === 0 && <GettingStarted name={sch.name} />}{children}</>}</main>
+</div>{demo && (isDemoVisitor(me.email) ? <p className="note msg" style={{ marginTop: 0 }}><b>Demo school.</b> Everything here is made up, so click anything: nothing is ever emailed, charged or posted, and the demo is made fresh every day. Try <b>Viewing as</b> (bottom left) to see a teacher’s, parent’s or student’s view. <a href="/osedtech/trial">Start a free trial</a> to get your own school.</p> : <p className="note msg" style={{ marginTop: 0 }}><b>Demo school.</b> Everything here is made up (families, children, payments and messages), so you can click anything safely. Nothing is ever emailed or charged. Switch back with the School menu.</p>)}{pl.plan && <TrialBar plan={PLAN_NAME[pl.plan]} days={pl.daysLeft} ended={pl.ended} students={pl.students} included={STUDENTS_INCLUDED[pl.plan]} />}{pl.ended ? <TrialEnded /> : notInPlan(pl.plan, path) ? <NotInPlan plan={PLAN_NAME[pl.plan!]} /> : <>{pl.plan && path === "/admin" && pl.classes === 0 && <GettingStarted name={sch.name} />}<PageBoxes />{children}</>}</main>
     {!pl.plan || pl.plan === "school" ? <Assistant /> : null}
   </div></div>;
 }
