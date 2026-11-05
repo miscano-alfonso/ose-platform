@@ -18,17 +18,23 @@ export type StudentRow = {
 };
 export type Overview = { term: { id: string; name: string; starts_on: string; ends_on: string } | null; since: string; rows: StudentRow[];
   totals: { students: number; due: number; handed: number; missing: number; late: number; withMissing: number; lowAtt: number; points: number };
-  classroom: { at: string | null; error: string | null; linked: number } };
+  classroom: { at: string | null; error: string | null; linked: number; granted: boolean | null } };
 
 /** opts.teacherUserId: only that teacher's classes (their own dashboard). */
 export async function studentOverview(opts: { teacherUserId?: string } = {}): Promise<Overview> {
+  const { classroomGranted } = await import("./meet");
+  const granted = await classroomGranted().catch(() => null);
   return withSchool(async (q) => {
     const gids = opts.teacherUserId ? (await q<{ id: string }>(`select g.id from course_groups g join teachers t on t.id = g.teacher_id where t.user_id = $1 and g.academic_year_id = ${YEAR}`, [opts.teacherUserId])).map((r) => r.id) : null;
     const term = (await q<{ id: string; name: string; starts_on: string; ends_on: string }>(`select id, name, starts_on::text, ends_on::text from terms where academic_year_id = ${YEAR}
       order by (current_date between starts_on and ends_on) desc, (starts_on > current_date), starts_on desc limit 1`))[0] ?? null;
     // the window: this term if it has started, else the last six weeks
-    const since = term && term.starts_on <= new Date().toISOString().slice(0, 10) ? term.starts_on : new Date(Date.now() - 42 * 864e5).toISOString().slice(0, 10);
-    const until = term && term.ends_on >= since ? term.ends_on : new Date().toISOString().slice(0, 10);
+    // work: from the start of this term, but always at least the last 4 weeks (so the first weeks of a term still show
+    // what was left undone before the break); attendance and points stay this term's
+    const d28 = new Date(Date.now() - 28 * 864e5).toISOString().slice(0, 10);
+    const tStart = term && term.starts_on <= new Date().toISOString().slice(0, 10) ? term.starts_on : null;
+    const since = tStart && tStart < d28 ? tStart : d28, pSince = tStart ?? d28;
+    const until = term && term.ends_on >= pSince ? term.ends_on : new Date().toISOString().slice(0, 10);
     const base = await q<{ id: string; name: string; parent_id: string; family: string; levels: string; classes: { id: string; code: string; name: string }[];
       has_send: string | null; needs: string[] | null; details: string | null }>(`
       select s.id, s.first_name || ' ' || s.last_name as name, s.parent_id, p.first_name || ' ' || p.last_name as family,
@@ -52,7 +58,7 @@ export async function studentOverview(opts: { teacherUserId?: string } = {}): Pr
         left join classroom_submissions sub on sub.coursework_id = c.id and sub.student_id = e.student_id
       where c.due_at >= $1::date and c.due_at < now() and g.academic_year_id = ${YEAR} and ($2::uuid[] is null or g.id = any($2::uuid[]))
       order by c.due_at desc`, [since, gids]);
-    const pts = await q<{ id: string; points: number }>(`select student_id as id, sum(points)::int as points from reward_points where awarded_on between $1::date and $2::date and ($3::uuid[] is null or group_id = any($3::uuid[])) group by student_id`, [since, until, gids]);
+    const pts = await q<{ id: string; points: number }>(`select student_id as id, sum(points)::int as points from reward_points where awarded_on between $1::date and $2::date and ($3::uuid[] is null or group_id = any($3::uuid[])) group by student_id`, [pSince, until, gids]);
     const info = (await q<{ value: { at?: string; error?: string } }>(`select value from meet_kv where key = 'classroom' limit 1`).catch(() => []))[0]?.value ?? {};
     const linked = (await q<{ n: number }>(`select count(*)::int as n from course_groups g where g.academic_year_id = ${YEAR} and g.google_course_id is not null and g.status <> 'closed' and ($1::uuid[] is null or g.id = any($1::uuid[]))`, [gids]))[0]?.n ?? 0;
 
@@ -72,6 +78,6 @@ export async function studentOverview(opts: { teacherUserId?: string } = {}): Pr
     return { term, since, rows,
       totals: { students: rows.length, due: sum("due"), handed: sum("handed"), missing: sum("missing"), late: sum("late"), withMissing: rows.filter((r) => r.missing > 0).length,
         lowAtt: rows.filter((r) => r.att != null && r.held >= 3 && r.att < 85).length, points: sum("points") },
-      classroom: { at: info.at ?? null, error: info.error ?? null, linked } };
+      classroom: { at: info.at ?? null, error: info.error ?? null, linked, granted } };
   });
 }

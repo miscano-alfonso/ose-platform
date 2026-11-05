@@ -31,7 +31,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
     <Link scroll={false} className="thsort" href={href({ sort: k, dir: on && dir === 1 ? "desc" : undefined })}>{label}{on ? (dir === 1 ? " ↓" : " ↑") : ""}</Link></th>; };
   const t = o.totals, rate = t.due ? Math.round((t.handed / t.due) * 100) : null;
   return <>
-    <div className="top"><div><h1>Students</h1><div className="sub">{o.term ? `${o.term.name}` : "The last six weeks"} · attendance from Google Meet, work from Google Classroom, reward points. Since {day(o.since)}.</div></div>
+    <div className="top"><div><h1>Students</h1><div className="sub">{o.term ? `${o.term.name}` : "The last six weeks"} · attendance from Google Meet, work from Google Classroom, reward points. Work due since {day(o.since)}.</div></div>
       <span className="grow" /><Link className="abtn" href="/admin/attendance">Attendance details</Link><Link className="abtn" href="/admin/rewards">Rewards</Link></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <div className="tiles">
@@ -42,8 +42,9 @@ export default async function Students({ searchParams }: { searchParams: Promise
       <Link href={href({ show: "points", sort: undefined, dir: undefined })} className="tile" style={{ textDecoration: "none", color: "inherit" }}><span className="k">Reward points</span><span className="v">{t.points}</span><span className="h">given this term</span></Link>
     </div>
     <div className="st-sync">
-      <span className="muted">{o.classroom.linked === 0 ? "No classes are linked to Google Classroom yet." : o.classroom.error ? `Classroom couldn’t be read: ${o.classroom.error}` : o.classroom.at ? `Classroom last read ${ago(o.classroom.at)} (every 2 hours).` : "Classroom hasn’t been read yet."}</span>
-      <form action={readClassroomAction}><input type="hidden" name="back" value="/admin/students" /><button className="abtn sm" type="submit">Read Classroom now</button></form>
+      {o.classroom.granted !== true ? <p className="note msg bad" style={{ margin: 0 }}>Google Classroom isn’t connected, so there’s no work to show yet. {o.classroom.granted === null ? "Connect Google" : "Turn on the Google Classroom API and connect Google again"} under <Link href="/admin/attendance?tab=google">Attendance → Google</Link> (read-only).</p>
+      : <><span className="muted">{o.classroom.linked === 0 ? "No classes are linked to a Google Classroom yet (Classes → Classroom link)." : o.classroom.error ? `Classroom couldn’t be read: ${o.classroom.error}` : o.classroom.at ? `Classroom last read ${ago(o.classroom.at)} (every 2 hours).` : "Classroom hasn’t been read yet."}</span>
+      <form action={readClassroomAction}><input type="hidden" name="back" value="/admin/students" /><button className="abtn sm" type="submit">Read Classroom now</button></form></>}
     </div>
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "14px 0" }}>
       <LiveSearch placeholder="Search student, parent or class" label="Search students" />
@@ -57,7 +58,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
       <thead><tr>{th("Student", "name")}<th>Classes</th>{th("Attendance", "att")}{th("Work handed in", "work")}{th("Missing", "missing", "n")}{th("Points", "points", "n")}<th>SEND</th></tr></thead>
       {list.map((r) => <tbody key={r.id} id={`s-${r.id}`}><tr>
         <td><b>{r.name}</b><div className="muted" style={{ fontSize: 14 }}><Link href={`/admin/families/${r.parent_id}`}>{r.family}</Link></div></td>
-        <td style={{ fontSize: 14 }}>{r.classes.map((c) => c.code).join(", ")}</td>
+        <td style={{ fontSize: 14 }}>{r.classes.map((c) => <div key={c.id} title={c.code}>{c.name}</div>)}</td>
         <td>{r.att == null ? <span className="muted">No lessons marked</span> : <><span className={`pill ${attTone(r.att)}`}>{r.att}%</span> <span className="muted" style={{ fontSize: 13 }}>{r.attended} of {r.held}</span></>}</td>
         <td>{r.due === 0 ? <span className="muted">Nothing due yet</span> : <><div className="st-meter" role="img" aria-label={`${r.handed} of ${r.due} handed in`}><i style={{ width: `${(r.handed / r.due) * 100}%` }} /></div>
           <span style={{ fontSize: 13.5 }}>{r.handed} of {r.due}{r.late ? ` · ${r.late} late` : ""}{r.marked ? ` · ${r.marked} marked` : ""}</span></>}</td>
@@ -67,7 +68,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
       </tr>
       {r.missing > 0 && <tr className="editrow"><td colSpan={7} style={{ paddingTop: 0 }}>
         <details className="edit"><summary className="abtn sm">Missing work ({r.missing})</summary>
-          <ul className="st-miss">{r.missingList.map((m, i) => <li key={i}><b>{m.title}</b> <span className="muted">· {m.code} · due {day(m.due_at)}</span>
+          <ul className="st-miss">{r.missingList.map((m, i) => <li key={i}><b>{m.title}</b> <span className="muted">· {r.classes.find((c) => c.id === m.gid)?.name ?? m.code} · due {day(m.due_at)}</span>
             {m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>}</li>)}
             {r.missing > r.missingList.length && <li className="muted">and {r.missing - r.missingList.length} more</li>}</ul>
           {r.notInClassroom > 0 && <p className="note" style={{ margin: "8px 0 0" }}>{r.notInClassroom === r.missing ? "They haven’t joined" : "For some of these they haven’t joined"} the class’s Google Classroom yet, so they may not have seen the work.</p>}
