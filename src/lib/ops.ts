@@ -147,7 +147,7 @@ export async function makeLessonDates(actorId: string, termId: string): Promise<
   });
 }
 
-export type RegisterStudent = { id: string; name: string; mark: string | null; notice: string | null; mark_source?: string | null; correction_note?: string | null; corrected_by_name?: string | null; send?: boolean; send_details?: string | null; adjustments?: string | null; needs?: string[] | null };
+export type RegisterStudent = { id: string; name: string; mark: string | null; notice: string | null; leaving?: string | null; mark_source?: string | null; correction_note?: string | null; corrected_by_name?: string | null; send?: boolean; send_details?: string | null; adjustments?: string | null; needs?: string[] | null };
 export type Register = { id: string; lesson_date: string; starts_at: string; ends_at: string; code: string; name: string; status: string; note: string | null;
   teacher: string | null; teacher_user: string | null; link: string | null; start_at: string; end_at: string; students: RegisterStudent[]; tasters: { id: string; child: string; status: string; email: string | null; message: string | null }[] };
 
@@ -165,7 +165,9 @@ export async function getRegister(eventId: string): Promise<Register | null> {
         coalesce(sup.has_send = 'yes' and sup.share_with_teachers, false) as send,
         case when sup.has_send = 'yes' and sup.share_with_teachers then sup.details end as send_details,
         case when sup.has_send = 'yes' and sup.share_with_teachers then sup.adjustments end as adjustments,
-        case when sup.has_send = 'yes' and sup.share_with_teachers then sup.needs end as needs
+        case when sup.has_send = 'yes' and sup.share_with_teachers then sup.needs end as needs,
+        case when x.status = 'active' and x.notice_given_on is not null then 'Leaving after ' || coalesce((select t.name from terms t where t.id = x.last_billed_term_id), 'their notice')
+             when x.status <> 'active' then 'Course cancelled' end as leaving
       from enrolments x join students st on st.id = x.student_id left join attendance_marks m on m.lesson_event_id = $1 and m.student_id = st.id
       left join student_support sup on sup.student_id = st.id
       where x.group_id = $2 and not x.is_taster and (x.status = 'active' or m.id is not null) and x.enrolled_at::date <= $3::date

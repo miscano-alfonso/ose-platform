@@ -57,7 +57,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
     {live && !fix && <AutoRefresh seconds={45} />}
     {r.status !== "cancelled" && (future
       ? <section className="card"><h2>Who’s expected</h2><p className="cs">{r.students.length} student{r.students.length === 1 ? "" : "s"}{r.tasters.length ? ` and ${r.tasters.length} taster${r.tasters.length === 1 ? "" : "s"}` : ""}. On the day, arrivals show here as students join; attendance is taken from Google Meet.</p>
-          <div className="arr">{r.students.map((s) => <div key={s.id} className={`arr-row ${s.notice ? "away" : "waiting"}`}><b>{s.name}</b><span>{s.notice ? `Away: ${s.notice}` : "Expected"}</span><span className="arr-t" />{s.send && <span className="arr-needs">{sendLabels(s.needs, s.send_details).map((n) => <span key={n} className="pill warn">{n}</span>)}</span>}</div>)}
+          <div className="arr">{r.students.map((s) => <div key={s.id} className={`arr-row ${s.notice ? "away" : "waiting"}`}><b>{s.name}{s.leaving && <span className="pill mute arr-leave">{s.leaving}</span>}</b><span>{s.notice ? `Away: ${s.notice}` : "Expected"}</span><span className="arr-t" />{s.send && <span className="arr-needs">{sendLabels(s.needs, s.send_details).map((n) => <span key={n} className="pill warn">{n}</span>)}</span>}</div>)}
             {r.tasters.map((t) => <div key={t.id} className="arr-row waiting"><b>{t.child}</b><span>Taster</span></div>)}</div></section>
       : <section className={`card${now > en ? " lesson-done" : now >= st ? " lesson-live" : ""}`} data-lesson={`${r.name}, ${r.starts_at}`}>
           <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>{live ? "Arrivals" : "Who joined"}</h2>
@@ -67,7 +67,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
             <form action={refreshJoinsAction}><input type="hidden" name="id" value={r.id} />{backInput}<button className="abtn sm" type="submit">Check Meet now</button></form></div>
           <form action={correctMarksAction} id="fix-form"><input type="hidden" name="id" value={r.id} />{backInput}
           <div className="arr" style={{ marginTop: 12 }}>{arrivals.sort((a, b) => order[a.state] - order[b.state]).map(({ s, x, lp, lateBy, state }) => <div key={s.id} className={`arr-row ${corrected(s) && s.mark ? ({ present: "in", late: "late", absent: "missing", approved_absence: "away" } as Record<string, string>)[s.mark] ?? state : state}${fix ? " fixing" : ""}`}>
-            <b>{s.name}</b>
+            <b>{s.name}{s.leaving && <span className="pill mute arr-leave">{s.leaving}</span>}</b>
             <span className="arr-st">{corrected(s) && s.mark ? `${LABEL[s.mark]} · corrected` : state === "in" ? "On time" : state === "late" ? `Late · ${lateBy} min` : state === "away" ? `Away: ${s.notice}` : state === "missing" ? "Not joined" : "Not joined yet"}</span>
             <span className="arr-t">{corrected(s) ? <>By {s.corrected_by_name ?? "the school"}{s.correction_note ? `: ${s.correction_note}` : ""}</> : x ? <>Joined {hm(x.first)}{x.last ? ` · left ${hm(x.last)}` : live ? " · still in" : ""} · {x.minutes} min{x.joins > 1 ? ` · ${x.joins} joins` : ""} · {x.sources.map((y) => SRC[y] ?? y).join(", ")}</>
               : lp ? <>Joined {hm(lp.joined)}{lp.left ? ` · left ${hm(lp.left)}` : " · in the lesson now"} · Meet</> : ""}</span>

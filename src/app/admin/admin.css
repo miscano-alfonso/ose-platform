@@ -1228,3 +1228,25 @@
 @supports not selector(::-webkit-scrollbar){.adm .dx-tl-scroll{scrollbar-width:thin;scrollbar-color:color-mix(in srgb,var(--ink) 35%,transparent) var(--soft)}}
 .adm .bb-grid.packed>.bb-cell:has(.dx-tl-scroll) .bb-body,.adm .bb-grid.packed>.bb-cell .bb-body>.dx-card:has(>.dx-tl-scroll){min-height:0}
 .adm .bb-body>.dx-card:has(>.dx-tl-scroll)>header{flex:none}
+/* 5 Nov: Messages → New message, and the office's own conversations */
+.adm .msg-views{display:flex;gap:8px;flex-wrap:wrap}
+.adm .msg-views .abtn{display:inline-flex;align-items:center}
+.adm tr.row-new td{background:color-mix(in srgb,var(--info) 7%,transparent)}
+.adm .nm-form{display:grid;gap:14px;max-width:820px}
+.adm .nm-form .fld textarea{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:9px 10px;font:16px/1.5 "Space Grotesk","Jost",sans-serif;width:100%;resize:vertical}
+.adm .nm-form select[size]{padding:4px}
+.adm .nm-form select[size] option{padding:6px 8px;border-radius:6px}
+.adm .nm-kinds{border:0;padding:0;margin:0;display:grid;gap:8px}
+.adm .nm-kinds legend{font-size:14.5px;font-weight:600;color:var(--muted);margin-bottom:6px;padding:0}
+.adm .nm-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.adm .nm-g{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);min-width:92px}
+.adm .nm-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--soft);color:var(--ink);border-radius:999px;padding:6px 12px;font-size:14.5px;cursor:pointer}
+.adm .nm-chip input{position:absolute;opacity:0;pointer-events:none}
+.adm .nm-chip:has(input:focus-visible){outline:2px solid var(--info);outline-offset:2px}
+.adm .nm-chip.on{background:var(--rail-on);border-color:var(--rail-on);color:var(--rail-on-ink)}
+.adm .nm-pick{display:grid;gap:8px}
+.adm .nm-reach{margin:0;font-size:15px}
+.adm .nm-check{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;font-size:15px}
+.adm .nm-btns{display:flex;gap:8px}
+@media (max-width:600px){.adm .nm-g{min-width:100%}}
+.adm .arr-leave{display:table;margin:4px 0 0;font-weight:500;font-size:12px}

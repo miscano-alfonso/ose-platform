@@ -52,7 +52,7 @@ export const CATALOGUE: Record<MenuArea, MenuItem[]> = {
     it("Workshops", "/parent/workshops", "cal"), it("Messages", "/parent/messages", "mail"), it("Other parents", "/parent/connect", "fam"), it("My details", "/parent/details", "set"),
     it("Privacy", "/parent/privacy", "set"), it("Reports", "/parent/reports", "rep"), it("Payments", "/parent/payments", "pay"), it("Calendar sync", "/parent/calendar", "cal"), it("Notifications", "/parent/notifications", "set"),
   ],
-  student: [it("Home", "/student", "home"), it("My classes", CLASSES_TOKEN, "cls"), it("Chat", "/student/chat", "chat"), it("Rewards", "/student/rewards", "star"), it("Calendar sync", "/student/calendar", "cal"), it("Notifications", "/student/notifications", "set")],
+  student: [it("Home", "/student", "home"), it("My classes", CLASSES_TOKEN, "cls"), it("Chat", "/student/chat", "chat"), it("Messages", "/student/messages", "mail"), it("Rewards", "/student/rewards", "star"), it("Calendar sync", "/student/calendar", "cal"), it("Notifications", "/student/notifications", "set")],
 };
 
 const hrefs = (a: MenuArea, ...ls: string[]) => ls.map((l) => l.startsWith("/") ? l : CATALOGUE[a].find((x) => x.label === l)!.href);   // a label, or the link itself when two items share a label

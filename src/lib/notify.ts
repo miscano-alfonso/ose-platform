@@ -43,6 +43,11 @@ export async function notifyEvents(w: Who, since: Date): Promise<NotifyEvent[]> 
       run(`select 'm:' || m.id as id, 'message' as type, 'Message from ' || case when m.sender = 'parent' then p.first_name || ' ' || p.last_name else (select u.name from users u join teachers t on t.user_id = u.id where t.id = th.teacher_id) end as title,
           th.subject as body, '/admin/messages/' || th.id as href, m.created_at::text as at
         from messages m join message_threads th on th.id = m.thread_id join parents p on p.id = th.parent_id where m.created_at > $1::timestamptz and m.sender in ('parent','teacher') order by m.created_at desc limit 10`, [from]),
+      run(`select 'or:' || m.id as id, 'message' as type, 'Reply from ' || coalesce(p.first_name || ' ' || p.last_name, s.first_name || ' ' || s.last_name, tu.name, 'someone') as title,
+          th.subject as body, '/admin/messages/office/' || th.id as href, m.created_at::text as at
+        from office_messages m join office_threads th on th.id = m.thread_id left join parents p on th.to_kind = 'parent' and p.id = th.parent_id
+          left join students s on th.to_kind = 'student' and s.id = th.student_id left join teachers t on t.id = th.teacher_id left join users tu on tu.id = t.user_id
+        where m.sender <> 'office' and m.created_at > $1::timestamptz order by m.created_at desc limit 10`, [from]),
       run(`select 't:' || r.id as id, 'taster' as type, 'Taster request: ' || r.child_name as title, r.parent_first_name || ' ' || r.parent_last_name as body, '/admin/tasters' as href, r.created_at::text as at
         from taster_requests r where r.created_at > $1::timestamptz order by r.created_at desc limit 10`, [from]),
       run(`select 'q:' || e.id as id, 'enquiry' as type, 'New enquiry: ' || e.name as title, coalesce(left(e.message, 120), '') as body, '/admin/enquiries' as href, e.created_at::text as at
@@ -50,6 +55,8 @@ export async function notifyEvents(w: Who, since: Date): Promise<NotifyEvent[]> 
       run(LESSON("true").replace("%HREF%", "'/admin/register/' || ev.id"), []),
     ];
     if (w.role === "teacher") parts = [
+      run(`select 'om:' || m.id as id, 'message' as type, 'Message from the office' as title, th.subject as body, '/admin/teacher/messages?office=' || th.id as href, m.created_at::text as at
+        from office_messages m join office_threads th on th.id = m.thread_id where th.to_kind = 'teacher' and th.teacher_id = ${T} and m.sender = 'office' and m.created_at > $2::timestamptz order by m.created_at desc limit 10`, [w.id, from]),
       run(LESSON(`ev.teacher_id = ${T}`).replace("%HREF%", "g.meet_url"), [w.id]),
       run(`select 'm:' || m.id as id, 'message' as type, 'Message from ' || p.first_name || ' ' || p.last_name as title, th.subject as body, '/admin/messages/' || th.id as href, m.created_at::text as at
         from messages m join message_threads th on th.id = m.thread_id join parents p on p.id = th.parent_id
@@ -64,6 +71,8 @@ export async function notifyEvents(w: Who, since: Date): Promise<NotifyEvent[]> 
     ];
     const KIDS = `(select e.group_id from enrolments e join students s on s.id = e.student_id where s.parent_id = $1 and e.status in ('pending','active'))`;
     if (w.role === "parent") parts = [
+      run(`select 'om:' || m.id as id, 'message' as type, 'Message from the office' as title, th.subject as body, '/parent/messages?o=' || th.id as href, m.created_at::text as at
+        from office_messages m join office_threads th on th.id = m.thread_id where th.to_kind = 'parent' and th.parent_id = $1 and m.sender = 'office' and m.created_at > $2::timestamptz order by m.created_at desc limit 10`, [w.id, from]),
       run(LESSON(`ev.group_id in ${KIDS}`).replace("%HREF%", "'/parent'"), [w.id]),
       run(`select 'm:' || m.id as id, 'message' as type, 'Message from ' || (select u.name from users u join teachers t on t.user_id = u.id where t.id = th.teacher_id) as title, th.subject as body,
           '/parent/messages?t=' || th.id as href, m.created_at::text as at
@@ -76,6 +85,8 @@ export async function notifyEvents(w: Who, since: Date): Promise<NotifyEvent[]> 
         where s.parent_id = $1 and i.status = 'scheduled' and i.due_on = current_date + 1 and extract(hour from now() at time zone 'Europe/London') between 8 and 20`, [w.id]),
     ];
     if (w.role === "student") parts = [
+      run(`select 'om:' || m.id as id, 'message' as type, 'Message from the office' as title, th.subject as body, '/student/messages?o=' || th.id as href, m.created_at::text as at
+        from office_messages m join office_threads th on th.id = m.thread_id where th.to_kind = 'student' and th.student_id = $1 and m.sender = 'office' and m.created_at > $2::timestamptz order by m.created_at desc limit 10`, [w.id, from]),
       run(LESSON(`ev.group_id in (select group_id from enrolments where student_id = $1 and status in ('pending','active'))`).replace("%HREF%", "'/join/' || g.id"), [w.id]),
       run(`select 'c:' || cm.id as id, 'chat' as type, coalesce(case when cm.sender_teacher_id is not null then (select u.name from users u join teachers t on t.user_id = u.id where t.id = cm.sender_teacher_id) end,
             (select coalesce(nullif(known_as, ''), first_name) from students where id = cm.sender_student_id), 'The office') as title, left(cm.body, 140) as body, '/student/chat?c=' || c.id || case when c.kind = 'class' then '&t=' || coalesce(cm.parent_id, cm.id) else '' end as href, cm.created_at::text as at

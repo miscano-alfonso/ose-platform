@@ -3,6 +3,8 @@ import { requireViewer } from "@/lib/auth";
 import { listThreads } from "@/lib/community";
 import { teacherEmails, teacherContacts, officeInfo, familyMsgsOn } from "@/lib/teacher-area";
 import { teacherEmailAction } from "../email/actions";
+import { teacherOfficeReplyAction } from "../../../actions";
+import { myOfficeThreads, myOfficeThread } from "@/lib/office-messages";
 
 export const dynamic = "force-dynamic";
 const day = (s: string) => new Date(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
@@ -12,17 +14,31 @@ const kb = (n: number) => n > 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${Math.max(1
 // Messages (31 Oct): one place for a teacher's conversations, with the school (the people it lists, e.g. the principal
 // and IT support; this was the separate "Email" page) and with the families of the students they teach.
 // ?to=<contact> writes to someone at the school, ?school=<thread> opens a conversation with the school.
-export default async function TeacherMessages({ searchParams }: { searchParams: Promise<{ show?: string; to?: string; school?: string; ok?: string; err?: string }> }) {
+export default async function TeacherMessages({ searchParams }: { searchParams: Promise<{ show?: string; to?: string; school?: string; office?: string; ok?: string; err?: string }> }) {
   const [sp, me] = await Promise.all([searchParams, requireViewer()]);
   const show = sp.show === "closed" || sp.show === "all" ? sp.show : "open";
-  const [threads, mails, contacts, office, canMsg] = await Promise.all([listThreads(me.id, show), teacherEmails(me.id), teacherContacts().catch(() => []),
-    officeInfo().catch(() => ({ label: "the office", mailbox: null })), familyMsgsOn()]);
+  const [threads, mails, contacts, office, canMsg, fromOffice] = await Promise.all([listThreads(me.id, show), teacherEmails(me.id), teacherContacts().catch(() => []),
+    officeInfo().catch(() => ({ label: "the office", mailbox: null })), familyMsgsOn(), myOfficeThreads("teacher", me.id).catch(() => [])]);
   const labelOf = (name: string | null) => { const c = contacts.find((x) => x.name === name); return name ? `${name}${c ? ` · ${c.label}` : ""}` : office.label; };
   // conversations with the school: one per thread, newest first; inside, oldest first
   const school = [...mails.reduce((m, e) => m.set(e.thread_id, [...(m.get(e.thread_id) ?? []), e]), new Map<string, typeof mails>()).values()].map((t) => [...t].reverse());
   const open = sp.school ? school.find((t) => t[0].thread_id === sp.school) : undefined;
   const to = contacts.find((c) => c.user_id === sp.to);
   const off = me.viewing ? <p className="note">You’re viewing as {me.name}: you can read their messages but not send as them.</p> : null;
+
+  // a message the office started (5 Nov)
+  const ot = sp.office ? await myOfficeThread("teacher", me.id, sp.office, !me.viewing) : null;
+  if (ot) return <>
+    <p className="backlink"><Link className="abtn sm" href="/admin/teacher/messages">← Messages</Link></p>
+    <div className="top"><div><h1>{ot.th.subject}</h1><div className="sub">From {office.label}{ot.th.status === "closed" ? " · closed" : ""}</div></div></div>
+    {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+    <div className="tm-msgs">{ot.msgs.map((m) => <div key={m.id} className={`card bubble b-${m.sender === "office" ? "office" : "teacher"}`}>
+      <div className="muted tm-who"><b>{m.who}</b> · {when(m.at)}</div><div className="tm-body">{m.body}</div></div>)}</div>
+    {ot.th.status === "open" ? <form action={teacherOfficeReplyAction} className="card tm-form"><input type="hidden" name="id" value={ot.th.id} />
+      <label className="fld">Reply<textarea name="body" required rows={5} maxLength={5000} /></label>
+      <div><button className="abtn pri" type="submit" disabled={!!me.viewing}>Send</button></div>{off}</form>
+      : <p className="note">This conversation is closed.</p>}
+  </>;
 
   // one conversation with the school
   if (open) { const last = open[open.length - 1]; return <>
@@ -67,6 +83,9 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
         <div style={{ display: "flex", gap: 8 }}><button className="abtn pri" type="submit" disabled={!!me.viewing}>Send</button><Link className="abtn" href="/admin/teacher/messages">Cancel</Link></div>{off}
         <p className="note" style={{ margin: 0 }}>They also get it by email. Their reply shows here and comes to {me.email}.</p>
       </form>}
+      {fromOffice.length > 0 && <div className="tm-list">{fromOffice.map((t) => <Link key={t.id} className="li tm-row" href={`/admin/teacher/messages?office=${t.id}`}>
+        <div className="t"><b>{t.subject}</b><span>From {office.label} · {day(t.last_at)}</span></div>
+        {t.unread ? <span className="pill info">New</span> : t.status === "closed" ? <span className="pill mute">Closed</span> : t.last_sender === "teacher" ? <span className="pill good">Replied</span> : null}<span className="abtn sm">Open</span></Link>)}</div>}
       {school.length > 0 && <div className="tm-list">{school.map((t) => { const last = t[t.length - 1]; const replied = !!last.replied_at;
         return <Link key={last.thread_id} className="li tm-row" href={`/admin/teacher/messages?school=${encodeURIComponent(last.thread_id)}`}>
           <div className="t"><b>{last.subject || "(no subject)"}</b><span>With {labelOf(t[0].to_name)} · {day(last.replied_at ?? last.at)} · {t.length + t.filter((e) => e.replied_at).length} message{t.length + t.filter((e) => e.replied_at).length === 1 ? "" : "s"}</span></div>

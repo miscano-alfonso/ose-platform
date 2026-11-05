@@ -149,3 +149,12 @@ export async function parentSwapAction(f: FormData): Promise<void> {
   const err = await F.parentSwap(p.id, str(f, "id", 40), str(f, "to", 40), start);
   go("/parent/payments", start === "next" ? "Swap booked: the new class starts next term." : "Swapped: your child moves now and this term is re-priced.", err);
 }
+
+// ---------- replies to messages from the office (5 Nov) ----------
+export async function familyOfficeReplyAction(f: FormData): Promise<void> {
+  const id = str(f, "id", 40), kind = f.get("kind") === "student" ? "student" : "parent", page = `/${kind}/messages?o=${encodeURIComponent(id)}`;
+  const who = kind === "student" ? await student(page) : await parent(page);
+  const { myOfficeReply } = await import("@/lib/office-messages");
+  const err = await myOfficeReply(kind, who.id, id, String(f.get("body") ?? "").replace(/\r\n/g, "\n"));
+  go(page, "Sent to the office.", err);
+}

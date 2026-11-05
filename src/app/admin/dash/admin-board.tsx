@@ -5,6 +5,7 @@ import { getDashboard, getDashboardMore } from "@/lib/admin-data";
 import type { Staff } from "@/lib/auth";
 import { inboxList, inboxStatus } from "@/lib/inbox";
 import { listThreads } from "@/lib/community";
+import { officeThreads } from "@/lib/office-messages";
 import { money, dayMonth, yearLabel } from "@/lib/format";
 import { MoreList } from "../MoreList";
 import { notInPlan, type PlanId } from "@/lib/plan";
@@ -37,9 +38,10 @@ const I = {
 
 /** The admin home's modules (also used by the Solo dashboard, which mixes them with the teacher's). */
 export async function adminModules(me: Staff, plan: PlanId | null): Promise<BoardModule[]> {
-  const [{ t, attention }, m, flags, box, threads] = await Promise.all([getDashboard(), getDashboardMore(LOW), openFlags().catch(() => []), inboxStatus().catch(() => null), listThreads(null, "open").catch(() => [])]);
+  const [{ t, attention }, m, flags, box, threads, officeAll] = await Promise.all([getDashboard(), getDashboardMore(LOW), openFlags().catch(() => []), inboxStatus().catch(() => null), listThreads(null, "open").catch(() => []), officeThreads("replies").catch(() => [])]);
   const waitCut = Date.now() - 2 * 864e5, waiting = threads.filter((x) => x.last_sender === "parent" && Date.parse(x.last_message_at) < waitCut).length;
-  const fromParent = threads.filter((x) => x.last_sender === "parent").length;
+  const replies = officeAll.filter((x) => x.unread > 0);
+  const fromParent = threads.filter((x) => x.last_sender === "parent").length + replies.length;
   const mail = box?.connected ? await inboxList("new").catch(() => ({ rows: [], unread: 0 })) : { rows: [], unread: 0 };
   const ago = (iso: string) => { const h = (Date.now() - Date.parse(iso)) / 3600e3; return h < 1 ? `${Math.max(1, Math.round(h * 60))} min ago` : h < 24 ? `${Math.round(h)} h ago` : dayMonth(iso.slice(0, 10)); };
   const pct = t.capacity ? Math.round((t.taken / t.capacity) * 100) : 0;
@@ -157,7 +159,9 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
     </section> },
     { id: "messages", title: "Messages", node: <section className="dx-card">
       <header><h2>Messages</h2>{fromParent > 0 && <span className="dx-count">{fromParent}</span>}<Link className="dx-more" href="/admin/messages">All messages →</Link></header>
-      {threads.length === 0 ? <div className="dx-clear"><Ico d={I.check} /><b>No open conversations</b><span>Messages between parents and teachers will show here.</span></div>
+      {replies.length > 0 && <MoreList className="dx-list" limit={3}>{replies.map((x) => <Link key={x.id} className="dx-item warn" href={`/admin/messages/office/${x.id}`}>
+        <span className="t"><b>{x.subject}</b><span>Reply from {x.name} to the office</span><span style={{ fontSize: 13 }}>{ago(x.last_message_at)}{x.batch ? ` · ${x.batch}` : ""}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
+      {threads.length === 0 ? replies.length > 0 ? null : <div className="dx-clear"><Ico d={I.check} /><b>No open conversations</b><span>Messages between parents and teachers will show here.</span></div>
         : <>{waiting > 0 && <p style={{ margin: "0 0 10px", fontSize: 14 }}><span className="pill bad">{waiting} waiting over 2 days</span></p>}
           <MoreList className="dx-list" limit={4}>{threads.map((x) => { const late = x.last_sender === "parent" && Date.parse(x.last_message_at) < waitCut;
             return <Link key={x.id} className={`dx-item ${late ? "bad" : x.last_sender === "parent" ? "warn" : "info"}`} href={`/admin/messages/${x.id}`}>

@@ -47,7 +47,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   const [x] = await withSchool((q) => q<{ rep: number; msg: number; joins: number }>(`select
     (select count(*)::int from report_entries e join report_cycles c on c.id = e.cycle_id where e.status = 'submitted' and c.status <> 'published') as rep,
     (select count(*)::int from message_threads th where th.status = 'open' and th.last_message_at < now() - interval '2 days'
-      and (select m.sender from messages m where m.thread_id = th.id order by m.created_at desc limit 1) = 'parent') as msg,
+      and (select m.sender from messages m where m.thread_id = th.id order by m.created_at desc limit 1) = 'parent')
+      + (select count(distinct thread_id)::int from office_messages where sender <> 'office' and read_at is null) as msg,
     coalesce((select coalesce(value->>'people', value->>'unmatched')::int from meet_kv where key = 'sync'), 0) as joins`)).catch(() => [{ rep: 0, msg: 0, joins: 0 }]);
   const [c] = await withSchool((q) => q<{ enq: number; jobs: number; failed: number; tasters: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq,
     (select count(*)::int from job_applications where status = 'new') as jobs, (select count(*)::int from instalments where status = 'failed') as failed,

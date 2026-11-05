@@ -658,6 +658,51 @@ export async function startThreadAction(f: FormData): Promise<void> {
   redirect(r.id ? `/admin/messages/${r.id}` : `/admin/messages/new?err=${encodeURIComponent(r.error!)}`);
 }
 
+// ---------- messages the office starts (5 Nov) ----------
+async function baseUrl() {
+  const h = await headers(); const { siteBase } = await import("@/lib/social");
+  return siteBase(`${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`);
+}
+const msgBody = (f: FormData) => String(f.get("body") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 4500);
+export async function sendOfficeMessageAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { sendOfficeMessage } = await import("@/lib/office-messages");
+  const aud = str(f, "aud", 30) as import("@/lib/office-messages").Audience, target = str(f, "target", 40);
+  const r = await sendOfficeMessage(me.id, { aud, target, subject: str(f, "subject", 160), body: msgBody(f), email: f.get("email") === "1", base: await baseUrl() });
+  if (r.error) redirect(`/admin/messages/write?aud=${encodeURIComponent(aud)}&target=${encodeURIComponent(target)}&err=${encodeURIComponent(r.error)}`);
+  const n = r.count ?? 0, parts = [`Sent to ${n === 1 ? "1 person" : `${n} people, each privately`}.`];
+  if (f.get("email") === "1") {
+    if (r.held) parts.push(`Test mode held ${r.held} email${r.held === 1 ? "" : "s"}.`); else if (r.emailed) parts.push(`${r.emailed} email cop${r.emailed === 1 ? "y" : "ies"} sent.`);
+    if (r.noEmail) parts.push(`${r.noEmail} ha${r.noEmail === 1 ? "s" : "ve"} no email address, so ${r.noEmail === 1 ? "it’s" : "they’re"} only on the platform.`);
+    if (r.emailError) parts.push(`Some emails didn’t send: ${r.emailError}`);
+  }
+  revalidatePath("/admin/messages");
+  const ok = encodeURIComponent(parts.join(" "));
+  redirect(n === 1 ? `/admin/messages/office/${r.threads![0]}?ok=${ok}` : `/admin/messages?view=office&batch=${r.batch}&ok=${ok}`);
+}
+export async function officeReplyAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { officeReply } = await import("@/lib/office-messages");
+  const id = str(f, "id", 40), r = await officeReply(me.id, id, msgBody(f), f.get("email") === "1", await baseUrl());
+  revalidatePath("/admin/messages");
+  redirect(`/admin/messages/office/${id}?${r.error ? "err=" + encodeURIComponent(r.error) : "ok=" + encodeURIComponent(r.held ? "Sent. Test mode held the email copy." : r.emailed ? "Sent, with a copy by email." : "Sent.")}`);
+}
+export async function officeStatusAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { setOfficeStatus } = await import("@/lib/office-messages");
+  const id = str(f, "id", 40); await setOfficeStatus(me.id, id, str(f, "status", 6) === "closed" ? "closed" : "open");
+  revalidatePath("/admin/messages"); redirect(`/admin/messages/office/${id}`);
+}
+/** A teacher replying on their Messages page to a message from the office. */
+export async function teacherOfficeReplyAction(f: FormData): Promise<void> {
+  const me = await requireSignedIn(), v = await requireViewer();
+  const id = str(f, "id", 40), back = `/admin/teacher/messages?office=${encodeURIComponent(id)}`;
+  if (v.viewing) redirect(`${back}&err=${encodeURIComponent("You’re viewing as this teacher, so you can’t send as them.")}`);
+  const { myOfficeReply } = await import("@/lib/office-messages");
+  const err = await myOfficeReply("teacher", me.id, id, msgBody(f));
+  redirect(`${back}&${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Sent to the office.")}`);
+}
+
 // ---------- student chat ----------
 export async function hideChatMessageAction(f: FormData): Promise<void> {
   const me = await requireStaff();
