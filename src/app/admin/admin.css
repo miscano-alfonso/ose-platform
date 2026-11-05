@@ -1286,3 +1286,11 @@
 .adm .bb.editing .dx-acts-edit{display:inline-grid;pointer-events:auto;opacity:1;border-style:solid;border-color:var(--brand-accent,#e8f064);color:var(--brand-accent,#e8f064)}
 .adm .tt-live{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .adm .tt-live .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2f9e63;animation:ttpulse 1.6s infinite}@media (prefers-reduced-motion:reduce){.adm .tt-live .pulse{animation:none}}
+/* 5 Nov: the timetable's lesson pop-up in the brand yellow, with navy buttons (white outline), white with navy text on hover */
+.adm .tt2 .pop{--pop-ink:var(--brand-accent-ink,#0f1747);background:var(--brand-accent,#e8f064);border-color:var(--brand-accent,#e8f064);color:var(--pop-ink);box-shadow:0 14px 36px rgba(5,8,25,.35)}
+.adm .tt2 .pop .pt,.adm .tt2 .pop .pt b,.adm .tt2 .pop .muted,.adm .tt2 .pop .ps{color:var(--pop-ink)}
+.adm .tt2 .pop .ps,.adm .tt2 .pop .muted{opacity:.82}
+.adm .tt2 .pop .pa .abtn,.adm .tt2 .pop .pa .abtn.pri{background:var(--pop-ink);color:#fff;border:1.5px solid #fff;box-shadow:none}
+.adm .tt2 .pop .pa .abtn:hover,.adm .tt2 .pop .pa .abtn:focus-visible{background:#fff;color:var(--pop-ink);border-color:#fff}
+.adm .tt2 .pop .pa .abtn:focus-visible{outline:2px solid var(--pop-ink);outline-offset:2px}
+.adm .tt2 .pop .pill.mute{background:transparent;color:var(--pop-ink);border:1px solid var(--pop-ink)}
