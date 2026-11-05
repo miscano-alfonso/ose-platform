@@ -1,14 +1,17 @@
 "use client";
-import { useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import { saveQuickLinksAction } from "../actions";
 
 type L = { href: string; label: string };
-// The greeting's quick links, with a pencil to choose them (5 Nov). Only this person sees their choice.
+// The greeting's quick links, with a pencil to choose them that shows in Customise mode (5 Nov). Only this person sees their choice.
 export function QuickLinks({ links, options, isDefault, locked }: { links: L[]; options: L[]; isDefault: boolean; locked?: boolean }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const [pick, setPick] = useState<string[]>(links.map((l) => l.href));
   const [pending, start] = useTransition();
+  const [root, setRoot] = useState<Element | null>(null);   // the dialog sits outside the board, so dragging and Customise mode don't block it
+  useEffect(() => { setRoot(document.querySelector(".adm") ?? document.body); }, []);
   const label = (h: string) => options.find((o) => o.href === h)?.label ?? h;
   const open = () => { setPick(links.map((l) => l.href)); dlg.current?.showModal(); };
   const save = (v: string[] | null) => start(async () => { await saveQuickLinksAction(v); dlg.current?.close(); });
@@ -17,7 +20,7 @@ export function QuickLinks({ links, options, isDefault, locked }: { links: L[]; 
     {links.map((l) => <Link key={l.href} href={l.href}>{l.label}</Link>)}
     {!locked && <button type="button" className="dx-acts-edit" onClick={open} aria-label="Choose your quick links" title="Choose your quick links">
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16zM14 6l4 4" /></svg></button>}
-    <dialog ref={dlg} className="ql-dlg" aria-labelledby="ql-h">
+    {root && createPortal(<dialog ref={dlg} className="ql-dlg" aria-labelledby="ql-h">
       <h2 id="ql-h">Your quick links</h2>
       <p className="cs">Up to 8 links in your greeting. Only you see these.</p>
       {pick.length === 0 ? <p className="empty">No links. Add one below.</p> : <ol className="ql-list">{pick.map((h, i) => <li key={h}><span>{label(h)}</span>
@@ -29,6 +32,6 @@ export function QuickLinks({ links, options, isDefault, locked }: { links: L[]; 
       <div className="ql-btns"><button type="button" className="abtn pri" disabled={pending} onClick={() => save(pick)}>{pending ? "Saving…" : "Save"}</button>
         <button type="button" className="abtn" disabled={pending} onClick={() => dlg.current?.close()}>Cancel</button>
         {!isDefault && <button type="button" className="abtn" disabled={pending} onClick={() => save(null)}>Back to the standard links</button>}</div>
-    </dialog>
+    </dialog>, root)}
   </div>;
 }

@@ -149,12 +149,12 @@ export async function makeLessonDates(actorId: string, termId: string): Promise<
 
 export type RegisterStudent = { id: string; name: string; mark: string | null; notice: string | null; leaving?: string | null; mark_source?: string | null; correction_note?: string | null; corrected_by_name?: string | null; send?: boolean; send_details?: string | null; adjustments?: string | null; needs?: string[] | null };
 export type Register = { id: string; lesson_date: string; starts_at: string; ends_at: string; code: string; name: string; status: string; note: string | null;
-  teacher: string | null; teacher_user: string | null; link: string | null; start_at: string; end_at: string; students: RegisterStudent[]; tasters: { id: string; child: string; status: string; email: string | null; message: string | null }[] };
+  teacher: string | null; teacher_user: string | null; link: string | null; course?: string | null; start_at: string; end_at: string; students: RegisterStudent[]; tasters: { id: string; child: string; status: string; email: string | null; message: string | null }[] };
 
 export async function getRegister(eventId: string): Promise<Register | null> {
   return withSchool(async (q) => {
     const ev = (await q<Omit<Register, "students" | "tasters"> & { group_id: string }>(`select e.id, e.group_id, e.lesson_date::text, to_char(s.starts_at,'HH24:MI') as starts_at,
-        to_char(s.ends_at,'HH24:MI') as ends_at, g.code, l.name || ' ' || sj.name as name, e.status::text, e.note, u.name as teacher, t.user_id as teacher_user, g.meet_url as link,
+        to_char(s.ends_at,'HH24:MI') as ends_at, g.code, l.name || ' ' || sj.name as name, e.status::text, e.note, u.name as teacher, t.user_id as teacher_user, g.meet_url as link, g.google_course_id as course,
         ((e.lesson_date + s.starts_at) at time zone sc.timezone)::text as start_at, ((e.lesson_date + s.ends_at) at time zone sc.timezone)::text as end_at
       from lesson_events e join lesson_slots s on s.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join schools sc on sc.id = e.school_id
       join subjects sj on sj.id = g.subject_id left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id where e.id = $1`, [eventId]))[0];

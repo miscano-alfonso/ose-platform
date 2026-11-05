@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
 import { getRegister, lessonJoins } from "@/lib/ops";
+import { classroomUrl } from "@/lib/week-timetable";
 import { correctMarksAction, cancelLessonAction, refreshJoinsAction } from "../../../actions";
 import { AutoRefresh } from "../../../AutoRefresh";
 import { sendLabels } from "@/lib/send";
@@ -48,7 +49,9 @@ export default async function RegisterPage({ params, searchParams }: { params: P
     <p className="backlink"><a className="abtn sm" href={backHref}>← Back</a></p>
     <div className="top"><div><h1>{r.name}<span className="h1-code">{r.code}</span></h1>
       <div className="sub">{longDay(r.lesson_date)}, {r.starts_at}–{r.ends_at}{r.teacher ? ` · ${r.teacher}` : ""}</div></div>
-      <span className="grow" />{r.status === "cancelled" ? <span className="pill bad">Cancelled</span> : now >= st && now <= en ? <span className="pill good">Live now</span>
+      <span className="grow" />{r.link && r.status !== "cancelled" && <a className="abtn sm pri" href={r.link} target="_blank" rel="noopener">Join Meet</a>}
+      {r.course && <a className="abtn sm" href={classroomUrl(r.course)} target="_blank" rel="noopener">Classroom</a>}
+      {r.status === "cancelled" ? <span className="pill bad">Cancelled</span> : now >= st && now <= en ? <span className="pill good">Live now</span>
         : now > en ? <span className="pill warn">Finished</span> : <span className="pill info">Scheduled</span>}</div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {r.note && <p className="note">{r.note}</p>}

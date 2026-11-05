@@ -1282,3 +1282,7 @@
 .adm .ql-list button:disabled{opacity:.35;cursor:default}
 .adm .ql-dlg .fld{margin:8px 0 14px}
 .adm .ql-btns{display:flex;gap:8px;flex-wrap:wrap}
+.adm .dx-acts-edit{display:none}
+.adm .bb.editing .dx-acts-edit{display:inline-grid;pointer-events:auto;opacity:1;border-style:solid;border-color:var(--brand-accent,#e8f064);color:var(--brand-accent,#e8f064)}
+.adm .tt-live{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.adm .tt-live .pulse{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2f9e63;animation:ttpulse 1.6s infinite}@media (prefers-reduced-motion:reduce){.adm .tt-live .pulse{animation:none}}

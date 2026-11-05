@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CloseOutside } from "../../CloseOutside";
 import { weekLessons, mondayOf, addDays, todayLondon, nextTeachingWeek, classroomUrl, type WeekLesson } from "@/lib/week-timetable";
 import { joinLabel } from "@/lib/video";
 
@@ -60,7 +61,8 @@ export default async function Timetable({ searchParams }: { searchParams: Promis
         <button className="abtn sm" type="submit">Show</button></form>}
     </div>
     {skipped && <p className="note msg">No lessons this week (holiday). Showing the next week with lessons.</p>}
-    {live.length > 0 && <p className="note msg" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}><b>Live now:</b>{live.map((l) => l.link ? <a key={l.id} className="abtn sm pri" href={l.link} target="_blank" rel="noopener">{l.name} · {joinLabel(l.link).replace("Join ", "")}</a> : <span key={l.id}>{l.name}</span>)}</p>}
+    <CloseOutside selector="details.tt2" />
+    {live.length > 0 && <p className="note msg tt-live"><i className="pulse" aria-hidden="true" /><b>Live now:</b> {live.length} lesson{live.length === 1 ? "" : "s"}</p>}
     {shown.length === 0 ? <p className="empty">No lessons this week.</p> :
     <div className="tw"><table className="ttable tt2t"><thead><tr><th>Time</th>{days.map((d) => { const date = addDays(monday, d - 1); return <th key={d} className={date === today ? "today" : undefined}>{DAYS[d]} <span className="muted">{nice(date, { day: "numeric", month: "short" })}</span>{date === today && <span className="pill info" style={{ marginLeft: 6 }}>Today</span>}</th>; })}</tr></thead><tbody>
       {times.map((tm) => <tr key={tm}><td className="mono">{tm}</td>{days.map((d) => <td key={d} className={addDays(monday, d - 1) === today ? "today" : undefined}>{shown.filter((l) => l.weekday === d && l.starts === tm).map(tile)}</td>)}</tr>)}

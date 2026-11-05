@@ -101,7 +101,7 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
         <span className="dx-big">{m.day.lessons.filter((l) => l.status !== "cancelled").length}</span>
         <span>lesson{m.day.lessons.length === 1 ? "" : "s"} {m.day.today ? "today" : `on ${DAY(m.day.date, { weekday: "long" })}`}</span>
         {nextIdx >= 0 && <small>Next: {m.day.lessons[nextIdx].starts} {m.day.lessons[nextIdx].name}</small>}
-        <QuickLinks links={(mine ?? DEFAULT_LINKS).map((h) => linkOpts.find((o) => o.href === h)).filter((x): x is { href: string; label: string } => !!x)} options={linkOpts} isDefault={!mine} />
+        <QuickLinks links={(mine?.length ? mine : DEFAULT_LINKS).map((h) => linkOpts.find((o) => o.href === h)).filter((x): x is { href: string; label: string } => !!x)} options={linkOpts} isDefault={!mine?.length} />
       </div>
       {t.students === 0 && <Link className="dx-flag" href="/admin/import">No families imported yet: import them</Link>}
     </section> },
