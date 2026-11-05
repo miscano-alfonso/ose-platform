@@ -121,6 +121,7 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
     if (c) {
       const m = c.minutes ?? 15;
       const vid = await videoSettings(q);
+      const { viaDashboard } = await (await import("./lesson-access")).accessSettings(q);
       const rows = await q<{ ev: string; gid: string; starts: string; class: string; teacher: string | null; meet: string | null; sid: string; child: string; semail: string | null; parent: string; pemail: string }>(`
         select e.id as ev, g.id as gid, ((e.lesson_date + s.starts_at) at time zone sc.timezone)::text as starts, l.name || ' ' || sj.name as class, u.name as teacher, g.meet_url as meet,
           st.id as sid, st.first_name as child, st.email::text as semail, p.first_name as parent, p.email::text as pemail
@@ -134,7 +135,8 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
         const at = Date.parse(r.starts) - m * 60e3; if (at < now + 60e3 || at > now + horizon) continue;
         const to = [...(c.to_student && r.semail ? [{ name: r.child, email: r.semail }] : []), ...(c.to_parent ? [{ name: r.parent, email: r.pemail }] : [])];
         await deliver(q, "lesson_reminder", c, { ref: `${r.ev}:${r.sid}`, to, at: new Date(at), vars: { child: r.child, parent: r.parent, class: r.class, time: fmtTime(r.starts), teacher: r.teacher ?? "your teacher",
-          meet_link: r.meet ? (vid.checkins && base ? base + joinPath(r.gid, r.sid) : r.meet) : "the lesson link in your class’s Google Classroom", school } }, budget); // with check-ins, the link checks the child in first
+          // with check-ins, the link checks the child in first; with "join through the dashboard" (5 Nov) it needs the student signed in to their own account
+          meet_link: r.meet ? (viaDashboard && base ? `${base}/join/${r.gid}` : vid.checkins && base ? base + joinPath(r.gid, r.sid) : r.meet) : "the lesson link in your class’s Google Classroom", school } }, budget);
       }
     }
 

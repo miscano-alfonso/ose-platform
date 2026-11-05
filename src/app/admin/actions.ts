@@ -1705,3 +1705,20 @@ export async function inboxTickAction(): Promise<{ changed: boolean }> {
   const r = await syncInbox().catch(() => null);
   return { changed: !!r };
 }
+
+// ---------- 5 Nov: Students → Lesson access ----------
+export async function saveLessonAccessAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { saveAccessSettings } = await import("@/lib/lesson-access");
+  const on = f.get("dash") === "on";
+  await saveAccessSettings(me.id, { viaDashboard: on });
+  revalidatePath("/admin/students/access");
+  redirect(`/admin/students/access?ok=${encodeURIComponent(on ? "Lessons now go through the student’s dashboard." : "Join links work as before (no sign-in needed).")}`);
+}
+export async function checkMeetAccessAction(): Promise<void> {
+  await requireStaff();
+  const { meetAccess } = await import("@/lib/lesson-access");
+  const r = await meetAccess(true);
+  revalidatePath("/admin/students/access");
+  redirect(`/admin/students/access?${r.can !== "ok" ? "err=" + encodeURIComponent("The school account (ose@) needs connecting again before the site can read Meet settings.") : "ok=" + encodeURIComponent("Meet settings checked with Google.")}#meet`);
+}

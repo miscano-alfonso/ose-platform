@@ -98,13 +98,14 @@ async function events(q: Q, o: FeedOwner, site: string): Promise<{ name: string;
         location: r.link ?? undefined, url: `${site}/admin/register/${r.id}`,
         desc: [r.link && `Lesson link: ${r.link}`, `Attendance: ${site}/admin/register/${r.id}`, r.course && `Google Classroom: ${classroom(r.course)}`].filter(Boolean).join("\n") });
   } else {
+    const dash = (await (await import("./lesson-access")).accessSettings(q as never)).viaDashboard;   // 5 Nov: no signed links when lessons go through the dashboard
     const rows = await q<LessonRow>(lessonSql(`${enrolled} where ${o.kind === "student" ? "st.id" : "st.parent_id"} = $1`), [o.id]);
     // a parent with two children in the same class gets one event naming both
     const byLesson = new Map<string, LessonRow[]>();
     for (const r of rows) byLesson.set(r.id, [...(byLesson.get(r.id) ?? []), r]);
     for (const [id, rs] of byLesson) {
       const r = rs[0], kids = [...new Set(rs.map((x) => x.child ?? ""))].filter(Boolean).sort();
-      const join = o.kind === "student" && r.student_id ? `${site}${joinPath(r.group_id, r.student_id)}` : null;
+      const join = o.kind === "student" && r.student_id ? `${site}${dash ? `/join/${r.group_id}` : joinPath(r.group_id, r.student_id)}` : null;
       evs.push({ uid: `lesson-${id}-${o.id}@${host}`, start: r.starts, end: r.ends, cancelled: r.status === "cancelled",
         title: o.kind === "parent" ? `${kids.join(", ").replace(/, ([^,]*)$/, " and $1")}: ${r.name}` : r.name, url: join ?? `${site}/${o.kind}`, location: join ?? undefined,
         desc: [r.teacher && `Teacher: ${r.teacher}`, join && `Join the lesson: ${join}`, r.course && `Google Classroom: ${classroom(r.course)}`].filter(Boolean).join("\n") });

@@ -16,7 +16,7 @@ import { notInPlan, type PlanId } from "@/lib/plan";
 import type { BoardModule } from "../BentoBoard";
 
 const PILL: Record<string, [string, string]> = { failed: ["bad", "Payment failed"], full: ["warn", "Class full"], almost: ["warn", "Almost full"], enquiry: ["info", "New enquiry"], waitlist: ["mute", "Waiting list"],
-  clash: ["bad", "Timetable clash"], low: ["warn", "Low attendance"], chat: ["bad", "Chat alert"] };
+  clash: ["bad", "Timetable clash"], access: ["bad", "Lesson access"], low: ["warn", "Low attendance"], chat: ["bad", "Chat alert"] };
 const LOW = 50;
 const DAY = (d: string, o: Intl.DateTimeFormatOptions) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { ...o, timeZone: "UTC" });
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((x) => x[0]).join("").toUpperCase();
@@ -44,7 +44,8 @@ const I = {
 export async function adminModules(me: Staff, plan: PlanId | null): Promise<BoardModule[]> {
   const [{ t, attention }, m, flags, box, threads, officeAll] = await Promise.all([getDashboard(), getDashboardMore(LOW), openFlags().catch(() => []), inboxStatus().catch(() => null), listThreads(null, "open").catch(() => []), officeThreads("replies").catch(() => [])]);
   const waitCut = Date.now() - 2 * 864e5, waiting = threads.filter((x) => x.last_sender === "parent" && Date.parse(x.last_message_at) < waitCut).length;
-  const [linkOpts, mine, so] = await Promise.all([linkOptions((h) => !notInPlan(plan, h)), myLinks(me.id), studentOverview().catch(() => null)]);
+  const [linkOpts, mine, so, la] = await Promise.all([linkOptions((h) => !notInPlan(plan, h)), myLinks(me.id), studentOverview().catch(() => null),
+    import("@/lib/lesson-access").then((m) => m.accessAlerts(7)).catch(() => ({ strangers: 0, open: 0 }))]);
   const sAgo = (iso: string) => { const n = Math.round((Date.now() - Date.parse(iso)) / 60000); return n < 1 ? "just now" : n < 60 ? `${n} min ago` : n < 1440 ? `${Math.round(n / 60)} h ago` : `${Math.round(n / 1440)} days ago`; };
   // students needing a nudge: most missing work first, then lowest attendance
   const worry = so ? so.rows.filter((r) => r.missing > 0 || (r.att != null && r.held >= 3 && r.att < 85))
@@ -58,6 +59,9 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
   const items = [...flags.slice(0, 6).map((x) => ({ kind: "chat", title: `${x.rules.includes("wellbeing") ? "Urgent: " : ""}${x.rules.map(ruleLabel).join(", ")} · ${x.sender}`,
       detail: `${x.blocked ? "Blocked: " : ""}“${x.body.length > 70 ? x.body.slice(0, 70) + "…" : x.body}” · ${x.chat}`, href: "/admin/student-chat#alerts" })),
     ...attention.filter((a) => a.kind === "failed"),
+    // 5 Nov: someone who isn't on a class's register was in its lesson, or a class's Meet link is open to anyone
+    ...(la.strangers ? [{ kind: "access", title: `${la.strangers} ${la.strangers === 1 ? "person" : "people"} not on the register in lessons`, detail: "this week · see who, and which lessons", href: "/admin/students/access" }] : []),
+    ...(la.open ? [{ kind: "access", title: `${la.open} class Meet link${la.open === 1 ? " is" : "s are"} open to anyone`, detail: "set them to Restricted in Meet", href: "/admin/students/access#meet" }] : []),
     ...m.clashes.map((c) => ({ kind: "clash", title: c.title, detail: c.detail, href: "/admin/timetable-setup#clashes" })),
     ...m.att.low.map((x) => ({ kind: "low", title: `${x.name}: ${x.pct}%`, detail: `${x.level} · ${x.att} of ${x.held} lessons this term`, href: "/admin/attendance" })),
     ...attention.filter((a) => a.kind !== "failed")];
