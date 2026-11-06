@@ -25,6 +25,14 @@ export function WriteForm({ opts, action, initial, testMode }: { opts: Options; 
     const f = find.trim().toLowerCase();
     return f ? all.filter((x) => x.label.toLowerCase().includes(f) || x.id === target) : all;
   }, [kind.pick, aud, opts, find, target]);
+  // 6 Nov: one search for anyone: typing finds parents (and their children's names), students and teachers together;
+  // picking someone switches "To" to that kind of person
+  const one = kind.pick === "parent" || kind.pick === "student" || kind.pick === "teacher";
+  const q = find.trim().toLowerCase();
+  const found = useMemo(() => !q ? [] : ([["parent", "Parents", opts.parents], ["student", "Students", opts.students], ["teacher", "Teachers", opts.teachers]] as const)
+    .map(([k, l, xs]) => ({ k, l, xs: xs.filter((x) => x.label.toLowerCase().includes(q)) })).filter((g) => g.xs.length), [q, opts]);
+  const chosen = one && target ? (aud === "parent" ? opts.parents : aud === "student" ? opts.students : opts.teachers).find((x) => x.id === target)?.label ?? null : null;
+  const hits = found.reduce((n, g) => n + g.xs.length, 0);
   const count = kind.pick === "class" ? opts.classes.find((c) => c.id === target) : kind.pick === "level" ? opts.levels.find((c) => c.id === target) : null;
   const reach = aud === "teachers" ? `${opts.teachers.length} teacher${opts.teachers.length === 1 ? "" : "s"}`
     : count ? (aud.endsWith("parents") ? `${count.families} famil${count.families === 1 ? "y" : "ies"}` : `${count.students} student${count.students === 1 ? "" : "s"}`) : null;
@@ -34,14 +42,18 @@ export function WriteForm({ opts, action, initial, testMode }: { opts: Options; 
     <fieldset className="nm-kinds"><legend>To</legend>
       {["One person", "A group"].map((g) => <div key={g} className="nm-row"><span className="nm-g">{g}</span>
         {KINDS.filter((k) => k.group === g).map((k) => <label key={k.id} className={`nm-chip${aud === k.id ? " on" : ""}`}>
-          <input type="radio" name="kind" checked={aud === k.id} onChange={() => { setAud(k.id); if (k.pick !== kind.pick) { setTarget(""); setFind(""); } }} />{k.label}</label>)}</div>)}
+          <input type="radio" name="kind" checked={aud === k.id} onChange={() => { setAud(k.id); if (k.pick !== kind.pick) { setTarget(""); if (k.group !== "One person") setFind(""); } }} />{k.label}</label>)}</div>)}
     </fieldset>
     {kind.pick && <div className="nm-pick">
-      {(kind.pick === "parent" || kind.pick === "student") && <label className="fld">Search<input type="search" value={find} onChange={(e) => setFind(e.target.value)} placeholder={`Type a ${kind.pick === "parent" ? "parent’s or child’s" : "student’s"} name`} /></label>}
-      <label className="fld">{PICK_LABEL[kind.pick]}<select required value={target} onChange={(e) => setTarget(e.target.value)} size={kind.pick === "parent" || kind.pick === "student" ? Math.min(8, Math.max(3, list.length)) : undefined}>
+      {one && <label className="fld">Search everyone<input type="search" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Type a parent’s, student’s or teacher’s name" /></label>}
+      {one && q ? <label className="fld">Matches<select required value={target ? `${aud}:${target}` : ""} size={Math.min(10, Math.max(3, hits + found.length))}
+          onChange={(e) => { const [k, id] = e.target.value.split(":"); setAud(k as Audience); setTarget(id); }}>
+          {found.map((g) => <optgroup key={g.k} label={g.l}>{g.xs.map((x) => <option key={x.id} value={`${g.k}:${x.id}`}>{x.label}</option>)}</optgroup>)}</select></label>
+      : <label className="fld">{PICK_LABEL[kind.pick]}<select required value={target} onChange={(e) => setTarget(e.target.value)} size={one && kind.pick !== "teacher" ? Math.min(8, Math.max(3, list.length)) : undefined}>
         {!(kind.pick === "parent" || kind.pick === "student") && <option value="">Choose…</option>}
-        {list.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>
-      {list.length === 0 && <p className="cs" style={{ margin: 0 }}>{find ? "No one matches that." : "Nobody to choose yet."}</p>}
+        {list.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>}
+      {(one && q ? hits === 0 : list.length === 0) && <p className="cs" style={{ margin: 0 }}>{q ? "No one matches that." : "Nobody to choose yet."}</p>}
+      {one && q && chosen && <p className="cs" style={{ margin: 0 }}>To: <b>{chosen}</b> ({PICK_LABEL[aud]?.toLowerCase() ?? aud})</p>}
     </div>}
     {reach && <p className="nm-reach">Goes to <b>{reach}</b>{!/^1 /.test(reach) ? ", each privately. Replies come back to you, one conversation each." : "."}</p>}
     <label className="fld">Subject<input name="subject" required maxLength={160} /></label>
