@@ -5,8 +5,8 @@ import type { Audience, Options } from "@/lib/office-messages";
 type Pick = "parent" | "student" | "teacher" | "class" | "level" | null;
 const KINDS: { id: Audience; label: string; pick: Pick; group: string }[] = [
   { id: "parent", label: "A parent", pick: "parent", group: "One person" }, { id: "student", label: "A student", pick: "student", group: "One person" }, { id: "teacher", label: "A teacher", pick: "teacher", group: "One person" },
-  { id: "class-parents", label: "Parents in a class", pick: "class", group: "A group" }, { id: "class-students", label: "Students in a class", pick: "class", group: "A group" },
-  { id: "level-parents", label: "Parents in a level", pick: "level", group: "A group" }, { id: "level-students", label: "Students in a level", pick: "level", group: "A group" },
+  { id: "class-parents", label: "Parents class", pick: "class", group: "A group" }, { id: "class-students", label: "Students class", pick: "class", group: "A group" },
+  { id: "level-parents", label: "Parents level", pick: "level", group: "A group" }, { id: "level-students", label: "Students level", pick: "level", group: "A group" },
   { id: "teachers", label: "All teachers", pick: null, group: "A group" },
 ];
 const PICK_LABEL: Record<string, string> = { parent: "Parent", student: "Student", teacher: "Teacher", class: "Class", level: "Level" };
