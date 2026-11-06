@@ -16,7 +16,7 @@ export function WriteForm({ opts, action, initial, testMode }: { opts: Options; 
   const [aud, setAud] = useState<Audience>((KINDS.find((k) => k.id === initial.aud)?.id ?? "parent"));
   const [target, setTarget] = useState(initial.target ?? "");
   const [find, setFind] = useState("");
-  const [picked, setPicked] = useState(false);   // 6 Nov: someone chosen from the search: the matches fold away
+  const [picked, setPicked] = useState(!!initial.target);   // 6 Nov: someone chosen from the search: the matches fold away
   const kind = KINDS.find((k) => k.id === aud)!;
   const list = useMemo(() => {
     const p = kind.pick;
@@ -52,7 +52,7 @@ export function WriteForm({ opts, action, initial, testMode }: { opts: Options; 
       {one && q ? <label className="fld">Matches<select required value={target ? `${aud}:${target}` : ""} size={Math.min(10, Math.max(3, hits + found.length))}
           onChange={(e) => { const [k, id] = e.target.value.split(":"); setAud(k as Audience); setTarget(id); setPicked(true); }}>
           {found.map((g) => <optgroup key={g.k} label={g.l}>{g.xs.map((x) => <option key={x.id} value={`${g.k}:${x.id}`}>{x.label}</option>)}</optgroup>)}</select></label>
-      : <label className="fld">{PICK_LABEL[kind.pick]}<select required value={target} onChange={(e) => setTarget(e.target.value)} size={one && kind.pick !== "teacher" ? Math.min(8, Math.max(3, list.length)) : undefined}>
+      : <label className="fld">{PICK_LABEL[kind.pick]}<select required value={target} onChange={(e) => { setTarget(e.target.value); if (one) setPicked(true); }} size={one && kind.pick !== "teacher" ? Math.min(8, Math.max(3, list.length)) : undefined}>
         {!(kind.pick === "parent" || kind.pick === "student") && <option value="">Choose…</option>}
         {list.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>}
       {(one && q ? hits === 0 : list.length === 0) && <p className="cs" style={{ margin: 0 }}>{q ? "No one matches that." : "Nobody to choose yet."}</p>}
