@@ -1349,3 +1349,4 @@
 .adm .la-table td{vertical-align:top;padding-top:12px;padding-bottom:12px}.adm .la-table .muted{font-size:13.5px;margin-top:2px}
 .adm .la-how{background:var(--soft);border-radius:12px;padding:12px 14px;margin:0 0 12px;font-size:14.5px;line-height:1.5}
 .adm .la-set{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.adm .nm-picked{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}

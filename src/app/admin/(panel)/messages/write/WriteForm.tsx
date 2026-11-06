@@ -16,6 +16,7 @@ export function WriteForm({ opts, action, initial, testMode }: { opts: Options; 
   const [aud, setAud] = useState<Audience>((KINDS.find((k) => k.id === initial.aud)?.id ?? "parent"));
   const [target, setTarget] = useState(initial.target ?? "");
   const [find, setFind] = useState("");
+  const [picked, setPicked] = useState(false);   // 6 Nov: someone chosen from the search: the matches fold away
   const kind = KINDS.find((k) => k.id === aud)!;
   const list = useMemo(() => {
     const p = kind.pick;
@@ -42,22 +43,24 @@ export function WriteForm({ opts, action, initial, testMode }: { opts: Options; 
     <fieldset className="nm-kinds"><legend>To</legend>
       {["One person", "A group"].map((g) => <div key={g} className="nm-row"><span className="nm-g">{g}</span>
         {KINDS.filter((k) => k.group === g).map((k) => <label key={k.id} className={`nm-chip${aud === k.id ? " on" : ""}`}>
-          <input type="radio" name="kind" checked={aud === k.id} onChange={() => { setAud(k.id); if (k.pick !== kind.pick) { setTarget(""); if (k.group !== "One person") setFind(""); } }} />{k.label}</label>)}</div>)}
+          <input type="radio" name="kind" checked={aud === k.id} onChange={() => { setAud(k.id); setPicked(false); if (k.pick !== kind.pick) { setTarget(""); if (k.group !== "One person") setFind(""); } }} />{k.label}</label>)}</div>)}
     </fieldset>
     {kind.pick && <div className="nm-pick">
-      {one && <label className="fld">Search everyone<input type="search" value={find} onChange={(e) => setFind(e.target.value)} placeholder="Type a parent’s, student’s or teacher’s name" /></label>}
+      {one && picked && chosen ? <div className="nm-picked"><span>To: <b>{chosen}</b> <span className="cs">({PICK_LABEL[aud]?.toLowerCase() ?? aud})</span></span>
+        <button type="button" className="abtn sm" onClick={() => setPicked(false)}>Change</button></div> : <>
+      {one && <label className="fld">Search everyone<input type="search" value={find} onChange={(e) => { setFind(e.target.value); setPicked(false); }} placeholder="Type a parent’s, student’s or teacher’s name" autoComplete="off" /></label>}
       {one && q ? <label className="fld">Matches<select required value={target ? `${aud}:${target}` : ""} size={Math.min(10, Math.max(3, hits + found.length))}
-          onChange={(e) => { const [k, id] = e.target.value.split(":"); setAud(k as Audience); setTarget(id); }}>
+          onChange={(e) => { const [k, id] = e.target.value.split(":"); setAud(k as Audience); setTarget(id); setPicked(true); }}>
           {found.map((g) => <optgroup key={g.k} label={g.l}>{g.xs.map((x) => <option key={x.id} value={`${g.k}:${x.id}`}>{x.label}</option>)}</optgroup>)}</select></label>
       : <label className="fld">{PICK_LABEL[kind.pick]}<select required value={target} onChange={(e) => setTarget(e.target.value)} size={one && kind.pick !== "teacher" ? Math.min(8, Math.max(3, list.length)) : undefined}>
         {!(kind.pick === "parent" || kind.pick === "student") && <option value="">Choose…</option>}
         {list.map((x) => <option key={x.id} value={x.id}>{x.label}</option>)}</select></label>}
       {(one && q ? hits === 0 : list.length === 0) && <p className="cs" style={{ margin: 0 }}>{q ? "No one matches that." : "Nobody to choose yet."}</p>}
-      {one && q && chosen && <p className="cs" style={{ margin: 0 }}>To: <b>{chosen}</b> ({PICK_LABEL[aud]?.toLowerCase() ?? aud})</p>}
+      </>}
     </div>}
     {reach && <p className="nm-reach">Goes to <b>{reach}</b>{!/^1 /.test(reach) ? ", each privately. Replies come back to you, one conversation each." : "."}</p>}
-    <label className="fld">Subject<input name="subject" required maxLength={160} /></label>
-    <label className="fld">Message<textarea name="body" required rows={8} maxLength={4500} /></label>
+    <label className="fld">Subject<input name="subject" required maxLength={160} autoComplete="off" /></label>
+    <label className="fld">Message<textarea name="body" required rows={8} maxLength={4500} autoComplete="off" /></label>
     <label className="nm-check"><input type="checkbox" name="email" value="1" defaultChecked /> Also send a copy by email<span className="cs"> (replies to the email arrive in Email › Inbox)</span></label>
     {testMode && <p className="note" style={{ margin: 0 }}>Test mode is on, so emails to families, students and teachers are held. The messages still appear on the platform.</p>}
     <div className="nm-btns"><button className="abtn pri" type="submit" disabled={!!kind.pick && !target}>Send</button><a className="abtn" href="/admin/messages" onClick={(e) => { if (dirty && !confirm("Leave without sending?")) e.preventDefault(); }}>Cancel</a></div>
