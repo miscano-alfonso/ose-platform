@@ -19,6 +19,7 @@ export const TYPES: Record<NotifyRole, NotifyType[]> = {
     { id: "message", label: "Message from a parent", hint: "A parent writes to you in Messages", sound: "pop" },
     { id: "email", label: "Reply from the school", hint: "The office answers your email", sound: "chime" },
     { id: "chat", label: "Class chat", hint: "A student posts in one of your class chats", sound: "ding" },
+    { id: "marking", label: "Marking due soon", hint: "Handed-in work has 2 days left of the 7-day marking turnaround", sound: "chime" },
   ],
   parent: [
     { id: "lesson", label: "Lesson starting", hint: "10 minutes before your child’s lesson", sound: "bell" },

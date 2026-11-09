@@ -68,6 +68,15 @@ export async function notifyEvents(w: Who, since: Date): Promise<NotifyEvent[]> 
         from student_chat_messages cm join student_chats c on c.id = cm.chat_id join course_groups g on g.id = c.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
           join students st on st.id = cm.sender_student_id
         where c.kind = 'class' and g.teacher_id = ${T} and cm.hidden_at is null and cm.created_at > $2::timestamptz order by cm.created_at desc limit 10`, [w.id, from]),
+      // 6 Nov: handed-in work reaching 2 days left of the 7-day marking turnaround (the moment it crosses, so it pops up once)
+      run(`select 'mk:' || x.cw as id, 'marking' as type, 'Marking due in 2 days: ' || x.title as title, x.cls || ' · ' || x.n || ' to mark and return in Classroom' as body,
+          coalesce(x.link, '/admin/teacher/classes/' || x.gid || '#assignments') as href, (x.deadline - interval '2 days')::text as at
+        from (select c.id as cw, c.title, c.link, g.id as gid, l.name || ' ' || sj.name as cls, count(*)::int as n,
+            min(coalesce(c.due_at, s.turned_in_at) + interval '7 days') as deadline
+          from classroom_submissions s join classroom_coursework c on c.id = s.coursework_id join course_groups g on g.id = c.group_id
+            join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+          where s.state = 'turned_in' and g.teacher_id = ${T} group by c.id, c.title, c.link, g.id, l.name, sj.name) x
+        where x.deadline - interval '2 days' > $2::timestamptz and x.deadline - interval '2 days' <= now() limit 10`, [w.id, from]),
     ];
     const KIDS = `(select e.group_id from enrolments e join students s on s.id = e.student_id where s.parent_id = $1 and e.status in ('pending','active'))`;
     if (w.role === "parent") parts = [

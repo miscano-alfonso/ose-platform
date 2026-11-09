@@ -41,7 +41,7 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
   if (tab === "auto") {
     const { rows } = await automations();
     return <>{head}<div className="tw"><table><thead><tr><th>Email</th><th>When it goes</th><th>To</th><th>This week</th><th>On</th><th /></tr></thead><tbody>
-      {rows.map((a) => <tr key={a.key}><td><b>{a.name}</b></td><td>{a.when}{a.timing && a.minutes != null ? ` ${a.minutes} ${a.timing.label}.` : ""}</td><td>{[a.to_parent && "Parent", a.to_student && "Student"].filter(Boolean).join(", ")}</td>
+      {rows.map((a) => <tr key={a.key}><td><b>{a.name}</b></td><td>{a.when}{a.timing && a.minutes != null ? ` ${a.minutes} ${a.timing.label}.` : ""}</td><td>{a.to_teacher ? "Teacher" : [a.to_parent && "Parent", a.to_student && "Student"].filter(Boolean).join(", ")}</td>
         <td>{a.sent7} sent{a.scheduled ? ` · ${a.scheduled} booked` : ""}</td><td><span className={`pill ${a.enabled ? "good" : "mute"}`}>{a.enabled ? "On" : "Off"}</span></td>
         <td><Link className="abtn sm" href={`/admin/automations?open=${a.key}#${a.key}`}>Edit wording</Link></td></tr>)}</tbody></table></div>
       <p className="note">These use the timetable, term dates and payment plans, so they stop in the holidays and never send twice. Switch them on and change the wording under Automations.</p></>;

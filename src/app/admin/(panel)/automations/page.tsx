@@ -28,7 +28,7 @@ export default async function Automations({ searchParams }: { searchParams: Prom
       <details open={sp.open === r.key}>
         <summary style={{ cursor: "pointer", listStyle: "none", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
           <span className={`pill ${r.enabled ? "good" : "mute"}`}>{r.enabled ? "On" : "Off"}</span>
-          <div style={{ flex: 1, minWidth: 220 }}><b style={{ fontSize: 17 }}>{r.name}</b><div className="muted" style={{ fontSize: 14.5 }}>{r.when}{r.timing && r.minutes != null ? ` ${r.minutes} ${r.timing.label}.` : ""} To: {[r.to_parent && "parent", r.to_student && "student"].filter(Boolean).join(" and ")}.</div></div>
+          <div style={{ flex: 1, minWidth: 220 }}><b style={{ fontSize: 17 }}>{r.name}</b><div className="muted" style={{ fontSize: 14.5 }}>{r.when}{r.timing && r.minutes != null ? ` ${r.minutes} ${r.timing.label}.` : ""} To: {r.to_teacher ? "the teacher" : [r.to_parent && "parent", r.to_student && "student"].filter(Boolean).join(" and ")}.</div></div>
           <span className="muted" style={{ fontSize: 14 }}>{r.sent7} sent this week{r.scheduled ? ` · ${r.scheduled} booked` : ""}{r.failed7 ? ` · ${r.failed7} failed` : ""}</span>
           <span className="abtn sm">Edit</span>
         </summary>
@@ -37,8 +37,9 @@ export default async function Automations({ searchParams }: { searchParams: Prom
           <div style={{ display: "flex", gap: 18, flexWrap: "wrap", alignItems: "center" }}>
             <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="enabled" defaultChecked={r.enabled} /> <b>Switched on</b></label>
             {r.timing && <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="number" name="minutes" min={0} defaultValue={r.minutes ?? r.timing.default} className="mini" style={{ width: 80 }} /> {r.timing.label}</label>}
+            {r.to_teacher ? <span className="muted">Goes to the class’s teacher</span> : <>
             <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="to_parent" defaultChecked={r.to_parent} /> Parent</label>
-            <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="to_student" defaultChecked={r.to_student} /> Student (their Google account)</label>
+            <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="to_student" defaultChecked={r.to_student} /> Student (their Google account)</label></>}
           </div>
           <label className="fld">Subject<input name="subject" defaultValue={r.subject} maxLength={200} required className="mini" style={{ width: "100%" }} /></label>
           <label className="fld">Message<textarea name="body" defaultValue={r.body} rows={8} maxLength={5000} required className="mini" style={{ width: "100%" }} /></label>

@@ -11,7 +11,7 @@ import { joinPath, videoSettings } from "./checkins";
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 type Cfg = { enabled: boolean; subject: string; body: string; minutes: number | null; to_parent: boolean; to_student: boolean };
 export type Timing = { label: string; unit: "minutes" | "hours" | "days"; default: number } | null;
-export type AutoDef = { key: string; name: string; when: string; timing: Timing; to_parent: boolean; to_student: boolean; subject: string; body: string; fields: string[] };
+export type AutoDef = { key: string; name: string; when: string; timing: Timing; to_parent: boolean; to_student: boolean; to_teacher?: boolean; subject: string; body: string; fields: string[] };
 
 export const DEFS: AutoDef[] = [
   { key: "taster_booked", name: "Taster booked: thank you", when: "As soon as a taster lesson is booked (on the website or by the office).", timing: null, to_parent: true, to_student: false,
@@ -50,6 +50,11 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "child", "report", "school"],
     subject: "{{child}}’s {{report}} is ready",
     body: "Dear {{parent}},\n\n{{child}}’s {{report}} is ready. Sign in to your account to read it.\n\n{{school}}" },
+  // 6 Nov: to the teacher, not families
+  { key: "marking_reminder", name: "Marking reminder to the teacher", when: "Once a day (between 8am and 8pm) while any handed-in work in their classes is close to or past the 7-day marking turnaround, starting", timing: { label: "days before the marking deadline", unit: "days", default: 2 }, to_parent: false, to_student: false, to_teacher: true,
+    fields: ["teacher", "count", "list", "dashboard_link", "school"],
+    subject: "Marking due soon: {{count}}",
+    body: "Hello {{teacher}},\n\nA reminder that this handed-in work needs marking and returning in Google Classroom within the 7-day turnaround:\n\n{{list}}\n\nWork comes off this list once it’s returned to the student in Classroom. Your dashboard shows the countdown: {{dashboard_link}}\n\nThank you,\n{{school}}" },
 ];
 
 export type AutoRow = AutoDef & { enabled: boolean; minutes: number | null; custom: boolean; sent7: number; scheduled: number; failed7: number };
@@ -71,7 +76,7 @@ export async function automations(): Promise<{ rows: AutoRow[]; ready: boolean; 
 export async function saveAutomation(actorId: string, key: string, d: { enabled: boolean; subject: string; body: string; minutes: number | null; to_parent: boolean; to_student: boolean }): Promise<string | null> {
   const def = DEFS.find((x) => x.key === key); if (!def) return "Unknown automation.";
   if (!d.subject.trim() || !d.body.trim()) return "Write a subject and a message.";
-  if (!d.to_parent && !d.to_student) return "Choose who it goes to.";
+  if (!def.to_teacher && !d.to_parent && !d.to_student) return "Choose who it goes to.";
   const minutes = def.timing ? Math.max(0, Math.min(def.timing.unit === "days" ? 14 : def.timing.unit === "hours" ? 72 : 1440, Math.round(d.minutes ?? def.timing.default))) : null;
   await withSchool(async (q) => {
     await q(`insert into automations (school_id, key, enabled, subject, body, minutes, to_parent, to_student, updated_by) values (current_school(), $1, $2, $3, $4, $5, $6, $7, $8)
@@ -140,6 +145,20 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
       }
     }
 
+    // 6 Nov: marking reminder to each teacher, once a day while any hand-in is within the set days of the 7-day turnaround (or past it)
+    c = cfg("marking_reminder");
+    const hour = Number(new Date().toLocaleString("en-GB", { hour: "2-digit", hour12: false, timeZone: "Europe/London" }));
+    if (c && hour >= 8 && hour < 20) {
+      const { markingQueue, countdown } = await import("./marking");
+      const near = (await markingQueue(null, q)).filter((m) => m.teacherEmail && m.teacherUserId && m.daysLeft <= (c!.minutes ?? 2));
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+      for (const t of [...new Set(near.map((m) => m.teacherUserId!))]) {
+        const mine = near.filter((m) => m.teacherUserId === t), first = mine[0];
+        await deliver(q, "marking_reminder", c, { ref: `${t}:${today}`, to: [{ name: first.teacher ?? "", email: first.teacherEmail! }], vars: { teacher: (first.teacher ?? "").split(" ")[0], parent: "",
+          count: `${mine.length} piece${mine.length === 1 ? "" : "s"} of work`, list: mine.map((m) => `• ${m.title} (${m.cls}) · ${m.toMark} to mark · ${countdown(m.daysLeft)}`).join("\n"),
+          dashboard_link: base ? `${base}/admin/teacher` : "your dashboard", school } }, budget);
+      }
+    }
     // tasters: thank-you now, joining link before the lesson, then (from Meet attendance) an invitation to book, or another date if they missed it
     await q(`select settle_tasters()`).catch((e) => console.error("settle tasters", e));
     const tasters = await q<{ id: string; status: string; starts: string; ends: string; class: string; teacher: string | null; meet: string | null; child: string; cemail: string; parent: string; pemail: string; created: string }>(`
@@ -226,7 +245,8 @@ export async function cancelLessonReminders(eventId: string) {
 export async function testAutomation(key: string, to: Recipient, d: { subject: string; body: string }) {
   const school = (await withSchool((q) => q<{ name: string }>(`select name from schools where id = current_school()`)))[0]?.name ?? "OH-SO ED";
   const vars = { parent: to.name.split(" ")[0], child: "Sam", class: "KS3 Maths", date: fmtDate(new Date(Date.now() + 864e5).toISOString().slice(0, 10)), time: "16:00", teacher: "Becky",
-    meet_link: "https://meet.google.com/abc-defg-hij", book_link: (process.env.SITE_URL || "") + "/courses", amount: "£150.00", hours: "48", report: "Term 1 Progress Report", school };
+    meet_link: "https://meet.google.com/abc-defg-hij", book_link: (process.env.SITE_URL || "") + "/courses", amount: "£150.00", hours: "48", report: "Term 1 Progress Report", school,
+    count: "2 pieces of work", list: "• Essay plan (iGCSE English Language) · 3 to mark · 2 days left\n• Poetry comparison (iGCSE English Language) · 1 to mark · 1 day overdue", dashboard_link: (process.env.SITE_URL || "") + "/admin/teacher" };
   return sendOne([to], `[Test] ${fill(d.subject, vars)}`, fill(d.body, vars), { tag: `auto-test-${key}` });
 }
 

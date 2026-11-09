@@ -12,6 +12,7 @@ import { studentOverview } from "@/lib/student-overview";
 import { MoreList } from "../MoreList";
 import { Ring, Ico, IC } from "../DashBits";
 import { joinLabel } from "@/lib/video";
+import { markingQueue, countdown, tone, TURNAROUND_DAYS, REMIND_DAYS } from "@/lib/marking";
 
 
 const DAY = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -35,6 +36,9 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
   // 5 Nov: students behind on their Classroom work in this teacher's classes (this term)
   const so = await studentOverview({ teacherUserId: me.id }).catch(() => null);
   const behind = so ? so.rows.filter((r) => r.missing > 0).sort((a, b) => b.missing - a.missing || a.name.localeCompare(b.name)) : [];
+  // 6 Nov: handed-in work to mark and return within 7 days, with a countdown for each piece
+  const marking = await markingQueue(me.id).catch(() => []);
+  const urgent = marking.filter((m) => m.daysLeft <= REMIND_DAYS).length;
   const dueDay = (s: string) => new Date(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
   const modules: BoardModule[] = [
     { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">{next && <RefreshAt at={next.ends_at} />}
@@ -86,6 +90,14 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
               {r.notInClassroom > 0 && <span style={{ fontSize: 13 }}>Not in the Google Classroom yet</span>}</span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList></>}
       {so && so.classroom.at && <p className="cs" style={{ margin: "10px 0 0", fontSize: 13 }}>From Google Classroom, read {(() => { const n = Math.round((Date.now() - Date.parse(so.classroom.at!)) / 60000); return n < 60 ? `${Math.max(1, n)} min ago` : n < 1440 ? `${Math.round(n / 60)} h ago` : `${Math.round(n / 1440)} days ago`; })()}.</p>}
     </section> },
+    { id: "marking", title: "Marking countdown", size: "l", node: <section className="dx-card dx-tall"><header><h2>Marking</h2>{urgent > 0 && <span className="dx-count">{urgent}</span>}<span className="dx-sub">{TURNAROUND_DAYS}-day turnaround</span><Link className="dx-more" href="/admin/teacher/classes">My classes →</Link></header>
+      {!so ? <p className="empty">Couldn’t load the Classroom work.</p> : so.classroom.granted !== true ? <p className="empty">Google Classroom isn’t connected to the school site yet, so work can’t be shown.</p>
+        : marking.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>All marked</b><span>Nothing handed in is waiting to be returned.</span></div>
+        : <><p className="cs" style={{ margin: "0 0 10px" }}>{marking.reduce((a, m) => a + m.toMark, 0)} hand-in{marking.reduce((a, m) => a + m.toMark, 0) === 1 ? "" : "s"} to mark and return in Classroom, each within {TURNAROUND_DAYS} days of its due date.</p>
+          <MoreList className="dx-list" limit={5}>{marking.map((m) => <a key={m.cw} className={`dx-item dx-wk dx-mk ${tone(m.daysLeft) === "ok" ? "info" : tone(m.daysLeft)}`} href={m.link ?? `/admin/teacher/classes/${m.gid}#assignments`} target={m.link ? "_blank" : undefined} rel="noopener">
+            <span className="t"><b>{m.title}</b><span>{m.cls} · {m.toMark} to mark{m.toMark <= 3 ? `: ${m.names.join(", ")}` : ""}</span></span>
+            <span className={`dx-cd ${tone(m.daysLeft)}`}>{countdown(m.daysLeft)}</span></a>)}</MoreList></>}
+    </section> },
     { id: "messages", title: "Messages", size: "l", node: <section className="dx-card dx-tall"><header><h2>Messages</h2>{waiting > 0 && <span className="dx-count">{waiting}</span>}<Link className="dx-more" href="/admin/teacher/messages">All messages →</Link></header>
       {threads.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No open conversations</b><span>Parents’ messages to you show here.</span></div>
         : <MoreList className="dx-list" limit={4}>{threads.map((t) => <Link key={t.id} className={`dx-item ${t.last_sender === "parent" ? "warn" : "info"}`} href={`/admin/messages/${t.id}`}>
@@ -128,5 +140,5 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
 export const TEACHER_BUILT_IN: { id: string; size: "s" | "q" | "m" | "l" | "xl" | "full"; h?: "s" | "m" | "l" }[] = [
   { id: "hero", size: "xl" }, { id: "reports-pop", size: "m" },
   { id: "k-attendance", size: "m" }, { id: "k-ones", size: "m" }, { id: "k-pay", size: "m" },
-  { id: "week", size: "l", h: "m" }, { id: "reports", size: "l", h: "m" }, { id: "messages", size: "l", h: "m" }, { id: "email", size: "l", h: "m" }, { id: "behind", size: "l", h: "m" },
+  { id: "week", size: "l", h: "m" }, { id: "reports", size: "l", h: "m" }, { id: "messages", size: "l", h: "m" }, { id: "email", size: "l", h: "m" }, { id: "behind", size: "l", h: "m" }, { id: "marking", size: "l", h: "m" },
 ];

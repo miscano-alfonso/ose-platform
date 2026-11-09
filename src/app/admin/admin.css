@@ -1351,3 +1351,7 @@
 .adm .la-set{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .adm .nm-picked{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft)}
 .adm .nm-pick select[size] option{padding:6px 8px;border-radius:6px}.adm .nm-pick select[size] option:checked{background:var(--soft) linear-gradient(0deg,var(--soft),var(--soft));color:var(--ink);font-weight:600}
+/* Marking countdown (6 Nov) */
+.adm .dx-mk{align-items:center}.adm .dx-mk .t{min-width:0}
+.adm .dx-cd{flex:none;margin-left:auto;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;color:var(--info);background:var(--info-bg)}
+.adm .dx-cd.warn{color:var(--warn);background:var(--warn-bg)}.adm .dx-cd.bad{color:var(--bad);background:var(--bad-bg)}
