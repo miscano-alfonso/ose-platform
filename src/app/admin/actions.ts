@@ -1753,3 +1753,11 @@ export async function runCollectionAction(): Promise<void> {
   const r = await (await import("@/lib/stripe-pay")).collectDue(true);
   collectBack(r.off ? null : `Asked Stripe for ${r.made} payment${r.made === 1 ? "" : "s"}${r.skipped ? ` (${r.skipped} skipped: not on the test list, or no Direct Debit set up)` : ""}.`, r.off ?? null);
 }
+
+// ---------- 11 Nov: Payments → Accounting export settings ----------
+export async function saveExportCfgAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const { saveExportCfg } = await import("@/lib/accounting-export");
+  await saveExportCfg({ salesAccount: str(f, "salesAccount", 10), taxType: str(f, "taxType", 40), prefix: str(f, "prefix", 8) });
+  redirect(`/admin/payments/export?ok=${encodeURIComponent("Saved. New downloads use these settings.")}`);
+}
