@@ -249,6 +249,8 @@ export async function stripeWebhook(raw: string, sigHeader: string | null): Prom
     const ch = (await q<{ id: string; status: string; amount_pence: number; refunded_pence: number; parent_id: string | null; matched_at: string | null; instalment_ids: string[]; linked_by: string | null }>(
       `select id, status, amount_pence, refunded_pence, parent_id, matched_at::text, instalment_ids, linked_by from stripe_charges where id = $1`, [ev.data.object.id]))[0];
     if (!ch?.parent_id) return;
+    const ours = !!(ev.data.object as { metadata?: Record<string, string> }).metadata?.ose_collection;   // 11 Nov: a termly payment the site took itself is recorded by stripe-pay
+    if (ours) return;
     if (ch.status === "succeeded" && !ch.matched_at && ch.refunded_pence === 0 && c.auto !== false && ch.linked_by !== "name") { // a name-only link always waits for the admin
       // a new payment that exactly matches one unpaid term (or several together) is recorded straight away
       const m = matchTerms(await yearTerms(q, ch.parent_id), ch.amount_pence, new Date().toISOString(), ev.data.object.description ?? null, new Set());

@@ -43,6 +43,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
   after(() => inboxBackground());
   after(() => import("@/lib/retention").then((m) => m.clearBackground()).catch(() => null)); // year-end clear-out of lesson chat records and transcripts (if switched on)
   after(() => recordingsBackground()); // lesson recordings: renamed, filed, posted to Classroom, title cards // families' emails from the school inbox, every 15 minutes
+  after(() => import("@/lib/stripe-pay").then((m) => m.collectBackground()).catch(() => null)); // termly payments, when switched on (11 Nov)
   after(() => automationsBackground()); // lesson reminders, taster emails, payment reminders… // reads new Google Meet joins every few hours, and sends Friday's attendance alert // scheduled Instagram posts and the weekly moments report, after the page is sent
   const { logo, custom } = await brandSrc();
   const [x] = await withSchool((q) => q<{ rep: number; msg: number; joins: number }>(`select

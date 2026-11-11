@@ -6,6 +6,9 @@ import { stripeWebhook } from "@/lib/stripe-read";
 export const dynamic = "force-dynamic";
 export async function POST(req: NextRequest) {
   const raw = await req.text();
+  // 11 Nov: notifications for termly payments the site takes itself (signed with the payments secret) are handled there
+  const { payWebhook } = await import("@/lib/stripe-pay");
+  if (await payWebhook(raw, req.headers.get("stripe-signature")).catch((e) => { console.error("payments webhook", e); return false; })) return new Response("ok", { status: 200 });
   const r = await stripeWebhook(raw, req.headers.get("stripe-signature")).catch((e) => { console.error("stripe webhook", e); return { status: 500, body: "error" }; });
   return new Response(r.body, { status: r.status });
 }

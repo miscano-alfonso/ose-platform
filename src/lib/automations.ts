@@ -38,14 +38,14 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "child", "class", "book_link", "hours", "school"],
     subject: "{{class}} is opening: book {{child}}’s place first",
     body: "Dear {{parent}},\n\nGood news: enough families have joined the waiting list, so {{class}} is going ahead.\n\nAs you were on the list, you can book {{child}}’s place before anyone else for the next {{hours}} hours: {{book_link}}\n\n{{school}}" },
-  { key: "payment_reminder", name: "Payment reminder", when: "Before each term’s payment is taken from the saved card.", timing: { label: "days before the payment", unit: "days", default: 3 }, to_parent: true, to_student: false,
-    fields: ["parent", "amount", "date", "school"],
+  { key: "payment_reminder", name: "Payment reminder", when: "Before each term’s payment is taken (by Direct Debit or card).", timing: { label: "days before the payment", unit: "days", default: 3 }, to_parent: true, to_student: false,
+    fields: ["parent", "amount", "date", "how", "payments_link", "school"],
     subject: "Your next payment of {{amount}} on {{date}}",
-    body: "Dear {{parent}},\n\nA reminder that your next termly payment of {{amount}} will be taken from your saved card on {{date}}.\n\nIf your card has changed, please update it before then.\n\n{{school}}" },
+    body: "Dear {{parent}},\n\nA reminder that your next termly payment of {{amount}} will be {{how}} on {{date}}.\n\nIf your bank account or card has changed, please update it before then: {{payments_link}}\n\n{{school}}" },
   { key: "payment_failed", name: "Payment failed", when: "When a termly payment can’t be taken.", timing: null, to_parent: true, to_student: false,
-    fields: ["parent", "amount", "child", "class", "school"],
+    fields: ["parent", "amount", "child", "class", "payments_link", "school"],
     subject: "We couldn’t take your payment of {{amount}}",
-    body: "Dear {{parent}},\n\nWe tried to take this term’s payment of {{amount}} for {{child}}’s {{class}} course, but it didn’t go through. We’ll try again in 3 days.\n\nPlease check your card, or reply to this email if you’d like to talk about it.\n\n{{school}}" },
+    body: "Dear {{parent}},\n\nWe tried to take this term’s payment of {{amount}} for {{child}}’s {{class}} course, but it didn’t go through. We’ll try once more in a few days.\n\nPlease check your bank account or card, or update how you pay: {{payments_link}}\n\nOr reply to this email if you’d like to talk about it.\n\n{{school}}" },
   { key: "report_published", name: "Report ready", when: "When a progress report is published.", timing: null, to_parent: true, to_student: false,
     fields: ["parent", "child", "report", "school"],
     subject: "{{child}}’s {{report}} is ready",
@@ -198,10 +198,12 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
     c = cfg("payment_reminder");
     if (c) {
       const days = c.minutes ?? 3;
-      const rows = await q<{ parent_id: string; parent: string; email: string; due: string; amount: number }>(`select p.id as parent_id, p.first_name as parent, p.email::text, i.due_on::text as due, sum(i.amount_pence)::int as amount
+      const rows = await q<{ parent_id: string; parent: string; email: string; due: string; amount: number; dd: boolean }>(`select p.id as parent_id, p.first_name as parent, p.email::text, i.due_on::text as due, sum(i.amount_pence)::int as amount,
+          coalesce((select m.method = 'bacs' and m.status in ('active', 'pending') from family_pay_methods m where m.parent_id = p.id), false) as dd
         from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id join parents p on p.id = s.parent_id
         where i.status = 'scheduled' and i.due_on > current_date and i.due_on <= current_date + $1::int group by p.id, i.due_on`, [days]);
-      for (const r of rows) await deliver(q, "payment_reminder", c, { ref: `${r.parent_id}:${r.due}`, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent, amount: gbp(r.amount), date: fmtDate(r.due), school } }, budget);
+      for (const r of rows) await deliver(q, "payment_reminder", c, { ref: `${r.parent_id}:${r.due}`, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent, amount: gbp(r.amount), date: fmtDate(r.due),
+        how: r.dd ? "collected by Direct Debit" : "taken from your saved card", payments_link: base ? `${base}/parent/payments` : "your account", school } }, budget);
     }
     c = cfg("payment_failed");
     if (c) {
@@ -209,7 +211,7 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
           l.name || ' ' || sj.name as class from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id join parents p on p.id = s.parent_id
           join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         where i.status = 'failed' and i.due_on > current_date - 30`);
-      for (const r of rows) await deliver(q, "payment_failed", c, { ref: r.id, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent, amount: gbp(r.amount), child: r.child, class: r.class, school } }, budget);
+      for (const r of rows) await deliver(q, "payment_failed", c, { ref: r.id, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent, amount: gbp(r.amount), child: r.child, class: r.class, payments_link: base ? `${base}/parent/payments` : "your account", school } }, budget);
     }
 
     // reports: tell parents when a report round is published
@@ -246,7 +248,7 @@ export async function testAutomation(key: string, to: Recipient, d: { subject: s
   const school = (await withSchool((q) => q<{ name: string }>(`select name from schools where id = current_school()`)))[0]?.name ?? "OH-SO ED";
   const vars = { parent: to.name.split(" ")[0], child: "Sam", class: "KS3 Maths", date: fmtDate(new Date(Date.now() + 864e5).toISOString().slice(0, 10)), time: "16:00", teacher: "Becky",
     meet_link: "https://meet.google.com/abc-defg-hij", book_link: (process.env.SITE_URL || "") + "/courses", amount: "£150.00", hours: "48", report: "Term 1 Progress Report", school,
-    count: "2 pieces of work", list: "• Essay plan (iGCSE English Language) · 3 to mark · 2 days left\n• Poetry comparison (iGCSE English Language) · 1 to mark · 1 day overdue", dashboard_link: (process.env.SITE_URL || "") + "/admin/teacher" };
+    how: "collected by Direct Debit", payments_link: (process.env.SITE_URL || "") + "/parent/payments", count: "2 pieces of work", list: "• Essay plan (iGCSE English Language) · 3 to mark · 2 days left\n• Poetry comparison (iGCSE English Language) · 1 to mark · 1 day overdue", dashboard_link: (process.env.SITE_URL || "") + "/admin/teacher" };
   return sendOne([to], `[Test] ${fill(d.subject, vars)}`, fill(d.body, vars), { tag: `auto-test-${key}` });
 }
 

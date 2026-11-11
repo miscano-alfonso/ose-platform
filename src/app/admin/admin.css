@@ -1355,3 +1355,9 @@
 .adm .dx-mk{align-items:center}.adm .dx-mk .t{min-width:0}
 .adm .dx-cd{flex:none;margin-left:auto;font-size:13px;font-weight:600;padding:3px 9px;border-radius:999px;white-space:nowrap;color:var(--info);background:var(--info-bg)}
 .adm .dx-cd.warn{color:var(--warn);background:var(--warn-bg)}.adm .dx-cd.bad{color:var(--bad);background:var(--bad-bg)}
+/* Parent → Payments: how you pay each term (11 Nov) */
+.adm .pm-how{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:16px 18px;margin:0 0 16px}
+.adm .pm-how>div:first-child{flex:1;min-width:240px}.adm .pm-btns{display:flex;gap:8px;flex-wrap:wrap}
+.adm .pm-sec{margin:16px 0 0;padding:18px 20px}.adm .pm-sec h2{margin:0 0 10px;font-size:19px}
+.adm .pm-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}.adm .pm-row+.pm-row{margin-top:12px}
+.adm .pm-form{display:grid;gap:10px;max-width:520px}

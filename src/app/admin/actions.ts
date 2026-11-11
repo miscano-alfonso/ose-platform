@@ -1722,3 +1722,34 @@ export async function checkMeetAccessAction(): Promise<void> {
   revalidatePath("/admin/students/access");
   redirect(`/admin/students/access?${r.can !== "ok" ? "err=" + encodeURIComponent("The school account (ose@) needs connecting again before the site can read Meet settings.") : "ok=" + encodeURIComponent("Meet settings checked with Google.")}#meet`);
 }
+
+// ---------- 11 Nov: Payments → Termly payments (Stripe, test key only for now) ----------
+const collectBack = (ok?: string | null, err?: string | null): never => redirect(`/admin/payments/collect?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok ?? "Saved.")}`);
+export async function connectPayAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { connectPay } = await import("@/lib/stripe-pay");
+  const err = await connectPay(me.name, String(f.get("key") ?? "").slice(0, 300), String(f.get("secret") ?? "").slice(0, 300));
+  collectBack("Connected to Stripe (test mode).", err);
+}
+export async function disconnectPayAction(): Promise<void> {
+  await requireStaff();
+  await (await import("@/lib/stripe-pay")).disconnectPay();
+  collectBack("The test key was removed and taking payments is switched off.");
+}
+export async function paySwitchAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const on = f.get("on") === "on";
+  await (await import("@/lib/stripe-pay")).setPaySwitch("collect", on);
+  collectBack(on ? "Termly payments will be collected each day from 8am (test families only)." : "Taking termly payments is switched off.");
+}
+export async function allowCardAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const id = str(f, "parent", 40); if (!/^[0-9a-f-]{36}$/.test(id)) collectBack(null, "Family not found.");
+  await (await import("@/lib/stripe-pay")).allowCard(id, f.get("on") === "1");
+  collectBack(f.get("on") === "1" ? "This family can now choose card instead of Direct Debit." : "This family pays by Direct Debit only.");
+}
+export async function runCollectionAction(): Promise<void> {
+  await requireStaff();
+  const r = await (await import("@/lib/stripe-pay")).collectDue(true);
+  collectBack(r.off ? null : `Asked Stripe for ${r.made} payment${r.made === 1 ? "" : "s"}${r.skipped ? ` (${r.skipped} skipped: not on the test list, or no Direct Debit set up)` : ""}.`, r.off ?? null);
+}

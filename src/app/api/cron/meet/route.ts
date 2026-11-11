@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
   await inboxBackground();
   await recordingsBackground();
   await import("@/lib/retention").then((m) => m.clearBackground()).catch((e) => console.error("year-end clear-out", e)); // once a day, if switched on
+  await import("@/lib/stripe-pay").then((m) => m.collectDue()).catch((e) => console.error("termly collection", e)); // termly payments, when switched on
   await runAutomations(400).catch((e) => console.error("automations cron", e)); // books the next 48 hours of lesson reminders with Brevo
   return NextResponse.json({ ok: true });
 }

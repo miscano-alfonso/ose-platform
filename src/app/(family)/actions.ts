@@ -159,3 +159,15 @@ export async function familyOfficeReplyAction(f: FormData): Promise<void> {
   const err = await myOfficeReply(kind, who.id, id, String(f.get("body") ?? "").replace(/\r\n/g, "\n"));
   go(page, "Sent to the office.", err);
 }
+
+// ---------- 11 Nov: how the family pays each term (Direct Debit, or card when the office allows it) ----------
+export async function startPayMethodAction(f: FormData): Promise<void> {
+  const p = await parent("/parent/payments");
+  const { payAccess, startSetup } = await import("@/lib/stripe-pay");
+  if (!(await payAccess(p.email))) go("/parent/payments", null, "Online payments aren’t open yet.");
+  const h = await headers();
+  const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`;
+  const r = await startSetup(p.id, str(f, "kind", 10) === "card" ? "card" : "bacs", await siteBase(origin));
+  if (r.error || !r.url) go("/parent/payments", null, r.error ?? "Couldn’t open Stripe.");
+  redirect(r.url!);
+}
