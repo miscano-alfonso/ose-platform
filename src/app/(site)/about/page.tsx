@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "@/app/(site)/HoverLink";
 import { siteText } from "@/lib/site-content";
 import { siteInfo } from "@/lib/db";
-import { roundelFace } from "../CourseCard";
+import { Roundel } from "../CourseCard";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "About us", description: "Meet Leanne, Principal of OH-SO ED: outstanding online lessons for home-educated students, taught by experienced secondary subject specialists." };
@@ -41,8 +41,7 @@ export default async function About() {
         return <article key={i} className={`ab-tile${k === "Our courses" ? " ab-courses" : ""}`}>
           {k && <p className="ab-k">{k}</p>}
           <p className="ab-body">{p}</p>
-          {k === "Our courses" && !site.demo && <div className="ab-rds" aria-hidden="true">{SUBJECTS.map((s) => { const f = roundelFace(s);
-            return <span key={s} className="cd-rtext" style={{ ["--rbg" as string]: f.bg }}><span>OH–SO</span><span>{f.word}</span></span>; })}</div>}
+          {k === "Our courses" && !site.demo && <div className="ab-rds" aria-hidden="true">{SUBJECTS.map((s) => <Roundel key={s} subject={s} size={84} />)}</div>}
           {k === "Our courses" && <Link className="ab-more" href="/courses">See all courses →</Link>}
           {k === "Our team" && <Link className="ab-more" href="/people">Meet the team →</Link>}
         </article>;

@@ -4,7 +4,7 @@ import Link from "@/app/(site)/HoverLink";
 import { notFound } from "next/navigation";
 import { getCoursePage } from "@/lib/data";
 import { money, DAYS, monthYear } from "@/lib/format";
-import { roundelSrc, roundelFace } from "../../../CourseCard";
+import { roundelSrc, Roundel, stickerOf } from "../../../CourseCard";
 import { siteInfo } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -28,22 +28,23 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
   const [p, site] = await Promise.all([getCoursePage(`${level}/${subject}`), siteInfo()]);
   if (!p) notFound();
   const g = p.groups[0];
+  const st = stickerOf(g);
   return (<>
     <section className="s-phead"><div className="wrap cd-head">
-      <div><div className="cd-title"><h1>{p.subject}</h1>{g?.label && <span className="sticky sl-few cd-hlabel">{g.label_text ?? g.label}</span>}</div>
+      <div><div className="cd-title"><h1>{p.subject}</h1>{st && <span className={`sticky ${st.cls} cd-hlabel`}>{st.text}</span>}</div>
         <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`}>← Back to courses</Link>
           {g && (g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
     </div></section>
     {/* once the title panel scrolls up, a slim band with the title stays under the menu, the roundel sticking on its edge */}
-    <div className="cd-sticky"><div className="cd-stitle"><b>{p.subject}</b>{g?.label && <span className="sticky sl-few">{g.label_text ?? g.label}</span>}</div>
+    <div className="cd-sticky"><div className="cd-stitle"><b>{p.subject}</b>{st && <span className={`sticky ${st.cls}`}>{st.text}</span>}</div>
       <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`} tabIndex={-1}>← Back to courses</Link>
         {g && (g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
     <div className="cd-badge"><div className="wrap">
-      {g?.label && <span className="sticky sl-few cd-rlabel" aria-hidden="true">{g.label_text ?? g.label}</span>}
+      {st && <span className={`sticky ${st.cls} cd-rlabel`} aria-hidden="true">{st.text}</span>}
       {site.demo ? <div className="roundel cd-roundel" style={{ ["--c" as string]: p.colour }} aria-hidden="true">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={roundelSrc(p.subject, site.demo)} alt="" width={140} height={140} /></div>
-        : <div className="cd-roundel cd-rtext" style={{ ["--rbg" as string]: roundelFace(p.subject).bg }} aria-hidden="true"><span>OH–SO</span><span>{roundelFace(p.subject).word}</span></div>}
+        : <Roundel subject={p.subject} className="cd-roundel" size={220} />}
     </div></div>
     <section className="s-sec"><div className="wrap cd-grid">
       <div>

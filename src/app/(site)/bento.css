@@ -1265,3 +1265,5 @@ html:not([data-theme=dark]) .bt .rg-warn{color:#b3392a}
 .bt .gd-go{margin-top:auto;padding-top:6px;font-weight:600;color:var(--b-ink)}
 .bt .gd-soon{margin:0;padding:22px 26px;border-radius:22px;border:1.5px dashed var(--b-line);color:var(--b-muted)}
 @media (prefers-reduced-motion:reduce){.bt .gd-card,.bt .gd-card:hover{transform:none}}
+.bt .cd-rimg{display:block;background:none;object-fit:contain;padding:0}
+.bt .sticky.sl-full{background:#ff914d;color:#050f2d}

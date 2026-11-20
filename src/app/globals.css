@@ -529,3 +529,5 @@ html,body{overflow-x:clip}
 .legal-tw th{text-align:left;background:var(--mist);padding:10px 14px;font-weight:600}
 .legal-tw td{padding:10px 14px;border-top:1px solid var(--line);vertical-align:top}
 .legal-small{font-size:14px;color:var(--muted)}
+/* 20 Nov: full groups get an orange "No spaces left" sticker (Geography roundel orange, navy text) */
+.sl-full{background:#ff914d;color:#050f2d}

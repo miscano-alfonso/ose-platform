@@ -4,7 +4,7 @@ import { cartQuote } from "@/lib/cart";
 import { currentFamily } from "@/lib/family-auth";
 import { familyChildren } from "@/lib/registration";
 import { money } from "@/lib/format";
-import { roundelFace } from "../CourseCard";
+import { roundelFace, Roundel } from "../CourseCard";
 import { removeFromCart, applyCoupon, checkout } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -37,7 +37,7 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
           <p className="ab-k">Courses</p>
           <ul className="bk-rows">{q.lines.map((l) => { const f = roundelFace(l.subject);
             return <li key={l.code} className="bk-row" style={{ ["--c" as string]: f.bg }}>
-              <span className="cd-rtext bk-rd" style={{ ["--rbg" as string]: f.bg }} aria-hidden="true"><span>OH–SO</span><span>{f.word}</span></span>
+              <Roundel subject={l.subject} className="bk-rd" size={58} />
               <div className="bk-name"><Link href={`/courses/${l.page_slug}`}><b>{l.subject}</b></Link>
                 <span>{l.level} · {l.years} year{l.years > 1 ? "s" : ""}</span>
                 {l.slots?.map((s, i) => <span key={i} className="bk-slot">{DAYS[s.d]} {s.t}</span>)}</div>
