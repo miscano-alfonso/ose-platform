@@ -1267,3 +1267,4 @@ html:not([data-theme=dark]) .bt .rg-warn{color:#b3392a}
 @media (prefers-reduced-motion:reduce){.bt .gd-card,.bt .gd-card:hover{transform:none}}
 .bt .cd-rimg{display:block;background:none;object-fit:contain;padding:0}
 .bt .sticky.sl-full{background:#ff914d;color:#050f2d}
+.mcard .mc-sum{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}

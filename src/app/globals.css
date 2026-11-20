@@ -531,3 +531,4 @@ html,body{overflow-x:clip}
 .legal-small{font-size:14px;color:var(--muted)}
 /* 20 Nov: full groups get an orange "No spaces left" sticker (Geography roundel orange, navy text) */
 .sl-full{background:#ff914d;color:#050f2d}
+.mcard .mc-sum{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}

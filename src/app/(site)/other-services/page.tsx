@@ -50,7 +50,7 @@ function WorkshopCard({ w }: { w: Workshop }) {
         {w.places_left !== null && w.places_left <= 3 && <span className="mc-tag t-few">{full ? "Full" : "Few places left"}</span>}</p>
       <h2><Link className="mc-link" href={`/other-services/workshop/${w.slug}`}>{w.title}</Link></h2>
       <p className="mc-sub">{when(w.starts_at)} · {w.minutes} minutes{w.teacher ? ` · ${w.teacher}` : ""}</p>
-      {w.summary && <p>{w.summary}</p>}
+      {w.summary && <p className="mc-sum" title={w.summary}>{w.summary}</p>}   {/* 20 Nov: one line, "…" at the end; the full text is on the workshop's page */}
       <div className="mc-foot"><p className="mc-price">{w.price_pence === 0 ? "Free" : money(w.price_pence)}
         {w.enrolled_price_pence !== null && w.enrolled_price_pence < w.price_pence && <small> · {w.enrolled_price_pence === 0 ? "free" : money(w.enrolled_price_pence)} for our students</small>}</p>
         {full ? <span className="btn btn-line" aria-disabled="true">Full</span> : <Link className="btn btn-brand" href={`/other-services/workshop/${w.slug}`}>Book now</Link>}</div>
