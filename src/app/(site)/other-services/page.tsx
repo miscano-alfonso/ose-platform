@@ -5,12 +5,12 @@ import { money } from "@/lib/format";
 import { MARKING_PRICE_PENCE } from "./past-paper-marking/subjects";
 
 export const dynamic = "force-dynamic";
-export const metadata: Metadata = { title: "More", description: "One-off workshops and past paper marking with written feedback, open to every family." };
+export const metadata: Metadata = { title: "Workshops", description: "One-off workshops and past paper marking with written feedback, open to every family." };
 
 const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "numeric", minute: "2-digit", timeZone: "Europe/London" }).replace(" at ", " · ");
 const TAGS = [["all", "All"], ["workshops", "Workshops"], ["marking", "Past paper marking"]] as const;
 
-// The "More" page (Other services): one card per thing on offer, each with its tag. Workshops come from Admin → Workshops
+// The "Workshops" page (was "More" until 20 Nov) (Other services): one card per thing on offer, each with its tag. Workshops come from Admin → Workshops
 // (title, words, date, price, picture and card size: single = one column, double = two columns with the picture beside the words).
 export default async function More({ searchParams }: { searchParams: Promise<{ tag?: string }> }) {
   const sp = await searchParams;
@@ -18,7 +18,7 @@ export default async function More({ searchParams }: { searchParams: Promise<{ t
   const workshops = await getWorkshops();
   const showW = tag !== "marking", showM = tag !== "workshops";
   return (<>
-    <section className="s-phead"><div className="wrap"><h1>More</h1><p>Live one-off workshops and exam paper marking, open to every family.</p></div></section>
+    <section className="s-phead"><div className="wrap"><h1>Workshops</h1><p>Live one-off workshops and exam paper marking, open to every family.</p></div></section>
     <div className="ph-sticky"><nav className="tabs ph-tabs" aria-label="Show">{TAGS.map(([k, l]) =>
         <Link key={k} href={k === "all" ? "/other-services" : `/other-services?tag=${k}`} scroll={false} className={k === tag ? "on" : ""} aria-current={k === tag ? "page" : undefined}>{l}</Link>)}</nav></div>
     <section className="s-sec"><div className="wrap">

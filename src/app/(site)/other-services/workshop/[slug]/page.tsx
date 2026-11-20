@@ -52,7 +52,7 @@ export default async function WorkshopPage({ params, searchParams }: { params: P
       <div id="book" className="wk-book">
         {sp.sent ? <div className="ct-form wk-done" role="status"><p className="ab-k">Booking received</p><h2>Thank you, we’ll be in touch</h2>
           <p>We’ve got your request for {w.title}. We’ll email you to confirm the place{w.price_pence > 0 ? " and send a payment link" : ""}, with the link to join on the day.</p>
-          <div className="cd-hbtns"><Link href="/other-services">Back to More</Link></div></div>
+          <div className="cd-hbtns"><Link href="/other-services">Back to Workshops</Link></div></div>
         : full ? <div className="ct-form wk-done"><p className="ab-k">Workshop full</p><h2>This one is full</h2><p>All the places have gone. <Link href="/contact">Get in touch</Link> and we’ll tell you when we run it again.</p></div>
         : <form action={requestWorkshop} className="cform ct-form">
           <p className="ab-k">Book a place</p>

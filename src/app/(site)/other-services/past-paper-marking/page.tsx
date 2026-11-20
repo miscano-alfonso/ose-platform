@@ -14,7 +14,7 @@ export default async function PastPaperMarking({ searchParams }: { searchParams:
   return (<>
     <section className="s-phead"><div className="wrap"><h1>Past Paper Marking</h1>
       <p>{money(MARKING_PRICE_PENCE)} a paper. Marked within 48 hours of receipt, with detailed feedback in line with the mark scheme and targets for improvement.</p>
-      <div className="cd-hbtns"><Link href="/other-services">← Back to More</Link><a href="#send">Send a paper</a></div></div></section>
+      <div className="cd-hbtns"><Link href="/other-services">← Back to Workshops</Link><a href="#send">Send a paper</a></div></div></section>
     <section className="s-sec"><div className="wrap pp-wrap" id="send">
       {sp.sent ? <div className="bk-tile bk-done" role="status"><p className="ab-k">Paper received</p><h2>Thank you, we’ve got your paper</h2>
         <p>{pay ? "Pay below and we’ll return it marked within 48 hours of payment." : "We’ll email you to confirm and send a payment link, then return it marked within 48 hours of payment."}</p>
