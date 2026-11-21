@@ -1761,3 +1761,22 @@ export async function saveExportCfgAction(f: FormData): Promise<void> {
   await saveExportCfg({ salesAccount: str(f, "salesAccount", 10), taxType: str(f, "taxType", 40), prefix: str(f, "prefix", 8) });
   redirect(`/admin/payments/export?ok=${encodeURIComponent("Saved. New downloads use these settings.")}`);
 }
+
+// ---------- Resources: useful resources for each subject on the website's /resources page (21 Nov) ----------
+export async function saveResourceAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const back = (k: string, m: string) => redirect(`/admin/resources?${k}=${encodeURIComponent(m)}`);
+  if (me.role !== "school_admin") return back("err", "Only a school admin can change this.");
+  const id = str(f, "id", 40);
+  const { saveResource } = await import("@/lib/resources");
+  const err = await saveResource(me.id, { id: /^[0-9a-f-]{36}$/.test(id) ? id : undefined, subject: str(f, "subject", 60), title: str(f, "title", 120),
+    description: str(f, "description", 400), url: str(f, "url", 600), kind: str(f, "kind", 10), sortOrder: Math.max(0, Math.min(99, parseInt(str(f, "sort", 2), 10) || 0)), hidden: f.get("hidden") === "on" });
+  revalidatePath("/resources"); revalidatePath("/admin/resources");
+  back(err ? "err" : "ok", err ?? "Saved. It shows on the Resources page.");
+}
+export async function deleteResourceAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  if (me.role === "school_admin") { const id = str(f, "id", 40); if (/^[0-9a-f-]{36}$/.test(id)) { const { deleteResource } = await import("@/lib/resources"); await deleteResource(me.id, id); } }
+  revalidatePath("/resources"); revalidatePath("/admin/resources");
+  redirect("/admin/resources?ok=Removed.");
+}

@@ -39,7 +39,7 @@ export const CATALOGUE: Record<MenuArea, MenuItem[]> = {
     it("Tasters", "/admin/tasters", "att"), it("Waiting list & enquiries", "/admin/enquiries", "wait"), it("Messages", "/admin/messages", "mail"), it("Student chat", "/admin/student-chat", "chat"),
     it("Data protection", "/admin/privacy", "set"), it("Rewards", "/admin/rewards", "star"), it("Email", "/admin/email", "mail"), it("Automations", "/admin/automations", "auto"), it("Jobs", "/admin/jobs", "job"),
     it("Overview", "/admin/marketing", "mkt"), it("Newsletter", "/admin/newsletter", "mail"), it("Subscribers", "/admin/subscribers", "fam"), it("Email stats", "/admin/email-stats", "rep"), it("Social", "/admin/social", "mkt"),
-    it("Website", "/admin/website", "web"), it("EdTech website", "/admin/cms", "web"), it("Home page symbols", "/admin/hero-symbols", "star"), it("Home Ed hub", "/admin/home-ed", "web"), it("Guides", "/admin/guides", "rep"), it("Sketch Studio", "/studio", "star"), it("Page styles", "/admin/styles", "set"),
+    it("Website", "/admin/website", "web"), it("EdTech website", "/admin/cms", "web"), it("Home page symbols", "/admin/hero-symbols", "star"), it("Home Ed hub", "/admin/home-ed", "web"), it("Guides", "/admin/guides", "rep"), it("Resources", "/admin/resources", "rep"), it("Sketch Studio", "/studio", "star"), it("Page styles", "/admin/styles", "set"),
     it("School settings", "/admin/school", "set"), it("Teachers", "/admin/teachers", "fam"), it("Staff & access", "/admin/staff", "set"), it("Account", "/admin/account", "set"),
     it("EdTech trials", "/admin/edtech", "set"), it("Solo dashboard", "/admin/solo-dashboard", "home"), it("Menus", "/admin/menus", "menu"), it("Timetable setup", "/admin/timetable-setup", "cal"), it("1:1 tutoring setup", "/admin/tutoring-setup", "fam"), it("Test mode", "/admin/test-mode", "set"), it("Notifications", "/admin/notifications", "set"), it("Email", "/admin/email-settings", "mail"), it("Course labels", "/admin/course-labels", "set"),
   ],
@@ -59,7 +59,7 @@ const hrefs = (a: MenuArea, ...ls: string[]) => ls.map((l) => l.startsWith("/") 
 export const DEFAULT_MENUS: Record<MenuArea, MenuConfig> = {
   admin: { hidden: [], groups: [
     { title: "Marketing", items: hrefs("admin", "Overview", "Newsletter", "Subscribers", "Email stats", "Social") },
-    { title: "Website", items: hrefs("admin", "Website", "Guides", "Sketch Studio", "Home Ed hub", "Page styles", "Home page symbols", "EdTech website") },
+    { title: "Website", items: hrefs("admin", "Website", "Guides", "Resources", "Sketch Studio", "Home Ed hub", "Page styles", "Home page symbols", "EdTech website") },
     { title: "Main menu", items: CATALOGUE.admin.slice(0, 22).map((x) => x.href) }, // Dashboard first, then the daily pages
     { title: "Settings", items: hrefs("admin", "School settings", "/admin/email-settings", "Notifications", "Course labels", "Test mode", "Timetable setup", "1:1 tutoring setup", "Teachers", "Staff & access", "Account", "EdTech trials", "Solo dashboard", "Menus") },
   ] },
@@ -90,9 +90,12 @@ export function cleanMenu(area: MenuArea, raw: unknown): MenuConfig {
   // admin pages added since go in the main group, after the page listed just before them in the catalogue when it's there
   const main = area === "admin" ? groups.find((g) => /^main/i.test(g.title)) : undefined;
   for (const h of missing) {
+    // (21 Nov) when the page before it sits in another group (e.g. Guides in Website), it goes beside it there
+    const cat = CATALOGUE[area].map((x) => x.href), prev = cat[cat.indexOf(h) - 1];
+    const near = area === "admin" && prev ? groups.find((g) => g.items.includes(prev)) : undefined;
+    if (near) { near.items.splice(near.items.indexOf(prev) + 1, 0, h); continue; }
     if (!main) { groups[groups.length - 1].items.push(h); continue; }
-    const cat = CATALOGUE[area].map((x) => x.href), prev = cat[cat.indexOf(h) - 1], at = prev ? main.items.indexOf(prev) : -1;
-    if (at >= 0) main.items.splice(at + 1, 0, h); else main.items.push(h);
+    main.items.push(h);
   }
   return { groups, hidden };
 }
