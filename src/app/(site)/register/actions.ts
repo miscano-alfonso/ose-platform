@@ -26,7 +26,7 @@ function readChildren(f: FormData): Promise<ChildIn[]> {
 /** New parents register with their children and are signed in straight away; signed-in parents can add children here too. */
 export async function registerAction(f: FormData): Promise<void> {
   const v = (k: string, max = 200) => String(f.get(k) ?? "").trim().slice(0, max);
-  const next = safeNext(v("next", 100));
+  const next = safeNext(v("next", 300));
   const back = (m: string) => redirect(`/register?next=${encodeURIComponent(next)}&error=${encodeURIComponent(m)}`);
   if (v("website")) redirect(next);
   const kids = (await readChildren(f)).filter((c, i) => i === 0 || c.first || c.last || c.email);
@@ -48,6 +48,6 @@ export async function registerAction(f: FormData): Promise<void> {
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`;
   const sent = await sendVerifyLink(id, await siteBase(origin));
-  if (next.startsWith("/taster")) { const { rememberNext } = await import("../../(family)/actions"); await rememberNext("/taster"); }
+  if (next.startsWith("/taster")) { const { rememberNext } = await import("../../(family)/actions"); await rememberNext(next); }
   redirect(`/register?check=${encodeURIComponent(p.email)}${sent.ok ? "" : "&error=" + encodeURIComponent("We couldn’t send the email just now. Use “I already have an account” to get a new link.")}`);
 }

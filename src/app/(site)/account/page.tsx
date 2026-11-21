@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "@/app/(site)/HoverLink";
 import { redirect } from "next/navigation";
 import { currentFamily } from "@/lib/family-auth";
+import { safeTaster } from "@/lib/taster-link";
 import { sendLinkAction } from "../../(family)/actions";
 
 export const metadata: Metadata = { title: "My account", robots: { index: false, follow: false } };
@@ -13,7 +14,8 @@ export default async function Account({ searchParams }: { searchParams: Promise<
   const f = await currentFamily();
   const join = /^\/join\/[0-9a-f-]{36}$/i.test(sp.next ?? "") ? sp.next! : null;   // 5 Nov: sent here by a lesson's Join link
   if (f && join) redirect(f.kind === "student" ? join : `/lesson-join?why=parent`);
-  if (f && !sp.out) redirect(f.kind === "parent" ? (sp.next === "cart" ? "/cart" : sp.next === "taster" ? "/taster" : "/parent") : "/student");
+  const taster = safeTaster(sp.next);   // 21 Nov: back to the taster form, course already chosen
+  if (f && !sp.out) redirect(f.kind === "parent" ? (sp.next === "cart" ? "/cart" : taster ?? "/parent") : "/student");
   return (<>
     <section className="s-phead"><div className="wrap"><h1>My Account</h1><p>Parents: your children’s lessons, attendance, reports and payments. Students: your classes, chat and rewards.</p></div></section>
     <section className="s-sec"><div className="wrap">
@@ -25,7 +27,7 @@ export default async function Account({ searchParams }: { searchParams: Promise<
         {sp.out && <p className="note">You’re signed out.</p>}
         {sp.err && <p className="note" role="alert">{sp.err}</p>}
         {join && <div className="note" style={{ marginBottom: 12 }}><b>Sign in to join your lesson.</b> Use your own email address (the Google account we have for you), not a parent’s. We’ll email you a link; once you’re signed in, the Join button takes you straight in for 30 days. Staff: open lessons from your register.</div>}
-        {sp.next && <input type="hidden" name="next" value={join ?? sp.next.slice(0, 20)} />}
+        {sp.next && <input type="hidden" name="next" value={join ?? taster ?? sp.next.slice(0, 20)} />}
         <label>Email<input type="email" name="email" autoComplete="email" required /></label>
         <button className="btn btn-brand" type="submit">Email me a sign-in link</button>
         <p className="note">Parents: use the email you booked with. Students: use your own Google account. New here? <Link href="/register">Register your family</Link>. Questions? <Link href="/contact">Contact us</Link>.</p>

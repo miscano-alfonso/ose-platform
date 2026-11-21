@@ -6,8 +6,9 @@ type Row = { level: string; subject: string; date: string; lesson: string };
 const day = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 /** One row per taster: Level → Subject → Date → Time, with + to add another (up to `max`) and − to remove. */
-export function TasterRows({ opts, max }: { opts: Opt[]; max: number }) {
-  const [rows, setRows] = useState<Row[]>([{ level: "", subject: "", date: "", lesson: "" }]);
+export function TasterRows({ opts, max, start }: { opts: Opt[]; max: number; start?: { level: string; subject: string } | null }) {
+  // 21 Nov: opened from a course page, the first row starts with that course chosen, so only the date and time are left
+  const [rows, setRows] = useState<Row[]>([{ level: start?.level ?? "", subject: start?.subject ?? "", date: "", lesson: "" }]);
   const levels = [...new Set(opts.map((o) => o.level))];
   const set = (i: number, r: Partial<Row>) => setRows(rows.map((x, j) => j === i ? { ...x, ...r } : x));
   const taken = (i: number) => rows.filter((_, j) => j !== i).map((r) => `${r.level}|${r.subject}`);

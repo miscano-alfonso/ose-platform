@@ -5,13 +5,17 @@ import { currentFamily } from "@/lib/family-auth";
 import { siteInfo } from "@/lib/db";
 import { bookTasterAction } from "./actions";
 import { TasterRows } from "./TasterRows";
+import { tasterHref } from "@/lib/taster-link";
 
 export const metadata: Metadata = { title: "Book a free taster", description: "Try a real lesson for free: pick a class and a date, and join the lesson live in Google Meet." };
 
 
-export default async function Taster({ searchParams }: { searchParams: Promise<{ booked?: string; error?: string }> }) {
+export default async function Taster({ searchParams }: { searchParams: Promise<{ booked?: string; error?: string; level?: string; subject?: string }> }) {
   const sp = await searchParams;
   const [opts, site, fam] = await Promise.all([tasterOptions(), siteInfo(), currentFamily()]);
+  // 21 Nov: "Book a taster" on a course page brings the course with it (kept through registering or signing in)
+  const start = sp.level && sp.subject && opts.some((o) => o.level === sp.level && o.subject === sp.subject) ? { level: sp.level, subject: sp.subject } : null;
+  const back = start ? tasterHref(start.level, start.subject) : "/taster";
   // 1 Nov: tasters are booked by registered parents, for one of their children
   const parent = fam?.kind === "parent" && !fam.viewer ? fam : null;
   const kids = parent ? await parentKids(parent.id) : [];
@@ -24,17 +28,18 @@ export default async function Taster({ searchParams }: { searchParams: Promise<{
         <p><Link href="/courses">Browse our courses</Link></p></div> :
       !parent ? <div className="notice"><h2>Register to book a taster</h2>
         <p>Tasters are booked from your family account, so we know who your child is and can invite them to Google Classroom. Register your family and add your children (it takes a couple of minutes), or sign in if you already have an account.</p>
-        <div className="cd-hbtns"><Link href="/register?next=/taster">Register your family</Link><Link href="/account?next=taster">I already have an account</Link></div></div> :
+        <div className="cd-hbtns"><Link href={`/register?next=${encodeURIComponent(back)}`}>Register your family</Link><Link href={`/account?next=${encodeURIComponent(back)}`}>I already have an account</Link></div></div> :
       kids.length === 0 ? <div className="notice"><h2>Add your child first</h2><p>Add the child the taster is for, with their own Google account email.</p>
-        <div className="cd-hbtns"><Link href="/register?next=/taster">Add a child</Link></div></div> :
+        <div className="cd-hbtns"><Link href={`/register?next=${encodeURIComponent(back)}`}>Add a child</Link></div></div> :
       opts.length === 0 ? <div className="notice"><h2>No taster places just now</h2><p>All our upcoming taster places are taken. <Link href="/contact">Get in touch</Link> and we’ll find a date for you.</p></div> :
       <form className="cform taster" action={bookTasterAction}>
         <p className="tinfo">If a course you’d like a taster for isn’t showing, please <Link href="/contact">contact us</Link>.</p>
         {sp.error && <p className="notice err" role="alert">{sp.error}</p>}
-        <TasterRows opts={opts.map((o) => ({ level: o.level, subject: o.subject, lessons: o.lessons }))} max={MAX_TASTERS} />
+        {start && <p className="note" style={{ margin: 0 }}>A taster for <b>{start.level} {start.subject}</b>: choose a date and a time below. You can add another subject with +.</p>}
+        <TasterRows opts={opts.map((o) => ({ level: o.level, subject: o.subject, lessons: o.lessons }))} max={MAX_TASTERS} start={start} />
         <fieldset className="wk-fs"><legend>Which child is it for?</legend><div className="ct-pills">
           {kids.map((k, i) => <label key={k.id}><input type="radio" name="child" value={k.id} required defaultChecked={kids.length === 1 && i === 0} /><span>{k.first}</span></label>)}</div>
-          <p className="note">The Classroom invitation goes to your child’s Google account: {kids.map((k) => `${k.first}: ${k.email ?? "not given yet"}`).join(" · ")}. <Link href="/register?next=/taster">+ Add a child</Link></p></fieldset>
+          <p className="note">The Classroom invitation goes to your child’s Google account: {kids.map((k) => `${k.first}: ${k.email ?? "not given yet"}`).join(" · ")}. <Link href={`/register?next=${encodeURIComponent(back)}`}>+ Add a child</Link></p></fieldset>
         <p className="note">Booking as {parent.first} {parent.last} · {parent.email}</p>
         <label>Additional message<textarea name="message" rows={4} maxLength={2000} /></label>
         <label className="hp" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>

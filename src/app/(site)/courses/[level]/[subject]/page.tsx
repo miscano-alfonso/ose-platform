@@ -6,6 +6,8 @@ import { getCoursePage } from "@/lib/data";
 import { money, DAYS, monthYear } from "@/lib/format";
 import { roundelSrc, Roundel, stickerOf } from "../../../CourseCard";
 import { siteInfo } from "@/lib/db";
+import { tasterOptions } from "@/lib/tasters-public";
+import { tasterHref } from "@/lib/taster-link";
 
 export const dynamic = "force-dynamic";
 
@@ -25,19 +27,21 @@ function Text({ text }: { text: string }) {
 
 export default async function CoursePage({ params }: { params: Promise<{ level: string; subject: string }> }) {
   const { level, subject } = await params;
-  const [p, site] = await Promise.all([getCoursePage(`${level}/${subject}`), siteInfo()]);
+  const [p, site, tasters] = await Promise.all([getCoursePage(`${level}/${subject}`), siteInfo(), tasterOptions().catch(() => [])]);
   if (!p) notFound();
+  // 21 Nov: "Book a taster" between the two buttons when this course has taster places coming up; the form opens with the course chosen
+  const taster = tasters.some((o) => o.level === p.level && o.subject === p.subject) ? tasterHref(p.level, p.subject) : null;
   const g = p.groups[0];
   const st = stickerOf(g);
   return (<>
     <section className="s-phead"><div className="wrap cd-head">
       <div><div className="cd-title"><h1>{p.subject}</h1>{st && <span className={`sticky ${st.cls} cd-hlabel`}>{st.text}</span>}</div>
-        <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`}>← Back to courses</Link>
+        <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`}>← Back to courses</Link>{taster && <Link href={taster}>Book a taster</Link>}
           {g && (g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
     </div></section>
     {/* once the title panel scrolls up, a slim band with the title stays under the menu, the roundel sticking on its edge */}
     <div className="cd-sticky"><div className="cd-stitle"><b>{p.subject}</b>{st && <span className={`sticky ${st.cls}`}>{st.text}</span>}</div>
-      <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`} tabIndex={-1}>← Back to courses</Link>
+      <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`} tabIndex={-1}>← Back to courses</Link>{taster && <Link href={taster} tabIndex={-1}>Book a taster</Link>}
         {g && (g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
     <div className="cd-badge"><div className="wrap">
       {st && <span className={`sticky ${st.cls} cd-rlabel`} aria-hidden="true">{st.text}</span>}
