@@ -49,10 +49,10 @@ export const CATALOGUE: Record<MenuArea, MenuItem[]> = {
   ],
   parent: [
     it("Home", "/parent", "home"), it("Attendance", "/parent/attendance", "att"), it("Assignments", "/parent/assignments", "rep"), it("Book a 1:1", "/parent/book", "fam"),
-    it("Workshops", "/parent/workshops", "cal"), it("Messages", "/parent/messages", "mail"), it("Other parents", "/parent/connect", "fam"), it("My details", "/parent/details", "set"),
+    it("Workshops", "/parent/workshops", "cal"), it("Resources", "/parent/resources", "rep"), it("Messages", "/parent/messages", "mail"), it("Other parents", "/parent/connect", "fam"), it("My details", "/parent/details", "set"),
     it("Privacy", "/parent/privacy", "set"), it("Reports", "/parent/reports", "rep"), it("Payments", "/parent/payments", "pay"), it("Calendar sync", "/parent/calendar", "cal"), it("Notifications", "/parent/notifications", "set"),
   ],
-  student: [it("Home", "/student", "home"), it("My classes", CLASSES_TOKEN, "cls"), it("Chat", "/student/chat", "chat"), it("Messages", "/student/messages", "mail"), it("Rewards", "/student/rewards", "star"), it("Calendar sync", "/student/calendar", "cal"), it("Notifications", "/student/notifications", "set")],
+  student: [it("Home", "/student", "home"), it("My classes", CLASSES_TOKEN, "cls"), it("Chat", "/student/chat", "chat"), it("Messages", "/student/messages", "mail"), it("Rewards", "/student/rewards", "star"), it("Resources", "/student/resources", "rep"), it("Calendar sync", "/student/calendar", "cal"), it("Notifications", "/student/notifications", "set")],
 };
 
 const hrefs = (a: MenuArea, ...ls: string[]) => ls.map((l) => l.startsWith("/") ? l : CATALOGUE[a].find((x) => x.label === l)!.href);   // a label, or the link itself when two items share a label
@@ -90,9 +90,9 @@ export function cleanMenu(area: MenuArea, raw: unknown): MenuConfig {
   // admin pages added since go in the main group, after the page listed just before them in the catalogue when it's there
   const main = area === "admin" ? groups.find((g) => /^main/i.test(g.title)) : undefined;
   for (const h of missing) {
-    // (21 Nov) when the page before it sits in another group (e.g. Guides in Website), it goes beside it there
+    // (21 Nov) beside the page listed just before it in the catalogue, in whichever group holds it (e.g. Resources after Guides / Workshops / Rewards)
     const cat = CATALOGUE[area].map((x) => x.href), prev = cat[cat.indexOf(h) - 1];
-    const near = area === "admin" && prev ? groups.find((g) => g.items.includes(prev)) : undefined;
+    const near = prev ? groups.find((g) => g.items.includes(prev)) : undefined;
     if (near) { near.items.splice(near.items.indexOf(prev) + 1, 0, h); continue; }
     if (!main) { groups[groups.length - 1].items.push(h); continue; }
     main.items.push(h);

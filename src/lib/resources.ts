@@ -53,3 +53,22 @@ export async function deleteResource(actorId: string, id: string) {
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'delete', 'resource', $2, '{}')`, [actorId, id]);
   });
 }
+
+// ---------- Dashboards (21 Nov): parents and students see the resources for the courses they're on first ----------
+/** Groups of subject names that share resources: "English Literature" courses get "English" resources, "Biology" gets "Science". */
+const FAMILIES: [string, RegExp][] = [["english", /english/i], ["maths", /math/i], ["science", /science|biology|chemistry|physics/i], ["geography", /geograph/i],
+  ["history", /history/i], ["business", /business/i], ["economics", /economic/i], ["computing", /computing|computer|\bict\b/i],
+  ["languages", /french|spanish|german|italian|latin|mandarin|^(modern )?languages?$/i], ["religion", /religio|\bre\b/i], ["media", /media/i]];
+export const subjectFamily = (s: string) => (FAMILIES.find(([, re]) => re.test(s))?.[0]) ?? s.trim().toLowerCase();
+
+export type CourseRef = { subject: string; level: string; who?: string };
+/** Splits the school's resources into the subjects of these courses ("mine", each with the courses it's for) and the rest
+ *  ("others"). "All subjects" goes at the end of "mine" only. */
+export function resourcesForCourses(list: Resource[], courses: CourseRef[]) {
+  const fams = new Set(courses.map((c) => subjectFamily(c.subject)));
+  const groups = groupBySubject(list);
+  const mine = groups.filter(([s]) => s === ALL_SUBJECTS || fams.has(subjectFamily(s)))
+    .map(([s, items]) => ({ subject: s, items, courses: s === ALL_SUBJECTS ? [] : courses.filter((c) => subjectFamily(c.subject) === subjectFamily(s)) }));
+  const others = groups.filter(([s]) => s !== ALL_SUBJECTS && !fams.has(subjectFamily(s))).map(([s, items]) => ({ subject: s, items, courses: [] as CourseRef[] }));
+  return { mine: mine.length === 1 && mine[0].subject === ALL_SUBJECTS && courses.length === 0 ? [] : mine, others };
+}

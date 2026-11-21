@@ -1367,3 +1367,17 @@
 .adm .ax-term{display:grid;gap:2px;padding:10px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft);color:var(--ink);text-decoration:none;min-width:150px;font-size:14px}
 .adm .ax-term:hover{border-color:var(--ink)}.adm .ax-term b{font-size:15px}
 .adm .ax-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+
+/* Resources on the parent and student dashboards (21 Nov): dashboard palette only; the subject roundel is the only subject colour. */
+.adm .rs-tabs{margin-bottom:14px;justify-content:flex-start;gap:6px}
+.adm .rs-tabs a{letter-spacing:0;font-size:15px}
+.adm .rs-dsec{margin:0 0 16px}
+.adm .rs-dhead{display:flex;align-items:center;gap:12px;margin-bottom:12px}
+.adm .rs-dhead img{width:44px;height:44px;flex:none;border-radius:50%}
+.adm .rs-dhead h2{margin:0}.adm .rs-dhead .note{margin:2px 0 0;overflow-wrap:anywhere}
+.adm .rs-dgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));gap:12px}
+.adm .rs-ditem{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:14px 16px;border-radius:14px;border:1px solid var(--line);background:var(--panel);color:var(--ink);text-decoration:none;overflow-wrap:anywhere;transition:background-color .15s,border-color .15s}
+.adm a.rs-ditem:hover,.adm a.rs-ditem:focus-visible{background:var(--hover);border-color:var(--accent)}
+.adm .rs-dtip{background:var(--soft)}
+.adm .rs-dt{font-size:16.5px;line-height:1.3}.adm .rs-dd{color:var(--muted);line-height:1.45}
+.adm .rs-dgo{margin-top:auto;padding-top:4px;font-weight:600;color:var(--ink)}
