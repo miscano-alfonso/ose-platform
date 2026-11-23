@@ -41,7 +41,7 @@ export const CATALOGUE: Record<MenuArea, MenuItem[]> = {
     it("Overview", "/admin/marketing", "mkt"), it("Newsletter", "/admin/newsletter", "mail"), it("Subscribers", "/admin/subscribers", "fam"), it("Email stats", "/admin/email-stats", "rep"), it("Social", "/admin/social", "mkt"),
     it("Website", "/admin/website", "web"), it("EdTech website", "/admin/cms", "web"), it("Home page symbols", "/admin/hero-symbols", "star"), it("Home Ed hub", "/admin/home-ed", "web"), it("Guides", "/admin/guides", "rep"), it("Resources", "/admin/resources", "rep"), it("Sketch Studio", "/studio", "star"), it("Page styles", "/admin/styles", "set"),
     it("School settings", "/admin/school", "set"), it("Teachers", "/admin/teachers", "fam"), it("Staff & access", "/admin/staff", "set"), it("Account", "/admin/account", "set"),
-    it("EdTech trials", "/admin/edtech", "set"), it("Solo dashboard", "/admin/solo-dashboard", "home"), it("Menus", "/admin/menus", "menu"), it("Timetable setup", "/admin/timetable-setup", "cal"), it("1:1 tutoring setup", "/admin/tutoring-setup", "fam"), it("Test mode", "/admin/test-mode", "set"), it("Notifications", "/admin/notifications", "set"), it("Email", "/admin/email-settings", "mail"), it("Course labels", "/admin/course-labels", "set"),
+    it("EdTech trials", "/admin/edtech", "set"), it("Solo dashboard", "/admin/solo-dashboard", "home"), it("Menus", "/admin/menus", "menu"), it("Timetable setup", "/admin/timetable-setup", "cal"), it("1:1 tutoring setup", "/admin/tutoring-setup", "fam"), it("Test mode", "/admin/test-mode", "set"), it("Notifications", "/admin/notifications", "set"), it("Email", "/admin/email-settings", "mail"), it("Course labels", "/admin/course-labels", "set"), it("Subject colours", "/admin/subject-colours", "set"),
   ],
   teacher: [
     it("My day", "/admin/teacher", "home"), it("My classes", "/admin/teacher/classes", "cls"), it("My students", "/admin/teacher/students", "fam"), it("1:1s & workshops", "/admin/teacher/ones", "fam"), it("Messages", "/admin/teacher/messages", "mail"), it("Class chats", "/admin/teacher/chats", "chat"),
@@ -61,7 +61,7 @@ export const DEFAULT_MENUS: Record<MenuArea, MenuConfig> = {
     { title: "Marketing", items: hrefs("admin", "Overview", "Newsletter", "Subscribers", "Email stats", "Social") },
     { title: "Website", items: hrefs("admin", "Website", "Guides", "Resources", "Sketch Studio", "Home Ed hub", "Page styles", "Home page symbols", "EdTech website") },
     { title: "Main menu", items: CATALOGUE.admin.slice(0, 22).map((x) => x.href) }, // Dashboard first, then the daily pages
-    { title: "Settings", items: hrefs("admin", "School settings", "/admin/email-settings", "Notifications", "Course labels", "Test mode", "Timetable setup", "1:1 tutoring setup", "Teachers", "Staff & access", "Account", "EdTech trials", "Solo dashboard", "Menus") },
+    { title: "Settings", items: hrefs("admin", "School settings", "/admin/email-settings", "Notifications", "Course labels", "Subject colours", "Test mode", "Timetable setup", "1:1 tutoring setup", "Teachers", "Staff & access", "Account", "EdTech trials", "Solo dashboard", "Menus") },
   ] },
   teacher: { hidden: [], groups: [{ title: "Menu", items: CATALOGUE.teacher.map((x) => x.href) }] },
   parent: { hidden: [], groups: [{ title: "Menu", items: CATALOGUE.parent.map((x) => x.href) }] },

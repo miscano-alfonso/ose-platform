@@ -38,7 +38,8 @@ export function Roundel({ subject, className, size }: { subject: string; classNa
   // eslint-disable-next-line @next/next/no-img-element
   return <img className={`cd-rtext cd-rimg${className ? " " + className : ""}`} src={roundelSrc(subject)} alt="" width={size} height={size} aria-hidden="true" />;
 }
-export const subjectColour = (subject: string, fallback: string) => FACE.find(([re]) => re.test(subject))?.[1] ?? fallback;
+/** (23 Nov) The subject's own colour, set in Settings → Subject colours (the brand sheet's), else its roundel's. */
+export const subjectColour = (subject: string, colour: string) => colour || (FACE.find(([re]) => re.test(subject))?.[1] ?? "#8494c2");
 
 export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }) {
   const lessons = `${c.lessons_per_week} lesson${c.lessons_per_week > 1 ? "s" : ""} per week`;
