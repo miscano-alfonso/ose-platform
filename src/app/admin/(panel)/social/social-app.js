@@ -144,11 +144,37 @@ function kitDrawns(){if(!KIT.covers){try{KIT.covers=JSON.parse(localStorage.getI
 function kitDrawn(id){const c=kitDrawns()[id];return c&&c.path?c:null}
 function kitSetDrawn(id,c){const all=kitDrawns();if(c)all[id]=c;else delete all[id];try{localStorage.setItem('ose-social-covers',JSON.stringify(all))}catch(_){}for(const k of Object.keys(KIT.pics))if(k.startsWith(id+'/'))delete KIT.pics[k];delete socCoursePics[id]}
 function kitSrcRow(b){const ov=kitDrawn(b.id),usual=b.status==='workshop'?'the workshop picture':'the teacher’s photo',S=KIT.studio&&KIT.studio.book===b.id?KIT.studio:null;
-  return `<div class="so-row kit-src"><span class="hint">Picture: ${ov?`the Sketch Studio drawing “${esc(ov.title||'Drawing')}”`:esc(usual)}</span><button class="btn small${S?' solid':''}" type="button" data-studio-act="open" data-where="kit">${ov?'Choose another drawing':'Use a Sketch Studio drawing'}</button>${ov?`<button class="linkbtn" type="button" data-studio-act="reset" data-where="kit">Back to ${esc(usual)}</button>`:''}</div>${S?studioPanel(S,'kit'):''}`}
+  return `<div class="so-row kit-src"><span class="hint">Picture: ${ov?`the Sketch Studio drawing “${esc(ov.title||'Drawing')}”`:esc(usual)}</span><button class="btn small${S?' solid':''}" type="button" data-studio-act="open" data-where="kit">${ov?'Choose another drawing':'Use a Sketch Studio drawing'}</button><button class="btn small" type="button" data-studio-act="draw" data-where="kit" title="Sketch Studio draws a picture from this post's details, its draft and the link for more details">Draw one in Sketch Studio</button>${ov?`<button class="linkbtn" type="button" data-studio-act="reset" data-where="kit">Back to ${esc(usual)}</button>`:''}</div>${S?studioPanel(S,'kit'):''}`}
 function studioState(where){return where==='sb'?(SOC.build&&SOC.build.studio):KIT.studio}
 function studioPanel(S,where){const pic=it=>`/admin/social-api?action=studiopic&small=1&id=${encodeURIComponent(it.id)}&v=${encodeURIComponent(it.at||'')}`;
   return `<div class="sb-canva sb-studio">${S.err?`<p class="hint">${esc(S.err)}</p>`:!S.items?'<p class="hint"><span class="spin"></span>Loading your drawings…</p>':S.items.length?`<p class="hint" style="margin:0 0 6px">Pick a drawing.</p><div class="sb-cgrid">${S.items.map(it=>`<button type="button" data-studio-pick="${esc(it.id)}" data-where="${where}" data-t="${esc(it.title)}" title="${esc(it.title)}"${S.busy?' disabled':''}><img src="${pic(it)}" alt="" loading="lazy"><span>${S.busy===it.id?'Adding…':esc(it.title)}</span></button>`).join('')}</div>`:'<p class="hint">No drawings with a picture yet. Make one in Sketch Studio, or open it once so it adds pictures to drawings made before 23 November, then press Refresh.</p>'}
     <div class="so-row" style="margin-top:6px"><a class="linkbtn" href="/studio" target="_blank" rel="noopener">Open Sketch Studio (new tab)</a><button class="linkbtn" type="button" data-studio-act="refresh" data-where="${where}">Refresh</button><button class="linkbtn" type="button" data-studio-act="close" data-where="${where}">Close</button></div></div>`}
+/* Draw in Sketch Studio (23 Nov): the Studio opens in a new tab, draws a picture from the post's words and its source link
+   (the linked page's title and description), and sends the finished drawing back here as the picture */
+const STUDIO_PAL=[[/english/i,'english'],[/math/i,'maths'],[/geograph/i,'geography'],[/histor/i,'history'],[/science|biolog|chemist|physic/i,'science'],[/business/i,'business'],[/media|film/i,'media'],[/econom/i,'economics'],[/comput|technolog|\bict\b/i,'technology']];
+function studioPalOf(t){return (STUDIO_PAL.find(([re])=>re.test(t||''))||[0,'house'])[1]}
+let studioJob=null;
+async function studioDraw(job){const say=t=>{if(job.where==='sb'&&SOC.build)sbMsg(t);else toast(t)};
+  const w=window.open('about:blank','ose-studio');   // opened during the click, so the browser allows it
+  if(!w){say('The browser blocked the new tab. Allow pop-ups for this site, then try again.');return}
+  say('Opening Sketch Studio…');
+  try{await api('studiopass',{})}catch(_){}
+  let src='';if(job.link){try{const i=(await api('linkinfo',{url:job.link})).info;if(i)src=[i.title,i.description].filter(Boolean).join(' — ')+(i.site?` (${i.site})`:'')}catch(_){}}
+  // the words without web addresses (tracking links mean nothing to the drawing) and without repeated lines
+  const seen=new Set(),words=job.words.join('\n').replace(/https?:\/\/\S+/g,'').split('\n').map(x=>x.replace(/\s+/g,' ').trim()).filter(x=>x&&!/^[^:]{0,30}:$/.test(x)&&!seen.has(x.toLowerCase())&&seen.add(x.toLowerCase())).join('\n').slice(0,1500);
+  const brief=['Topic: '+String(job.topic||'').slice(0,120),'A picture for an OH-SO ED social media post (OH-SO ED is an online school for home-educated secondary students).',
+    words?'The post is about:\n'+words:'',src?'It links to a page about: '+src:'','Draw one object or a simple scene that sums this up. No words, letters or logos in the picture.'].filter(Boolean).join('\n\n');
+  studioJob=Object.assign({},job,{brief,win:w,sent:false});
+  try{w.location.href='/studio?from=social'}catch(_){}
+  say('Sketch Studio is drawing it in the other tab (a minute or two). It comes back here as the picture when it’s done.')}
+const studioMsg=async e=>{const J=studioJob;if(!J||e.origin!==location.origin||e.source!==J.win||!e.data)return;
+  if(e.data.studioReady){if(!J.sent){J.sent=true;J.win.postMessage({studioBrief:J.brief,pal:J.pal},location.origin)}return}
+  if(!e.data.studioDrawing)return;studioJob=null;
+  try{const r=await api('studiouse',{id:String(e.data.studioDrawing)}),title=String(e.data.title||'Drawing').slice(0,120);
+    if(J.where==='sb'){const B=SOC.build;if(!B)return;B.image=r.path;B.autoPic=false;B.filtered='';B.studio=null;B.msg='Drawn in Sketch Studio. Add an effect if you like.';sbPaint();sbApplyFx()}
+    else{kitSetDrawn(J.book,{path:r.path,title});if(KIT.book===J.book){KIT.studio=null;socPaint()}}
+    toast('The Sketch Studio drawing is now the picture.')}catch(err){toast(err.message||'Couldn’t bring the drawing in.')}};
+if(window.__oseStudioMsg)window.removeEventListener('message',window.__oseStudioMsg);window.__oseStudioMsg=studioMsg;window.addEventListener('message',studioMsg);
 function studioRepaint(where){if(where==='sb')sbPaint();else socPaint()}
 async function studioLoad(where){const S=studioState(where);if(!S)return;S.items=null;S.err='';studioRepaint(where);
   try{const j=await api('studiolist');S.items=j.items||[]}catch(err){S.err=err.message||'Couldn’t load the drawings.'}if(studioState(where)===S)studioRepaint(where)}
@@ -156,6 +182,12 @@ app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closes
   if(where==='sb'&&!SOC.build)return;const b=where==='kit'?bookById(KIT.book):null;if(where==='kit'&&!b)return;
   if(act==='open'){if(KIT.studio&&KIT.studio.book===b.id){KIT.studio=null;socPaint();return}KIT.studio={book:b.id,items:null};studioLoad('kit');return}
   if(act==='reset'){kitSetDrawn(b.id,null);KIT.studio=null;socPaint();return}
+  if(act==='draw'){const B=kbB(b),D=KIT.drafts[b.id]||{},x=B.ex||{},f=B.fact||{};
+    const words=[b.title+(b.subtitle?' ('+b.subtitle+')':''),
+      B.type==='exhibition'&&x.name?['Event: '+x.name,x.venue,x.city,x.starts?'Date: '+fmtDate(x.starts,true):'',x.details].filter(Boolean).join(' · '):'',
+      B.type==='fact'&&(f.text||f.person)?['Fact: '+(f.text||''),f.person,f.date].filter(Boolean).join(' · '):'',
+      B.opener,D.facebook||D.instagram||''];
+    studioDraw({where:'kit',book:b.id,topic:B.type==='exhibition'&&x.name?x.name:B.type==='fact'&&f.person?f.person:b.title,words,link:B.type==='exhibition'?x.url||'':'',pal:studioPalOf(b.subject||b.title)});return}
   if(act==='refresh'){studioLoad(where);return}
   if(act==='close'){if(where==='sb')SOC.build.studio=null;else KIT.studio=null;studioRepaint(where);return}
   const S=studioState(where),id=t.dataset.studioPick;if(!S||S.busy||!id)return;S.busy=id;studioRepaint(where);
@@ -216,7 +248,7 @@ function sbView(){const B=SOC.build,name=(SOC_PURPOSES.find(x=>x[0]===B.purpose)
     <h3 class="sb-h">On the picture</h3>
     ${f('label','Small label (capitals)','e.g. We’re hiring')}${f('title','Title','e.g. GCSE Computer Science teacher',2)}${f('line','Line under','e.g. Part-time, from January')}${f('by','Small line at the bottom','optional')}
     <div class="field"><span class="em-lbl">Picture</span>${B.image?`<div class="so-pic"><img src="${esc(socImgSrc(B.image))}" alt=""><button class="linkbtn" type="button" data-sb="noimg">Remove</button></div>`:'<p class="hint" style="margin:0">None yet: the OH-SO ED icon is used.</p>'}
-      <div class="so-row"><button class="btn small${B.draw?' solid':''}" type="button" data-sb="drawopen">Draw with Claude</button><button class="btn small" type="button" data-sb="canva">From Canva</button><button class="btn small${B.studio?' solid':''}" type="button" data-sb="studio">From Sketch Studio</button><label class="btn small so-up">Upload a picture<input type="file" id="sbFile" accept="image/jpeg,image/png,image/webp" hidden></label>${sbPhotos().length?`<select id="sbPhoto" aria-label="Teacher photo"><option value="">Teacher photo…</option>${sbPhotos().map(([n,u])=>`<option value="${esc(u)}">${esc(n)}</option>`).join('')}</select>`:''}</div>${canva}${B.studio?studioPanel(B.studio,'sb'):''}${B.draw?sbDrawPanel():''}
+      <div class="so-row"><button class="btn small${B.draw?' solid':''}" type="button" data-sb="drawopen">Draw with Claude</button><button class="btn small" type="button" data-sb="canva">From Canva</button><button class="btn small${B.studio?' solid':''}" type="button" data-sb="studio">From Sketch Studio</button><button class="btn small" type="button" data-sb="studiodraw" title="Sketch Studio draws a picture from the words on the picture and the details">Draw in Sketch Studio</button><label class="btn small so-up">Upload a picture<input type="file" id="sbFile" accept="image/jpeg,image/png,image/webp" hidden></label>${sbPhotos().length?`<select id="sbPhoto" aria-label="Teacher photo"><option value="">Teacher photo…</option>${sbPhotos().map(([n,u])=>`<option value="${esc(u)}">${esc(n)}</option>`).join('')}</select>`:''}</div>${canva}${B.studio?studioPanel(B.studio,'sb'):''}${B.draw?sbDrawPanel():''}
       ${B.image?`<div class="sb-fx"><span class="hint">Effect</span><div class="em-seg">${SB_FX.map(([k,l])=>`<button type="button" data-sb-fx="${k}" aria-pressed="${B.filter===k}">${l}</button>`).join('')}</div>${['mono','duo','tint'].includes(B.filter)?`<label class="sb-con"><span class="hint">Contrast</span><input type="range" id="sbCon" min="-40" max="100" step="5" value="${B.contrast}"><output>${B.contrast>0?'+':''}${B.contrast}</output></label>`:''}${B.filter==='duo'||B.filter==='tint'?`<div class="so-row so-bgs"><span class="hint">${B.filter==='duo'?'Light colour':'Tint'}</span>${SB_FCOL.map(([v,l])=>`<button type="button" class="so-sw" data-sb-fcol="${v}" title="${l}" aria-pressed="${B.fcol===v}" style="background:${v}"></button>`).join('')}</div>`:''}</div>`:''}</div>
     <div class="field"><span class="em-lbl">Background</span><div class="so-row so-bgs">${sbColours().map(([v,l])=>`<button type="button" class="so-sw" data-sb-bg="${esc(v)}" title="${esc(l)}" aria-pressed="${B.colour===v}" style="background:${esc(v)}"></button>`).join('')}<input type="color" id="sbBg" value="${esc(B.colour)}" aria-label="Other colour"></div></div>
     <h3 class="sb-h">The text</h3>
@@ -257,6 +289,8 @@ app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closes
       const fd=new FormData();fd.append('file',await socBlob(cv,.92),'drawing.jpg');const r=await api('upload',fd,true);B.image=r.path;B.autoPic=false;B.filtered='';B.draw=false;B.msg='Drawn by Claude. Draw again for another version, or add an effect.'}
     catch(err){B.msg=err.message}finally{B.busy='';sbPaint();sbApplyFx()}return}
   if(a==='canvaclose'){B.canva=null;sbPaint();return}
+  if(a==='studiodraw'){const cs=B.courses.map(id=>bookById(id)).filter(Boolean);studioDraw({where:'sb',topic:B.title||(SOC_PURPOSES.find(x=>x[0]===B.purpose)||[])[1]||'News',
+    words:[B.label,B.title,B.line,B.by,B.notes,cs.length?'Courses: '+cs.map(x=>x.title).join(', '):'',B.fb],link:'',pal:cs[0]?studioPalOf(cs[0].subject||cs[0].title):'house'});return}
   if(a==='studio'){if(B.studio){B.studio=null;sbPaint();return}B.studio={items:null};B.canva=null;studioLoad('sb');return}
   if(a==='canva'){B.canva={items:null};sbPaint();try{const r=await fetch('/admin/design-api?action=canvalist',{credentials:'same-origin'});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Couldn’t open Canva.');if(SOC.build===B&&B.canva){B.canva={items:j.items||[]};sbPaint()}}catch(err){if(SOC.build===B&&B.canva){B.canva={err:/connect/i.test(err.message)?err.message:'Canva isn’t connected yet. Connect it under Social › Pictures & Canva (top right of the Social page), then try again. ('+err.message+')'};sbPaint()}}return}
   if(a==='draft'){B.busy='draft';sbPaint();try{

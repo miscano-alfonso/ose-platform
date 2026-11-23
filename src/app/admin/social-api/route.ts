@@ -1,7 +1,8 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { currentStaff } from "@/lib/auth";
 import * as S from "@/lib/social";
-import { drawingPictures, drawingPicture } from "@/lib/studio";
+import { drawingPictures, drawingPicture, STUDIO_COOKIE, studioToken } from "@/lib/studio";
+import { linkInfo } from "@/lib/link-info";
 
 // Admin → Social: one endpoint, like the Giles api.php?action=… handlers.
 export const dynamic = "force-dynamic";
@@ -90,6 +91,12 @@ export async function POST(req: NextRequest) {
         if (!p) return out({ error: "That drawing has no picture yet. Open it in Sketch Studio once, then try again." }, 404);
         return out({ path: `/social-img/${await S.saveImage(p)}.jpg` });
       }
+      case "studiopass": { // an admin opening Sketch Studio from Social doesn't need the studio password
+        const r = out({ ok: true });
+        r.cookies.set(STUDIO_COOKIE, studioToken(), { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/studio", maxAge: 30 * 86400 });
+        return r;
+      }
+      case "linkinfo": return out({ info: await linkInfo(String(b.url ?? "")).catch(() => null) });
       case "draftpost": return out(await S.draftPost(b));
       case "socialscan": return out(await S.scanNow(me.email));
       case "socialmomentsettings": return out(await S.momentSettings(b));
