@@ -1,6 +1,7 @@
 import { NextResponse, after, type NextRequest } from "next/server";
 import { currentStaff } from "@/lib/auth";
 import * as S from "@/lib/social";
+import { drawingPictures, drawingPicture } from "@/lib/studio";
 
 // Admin → Social: one endpoint, like the Giles api.php?action=… handlers.
 export const dynamic = "force-dynamic";
@@ -47,6 +48,13 @@ export async function GET(req: NextRequest) {
       case "socialplan":
         after(() => S.socialBackground());
         return out({ plan: await S.listPlan(), template: await S.getTemplate(), moments: await S.momentsForClient(), handles: await S.getHandles(), ai: await S.aiReady() });
+      // Sketch Studio drawings for a post's picture (23 Nov): the list, and each one's picture (small for the list)
+      case "studiolist": return out({ items: await drawingPictures() });
+      case "studiopic": {
+        const p = await drawingPicture(req.nextUrl.searchParams.get("id") ?? "", req.nextUrl.searchParams.get("small") === "1");
+        if (!p) return out({ error: "No picture." }, 404);
+        return new NextResponse(new Uint8Array(p), { headers: { "content-type": "image/jpeg", "cache-control": "private, max-age=300" } });
+      }
       default: return out({ error: "Unknown action." }, 404);
     }
   } catch (e) {
@@ -77,6 +85,11 @@ export async function POST(req: NextRequest) {
       case "socialtplsave": return out({ template: await S.saveTemplate((b.template ?? {}) as Record<string, unknown>) });
       case "socialfind": return out({ suggestions: await S.findForItem(String(b.bookId ?? ""), String(b.kind ?? "")) });
       case "drawpicture": return out(await S.drawPicture(b));
+      case "studiouse": { // a copy of the drawing's picture as a post picture, so changing or deleting the drawing later leaves the post alone
+        const p = await drawingPicture(String(b.id ?? ""));
+        if (!p) return out({ error: "That drawing has no picture yet. Open it in Sketch Studio once, then try again." }, 404);
+        return out({ path: `/social-img/${await S.saveImage(p)}.jpg` });
+      }
       case "draftpost": return out(await S.draftPost(b));
       case "socialscan": return out(await S.scanNow(me.email));
       case "socialmomentsettings": return out(await S.momentSettings(b));

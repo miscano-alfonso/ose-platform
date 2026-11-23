@@ -88,19 +88,49 @@ function socConnCard(){
     ${c.canEdit?`<div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">${pages.length>1?`<label class="hint" style="display:flex;gap:6px;align-items:center">Post as <select id="soPage">${pages.map(p=>`<option value="${esc(p.id)}"${p.id===c.page.id?' selected':''}>${esc(p.name)}${p.ig?' + @'+esc(p.ig):''}</option>`).join('')}</select></label>`:''}<a class="linkbtn" href="/admin/social-api?action=metalogin">Reconnect</a><button class="linkbtn" type="button" data-so="setup">Change app</button><button class="linkbtn" type="button" data-so="disconnect" style="margin-left:auto">Disconnect</button></div>`:''}
     <p class="hint" style="margin:0;font-size:13px">Connected${c.by?' by '+esc(c.by):''}${c.at?' on '+esc(fmtStamp(c.at)):''}.</p></div>`}
 
+/* ---- In-situ preview (23 Nov): a lifelike mock-up of the post as it shows in the Facebook or Instagram feed, between other
+   posts, on a phone or a computer, in the app's light or dark look. Nothing is sent anywhere. ---- */
+const PV={pl:'facebook',device:'phone',theme:'light'};
+function pvRich(t){return esc(t||'').replace(/(https?:\/\/[^\s<]+)/g,'<span class="pv-a">$1</span>').replace(/(^|\s)(#[\p{L}\p{N}_]+|@[\w.]+)/gu,'$1<span class="pv-a">$2</span>').replace(/\n/g,'<br>')}
+function pvImg(src,n,ig){return src?`<div class="pv-media"><img src="${esc(src)}" alt="" data-pv-r>${n>1?`<span class="pv-n">${ig?'1/'+n:'+'+(n-1)}</span>`:''}</div>`:''}
+function pvFb(f,page){const host=(String(f.link||'').match(/^https?:\/\/([^/]+)/)||[])[1]||'';
+  const card=!f.media&&f.link?`<div class="pv-link"><div class="pv-lkimg"></div><div class="pv-lktxt"><span>${esc(host)}</span><b>${esc(f.linkTitle||f.link)}</b></div></div>`:'';
+  return `<article class="pv-post"><header>${page.picture?`<img src="${esc(page.picture)}" alt="">`:'<i></i>'}<div><b>${esc(page.name||'OH-SO ED')}</b><span>${esc(f.when||'Just now')} · Public</span></div><em aria-hidden="true">···</em></header>
+    <div class="pv-txt" data-pv-clamp style="--l:${PV.device==='phone'?3:5}">${pvRich(f.text)}</div><button type="button" class="pv-more" data-pv-more hidden>See more</button>${f.media||''}${card}
+    <div class="pv-counts"><span>0 reactions</span><span>0 comments</span></div><footer><span>Like</span><span>Comment</span><span>Share</span></footer></article>`}
+function pvIg(g,user){return `<article class="pv-post"><header>${user.picture?`<img src="${esc(user.picture)}" alt="">`:'<i></i>'}<div><b>${esc(user.username||'ohsoed')}</b></div><em aria-hidden="true">···</em></header>
+    ${g.media||'<div class="pv-noimg">Instagram needs a picture</div>'}<footer class="ig"><span>♡</span><span>◯</span><span>➤</span><span class="pv-save">▢</span></footer>
+    <div class="pv-txt" data-pv-clamp style="--l:2"><b>${esc(user.username||'ohsoed')}</b> ${pvRich(g.text)}</div><button type="button" class="pv-more" data-pv-more hidden>more</button><p class="pv-when">${esc(g.when||'Just now')}</p></article>`}
+/** o: {fb:{text,media,link,linkTitle,when}|null, ig:{text,media,when}|null} */
+function pvView(o){const cfg=SOC.cfg||{};const pls=[o.fb&&['facebook','Facebook'],o.ig&&['instagram','Instagram']].filter(Boolean);
+  if(!pls.length)return '<p class="hint">Choose Facebook or Instagram to see a preview.</p>';
+  const pl=pls.some(x=>x[0]===PV.pl)?PV.pl:pls[0][0];
+  const seg=(k,opts,cur)=>`<div class="em-seg">${opts.map(([v,l])=>`<button type="button" data-pv-set="${k}" data-v="${v}" aria-pressed="${cur===v}">${l}</button>`).join('')}</div>`;
+  const ghost=top=>`<div class="pv-ghost${top?' top':''}" aria-hidden="true">${top?'':'<header><i></i><b></b></header>'}<s></s><s></s>${top?'<footer><b></b><b></b><b></b></footer>':'<div class="pv-gimg"></div>'}</div>`;
+  const post=pl==='facebook'?pvFb(o.fb,cfg.page||{}):pvIg(o.ig,cfg.ig||{});
+  setTimeout(pvFit);
+  return `<div class="pv-ctl">${pls.length>1?seg('pl',pls,pl):''}${seg('device',[['phone','Phone'],['desktop','Computer']],PV.device)}${seg('theme',[['light','Light'],['dark','Dark']],PV.theme)}</div>
+    <div class="pv pv-${pl} pv-${PV.device} pv-${PV.theme}"><div class="pv-bar" aria-hidden="true"><b></b><i></i><i></i><i></i></div><div class="pv-feed">${ghost(true)}${post}${ghost(false)}</div></div>
+    <p class="hint pv-note">${pl==='facebook'?'Facebook shortens long posts with “See more” (about 3 lines on a phone, 5 on a computer), so the first line has to do the work. Press See more to open it.':'Instagram shows the first 2 lines of the caption before “more”. Links in captions can’t be clicked.'} A mock-up: Facebook and Instagram change their look from time to time.</p>`}
+function pvFit(){document.querySelectorAll('[data-pv-clamp]').forEach(el=>{const b=el.nextElementSibling;if(!b||!b.matches('[data-pv-more]'))return;b.hidden=el.classList.contains('open')||el.scrollHeight<=el.clientHeight+2});
+  document.querySelectorAll('img[data-pv-r]').forEach(i=>{if(i.complete&&i.naturalWidth)pvRatio(i)})}
+function pvRatio(i){const r=i.naturalWidth/i.naturalHeight;if(r)i.style.aspectRatio=String(Math.min(1.91,Math.max(.8,r)))}
+app.addEventListener('load',e=>{if(e.target&&e.target.matches&&e.target.matches('img[data-pv-r]'))pvRatio(e.target)},true);
+app.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-pv-set],[data-pv-more]');if(!t)return;
+  if(t.dataset.pvMore!==undefined){const x=t.previousElementSibling;if(x)x.classList.add('open');t.hidden=true;return}
+  PV[t.dataset.pvSet]=t.dataset.v;pvRepaint()});
+function pvRepaint(){if(SOC.c&&document.getElementById('soPrev'))socPaintPrev();if(document.getElementById('kitPv'))kitPvPaint()}
 function socPrevImg(c,forIg){
   if(!c.image)return '';const src=socImgSrc(c.image);
   if(c.images&&c.images.length>1)return `<div class="so-raw so-car"><img src="${esc(src)}" alt=""><span class="so-carn">1/${c.images.length}</span><div class="so-dots">${c.images.map((_,i)=>`<i${i?'':' class="on"'}></i>`).join('')}</div></div>`;
   if(c.frame==='none')return `<div class="so-raw"><img src="${esc(src)}" alt="" data-so-ratio></div>`;
   return `<div class="so-frame" style="aspect-ratio:${c.frame==='1:1'?'1/1':'4/5'};background:${esc(c.bg)}"><img src="${esc(src)}" alt=""></div>`}
 function socPreviews(){
-  const c=SOC.c,cfg=SOC.cfg||{},page=cfg.page||{name:'OH-SO ED'},ig=cfg.ig||{username:'ohsoed'};
-  const igT=c.same?c.text:c.igText;
-  const linkCard=!c.image&&c.link?`<div class="so-link"><span class="mono">${esc((c.link.match(/^https?:\/\/([^/]+)/)||[])[1]||'')}</span><b>${esc(c.bookId?(bookById(c.bookId)||{}).title||'':c.link)}</b></div>`:'';
-  const fb=c.fb?`<div class="so-card so-fb"><div class="so-head">${page.picture?`<img src="${esc(page.picture)}" alt="">`:'<i></i>'}<div><b>${esc(page.name)}</b><span>${c.when==='later'&&c.at?esc(fmtStamp(c.at)):'Just now'} · 🌐</span></div></div>
-    <div class="so-text">${esc(c.text).replace(/\n/g,'<br>')}${c.image&&c.link&&!c.text.includes(c.link)?`<br><br><span class="so-url">${esc(c.link)}</span>`:''}</div>${socPrevImg(c)}${linkCard}<div class="so-acts"><span>Like</span><span>Comment</span><span>Share</span></div></div>`:'';
-  const igc=c.ig&&(cfg.ig||!cfg.connected)?`<div class="so-card so-ig"><div class="so-head">${ig.picture?`<img src="${esc(ig.picture)}" alt="">`:'<i></i>'}<div><b>${esc(ig.username)}</b></div></div>${c.image?socPrevImg(c,true):'<div class="so-noimg">Instagram needs a picture</div>'}<div class="so-acts ig"><span>♡</span><span>💬</span><span>➤</span></div><div class="so-text"><b>${esc(ig.username)}</b> ${esc(igT).replace(/\n/g,'<br>')}</div></div>`:'';
-  return (fb||igc)?`<div class="so-cards">${fb}${igc}</div>`:'<p class="hint">Choose Facebook or Instagram to see a preview.</p>'}
+  const c=SOC.c,cfg=SOC.cfg||{};const igT=c.same?c.text:c.igText;
+  const media=c.image?(c.frame==='none'&&!(c.images&&c.images.length>1)?pvImg(socImgSrc(c.image)):socPrevImg(c)):'';
+  const when=c.when==='later'&&c.at?fmtStamp(c.at):'Just now';
+  const fbText=c.text+(c.image&&c.link&&!c.text.includes(c.link)?'\n\n'+c.link:'');
+  return pvView({fb:c.fb?{text:fbText,media,link:c.link,linkTitle:c.bookId?(bookById(c.bookId)||{}).title||'':'',when}:null,ig:c.ig&&(cfg.ig||!cfg.connected)?{text:igT,media,when}:null})}
 function socCounts(){const c=SOC.c,t=c.same?c.text:c.igText,n=t.length,h=socTags(t);return c.ig?`Instagram caption: <b class="${n>2200?'so-over':''}">${n.toLocaleString('en-GB')}</b> / 2,200 · hashtags <b class="${h>30?'so-over':''}">${h}</b> / 30`:''}
 const SOC_PURPOSES=[['hiring','Hiring'],['holiday','Holiday / term dates'],['school','School announcement'],['subject','Subject announcement'],['reward','Rewards & celebrations'],['event','Event or key date'],['enrol','Tasters & enrolment'],['teacher','Meet the teacher'],['other','Something else']];
 function socPicker(){return `<div class="em-card so-pick"><h2 class="em-h" style="margin:0 0 4px">Build the post</h2><p class="hint" style="margin:0 0 12px">What’s the post for? Every post uses your picture template. For anything other than a course, Claude drafts the words on the picture and the Facebook and Instagram text, and the picture can come from Canva or an upload.</p>
@@ -109,6 +139,30 @@ function socPicker(){return `<div class="em-card so-pick"><h2 class="em-h" style
 const socCoursePics={};
 async function socCoursePic(b){if(socCoursePics[b.id])return socCoursePics[b.id];const cv=await kitRender(b,'portrait');const fd=new FormData();fd.append('file',await socBlob(cv,.9),'course.jpg');const p=(await api('upload',fd,true)).path;socCoursePics[b.id]=p;return p}
 async function socUseCoursePic(c,b){const m=document.getElementById('soMsg');if(m)m.textContent='Making the course picture…';try{const p=await socCoursePic(b);if(SOC.c===c&&c.bookId===b.id){c.image=p;c.frame='none';c.images=null;socPaint()}}catch(err){const m2=document.getElementById('soMsg');if(m2)m2.textContent=err.message||'Couldn’t make the picture.'}}
+/* ---- Sketch Studio drawings as a post's picture (23 Nov). The Studio keeps a picture of every drawing it saves. ---- */
+function kitDrawns(){if(!KIT.covers){try{KIT.covers=JSON.parse(localStorage.getItem('ose-social-covers')||'{}')||{}}catch(_){KIT.covers={}}}return KIT.covers}
+function kitDrawn(id){const c=kitDrawns()[id];return c&&c.path?c:null}
+function kitSetDrawn(id,c){const all=kitDrawns();if(c)all[id]=c;else delete all[id];try{localStorage.setItem('ose-social-covers',JSON.stringify(all))}catch(_){}for(const k of Object.keys(KIT.pics))if(k.startsWith(id+'/'))delete KIT.pics[k];delete socCoursePics[id]}
+function kitSrcRow(b){const ov=kitDrawn(b.id),usual=b.status==='workshop'?'the workshop picture':'the teacher’s photo',S=KIT.studio&&KIT.studio.book===b.id?KIT.studio:null;
+  return `<div class="so-row kit-src"><span class="hint">Picture: ${ov?`the Sketch Studio drawing “${esc(ov.title||'Drawing')}”`:esc(usual)}</span><button class="btn small${S?' solid':''}" type="button" data-studio-act="open" data-where="kit">${ov?'Choose another drawing':'Use a Sketch Studio drawing'}</button>${ov?`<button class="linkbtn" type="button" data-studio-act="reset" data-where="kit">Back to ${esc(usual)}</button>`:''}</div>${S?studioPanel(S,'kit'):''}`}
+function studioState(where){return where==='sb'?(SOC.build&&SOC.build.studio):KIT.studio}
+function studioPanel(S,where){const pic=it=>`/admin/social-api?action=studiopic&small=1&id=${encodeURIComponent(it.id)}&v=${encodeURIComponent(it.at||'')}`;
+  return `<div class="sb-canva sb-studio">${S.err?`<p class="hint">${esc(S.err)}</p>`:!S.items?'<p class="hint"><span class="spin"></span>Loading your drawings…</p>':S.items.length?`<p class="hint" style="margin:0 0 6px">Pick a drawing.</p><div class="sb-cgrid">${S.items.map(it=>`<button type="button" data-studio-pick="${esc(it.id)}" data-where="${where}" data-t="${esc(it.title)}" title="${esc(it.title)}"${S.busy?' disabled':''}><img src="${pic(it)}" alt="" loading="lazy"><span>${S.busy===it.id?'Adding…':esc(it.title)}</span></button>`).join('')}</div>`:'<p class="hint">No drawings with a picture yet. Make one in Sketch Studio, or open it once so it adds pictures to drawings made before 23 November, then press Refresh.</p>'}
+    <div class="so-row" style="margin-top:6px"><a class="linkbtn" href="/studio" target="_blank" rel="noopener">Open Sketch Studio (new tab)</a><button class="linkbtn" type="button" data-studio-act="refresh" data-where="${where}">Refresh</button><button class="linkbtn" type="button" data-studio-act="close" data-where="${where}">Close</button></div></div>`}
+function studioRepaint(where){if(where==='sb')sbPaint();else socPaint()}
+async function studioLoad(where){const S=studioState(where);if(!S)return;S.items=null;S.err='';studioRepaint(where);
+  try{const j=await api('studiolist');S.items=j.items||[]}catch(err){S.err=err.message||'Couldn’t load the drawings.'}if(studioState(where)===S)studioRepaint(where)}
+app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closest('[data-studio-pick],[data-studio-act]');if(!t)return;const where=t.dataset.where,act=t.dataset.studioAct;
+  if(where==='sb'&&!SOC.build)return;const b=where==='kit'?bookById(KIT.book):null;if(where==='kit'&&!b)return;
+  if(act==='open'){if(KIT.studio&&KIT.studio.book===b.id){KIT.studio=null;socPaint();return}KIT.studio={book:b.id,items:null};studioLoad('kit');return}
+  if(act==='reset'){kitSetDrawn(b.id,null);KIT.studio=null;socPaint();return}
+  if(act==='refresh'){studioLoad(where);return}
+  if(act==='close'){if(where==='sb')SOC.build.studio=null;else KIT.studio=null;studioRepaint(where);return}
+  const S=studioState(where),id=t.dataset.studioPick;if(!S||S.busy||!id)return;S.busy=id;studioRepaint(where);
+  try{const r=await api('studiouse',{id});
+    if(where==='sb'){const B=SOC.build;if(!B||B.studio!==S)return;B.image=r.path;B.autoPic=false;B.filtered='';B.studio=null;B.msg='';sbPaint();sbApplyFx()}
+    else{kitSetDrawn(b.id,{path:r.path,title:t.dataset.t||'Drawing'});KIT.studio=null;socPaint();toast('The pictures now use the drawing.')}}
+  catch(err){S.busy='';toast(err.message||'Couldn’t use that drawing.');if(studioState(where)===S)studioRepaint(where)}});
 /* ---- Build the post: any purpose, in the picture template's design ---- */
 const SB_LABEL={hiring:'We’re hiring',holiday:'Holidays',school:'News',subject:'New',reward:'Well done',event:'Save the date',enrol:'Now booking',teacher:'Meet the teacher',other:''};
 const SB_HINT={hiring:'The subject and level, hours, start date, and how and by when to apply.',holiday:'Which holiday or term, when you break up and come back, anything families need to do.',school:'What’s new, who it’s for, and when it starts.',subject:'The subject and level, what’s new, and any dates.',reward:'Who or what you’re celebrating. First names only, and only with permission.',event:'The day or event, the date, and how it links to your courses.',enrol:'Which courses, the dates, and any offer.',teacher:'Who they are, what they teach, and something about them.',other:'Say what the post is about.'};
@@ -162,7 +216,7 @@ function sbView(){const B=SOC.build,name=(SOC_PURPOSES.find(x=>x[0]===B.purpose)
     <h3 class="sb-h">On the picture</h3>
     ${f('label','Small label (capitals)','e.g. We’re hiring')}${f('title','Title','e.g. GCSE Computer Science teacher',2)}${f('line','Line under','e.g. Part-time, from January')}${f('by','Small line at the bottom','optional')}
     <div class="field"><span class="em-lbl">Picture</span>${B.image?`<div class="so-pic"><img src="${esc(socImgSrc(B.image))}" alt=""><button class="linkbtn" type="button" data-sb="noimg">Remove</button></div>`:'<p class="hint" style="margin:0">None yet: the OH-SO ED icon is used.</p>'}
-      <div class="so-row"><button class="btn small${B.draw?' solid':''}" type="button" data-sb="drawopen">Draw with Claude</button><button class="btn small" type="button" data-sb="canva">From Canva</button><label class="btn small so-up">Upload a picture<input type="file" id="sbFile" accept="image/jpeg,image/png,image/webp" hidden></label>${sbPhotos().length?`<select id="sbPhoto" aria-label="Teacher photo"><option value="">Teacher photo…</option>${sbPhotos().map(([n,u])=>`<option value="${esc(u)}">${esc(n)}</option>`).join('')}</select>`:''}</div>${canva}${B.draw?sbDrawPanel():''}
+      <div class="so-row"><button class="btn small${B.draw?' solid':''}" type="button" data-sb="drawopen">Draw with Claude</button><button class="btn small" type="button" data-sb="canva">From Canva</button><button class="btn small${B.studio?' solid':''}" type="button" data-sb="studio">From Sketch Studio</button><label class="btn small so-up">Upload a picture<input type="file" id="sbFile" accept="image/jpeg,image/png,image/webp" hidden></label>${sbPhotos().length?`<select id="sbPhoto" aria-label="Teacher photo"><option value="">Teacher photo…</option>${sbPhotos().map(([n,u])=>`<option value="${esc(u)}">${esc(n)}</option>`).join('')}</select>`:''}</div>${canva}${B.studio?studioPanel(B.studio,'sb'):''}${B.draw?sbDrawPanel():''}
       ${B.image?`<div class="sb-fx"><span class="hint">Effect</span><div class="em-seg">${SB_FX.map(([k,l])=>`<button type="button" data-sb-fx="${k}" aria-pressed="${B.filter===k}">${l}</button>`).join('')}</div>${['mono','duo','tint'].includes(B.filter)?`<label class="sb-con"><span class="hint">Contrast</span><input type="range" id="sbCon" min="-40" max="100" step="5" value="${B.contrast}"><output>${B.contrast>0?'+':''}${B.contrast}</output></label>`:''}${B.filter==='duo'||B.filter==='tint'?`<div class="so-row so-bgs"><span class="hint">${B.filter==='duo'?'Light colour':'Tint'}</span>${SB_FCOL.map(([v,l])=>`<button type="button" class="so-sw" data-sb-fcol="${v}" title="${l}" aria-pressed="${B.fcol===v}" style="background:${v}"></button>`).join('')}</div>`:''}</div>`:''}</div>
     <div class="field"><span class="em-lbl">Background</span><div class="so-row so-bgs">${sbColours().map(([v,l])=>`<button type="button" class="so-sw" data-sb-bg="${esc(v)}" title="${esc(l)}" aria-pressed="${B.colour===v}" style="background:${esc(v)}"></button>`).join('')}<input type="color" id="sbBg" value="${esc(B.colour)}" aria-label="Other colour"></div></div>
     <h3 class="sb-h">The text</h3>
@@ -203,6 +257,7 @@ app.addEventListener('click',async e=>{const t=e.target.closest&&e.target.closes
       const fd=new FormData();fd.append('file',await socBlob(cv,.92),'drawing.jpg');const r=await api('upload',fd,true);B.image=r.path;B.autoPic=false;B.filtered='';B.draw=false;B.msg='Drawn by Claude. Draw again for another version, or add an effect.'}
     catch(err){B.msg=err.message}finally{B.busy='';sbPaint();sbApplyFx()}return}
   if(a==='canvaclose'){B.canva=null;sbPaint();return}
+  if(a==='studio'){if(B.studio){B.studio=null;sbPaint();return}B.studio={items:null};B.canva=null;studioLoad('sb');return}
   if(a==='canva'){B.canva={items:null};sbPaint();try{const r=await fetch('/admin/design-api?action=canvalist',{credentials:'same-origin'});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||'Couldn’t open Canva.');if(SOC.build===B&&B.canva){B.canva={items:j.items||[]};sbPaint()}}catch(err){if(SOC.build===B&&B.canva){B.canva={err:/connect/i.test(err.message)?err.message:'Canva isn’t connected yet. Connect it under Social › Pictures & Canva (top right of the Social page), then try again. ('+err.message+')'};sbPaint()}}return}
   if(a==='draft'){B.busy='draft';sbPaint();try{
       const fields=[{k:'label',label:'Small label in capitals above the title (1-3 words)',def:SB_LABEL[B.purpose]||'News'},{k:'title',label:'Big title (2-6 words)',def:'GCSE Computer Science teacher'},{k:'line',label:'One line under the title',def:'Part-time, starting January'},{k:'by',label:'Small line at the bottom (a date, a deadline or a name; may be empty)',def:'Apply by 30 November'}];
@@ -233,7 +288,7 @@ function socComposer(){
     <div class="em-when"><label class="check"><input type="radio" name="soWhen" value="now"${c.when==='now'?' checked':''}> Post now</label><label class="check"><input type="radio" name="soWhen" value="later"${c.when==='later'?' checked':''}> Schedule for</label><input type="datetime-local" id="soAt" value="${esc(c.at)}" aria-label="Post date and time"></div>
     ${warn}
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><button class="btn solid small" type="submit"${SOC.busy||!cfg.connected?' disabled':''}>${SOC.busy?'Posting…':c.when==='later'?'Schedule':'Post now'}</button><button class="linkbtn" type="button" data-so="close">Cancel</button><span class="hint" id="soMsg" role="alert"></span></div>
-  </div><div class="so-prevwrap"><div class="em-prevbar"><span>Preview</span><span>Roughly how it will look</span></div><div id="soPrev">${socPreviews()}</div></div></form>`}
+  </div><div class="so-prevwrap"><div class="em-prevbar"><span>Preview</span><span>How it will look in the feed</span></div><div id="soPrev">${socPreviews()}</div></div></form>`}
 function socChan(p,ch){const x=p.channels&&p.channels[ch];if(!x)return '';const L=ch==='facebook'?'Facebook':'Instagram';
   const s=x.status;let h='';
   if(s==='posted')h=`<span class="pill sub-subscribed">${L}</span> ${x.url?`<a href="${esc(x.url)}" target="_blank" rel="noopener">View</a>`:'Posted'}`;
@@ -392,6 +447,7 @@ function kitLogo(ctx,right,bottom,h,bg,mode,ink){ // the site logo, right/bottom
   const ar=(kitLogoI.naturalWidth||773)/(kitLogoI.naturalHeight||224),lh=h*.55,w=lh*ar;
   ctx.drawImage(kitTint(kitLogoI,col),right-w,bottom-lh,w,lh);return w}
 async function kitRender(b,size,tpl){
+  const ov=kitDrawn(b.id);if(ov)b=Object.assign({},b,{cover:ov.path});
   const T=Object.assign({},KIT_TPL_DEF,tpl||kitSaved());
   const Z=KIT_SIZES[size],W=Z.w,H=Z.h,cv=document.createElement('canvas');cv.width=W;cv.height=H;const ctx=cv.getContext('2d');
   try{await Promise.all(['400 60px Jost','500 30px Jost','600 30px Jost'].map(f=>document.fonts.load(f)))}catch(_){}if(!kitLogoI&&BOOT.logo){try{kitLogoI=await kitLoadImg(BOOT.logo)}catch(_){}}
@@ -472,7 +528,7 @@ app.addEventListener('input',e=>{const D=e.target.dataset||{};if(!e.target.close
   if(D.ktTxt){ktSet(D.ktTxt,e.target.value);ktPreview();ktBadge();return}});
 app.addEventListener('change',e=>{if(e.target.id==='ktBook'){KIT.tplBook=e.target.value;ktPreview();return}const D=e.target.dataset||{};if(D.ktChk){ktSet(D.ktChk,e.target.checked);ktRepaint()}});
 function ktBadge(){const h=document.querySelector('.kit-tplhead');if(!h)return;const p=h.querySelector('.pill');if(KIT.tplDraft&&!p)h.querySelector('b').insertAdjacentHTML('afterend','<span class="pill sub-pending">Not saved</span>');if(!KIT.tplDraft&&p)p.remove();const s=document.querySelector('[data-kt="save"]'),d=document.querySelector('[data-kt="discard"]');if(s)s.disabled=!KIT.tplDraft;if(d)d.disabled=!KIT.tplDraft}
-async function kitPics(b){for(const k of Object.keys(KIT_SIZES)){if(KIT.book!==b.id)return;if(KIT.pics[b.id+'/'+k])continue;try{const cv=await kitRender(b,k);KIT.pics[b.id+'/'+k]=cv.toDataURL('image/jpeg',.9);const el=document.querySelector(`[data-kit-pic="${k}"]`);if(el)el.src=KIT.pics[b.id+'/'+k]}catch(_){}}}
+async function kitPics(b){for(const k of Object.keys(KIT_SIZES)){if(KIT.book!==b.id)return;if(KIT.pics[b.id+'/'+k])continue;try{const cv=await kitRender(b,k);KIT.pics[b.id+'/'+k]=cv.toDataURL('image/jpeg',.9);const el=document.querySelector(`[data-kit-pic="${k}"]`);if(el)el.src=KIT.pics[b.id+'/'+k]}catch(_){}}kitPvPaint()}
 async function kitBlob(b,size,type){const cv=await kitRender(b,size);return new Promise(ok=>cv.toBlob(ok,type||'image/png',.92))}
 async function kitDownload(b,size){const bl=await kitBlob(b,size,'image/png');const a=document.createElement('a');a.href=URL.createObjectURL(bl);a.download=`ohsoed-${b.id}-${size}-${KIT_SIZES[size].w}x${KIT_SIZES[size].h}.png`;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),4000)}
 
@@ -537,11 +593,17 @@ function kitBookView(){
     ${cfg.gated?'<p class="so-warn" style="max-width:900px">The website is still password-protected. Link previews and pictures work, but people who click through will be asked for the preview password until the site goes public.</p>':''}
     <div class="em-card kit-where"><b>Where to post</b><div class="cms-filters" style="margin:0">${kitOrdered().map(p=>`<button type="button" class="cms-chip" data-kit-where="${p.k}" aria-pressed="${kitWhere().includes(p.k)}">${p.n}</button>`).join('')}</div>${kitWhere().join()!==kitWhereDefault().join()&&kitWhere().length?'<label class="kit-wdef"><input type="checkbox" data-kit-wdef> Make this my default</label>':''}</div>
     <h2 class="em-h">Build the post</h2>${kbCard(b)}
-    <div class="em-card kit-pics" style="margin-top:16px"><h2 class="em-h" style="margin:0">Pictures</h2><p class="hint" style="margin:0">Made from the teacher’s photo (or the workshop picture), shown whole, with the title set beside or below it (never over the picture), using the picture template on the Social page. Pick a size to download it as a PNG.</p><div class="kit-picrow">${pics}</div></div>
+    <div class="em-card kit-pics" style="margin-top:16px"><h2 class="em-h" style="margin:0">Pictures</h2><p class="hint" style="margin:0">Made from the teacher’s photo (or the workshop picture), or a Sketch Studio drawing you choose, shown whole, with the title set beside or below it (never over the picture), using the picture template on the Social page. Pick a size to download it as a PNG.</p>${kitSrcRow(b)}<div class="kit-picrow">${pics}</div></div>
     ${kbSlides(b)}
     <h2 class="em-h">Posts</h2><p class="hint" style="margin:-4px 0 14px;max-width:900px">Drafts for each platform, built from the choices above. Edit them here (an edited draft stops following the choices until you rewrite it), copy them into each app, and save the ones you plan to the calendar. Every link carries tracking tags (utm_source = the platform), so visits from each platform show up separately in website analytics.</p>
     ${shown.length?`<div class="kit-postbar"><button class="linkbtn" type="button" data-kit-expand="${allOpen?0:1}">${allOpen?'Collapse all':'Expand all'}</button><button class="btn solid small" type="button" data-kit-saveall style="margin-left:auto">Save ${shown.length===1?'it':shown.length===2?'both':'all '+shown.length} to the calendar</button></div>
-    <div class="kit-posts">${shown.map(card).join('')}</div>`:'<div class="empty"><b>No platforms chosen.</b>Pick where to post at the top of the page.</div>'}`}
+    <div class="kit-posts">${shown.map(card).join('')}</div>`:'<div class="empty"><b>No platforms chosen.</b>Pick where to post at the top of the page.</div>'}
+    ${shown.some(p=>p.k==='facebook'||p.k==='instagram')?`<h2 class="em-h">Preview</h2><div class="em-card kit-pvcard"><div id="kitPv">${kitPvHtml(b)}</div></div>`:''}`}
+function kitPvHtml(b){const D=KIT.drafts[b.id]||{},shown=kitShown().map(p=>p.k);
+  const one=pl=>{if(!shown.includes(pl))return null;const size=KIT.sizes[pl]||kitPl(pl).size,src=KIT.pics[b.id+'/'+size]||'';
+    return {text:D[pl]||'',media:src?pvImg(src):`<div class="pv-noimg">Making the picture…</div>`,when:kitDate(pl)?fmtDate(kitDate(pl),true):'Just now'}};
+  return pvView({fb:one('facebook'),ig:one('instagram')})}
+let kitPvT=0;function kitPvPaint(){clearTimeout(kitPvT);kitPvT=setTimeout(()=>{const el=document.getElementById('kitPv'),b=bookById(KIT.book);if(el&&b)el.innerHTML=kitPvHtml(b)},120)}
 /* reorder the platform bars: drag the ⋮⋮ handle, or focus it and press the up/down arrows */
 let kitDragK=null;
 app.addEventListener('dragstart',e=>{const h=e.target.closest&&e.target.closest('[data-kit-drag]');if(!h)return;kitDragK=h.dataset.kitDrag;e.dataTransfer.effectAllowed='move';try{e.dataTransfer.setData('text/plain',kitDragK)}catch(_){}const bar=h.closest('.kit-bar');if(bar){bar.classList.add('dragging');try{e.dataTransfer.setDragImage(bar,20,20)}catch(_){}}});
@@ -552,8 +614,8 @@ app.addEventListener('keydown',e=>{const h=e.target.closest&&e.target.closest('[
 function copyText(t,msg){(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(()=>toast(msg||'Copied')).catch(()=>{const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();try{document.execCommand('copy');toast(msg||'Copied')}catch(_){toast('Couldn’t copy')}a.remove()})}
 app.addEventListener('input',e=>{
   if(e.target.id==='kitQ'){KIT.q=e.target.value;const pos=e.target.selectionStart;socPaint();const i=document.getElementById('kitQ');if(i){i.focus();try{i.setSelectionRange(pos,pos)}catch(_){}}return}
-  const t=e.target.dataset&&e.target.dataset.kitT;if(t){const b=bookById(KIT.book);KIT.drafts[b.id][t]=e.target.value;KIT.edited=KIT.edited||{};if(!(KIT.edited[b.id]||{})[t]){(KIT.edited[b.id]=KIT.edited[b.id]||{})[t]=true;const ph=e.target.closest('.kit-bar').querySelector('.kit-barhead > span:not(.kit-n):not(.kit-drag)');if(ph)ph.outerHTML=`<button class="linkbtn kb-ed" type="button" data-kb-rewrite="${t}">Edited · rewrite</button>`}const n=kitCount(t,e.target.value),p=kitPl(t),el=document.querySelector(`[data-kit-n="${t}"]`);if(el){el.textContent=n.toLocaleString('en-GB')+' / '+p.max.toLocaleString('en-GB');el.classList.toggle('so-over',n>p.max)}}});
-app.addEventListener('change',e=>{const D=e.target.dataset||{};if(D.kitS)KIT.sizes[D.kitS]=e.target.value;if(D.kitD){KIT.dates=KIT.dates||{};KIT.dates[D.kitD]=e.target.value;if(D.kitD===kitMaster()&&KIT.dateAll)socPaint()}
+  const t=e.target.dataset&&e.target.dataset.kitT;if(t){const b=bookById(KIT.book);KIT.drafts[b.id][t]=e.target.value;if(t==='facebook'||t==='instagram')kitPvPaint();KIT.edited=KIT.edited||{};if(!(KIT.edited[b.id]||{})[t]){(KIT.edited[b.id]=KIT.edited[b.id]||{})[t]=true;const ph=e.target.closest('.kit-bar').querySelector('.kit-barhead > span:not(.kit-n):not(.kit-drag)');if(ph)ph.outerHTML=`<button class="linkbtn kb-ed" type="button" data-kb-rewrite="${t}">Edited · rewrite</button>`}const n=kitCount(t,e.target.value),p=kitPl(t),el=document.querySelector(`[data-kit-n="${t}"]`);if(el){el.textContent=n.toLocaleString('en-GB')+' / '+p.max.toLocaleString('en-GB');el.classList.toggle('so-over',n>p.max)}}});
+app.addEventListener('change',e=>{const D=e.target.dataset||{};if(D.kitS){KIT.sizes[D.kitS]=e.target.value;kitPvPaint()}if(D.kitD){KIT.dates=KIT.dates||{};KIT.dates[D.kitD]=e.target.value;if(D.kitD===kitMaster()&&KIT.dateAll)socPaint()}
   if(D.kitWdef!==undefined&&e.target.checked){try{localStorage.setItem('ose-social-where',JSON.stringify(kitWhere()))}catch(_){}toast('Saved as your default: '+kitShown().map(p=>p.n).join(', '));socPaint();return}
   if(D.kitInc){KIT.inc=KIT.inc||{};KIT.inc[D.kitInc]=e.target.checked;const bar=e.target.closest('.kit-bar');if(bar)bar.classList.toggle('off',!e.target.checked);return}
   if(D.kitDall!==undefined){KIT.dateAll=e.target.checked;KIT.dateOv={};socPaint()}});

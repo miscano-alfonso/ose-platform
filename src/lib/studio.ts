@@ -7,10 +7,37 @@ import { getAiConfig } from "./social";
 export class StudioError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
 const PALETTES = ["house", "english", "maths", "geography", "history", "science", "business", "media", "economics", "technology"];
 
-export type Drawing = { id: string; title: string; prompt: string; bg: string; palette: string; hl: string; seed: number; spec: string; createdAt: string; updatedAt: string };
+export type Drawing = { id: string; title: string; prompt: string; bg: string; palette: string; hl: string; seed: number; spec: string; createdAt: string; updatedAt: string; needsPic: boolean };
 export async function listDrawings(): Promise<Drawing[]> {
-  return withSchool((q) => q<Drawing>(`select id, title, prompt, bg, palette, hl, seed, spec::text as spec, created_at as "createdAt", updated_at as "updatedAt"
+  return withSchool((q) => q<Drawing>(`select id, title, prompt, bg, palette, hl, seed, spec::text as spec, created_at as "createdAt", updated_at as "updatedAt",
+      (pic_at is null or pic_at < updated_at) as "needsPic"
     from studio_drawings order by created_at desc limit 120`));
+}
+
+// The picture of a drawing (23 Nov): the page sends a JPEG of what it drew after each save, and a small one for lists.
+const jpeg = (v: unknown, max: number): Buffer | null => {
+  const m = /^data:image\/jpeg;base64,([A-Za-z0-9+/=]+)$/.exec(typeof v === "string" ? v : "");
+  if (!m || m[1].length > max * 1.4) return null;
+  const b = Buffer.from(m[1], "base64");
+  return b.length > 100 && b.length <= max && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff ? b : null;
+};
+export async function saveDrawingPicture(b: Record<string, unknown>) {
+  const id = String(b.id ?? "");
+  if (!/^[0-9a-f-]{36}$/.test(id)) throw new StudioError("Unknown drawing.");
+  const pic = jpeg(b.jpg, 3_000_000), small = jpeg(b.small, 300_000);
+  if (!pic || !small) throw new StudioError("That picture couldn’t be read.");
+  const w = Math.max(1, Math.min(4000, Math.round(Number(b.w) || 0))), h = Math.max(1, Math.min(4000, Math.round(Number(b.h) || 0)));
+  const r = await withSchool((q) => q(`update studio_drawings set pic = $2, pic_small = $3, pic_w = $4, pic_h = $5, pic_at = now() where id = $1 returning id`, [id, pic, small, w, h]));
+  if (!r.length) throw new StudioError("That drawing has been deleted.", 404);
+}
+/** Drawings that have a picture, newest change first (for Social). */
+export async function drawingPictures(): Promise<{ id: string; title: string; w: number; h: number; at: string }[]> {
+  return withSchool((q) => q<{ id: string; title: string; w: number; h: number; at: string }>(`select id, title, pic_w as w, pic_h as h, pic_at::text as at
+    from studio_drawings where pic is not null order by greatest(updated_at, pic_at) desc limit 80`)).catch(() => []);
+}
+export async function drawingPicture(id: string, small = false): Promise<Buffer | null> {
+  if (!/^[0-9a-f-]{36}$/.test(id)) return null;
+  return withSchool((q) => q<{ p: Buffer | null }>(`select ${small ? "pic_small" : "pic"} as p from studio_drawings where id = $1`, [id])).then((r) => r[0]?.p ?? null);
 }
 export async function saveDrawing(userId: string | null, b: Record<string, unknown>): Promise<string> {
   const spec = typeof b.spec === "string" ? b.spec : "";

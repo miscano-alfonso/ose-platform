@@ -1,5 +1,5 @@
 import { NextResponse, after, type NextRequest } from "next/server";
-import { listDrawings, saveDrawing, deleteDrawing, getPalettes, savePalettes, startJob, jobStatus, StudioError, STUDIO_COOKIE, studioCookieOk } from "@/lib/studio";
+import { listDrawings, saveDrawing, saveDrawingPicture, deleteDrawing, getPalettes, savePalettes, startJob, jobStatus, StudioError, STUDIO_COOKIE, studioCookieOk } from "@/lib/studio";
 import { canvaUploadImage, canvaUploadStatus } from "@/lib/designs";
 
 // Sketch Studio's API (/studio/api): start a draft, check or change, poll it, list, save, delete, palettes, Canva. Needs the studio password.
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       return out({ id });
     }
     if (action === "save") return out({ id: await saveDrawing(me.id, b) });
+    if (action === "picture") { await saveDrawingPicture(b); return out({ ok: true }); }
     if (action === "palettes") { await savePalettes(b.palettes); return out({ ok: true }); }
     if (action === "delete") { await deleteDrawing(String(b.id ?? "")); return out({ ok: true }); }
     if (action === "canva") {
