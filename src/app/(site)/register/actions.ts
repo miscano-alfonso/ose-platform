@@ -58,7 +58,7 @@ export async function registerAction(f: FormData): Promise<void> {
   if (id === "exists") redirect(`/account?next=cart&err=${encodeURIComponent("That email already has an account. We can email you a sign-in link instead.")}`);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`;
-  const sent = await sendVerifyLink(id, await siteBase(origin));
+  const sent = await sendVerifyLink(id, await siteBase(origin), next.startsWith("/taster"));
   if (next.startsWith("/taster")) { const { rememberNext } = await import("../../(family)/actions"); await rememberNext(next); }
   redirect(`/register?check=${encodeURIComponent(p.email)}${next.startsWith("/taster") ? "&for=taster" : ""}${sent.ok ? "" : "&error=" + encodeURIComponent("We couldn’t send the email just now. Use “I already have an account” to get a new link.")}`);
 }

@@ -44,7 +44,7 @@ async function startSession(parentId: string | null, studentId: string | null, v
 
 /** A parent who has just registered on the website: email a link to confirm the address. Pressing it signs them in (and marks the email
  *  as confirmed), so nobody can use an account made with someone else's email. The link works once, for 24 hours. */
-export async function sendVerifyLink(parentId: string, base: string): Promise<{ ok: boolean; error?: string }> {
+export async function sendVerifyLink(parentId: string, base: string, forTaster = false): Promise<{ ok: boolean; error?: string }> {
   const r = await withSchool(async (q) => {
     const p = (await q<{ first: string; email: string }>(`select first_name as first, email::text from parents where id = $1`, [parentId]))[0];
     if (!p) return null;
@@ -55,7 +55,7 @@ export async function sendVerifyLink(parentId: string, base: string): Promise<{ 
   });
   if (!r) return { ok: false, error: "That account wasn’t found." };
   return sendOne([{ name: r.first, email: r.email }], `Confirm your email to finish registering with ${r.school}`,
-    `Hello ${r.first},\n\nThank you for registering with ${r.school}. Please confirm your email address to finish setting up your account:\n\n${base}/account/sign-in?t=${r.token}\n\nThe link works once, for the next 24 hours, and signs you in. Your basket will be waiting for you.\n\nIf you didn’t register, you can ignore this email and the account won’t be used.\n\n${r.school}`,
+    `Hello ${r.first},\n\nThank you for registering with ${r.school}. Please confirm your email address to finish setting up your account:\n\n${base}/account/sign-in?t=${r.token}\n\nThe link works once, for the next 24 hours, and signs you in. ${forTaster ? "You’ll go straight back to booking your taster." : "Your basket will be waiting for you."}\n\nIf you didn’t register, you can ignore this email and the account won’t be used.\n\n${r.school}`,
     { tag: "register-verify" });
 }
 
