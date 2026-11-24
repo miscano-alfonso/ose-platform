@@ -32,7 +32,7 @@ export async function parentHome(parentId: string) {
       count(*) filter (where a.parent_status = 'overdue')::int as overdue from student_assignments a join students s on s.id = a.student_id where s.parent_id = $1 group by a.student_id`, [parentId]),
     reports: await q<{ id: string; name: string; published: string }>(`select distinct c.id, c.name, c.published_at::date::text as published from report_cycles c join report_entries e on e.cycle_id = c.id
       join students s on s.id = e.student_id where s.parent_id = $1 and c.status = 'published' and e.status = 'approved' order by published desc`, [parentId]),
-    upcoming: (await q<{ name: string; publish_on: string }>(`select name, publish_on::text from report_cycles where academic_year_id = ${YEAR} and status <> 'published' order by publish_on limit 1`))[0] ?? null,
+    upcoming: (await q<{ name: string; publish_on: string }>(`select name, publish_on::text from report_cycles where academic_year_id = ${YEAR} and status <> 'published' and publish_on >= current_date order by publish_on limit 1`))[0] ?? null,
     classroomReady: (await q<{ n: number }>(`select count(*)::int as n from classroom_coursework`))[0].n > 0,
   }));
 }
@@ -50,7 +50,13 @@ export async function parentAttendance(parentId: string) {
         l.name || ' ' || sj.name as class, (select n.id::text from absence_notices n where n.lesson_event_id = e.id and n.student_id = s.id and n.cancelled_at is null) as absent
       from students s join enrolments x on x.student_id = s.id and x.status = 'active' and not x.is_taster join lesson_events e on e.group_id = x.group_id
       join lesson_slots sl on sl.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where s.parent_id = $1 and e.status = 'scheduled' and (e.lesson_date + sl.ends_at) at time zone 'Europe/London' > now() and e.lesson_date <= current_date + 28 order by e.lesson_date, sl.starts_at`, [parentId]),
+      where s.parent_id = $1 and e.status = 'scheduled' and (e.lesson_date + sl.ends_at) at time zone 'Europe/London' > now() and e.lesson_date <= current_date + 28
+      union all   -- 24 Nov: booked tasters show too, so a new family sees their first lesson
+      select e.id, s.id, e.lesson_date::text, to_char(sl.starts_at,'HH24:MI'), l.name || ' ' || sj.name || ' (taster)', null
+      from taster_bookings tb join taster_requests r on r.id = tb.request_id join students s on s.id = r.student_id join lesson_events e on e.id = tb.lesson_event_id
+      join lesson_slots sl on sl.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+      where s.parent_id = $1 and tb.status = 'booked' and e.status = 'scheduled' and (e.lesson_date + sl.ends_at) at time zone 'Europe/London' > now() and e.lesson_date <= current_date + 28
+      order by 3, 4`, [parentId]),
     notices: await q<{ id: string; student: string; date: string; time: string; class: string; reason: string; note: string | null; upcoming: boolean }>(`select n.id, s.first_name as student, e.lesson_date::text as date,
         to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as class, n.reason, n.note, e.lesson_date > current_date as upcoming
       from absence_notices n join students s on s.id = n.student_id join lesson_events e on e.id = n.lesson_event_id join lesson_slots sl on sl.id = e.slot_id

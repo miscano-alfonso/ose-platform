@@ -65,6 +65,16 @@ export async function parentReplyAction(f: FormData): Promise<void> {
 export async function parentStartAction(f: FormData): Promise<void> {
   const p = await parent("/parent/messages?new=1");
   const [student, group] = str(f, "to", 80).split("|"), subject = str(f, "subject", 120), body = str(f, "body", 5000);
+  // 24 Nov: "office|<child>" writes to the office (always possible; the only choice while teacher messages are switched off)
+  if (student === "office") {
+    if (!subject || !body) go("/parent/messages?new=1", null, "Write a subject and a message.");
+    const { startMyOfficeThread } = await import("@/lib/office-messages");
+    const r = await startMyOfficeThread("parent", p.id, subject, String(f.get("body") ?? ""), group || null);
+    if (r.error) go("/parent/messages?new=1", null, r.error);
+    go(`/parent/messages?o=${r.id}`, "Sent to the office. They’ll reply here.");
+  }
+  const { familyMsgsOn } = await import("@/lib/teacher-area");
+  if (!(await familyMsgsOn())) go("/parent/messages?new=1", null, "Messages to teachers are switched off for now. Choose “The office” and they’ll pass it on.");
   if (!subject || !body || !student || !group) go("/parent/messages?new=1", null, "Choose a teacher and write a subject and message.");
   const r = await F.parentStartThread(p.id, student, group, subject, body);
   if (r.error) go("/parent/messages?new=1", null, r.error);

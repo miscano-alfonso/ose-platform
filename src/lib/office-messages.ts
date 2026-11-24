@@ -210,3 +210,19 @@ export async function myOfficeReply(kind: ToKind, id: string, threadId: string, 
   });
   return null;
 }
+
+/** (24 Nov) A parent or student writes to the office: a new conversation of their own, which the office sees in
+ *  Messages → Office with the unread count. For a parent, `aboutStudent` (one of their children) says who it's about. */
+export async function startMyOfficeThread(kind: "parent" | "student", id: string, subject: string, body: string, aboutStudent?: string | null): Promise<{ id?: string; error?: string }> {
+  const s = subject.trim().slice(0, 160), b = body.replace(/\r\n/g, "\n").trim().slice(0, 5000);
+  if (!okId(id)) return { error: "Sign in again." };
+  if (!s || !b) return { error: "Add a subject and a message." };
+  return withSchool(async (q) => {
+    let student: string | null = null;
+    if (kind === "parent" && aboutStudent && okId(aboutStudent)) student = (await q<{ id: string }>(`select id from students where id = $1 and parent_id = $2`, [aboutStudent, id]))[0]?.id ?? null;
+    const th = (await q<{ id: string }>(`insert into office_threads (school_id, to_kind, parent_id, student_id, subject) values (current_school(), $1, $2, $3, $4) returning id`,
+      [kind, kind === "parent" ? id : null, kind === "student" ? id : student, s]))[0];
+    await q(`insert into office_messages (school_id, thread_id, sender, body) values (current_school(), $1, $2, $3)`, [th.id, kind, b]);
+    return { id: th.id };
+  });
+}

@@ -14,6 +14,9 @@ function checkEmails(form: HTMLFormElement | null) {
     const v = el.value.trim().toLowerCase();
     el.setCustomValidity(!v ? "" : v === parent ? "Your child needs their own email address, not the parent’s." : seen.has(v) ? "Each child needs a different email address." : "");
     if (v) seen.add(v);
+    // 24 Nov: a non-Gmail address needs "This is a Google account" ticked (checked here so the form isn't lost on a round trip)
+    const tick = form.querySelector<HTMLInputElement>(`input[name="${el.name.replace(/_email$/, "_google")}"]`);
+    if (tick) tick.setCustomValidity(v && /@/.test(v) && !/@(gmail|googlemail)\.com$/.test(v) && !tick.checked ? "Tick this if it’s a Google account: Google Classroom only works with Google accounts." : "");
   });
 }
 
@@ -34,6 +37,7 @@ export function ChildFields() {
       <label>Google email address <small className="rg-warn">Your child’s <b>own</b> Gmail account (not the parent’s): it must match the one they use for <b>Google Classroom</b>.</small>
         <input name={`c${i}_email`} type="email" required={i === 0} maxLength={160} placeholder="name@gmail.com" autoComplete="off"
           onInput={(e) => checkEmails(e.currentTarget.form)} onBlur={(e) => checkEmails(e.currentTarget.form)} /></label>
+      <label className="bk-check rg-google"><input type="checkbox" name={`c${i}_google`} /><span>This is a Google account <small className="note">tick if it isn’t an @gmail.com address, e.g. a Google Workspace school account</small></span></label>
       <div className="row2"><label>Date of birth<input name={`c${i}_dob`} type="date" /></label>
         <label>Classroom name <small className="note">the name they like to be called</small><input name={`c${i}_known`} maxLength={60} /></label></div>
       <fieldset className="wk-fs"><legend>Gender</legend><div className="ct-pills">

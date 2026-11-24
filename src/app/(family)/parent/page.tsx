@@ -8,12 +8,13 @@ import { BOARD_MODULES } from "@/lib/dash-modules";
 import { BentoBoard, type BoardModule } from "../../admin/BentoBoard";
 import { dm, dlong, gbp } from "../fmt";
 import { Ring } from "../../admin/DashBits";
+import { familyMsgsOn } from "@/lib/teacher-area";
 
 // The parent's home, Bento style: the family's next lesson up top (with Report an absence), the next payment in lime,
 // a card per child with their attendance ring and classes, then work due and reports.
 export default async function ParentHome() {
   const f = await requireParent();
-  const [ks, h, a, threads] = await Promise.all([kids(f.id), parentHome(f.id), parentAttendance(f.id), parentThreads(f.id).catch(() => [])]);
+  const [ks, h, a, threads, teachersOn] = await Promise.all([kids(f.id), parentHome(f.id), parentAttendance(f.id), parentThreads(f.id).catch(() => []), familyMsgsOn()]);
   const next = a.upcoming.find((u) => !u.absent) ?? null, who = next ? ks.find((k) => k.id === next.student_id) : null;
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
   const tone = (p: number | null) => p == null ? "brand" : p < 50 ? "bad" : p < 80 ? "warn" : "good";
@@ -23,7 +24,7 @@ export default async function ParentHome() {
         <p className="fx-live" style={next?.date === today ? undefined : { color: "var(--hero-soft)" }}>{next?.date === today && <i />}{next ? (next.date === today ? "Today" : `Next lesson · ${dlong(next.date)}`) : "Your account"}</p>
         <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {f.first}</span>{next && <><br />{who?.first ?? ""}: {next.class}</>}</h1>
         <p className="fx-hero-s">{next ? `${dlong(next.date)} · ${next.time}` : ks.length ? "No lessons in the next four weeks." : "No children on your account yet."}</p>
-        <div className="fx-btns"><Link className="go" href="/parent/attendance">Report an absence</Link><Link href="/parent/messages">Message a teacher</Link>
+        <div className="fx-btns"><Link className="go" href="/parent/attendance">Report an absence</Link><Link href="/parent/messages?new=1">{teachersOn ? "Message a teacher" : "Message the office"}</Link>
           {next && <LessonCountdown date={next.date} time={next.time} />}</div>
       </div>{next && <div className="fx-side"><LessonClock date={next.date} time={next.time} /><NotifyBell settingsHref="/parent/notifications" /></div>}</section> },
     { id: "payment", title: "Next payment", node: <Link href="/parent/payments" className="dx-pop c4"><span>Next payment</span>
@@ -44,7 +45,7 @@ export default async function ParentHome() {
     { id: "coming", title: "Coming up", size: "l", node: <section className="dx-card c6"><header><h2>Coming up</h2><Link className="dx-more" href="/parent/attendance">Attendance →</Link></header>
         {a.upcoming.slice(0, 5).map((u) => <div className="fx-row" key={u.id + u.student_id}><span className="fx-when">{dlong(u.date)}</span><div className="t"><b>{ks.find((k) => k.id === u.student_id)?.first}: {u.class}</b><span>{u.time}</span></div>{u.absent && <span className="pill mute">Away</span>}</div>)}</section> },
     { id: "messages", title: "Messages", size: "l", node: <section className="dx-card"><header><h2>Messages</h2>{unread > 0 && <span className="dx-count">{unread}</span>}<Link className="dx-more" href="/parent/messages">All messages →</Link></header>
-      {threads.length === 0 ? <p className="empty">No messages yet. You can message your children’s teachers.</p> : threads.slice(0, 4).map((t) => <div className="fx-row" key={t.id}><div className="t"><b>{t.subject}</b><span>{t.teacher} · about {t.student} · {dm(t.last_at)}</span></div>
+      {threads.length === 0 ? <p className="empty">No messages yet. {teachersOn ? "You can message your children’s teachers or the office." : "You can message the office."}</p> : threads.slice(0, 4).map((t) => <div className="fx-row" key={t.id}><div className="t"><b>{t.subject}</b><span>{t.teacher} · about {t.student} · {dm(t.last_at)}</span></div>
         {t.unread ? <span className="pill info">New</span> : null}<Link className="abtn sm" href={`/parent/messages?t=${t.id}`}>Open</Link></div>)}
       <div style={{ marginTop: 10 }}><Link className="abtn sm" href="/parent/messages?new=1">New message</Link></div></section> },
   ];

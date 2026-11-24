@@ -3,7 +3,7 @@ import { withSchool } from "./db";
 
 // Parent registration on the website (31 Oct, from the old site's Add Child form): the parent, then each child with their
 // Google account email (for Classroom and Meet), date of birth, classroom name, gender, SEND and any reports.
-export type ChildIn = { first: string; last: string; email: string; dob: string | null; known: string | null; gender: string | null; send: boolean | null;
+export type ChildIn = { first: string; last: string; email: string; google?: boolean; dob: string | null; known: string | null; gender: string | null; send: boolean | null;
   sendDetails: string | null; adjustments: string | null; share: boolean; needs: string[];
   files: { name: string; mime: string; data: Buffer }[] };
 export type ParentIn = { first: string; last: string; email: string; phone: string | null; heard: string | null; marketing: boolean };
@@ -15,6 +15,8 @@ export function checkChild(c: ChildIn, n: number): string | null {
   const who = `Child ${n}`;
   if (!c.first || !c.last) return `${who}: add their first and last name.`;
   if (!EMAIL.test(c.email)) return `${who}: add their Google (Gmail) email address.`;
+  // 24 Nov: Classroom needs a Google account. Gmail is one; any other address (e.g. a school Google Workspace account) needs the tick
+  if (!/@(gmail|googlemail)\.com$/i.test(c.email.trim()) && !c.google) return `${who}: ${c.email} isn’t a Gmail address. If it is a Google account (for example a Google Workspace school account), tick “This is a Google account”. Google Classroom only works with Google accounts.`;
   if (c.dob && !/^\d{4}-\d{2}-\d{2}$/.test(c.dob)) return `${who}: check the date of birth.`;
   for (const f of c.files) {
     if (!FILE_TYPES.includes(f.mime)) return `${who}: reports must be PDFs, Word documents or photos.`;
@@ -25,8 +27,8 @@ export function checkChild(c: ChildIn, n: number): string | null {
 
 async function insertChildren(q: Parameters<Parameters<typeof withSchool>[0]>[0], parentId: string, kids: ChildIn[]) {
   for (const c of kids) {
-    const [s] = await q<{ id: string }>(`insert into students (school_id, parent_id, first_name, last_name, email, date_of_birth, known_as, gender)
-      values (current_school(), $1, $2, $3, $4, $5, $6, $7) returning id`, [parentId, c.first, c.last, c.email.toLowerCase(), c.dob, c.known, c.gender]);
+    const [s] = await q<{ id: string }>(`insert into students (school_id, parent_id, first_name, last_name, email, date_of_birth, known_as, gender, google_account_confirmed)
+      values (current_school(), $1, $2, $3, $4, $5, $6, $7, $8) returning id`, [parentId, c.first, c.last, c.email.toLowerCase(), c.dob, c.known, c.gender, !!c.google]);
     // SEND goes in the school's existing support record (Admin → Families shows it; teachers see it only if the parent agreed to share)
     if (c.send !== null) await q(`insert into student_support (student_id, school_id, has_send, details, adjustments, share_with_teachers, needs)
       values ($1, current_school(), $2, $3, $4, $5, $6)`, [s.id, c.send ? "yes" : "no", c.send ? (c.sendDetails || (c.files.length ? "See the reports uploaded at registration." : "The parent said yes at registration; details to follow.")) : null,

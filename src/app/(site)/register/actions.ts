@@ -12,7 +12,7 @@ function readChildren(f: FormData): Promise<ChildIn[]> {
   const n = Math.min(8, Math.max(1, parseInt(String(f.get("count") ?? "1"), 10) || 1));
   const v = (k: string, max = 120) => String(f.get(k) ?? "").trim().slice(0, max);
   return Promise.all(Array.from({ length: n }, async (_, i) => ({
-    first: v(`c${i}_first`, 60), last: v(`c${i}_last`, 60), email: v(`c${i}_email`, 160).toLowerCase(),
+    first: v(`c${i}_first`, 60), last: v(`c${i}_last`, 60), email: v(`c${i}_email`, 160).toLowerCase(), google: f.get(`c${i}_google`) === "on",
     dob: v(`c${i}_dob`, 10) || null, known: v(`c${i}_known`, 60) || null,
     gender: GENDERS.includes(v(`c${i}_gender`, 30)) ? v(`c${i}_gender`, 30) : null,
     send: v(`c${i}_send`, 3) === "yes" ? true : v(`c${i}_send`, 3) === "no" ? false : null,
@@ -21,6 +21,16 @@ function readChildren(f: FormData): Promise<ChildIn[]> {
     files: await Promise.all(f.getAll(`c${i}_files`).filter((x): x is File => x instanceof File && x.size > 0).slice(0, 5)
       .map(async (x) => ({ name: x.name, mime: x.type, data: Buffer.from(await x.arrayBuffer()) }))),
   })));
+}
+
+// 24 Nov: the database's own checks on a child's email, in words (they used to crash the page)
+function saveError(e: unknown): string {
+  const m = (e as Error)?.message ?? "";
+  if (/Gmail/i.test(m)) return "A child’s email isn’t a Gmail address. If it is a Google account, tick “This is a Google account” under it.";
+  if (/own Google account|parent/i.test(m)) return "Each child needs their own email address, not a parent’s.";
+  if (/already uses/i.test(m)) return "That child’s email is already used on another account. Each child needs their own.";
+  console.error("register", e);
+  return "We couldn’t save that just now. Please try again, or contact us.";
 }
 
 /** New parents register with their children and are signed in straight away; signed-in parents can add children here too. */
@@ -35,7 +45,7 @@ export async function registerAction(f: FormData): Promise<void> {
   if (fam?.kind === "parent") {
     if (fam.viewer) return back("You’re viewing as this family, so nothing can be changed.");
     const dup = await checkChildEmails(fam.email, kids); if (dup) return back(dup);
-    await addChildren(fam.id, kids);
+    try { await addChildren(fam.id, kids); } catch (e) { return back(saveError(e)); }
     redirect(`${next}${next.includes("?") ? "&" : "?"}added=${kids.length}`);
   }
   const p = { first: v("first", 60), last: v("last", 60), email: v("email").toLowerCase(), phone: v("phone", 30) || null, heard: v("heard", 60) || null, marketing: f.get("marketing") === "on" };
@@ -43,11 +53,12 @@ export async function registerAction(f: FormData): Promise<void> {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(p.email)) return back("Add a valid email address.");
   if (f.get("terms") !== "on") return back("Please agree to the Terms & Conditions.");
   const dup = await checkChildEmails(p.email, kids); if (dup) return back(dup);
-  const id = await registerFamily(p, kids);
+  let id: string;
+  try { id = await registerFamily(p, kids); } catch (e) { return back(saveError(e)); }
   if (id === "exists") redirect(`/account?next=cart&err=${encodeURIComponent("That email already has an account. We can email you a sign-in link instead.")}`);
   const h = await headers();
   const origin = `${h.get("x-forwarded-proto") || "https"}://${h.get("x-forwarded-host") || h.get("host")}`;
   const sent = await sendVerifyLink(id, await siteBase(origin));
   if (next.startsWith("/taster")) { const { rememberNext } = await import("../../(family)/actions"); await rememberNext(next); }
-  redirect(`/register?check=${encodeURIComponent(p.email)}${sent.ok ? "" : "&error=" + encodeURIComponent("We couldn’t send the email just now. Use “I already have an account” to get a new link.")}`);
+  redirect(`/register?check=${encodeURIComponent(p.email)}${next.startsWith("/taster") ? "&for=taster" : ""}${sent.ok ? "" : "&error=" + encodeURIComponent("We couldn’t send the email just now. Use “I already have an account” to get a new link.")}`);
 }
