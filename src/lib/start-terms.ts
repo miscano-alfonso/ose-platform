@@ -6,7 +6,8 @@ import "server-only";
 // a 2-year GCSE only in Terms 1–2 of its first year. KS3 and Pre-GCSE can be joined any term.
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 export type StartKey = "this" | "next";
-export type StartOption = { key: StartKey; term: number; termName: string; from: string | null; lessons: number; yearLessons: number; terms: number; pence: number };
+export type StartOption = { key: StartKey; term: number; termName: string; from: string | null; lessons: number; yearLessons: number; terms: number; pence: number;
+  paidLessons: number; perLessonPence: number; laterLessons: number; laterPence: number };   // pence = paidLessons × perLessonPence + later years
 
 export const gcseLevel = (level: string) => /^i?gcse\b/i.test(level.trim());
 export function latestStartTerm(level: string, courseYears: number, yearOfCourse: number): number {
@@ -16,7 +17,8 @@ export function latestStartTerm(level: string, courseYears: number, yearOfCourse
 }
 
 /** The start options for each group, priced. `firstYearPence` is the group's price plan for this year, `laterPence` any later years. */
-export async function startOptions(q: Q, groups: { id: string; level: string; courseYears: number; yearOfCourse: number; firstYearPence: number; laterPence: number; yearTerms: number; laterTerms: number }[]): Promise<Map<string, StartOption[]>> {
+export async function startOptions(q: Q, groups: { id: string; level: string; courseYears: number; yearOfCourse: number; firstYearPence: number; laterPence: number; yearTerms: number; laterTerms: number;
+  perLessonPence: number; planLessons: number; laterLessons: number }[]): Promise<Map<string, StartOption[]>> {
   const out = new Map<string, StartOption[]>();
   if (!groups.length) return out;
   const rows = await q<{ group_id: string; number: number; name: string; starts_on: string; ends_on: string; current: boolean; left_here: number; first_here: string | null; year_total: number; left_from: number }>(`
@@ -38,8 +40,11 @@ export async function startOptions(q: Q, groups: { id: string; level: string; co
       if (r.year_total > 0 && r.left_from <= 0) continue;   // no lessons left from then
       // no timetable yet: share by terms instead of lessons
       const share = r.year_total > 0 ? Math.min(1, r.left_from / r.year_total) : Math.max(0, g.yearTerms - r.number + 1) / Math.max(1, g.yearTerms);
+      // the same sum as swap_course (db/094): the plan's lessons × the share left, × the price per lesson
+      const paid = Math.round(g.planLessons * share);
       opts.push({ key: r.current ? "this" : "next", term: r.number, termName: r.name, from: r.first_here, lessons: r.left_from, yearLessons: r.year_total,
-        terms: Math.max(1, g.yearTerms - r.number + 1) + g.laterTerms, pence: Math.round(g.firstYearPence * share) + g.laterPence });
+        terms: Math.max(1, g.yearTerms - r.number + 1) + g.laterTerms, pence: paid * g.perLessonPence + g.laterPence,
+        paidLessons: paid, perLessonPence: g.perLessonPence, laterLessons: g.laterLessons, laterPence: g.laterPence });
     }
     // "This term" with no lessons left in it (its last week) gives way to "Next term"
     const here = (o: StartOption) => rows.find((x) => x.group_id === g.id && x.number === o.term);

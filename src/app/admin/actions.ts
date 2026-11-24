@@ -1158,7 +1158,7 @@ export async function swapCourseAction(f: FormData): Promise<void> {
   const start = str(f, "start", 8) === "next" ? "next" : "current";
   const err = await swapCourse(me.id, str(f, "id", 40), str(f, "to", 40), start);
   revalidatePath("/admin/payments");
-  famBack(str(f, "family", 40), start === "next" ? "Swap booked: the new class starts next term." : "Swapped: the child moves now; this term is re-priced.", err);
+  famBack(str(f, "family", 40), start === "next" ? "Swap booked: the new class starts next term." : "Swapped: the child moves now. The new course is charged for its lessons from the start of this term, less what was already paid for this term.", err);
 }
 export async function familyTermAction(f: FormData): Promise<void> {
   const me = await requireStaff();

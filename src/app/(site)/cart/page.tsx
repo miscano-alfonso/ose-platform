@@ -48,7 +48,8 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
                 {!l.start ? <p className="bk-closed">This course can’t be joined at this point in the year. <Link href="/contact">Ask us about next year</Link></p>
                   : l.starts.length > 1 ? <StartPicker code={l.code} value={l.start.key} action={setStart} options={l.starts.map((o) => ({ key: o.key, label: startLabel(o) }))} />
                   : <p className="bk-startone">Starts {l.start.termName}{l.start.from ? `, from ${dd(l.start.from)}` : ""}</p>}</div>
-              <div className="bk-price">{l.start ? <><b>{money(l.netPence)}</b>{l.discountPence > 0 && <s>{money(l.listPence)}</s>}<span>{[`${l.start.termName}${l.terms > 1 ? " onwards" : ""}`, l.terms > 1 ? `or ${money(l.perTermPence)} a term` : ""].filter(Boolean).join(" · ")}</span></> : <b>–</b>}</div>
+              <div className="bk-price">{l.start ? <><b>{money(l.netPence)}</b>{l.discountPence > 0 && <s>{money(l.listPence)}</s>}<span className="bk-calc">{l.start.paidLessons} lessons × {money(l.start.perLessonPence)}{l.start.laterLessons ? ` + year 2: ${l.start.laterLessons} lessons` : ""}{l.discountPence > 0 ? `, less ${Math.round((l.discountPence / l.listPence) * 100)}%` : ""}</span>
+                <span>{l.terms > 1 ? `or ${l.terms} termly payments of ${money(l.perTermPence)}` : `${l.start.termName}`}</span></> : <b>–</b>}</div>
               {parent && <label className="bk-who"><span>Student</span>{kids.length ? <select name={`who:${l.code}`} form="bk-checkout" required defaultValue={kids.length === 1 ? kids[0].id : ""}>
                   {kids.length > 1 && <option value="" disabled>Choose a child</option>}{kids.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}</select>
                 : <Link href="/register?next=/cart">Add a child first</Link>}</label>}
@@ -57,7 +58,7 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
             </li>; })}</ul>
           <ol className="bk-notes">
             <li>10% off when you take 3 or 4 courses, 15% off for 5 or more, applied automatically.</li>
-            <li>Starting part-way through the year? Choose This term or Next term: you pay from the start of that term to the end of the course year (joining part-way through a term pays for the whole term). A 1-year GCSE starts in Term 1, and a 2-year GCSE in Term 1 or 2.</li>
+            <li>Starting part-way through the year? Choose This term or Next term: you pay for the lessons from the start of that term to the end of the course year, at the course’s price per lesson (joining part-way through a term pays for the whole term). A 1-year GCSE starts in Term 1, and a 2-year GCSE in Term 1 or 2.</li>
             <li>Registration fee: {q.lines[0] ? money(q.lines[0].feePence) : "£25"} per course (non-refundable).</li>
             <li>Spread the cost: pay each course in equal termly instalments, collected by Direct Debit on each term’s payment date, two weeks before the term starts (see <Link href="/term-dates">Term dates</Link>). The first is paid when you book.</li>
           </ol>

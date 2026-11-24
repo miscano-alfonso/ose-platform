@@ -73,7 +73,7 @@ export default async function Family({ params, searchParams }: { params: Promise
                 {x.swaps.length > 0 ? <form action={swapCourseAction} style={{ display: "grid", gap: 8, borderTop: "1px solid var(--line)", paddingTop: 10 }}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="family" value={f.id} />
                   <b>Or swap to another class</b>
                   <select name="to" className="mini" required>{x.swaps.map((o) => <option key={o.id} value={o.id}>{o.name}{o.slots ? ` · ${o.slots}` : ""}{o.places != null ? ` · ${o.places} places` : ""}</option>)}</select>
-                  <select name="start" className="mini"><option value="current">Move now (this term is re-priced)</option><option value="next">From next term (nothing to pay now)</option></select>
+                  <select name="start" className="mini"><option value="current">Move now: the new course’s lessons from the start of this term</option><option value="next">From next term (nothing to pay now)</option></select>
                   <div><button className="abtn sm" type="submit">Swap</button></div></form> : <span className="muted">No other open class at this level to swap to.</span>}
               </div></details>}
             {c.needs_check && <form action={familyCheckAction} style={{ marginTop: 6 }}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="family" value={f.id} /><button className="abtn sm" type="submit">Mark checked</button></form>}

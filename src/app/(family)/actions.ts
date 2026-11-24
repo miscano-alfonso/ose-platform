@@ -159,7 +159,7 @@ export async function parentSwapAction(f: FormData): Promise<void> {
   const p = await parent("/parent/payments");
   const start = str(f, "start", 8) === "next" ? "next" : "current";
   const err = await F.parentSwap(p.id, str(f, "id", 40), str(f, "to", 40), start);
-  go("/parent/payments", start === "next" ? "Swap booked: the new class starts next term." : "Swapped: your child moves now and this term is re-priced.", err);
+  go("/parent/payments", start === "next" ? "Swap booked: the new class starts next term." : "Swapped: your child moves now. The new course is charged for its lessons from the start of this term, less what you’d already paid for this term.", err);
 }
 
 // ---------- replies to messages from the office (5 Nov) ----------

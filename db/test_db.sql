@@ -800,6 +800,28 @@ declare sc uuid; par uuid; st uuid; kmat uuid; pgeo uuid; keng uuid; t1 uuid; e1
   update enrolments set swapped_from_id = null where student_id = st; delete from enrolments where student_id = st; delete from students where id = st;
 end $$;
 
+-- 25 Nov: a swap later in the year charges the new course by its lessons from the start of the term (never more)
+do $$
+declare sc uuid; par uuid; st uuid; kmat uuid; pmat uuid; t3 uuid; e1 uuid; r record; left_l int; year_l int; begin
+  select id into sc from schools where slug = 'ohsoed';
+  select parent_id into par from students where first_name = 'Cleo';
+  insert into students (school_id, parent_id, first_name, last_name) values (sc, par, 'Swapper', 'L') returning id into st;
+  select id into kmat from course_groups where code = 'KMat26/1'; select id into pmat from course_groups where code = 'PMat26/1';
+  select t.id into t3 from terms t join course_groups g on g.academic_year_id = t.academic_year_id where g.id = kmat and t.number = 3;
+  insert into enrolments (school_id, student_id, group_id, status, list_price_pence) values (sc, st, kmat, 'active', 27200) returning id into e1;
+  insert into instalments (school_id, enrolment_id, term_id, due_on, amount_pence, status)
+    select sc, e1, t.id, t.bills_on, 4533 + case when t.number = 1 then 2 else 0 end, case when t.number <= 3 then 'paid' else 'scheduled' end::instalment_status
+    from terms t where t.academic_year_id = (select academic_year_id from course_groups where id = kmat);
+  select count(*) filter (where t.number >= 3), count(*) into left_l, year_l from lesson_events ev join terms t on t.id = ev.term_id where ev.group_id = pmat and ev.status <> 'cancelled';
+  select * into r from swap_course(e1, pmat, 'current', (select starts_on + 10 from terms where id = t3));
+  assert (select sum(amount_pence) from instalments where enrolment_id = r.to_enrolment) + 4533
+       = (select cost_per_lesson_pence from price_plans pp join course_groups g on g.price_plan_id = pp.id where g.id = pmat) * round(68 * left_l::numeric / year_l),
+    'new course from Term 3 costs its lessons x price per lesson';
+  delete from swap_adjustments where from_enrolment_id in (select id from enrolments where student_id = st);
+  delete from instalments where enrolment_id in (select id from enrolments where student_id = st);
+  update enrolments set swapped_from_id = null where student_id = st; delete from enrolments where student_id = st; delete from students where id = st;
+end $$;
+
 -- data protection: consent history, rights requests, logged SEND reads, family export, erasure, retention
 do $$
 declare sc uuid; par uuid; st uuid; admin_u uuid; out jsonb; rq uuid; g uuid; e uuid; t1 uuid; n int; begin

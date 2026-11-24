@@ -37,13 +37,14 @@ export default async function Payments({ searchParams }: { searchParams: Promise
       <div className="tw" style={{ marginBottom: 0 }}><table><thead><tr><th>Course</th><th className="n">Year</th>{d.terms.map((t) => <th key={t.id} className="n">T{t.number}</th>)}</tr></thead><tbody>
         {st.courses.length === 0 ? <tr><td colSpan={d.terms.length + 2} className="muted">No courses this year.</td></tr> : st.courses.map((c) => { const x = X[c.id]; return <tr key={c.id}>
           <td><span className="dot" style={{ background: c.colour }} /> <b>{c.subject}</b> <span className="muted">{c.level}</span>
+            {c.cpl && c.list > 0 && <span className="muted" style={{ display: "block", fontSize: 13.5 }}>{Math.round(c.list / c.cpl)} lessons × {gbp(c.cpl)}{c.discount > 0 ? `, less ${Math.round((c.discount / c.list) * 100)}% multi-course discount` : ""}</span>}
             {c.status !== "active" && <> <span className="pill mute">{c.status === "swapped" ? "Swapped" : "Cancelled"}</span></>}
             {c.notice_given_on && c.status === "active" && <> <span className="pill warn">Notice given {dm(c.notice_given_on)}</span></>}
             {x && <details style={{ marginTop: 6 }}><summary className="abtn sm" style={{ cursor: "pointer" }}>Swap or cancel</summary>
               <div style={{ display: "grid", gap: 10, background: "var(--soft)", borderRadius: 10, padding: 12, marginTop: 8, maxWidth: 520 }}>
                 {x.sw.length > 0 && <form action={parentSwapAction} style={{ display: "grid", gap: 8 }}><input type="hidden" name="id" value={c.id} /><b>Swap to another class</b>
                   <select name="to" className="mini">{x.sw.map((o) => <option key={o.id} value={o.id}>{o.name}{o.slots ? ` · ${o.slots}` : ""}</option>)}</select>
-                  <select name="start" className="mini"><option value="current">Move now (this term is re-priced)</option><option value="next">From next term (nothing to pay now)</option></select>
+                  <select name="start" className="mini"><option value="current">Move now: the new course’s lessons from the start of this term</option><option value="next">From next term (nothing to pay now)</option></select>
                   <div><button className="abtn sm" type="submit">Swap</button></div></form>}
                 {x.pre && <form action={parentCancelAction} style={{ display: "grid", gap: 8, borderTop: x.sw.length ? "1px solid var(--line)" : 0, paddingTop: x.sw.length ? 10 : 0 }}><input type="hidden" name="id" value={c.id} />
                   <b>Cancel {c.subject}</b><span>{x.pre.cooling ? <>You’re within the 14-day cooling-off period: everything is cancelled{x.pre.refund ? <> and {gbp(x.pre.refund)} is refunded</> : null}.</>
@@ -53,6 +54,6 @@ export default async function Payments({ searchParams }: { searchParams: Promise
           <td className="n">{gbp(c.net)}</td>
           {c.cells.map((cell, i) => <td key={i} className="n">{cell ? <div style={{ display: "grid", gap: 2, justifyItems: "end" }}><span>{gbp(cell.amount)}</span><span className={`pill ${CELL[cell.status]?.[0] ?? "mute"}`} style={{ fontSize: 12.5 }}>{CELL[cell.status]?.[1] ?? cell.status}</span></div> : <span className="muted">—</span>}</td>)}</tr>; })}
       </tbody></table></div></section>)}
-    <p className="note">Cancelling needs one full term’s notice for KS3 and Pre-GCSE courses and two full terms’ notice for GCSE courses, as agreed when you booked. Within 14 days of the first lesson, before the Classroom is used, you can cancel for a full refund.{online ? null : " To update your card, message us for now: card payments online are coming."}</p>
+    <p className="note">Each course costs its lessons × its price per lesson, paid in equal termly payments. Swapping charges the new course for its lessons from the start of the term you move in, less what you’ve already paid for that term. Cancelling needs one full term’s notice for KS3 and Pre-GCSE courses and two full terms’ notice for GCSE courses, as agreed when you booked. Within 14 days of the first lesson, before the Classroom is used, you can cancel for a full refund.{online ? null : " To update your card, message us for now: card payments online are coming."}</p>
   </>;
 }

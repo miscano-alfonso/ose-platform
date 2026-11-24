@@ -33,10 +33,11 @@ export async function cartQuote(): Promise<CartQuote> {
   const couponCode = ((await cookies()).get(COUPON_COOKIE)?.value ?? "").slice(0, 40);
   const chosen = await cartStarts();
   return withSchool(async (q) => {
-    const rows = codes.length ? await q<{ id: string; code: string; level: string; subject: string; colour: string; years: number; year_of_course: number; total: number; fee: number; terms: number; total_terms: number; first_year: number;
+    const rows = codes.length ? await q<{ id: string; code: string; level: string; subject: string; colour: string; years: number; year_of_course: number; total: number; fee: number; terms: number; total_terms: number; first_year: number; cpl: number; plan_lessons: number; total_lessons: number;
       year_id: string; level_id: string; slots: { d: number; t: string }[] | null; page_slug: string; year_label: string }>(`
       select g.id, g.code, l.name as level, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour, pp.course_years as years, pp.year_of_course,
-             (select total_pence from course_price(pp.id)) as total, (select terms from course_price(pp.id)) as total_terms, pp.registration_fee_pence as fee, pp.term_count as terms, pp.total_pence as first_year,
+             (select total_pence from course_price(pp.id)) as total, (select terms from course_price(pp.id)) as total_terms, (select lessons from course_price(pp.id)) as total_lessons,
+             pp.cost_per_lesson_pence as cpl, pp.lessons as plan_lessons, pp.registration_fee_pence as fee, pp.term_count as terms, pp.total_pence as first_year,
              g.academic_year_id as year_id, g.level_id, y.label as year_label,
              lower(regexp_replace(l.name, '[^A-Za-z0-9]+', '-', 'g')) || '/' || lower(regexp_replace(sj.name, '[^A-Za-z0-9]+', '-', 'g')) as page_slug,
              (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at, 'HH24:MI')) order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id) as slots
@@ -49,7 +50,8 @@ export async function cartQuote(): Promise<CartQuote> {
       `select min_courses, percent_off::text, level_id from bundle_discounts where academic_year_id = $1`, [rows[0].year_id]) : [];
     // 24 Nov: priced from the chosen start term (This term / Next term), from the lessons still to come
     const starts = await startOptions(q, rows.map((r) => ({ id: r.id, level: r.level, courseYears: r.years, yearOfCourse: r.year_of_course, firstYearPence: r.first_year,
-      laterPence: Math.max(0, r.total - r.first_year), yearTerms: r.terms, laterTerms: Math.max(0, (r.total_terms ?? r.terms) - r.terms) })));
+      laterPence: Math.max(0, r.total - r.first_year), yearTerms: r.terms, laterTerms: Math.max(0, (r.total_terms ?? r.terms) - r.terms),
+      perLessonPence: r.cpl, planLessons: r.plan_lessons, laterLessons: Math.max(0, (r.total_lessons ?? r.plan_lessons) - r.plan_lessons) })));
     const lines: CartLine[] = rows.map((r) => {
       const t: BundleTier[] = tiers.filter((x) => !x.level_id || x.level_id === r.level_id).map((x) => ({ minCourses: x.min_courses, percentOff: Number(x.percent_off) }));
       const opts = starts.get(r.id) ?? [], start = opts.find((o) => o.key === chosen[r.code]) ?? opts[0] ?? null;
