@@ -67,7 +67,7 @@ export async function checkout(form: FormData) {
   const message = [...lines,
     q.coupon ? `Coupon ${q.coupon.code}: −${money(q.coupon.pence)}` : "",
     `Courses ${money(q.totalPence)} + registration fees ${money(q.feesPence)} = ${money(q.payPence)}`,
-    spread ? `Wants to spread the cost: about ${money(q.perTermPence)} a term over ${q.terms} terms, plus fees` : "Paying in full",
+    spread ? `Spreading the cost: ${money(q.todayPence)} today (first instalments ${money(q.firstPence)} + fees), then ${q.schedule.map((r) => `${r.label} ${money(r.pence)}${r.count > 1 ? " a term" : ""}`).join(", ") || "nothing more"}` : "Paying in full",
     v("message", 1500) ? `Note: ${v("message", 1500)}` : ""].filter(Boolean).join("\n");
   await withSchool((db) => db(`insert into enquiries (school_id, kind, name, email, child_name, subject, levels, message)
     values (current_school(), 'booking', $1, $2, $3, $4, $5, $6)`,

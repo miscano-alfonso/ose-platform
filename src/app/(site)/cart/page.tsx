@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "@/app/(site)/HoverLink";
-import { cartQuote } from "@/lib/cart";
+import { cartQuote, instalments } from "@/lib/cart";
 import { currentFamily } from "@/lib/family-auth";
 import { familyChildren } from "@/lib/registration";
 import { money } from "@/lib/format";
@@ -14,6 +14,8 @@ export const metadata: Metadata = { title: "Basket", robots: { index: false, fol
 const DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const TERMS_URL = "https://ohsoed.co.uk/terms-conditions";
 const dd = (d: string | null) => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London" }) : "";
+const termly = (net: number, terms: number) => { const p = instalments(net, terms);
+  return p[0] === p[1] ? `or ${terms} termly payments of ${money(p[1])}` : `or ${terms} termly payments: ${money(p[0])}, then ${money(p[1])}`; };
 const startLabel = (o: StartOption) => `${o.key === "this" ? "This term" : "Next term"} (${o.termName}${o.from ? `, from ${dd(o.from)}` : ""}) · ${money(o.pence)}`;
 
 // The basket (31 Oct), from ohsoed.co.uk/cart in the new style: the courses on the left, the summary and checkout on the right.
@@ -49,7 +51,7 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
                   : l.starts.length > 1 ? <StartPicker code={l.code} value={l.start.key} action={setStart} options={l.starts.map((o) => ({ key: o.key, label: startLabel(o) }))} />
                   : <p className="bk-startone">Starts {l.start.termName}{l.start.from ? `, from ${dd(l.start.from)}` : ""}</p>}</div>
               <div className="bk-price">{l.start ? <><b>{money(l.netPence)}</b>{l.discountPence > 0 && <s>{money(l.listPence)}</s>}<span className="bk-calc">{l.start.paidLessons} lessons × {money(l.start.perLessonPence)}{l.start.laterLessons ? ` + year 2: ${l.start.laterLessons} lessons` : ""}{l.discountPence > 0 ? `, less ${Math.round((l.discountPence / l.listPence) * 100)}%` : ""}</span>
-                <span>{l.terms > 1 ? `or ${l.terms} termly payments of ${money(l.perTermPence)}` : `${l.start.termName}`}</span></> : <b>–</b>}</div>
+                <span>{l.terms > 1 ? termly(l.netPence, l.terms) : `${l.start.termName}`}</span></> : <b>–</b>}</div>
               {parent && <label className="bk-who"><span>Student</span>{kids.length ? <select name={`who:${l.code}`} form="bk-checkout" required defaultValue={kids.length === 1 ? kids[0].id : ""}>
                   {kids.length > 1 && <option value="" disabled>Choose a child</option>}{kids.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}</select>
                 : <Link href="/register?next=/cart">Add a child first</Link>}</label>}
@@ -70,9 +72,14 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
             {q.bundlePence > 0 && <div className="bk-off"><dt>Bundle discount <sup>1</sup> · {q.bundlePct}%</dt><dd>−{money(q.bundlePence)}</dd></div>}
             {q.coupon && <div className="bk-off"><dt>Coupon {q.coupon.code}{q.coupon.label ? ` · ${q.coupon.label}` : ""}</dt><dd>−{money(q.coupon.pence)}</dd></div>}
             <div><dt>Courses total</dt><dd>{money(q.totalPence)}</dd></div>
+            <div className="bk-sp"><dt>First instalment{q.lines.length > 1 ? "s" : ""} <sup>3</sup></dt><dd>{money(q.firstPence)}</dd></div>
             <div><dt>Registration fees <sup>2</sup></dt><dd>{money(q.feesPence)}</dd></div>
-            <div className="bk-big"><dt>Total payment</dt><dd>{money(q.payPence)}</dd></div>
+            <div className="bk-big bk-full"><dt>Total payment</dt><dd>{money(q.payPence)}</dd></div>
+            <div className="bk-big bk-sp"><dt>Total payment today</dt><dd>{money(q.todayPence)}</dd></div>
           </dl>
+          {q.schedule.length > 0 && <div className="bk-sp bk-plan"><p>Then by Direct Debit, two weeks before each term:</p>
+            <ul>{q.schedule.map((r) => <li key={r.label}><span>{r.label}</span><b>{money(r.pence)}{r.count > 1 ? " a term" : ""}</b></li>)}</ul></div>}
+          <label className="bk-check bk-spreadbox"><input type="checkbox" name="spread" value="1" {...(parent ? { form: "bk-checkout" } : {})} /><span>Spread the cost in termly instalments <sup>3</sup></span></label>
           <details className="bk-coupon" open={!!q.coupon || !!sp.error?.includes("coupon")}><summary>I have a coupon code</summary>
             <form action={applyCoupon} className="bk-cform"><input name="coupon" defaultValue={q.coupon?.code ?? ""} placeholder="Coupon code" aria-label="Coupon code" maxLength={40} />
               <button type="submit">Apply</button></form></details>
@@ -88,8 +95,6 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
             {sp.added && <p className="notice ok" role="status">Child added. Choose them for each course on the left.</p>}
             {sp.error && <p className="notice err" role="alert">{sp.error}</p>}
             <p className="bk-who-note">Booking as <b>{parent.first} {parent.last}</b> · {parent.email}. <Link href="/register?next=/cart">+ Add a child</Link></p>
-            <label className="bk-check"><input type="checkbox" name="spread" value="1" /><span>Spread the cost in termly instalments <sup>3</sup></span></label>
-            <p className="bk-spread">About <b>{money(q.perTermPence)}</b> a term over {q.terms} terms, plus {money(q.feesPence)} registration today.</p>
             <label>Anything we should know? <small className="note">optional</small><textarea name="message" rows={2} maxLength={1500} /></label>
             <label className="bk-check"><input type="checkbox" name="terms" value="1" required /><span>I agree to the <a href={TERMS_URL} target="_blank" rel="noopener noreferrer">Terms &amp; Conditions</a></span></label>
             <button className="wk-go bk-go" type="submit" disabled={!kids.length}>Checkout</button>

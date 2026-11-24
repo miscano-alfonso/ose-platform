@@ -24,9 +24,39 @@ export const cartValue = (codes: string[]) => [...new Set(codes)].slice(0, MAX).
 
 export type CartLine = { code: string; level: string; subject: string; colour: string; years: number; slots: { d: number; t: string }[] | null;
   listPence: number; discountPence: number; netPence: number; feePence: number; terms: number; perTermPence: number; page_slug: string; year_label: string;
-  start: StartOption | null; starts: StartOption[]; fullPence: number };   // start null: can't be joined now (e.g. a GCSE after its first terms)
+  start: StartOption | null; starts: StartOption[]; fullPence: number; yearTerms: number };   // start null: can't be joined now (e.g. a GCSE after its first terms)
 export type CartQuote = { lines: CartLine[]; subtotalPence: number; bundlePct: number; bundlePence: number; coupon: { code: string; pence: number; label: string } | null;
-  totalPence: number; feesPence: number; payPence: number; perTermPence: number; terms: number };
+  totalPence: number; feesPence: number; payPence: number; perTermPence: number; terms: number;
+  // Spread the cost (24 Nov, as on the old site): each course in equal termly instalments, the odd pence on the first;
+  // every course's first instalment is paid at booking, the rest by Direct Debit before each later term.
+  firstPence: number; todayPence: number; schedule: { label: string; pence: number; count: number }[] };
+
+// Each course's instalments, from its start term: equal shares, the remainder on the first (as swap_course does).
+export function instalments(net: number, terms: number): number[] {
+  const n = Math.max(1, terms), base = Math.floor(net / n);
+  return Array.from({ length: n }, (_, i) => base + (i === 0 ? net - base * n : 0));
+}
+const slotName = (slot: number, yearTerms: number) => slot <= yearTerms ? `Term ${slot}` : `Term ${slot - yearTerms} next year`;
+function spreadPlan(lines: CartLine[], couponPence: number) {
+  const live = lines.filter((l) => l.start && l.netPence > 0), sum = live.reduce((a, l) => a + l.netPence, 0);
+  let left = Math.min(couponPence, sum), first = 0;
+  const bySlot = new Map<number, number>(), yearTerms = live[0]?.yearTerms ?? 6;
+  live.forEach((l, i) => {   // a coupon comes off each course in proportion to its price
+    const off = i === live.length - 1 ? left : Math.round((couponPence * l.netPence) / Math.max(1, sum)); left -= off;
+    const parts = instalments(Math.max(0, l.netPence - off), l.terms);
+    first += parts[0];
+    parts.slice(1).forEach((p, k) => { const slot = l.start!.term + k + 1; bySlot.set(slot, (bySlot.get(slot) ?? 0) + p); });
+  });
+  const runs: { from: number; to: number; pence: number }[] = [];
+  for (const slot of [...bySlot.keys()].sort((a, b) => a - b)) {   // runs of the same amount in a row: "Terms 4–6, £200.16 a term"
+    const pence = bySlot.get(slot)!, last = runs[runs.length - 1];
+    if (last && last.pence === pence && last.to === slot - 1 && (slot <= yearTerms) === (last.from <= yearTerms)) last.to = slot;
+    else runs.push({ from: slot, to: slot, pence });
+  }
+  const label = (r: { from: number; to: number }) => r.from === r.to ? slotName(r.from, yearTerms)
+    : r.from > yearTerms ? `Terms ${r.from - yearTerms}–${r.to - yearTerms} next year` : `Terms ${r.from}–${r.to}`;
+  return { firstPence: first, schedule: runs.map((r) => ({ label: label(r), pence: r.pence, count: r.to - r.from + 1 })) };
+}
 
 export async function cartQuote(): Promise<CartQuote> {
   const codes = await cartCodes();
@@ -60,7 +90,7 @@ export async function cartQuote(): Promise<CartQuote> {
       const pct = bundlePercent(joinable, t), disc = percentOf(price, pct), net = price - disc;
       return { code: r.code, level: r.level, subject: r.subject, colour: r.colour, years: r.years, slots: r.slots, page_slug: r.page_slug, year_label: r.year_label,
         listPence: price, discountPence: disc, netPence: net, feePence: start ? r.fee : 0, terms, perTermPence: Math.round(net / Math.max(1, terms)),
-        start, starts: opts, fullPence: r.total };
+        start, starts: opts, fullPence: r.total, yearTerms: r.terms };
     });
     const subtotal = lines.reduce((a, l) => a + l.listPence, 0), bundle = lines.reduce((a, l) => a + l.discountPence, 0);
     const bundlePct = subtotal ? Math.round((bundle / subtotal) * 100) : 0;
@@ -79,7 +109,9 @@ export async function cartQuote(): Promise<CartQuote> {
     const fees = lines.reduce((a, l) => a + l.feePence, 0);
     const terms = lines.reduce((a, l) => Math.max(a, l.terms), 0);
     const perTerm = lines.reduce((a, l) => a + l.perTermPence, 0) - (coupon && terms ? Math.round(coupon.pence / terms) : 0);
-    return { lines, subtotalPence: subtotal, bundlePct, bundlePence: bundle, coupon, totalPence: total, feesPence: fees, payPence: total + fees, perTermPence: Math.max(0, perTerm), terms };
+    const plan = spreadPlan(lines, coupon?.pence ?? 0);
+    return { lines, subtotalPence: subtotal, bundlePct, bundlePence: bundle, coupon, totalPence: total, feesPence: fees, payPence: total + fees, perTermPence: Math.max(0, perTerm), terms,
+      ...plan, todayPence: plan.firstPence + fees };
   });
 }
 

@@ -1112,8 +1112,15 @@ html:not([data-theme=dark]) .bt .bk-dl .bk-off dd{color:#5f6a12}
 .bt .bk-check{display:flex!important;flex-direction:row!important;gap:10px;align-items:flex-start;font-weight:400}
 .bt .bk-check input{width:20px;height:20px;margin:2px 0 0;accent-color:#68bbe4;flex:none}
 .bt .bk-check a{color:var(--b-sky)}
-.bt .bk-spread{display:none;margin:-6px 0 0 30px;color:var(--b-muted)}
-.bt .bk-form:has(input[name=spread]:checked) .bk-spread{display:block}
+/* Spread the cost (24 Nov): ticking the box swaps the total for what's paid today, with the Direct Debits after it */
+.bt .bk-sum .bk-sp{display:none}
+.bt .bk-sum:has(input[name=spread]:checked) .bk-sp{display:flex}
+.bt .bk-sum:has(input[name=spread]:checked) .bk-full{display:none}
+.bt .bk-sum:has(input[name=spread]:checked) .bk-plan{display:block}
+.bt .bk-plan{margin:0 0 6px;padding:12px 16px;border-radius:14px;background:var(--b-inset);color:var(--b-muted);font-size:15px}
+.bt .bk-plan p{margin:0 0 6px}.bt .bk-plan ul{list-style:none;margin:0;padding:0;display:grid;gap:4px}
+.bt .bk-plan li{display:flex;justify-content:space-between;gap:12px}.bt .bk-plan b{color:var(--b-ink);font-weight:500}
+.bt .bk-spreadbox{margin:14px 0 4px}
 .bt .bk-go{align-self:stretch;text-align:center}
 .bt .cd-hbtns .in-cart,.bt .in-cart{border-color:#68bbe4!important;color:#68bbe4}
 .bt .cd-hbtns button{font:inherit}
