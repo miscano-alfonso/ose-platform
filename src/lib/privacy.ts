@@ -58,6 +58,9 @@ export async function eraseFamily(actorId: string, requestId: string): Promise<s
     return await withSchool(async (q) => {
       const r = (await q<{ parent_id: string | null }>(`select parent_id from privacy_requests where id = $1 and kind = 'erasure' and status = 'open'`, [requestId]))[0];
       if (!r?.parent_id) return "That request isn’t linked to a family.";
+      // 24 Nov: sign the family out everywhere (their sessions and unused sign-in links went on working after erasure)
+      await q(`delete from family_sessions where parent_id = $1 or student_id in (select id from students where parent_id = $1)`, [r.parent_id]);
+      await q(`delete from family_links where parent_id = $1 or student_id in (select id from students where parent_id = $1)`, [r.parent_id]);
       await q(`select erase_family($1, $2)`, [r.parent_id, requestId]);
       await q(`update privacy_requests set status = 'done', outcome = 'Family erased; payment records kept without names for six years', completed_at = now() where id = $1`, [requestId]);
       await audit(q, actorId, "erase", "parent", r.parent_id);
