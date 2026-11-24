@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "Prices", description: "OH-SO ED cour
 export default async function Pricing() {
   const [rows, { ks3Pence, bundles }] = await Promise.all([getPriceRows(), getBundles()]);
   return (<>
-    <section className="s-phead"><div className="wrap"><h1>Our Pricing Plan</h1><p>Every course is priced per lesson. Payments are taken termly, two weeks before each term starts.</p></div></section>
+    <section className="s-phead"><div className="wrap"><h1>Our Pricing Plan</h1><p>Every course is priced per lesson. Pay in full, or termly by Direct Debit, collected two weeks before each term starts.</p></div></section>
     <section className="s-sec"><div className="wrap">
       <div className="ptab-wrap"><table className="ptab">
         <thead><tr><th scope="col">Level</th><th scope="col">Course length</th><th scope="col">Lessons</th><th scope="col">Cost per lesson</th><th scope="col">Total</th></tr></thead>

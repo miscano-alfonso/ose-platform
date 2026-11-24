@@ -34,7 +34,7 @@ export function Calculator({ years }: { years: CalcYear[] }) {
           <div><dt>First termly payment**</dt><dd>{money(firstTerm)}</dd></div>
         </dl>
         {lines.length > 0 && <ul className="calc-inst">{lines.map((l) => <li key={l.subject}>{l.subject}: {l.terms} payments of {money(l.perTerm)}</li>)}</ul>}
-        <p className="calc-notes">* Excluding the {money(fee)} enrolment fee for each course.<br />** 6 payments for KS3 and Pre-GCSE, 5 for 1-year GCSE and 11 for 2-year GCSE, taken two weeks before each term.</p>
+        <p className="calc-notes">* Excluding the {money(fee)} enrolment fee for each course.<br />** 6 payments for KS3 and Pre-GCSE, 5 for 1-year GCSE and 11 for 2-year GCSE, collected by Direct Debit two weeks before each term.</p>
       </aside>
     </div>
   </div>;

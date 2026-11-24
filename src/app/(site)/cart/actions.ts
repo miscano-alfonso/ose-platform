@@ -63,7 +63,7 @@ export async function checkout(form: FormData) {
   const who = q.lines.map((l) => kids.get(v(`who:${l.code}`, 40)));
   if (who.some((w) => !w)) return back("Choose the student for each course.");
   const spread = v("spread") === "1";
-  const lines = q.lines.map((l, i) => `${l.level} ${l.subject} (${l.code}) for ${who[i]}, starting ${l.start!.termName}${l.start!.from ? ` (first lesson ${l.start!.from})` : ""}${l.start!.lessons ? `, ${l.start!.lessons} lessons` : ""}: ${money(l.netPence)}${l.discountPence ? ` after ${money(l.discountPence)} bundle discount` : ""}`);
+  const lines = q.lines.map((l, i) => `${l.level} ${l.subject} (${l.code}) for ${who[i]}, starting ${l.start!.termName}${l.start!.from ? ` (first lesson ${l.start!.from})` : ""}${l.start!.lessons ? `, paying for ${l.start!.lessons} lessons from the start of ${l.start!.termName}` : ""}: ${money(l.netPence)}${l.discountPence ? ` after ${money(l.discountPence)} bundle discount` : ""}`);
   const message = [...lines,
     q.coupon ? `Coupon ${q.coupon.code}: −${money(q.coupon.pence)}` : "",
     `Courses ${money(q.totalPence)} + registration fees ${money(q.feesPence)} = ${money(q.payPence)}`,

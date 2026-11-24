@@ -1,8 +1,8 @@
 import "server-only";
 
 // When a new pupil starts a course (24 Nov). Parents choose "This term" or "Next term"; the price is the course year's
-// price × the share of the year's lessons still to come from that start (so holidays and short terms count properly),
-// plus any later years of the course in full. Joining rules (Alfonso, 24 Nov): a 1-year GCSE can only be joined in Term 1;
+// price × the share of the year's lessons in the terms from the start term on (so short terms count properly), plus any
+// later years of the course in full. Joining part-way through a term pays for the whole term (Alfonso, 24 Nov). Joining rules (Alfonso, 24 Nov): a 1-year GCSE can only be joined in Term 1;
 // a 2-year GCSE only in Terms 1–2 of its first year. KS3 and Pre-GCSE can be joined any term.
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 export type StartKey = "this" | "next";
@@ -28,7 +28,7 @@ export async function startOptions(q: Q, groups: { id: string; level: string; co
       (select count(*)::int from ev where ev.group_id = t.group_id and ev.term_id = t.term_id and ev.lesson_date > current_date) as left_here,
       (select min(ev.lesson_date)::text from ev where ev.group_id = t.group_id and ev.term_id = t.term_id and ev.lesson_date > current_date) as first_here,
       (select count(*)::int from ev where ev.group_id = t.group_id) as year_total,
-      (select count(*)::int from ev join t t2 on t2.term_id = ev.term_id and t2.group_id = ev.group_id where ev.group_id = t.group_id and t2.number >= t.number and ev.lesson_date > current_date) as left_from
+      (select count(*)::int from ev join t t2 on t2.term_id = ev.term_id and t2.group_id = ev.group_id where ev.group_id = t.group_id and t2.number >= t.number) as left_from
     from t join cur on cur.group_id = t.group_id where t.number in (cur.number, cur.number + 1) order by t.group_id, t.number`, [groups.map((g) => g.id)]);
   for (const g of groups) {
     const last = latestStartTerm(g.level, g.courseYears, g.yearOfCourse);

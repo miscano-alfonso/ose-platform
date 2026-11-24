@@ -36,7 +36,7 @@ export default async function TermDates({ searchParams }: { searchParams: Promis
               <div className="td"><span className="lab">Payment</span><b>{t.number === 1 ? "On enrolment" : `Taken ${dayMonth(t.bills_on)}`}</b></div>
               <div className="td brk"><span className="lab">Break</span><b>{t.break_start ? `${dayMonth(t.break_start)} – ${dayMonth(t.break_end!)}` : "Summer holiday"}</b></div>
             </div>; })}</div></div>; })}
-      <p className="ttnote">Termly payments are taken 2 weeks before each new term starts. Term 1 is paid when you enrol.</p>
+      <p className="ttnote">Termly payments are collected by Direct Debit on each term’s payment date, two weeks before the term starts. Your first payment is made when you book.</p>
     </div></section>
   </>);
 }
