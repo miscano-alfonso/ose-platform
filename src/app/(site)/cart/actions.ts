@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { withSchool } from "@/lib/db";
 import { money } from "@/lib/format";
-import { CART_COOKIE, COUPON_COOKIE, cartCodes, cartValue, cartQuote } from "@/lib/cart";
+import { CART_COOKIE, COUPON_COOKIE, START_COOKIE, cartCodes, cartValue, cartQuote, cartStarts } from "@/lib/cart";
 import { currentFamily } from "@/lib/family-auth";
 import { familyChildren } from "@/lib/registration";
 
@@ -22,6 +22,17 @@ export async function addToCart(code: string): Promise<number> {
 export async function removeFromCart(form: FormData) {
   const code = String(form.get("code") ?? "");
   (await cookies()).set(CART_COOKIE, cartValue((await cartCodes()).filter((c) => c !== code)), keep);
+  redirect("/cart");
+}
+
+/** 24 Nov: "This term" or "Next term" for one course in the basket. */
+export async function setStart(form: FormData) {
+  const code = String(form.get("code") ?? ""), start = String(form.get("start") ?? "");
+  if (/^[\w/-]{1,40}$/.test(code) && (start === "this" || start === "next")) {
+    const all = { ...(await cartStarts()), [code]: start } as Record<string, string>;
+    const codes = new Set(await cartCodes()); for (const k of Object.keys(all)) if (!codes.has(k)) delete all[k];
+    (await cookies()).set(START_COOKIE, JSON.stringify(all), keep);
+  }
   redirect("/cart");
 }
 
@@ -45,12 +56,14 @@ export async function checkout(form: FormData) {
   if (fam.viewer) return back("You’re viewing as this family, so nothing can be booked.");
   const q = await cartQuote();
   if (!q.lines.length) return back("Your basket is empty.");
+  const closed = q.lines.filter((l) => !l.start);
+  if (closed.length) return back(`${closed.map((l) => `${l.level} ${l.subject}`).join(", ")} can’t be joined at this point in the year. Remove it from your basket, or contact us about next year.`);
   if (v("terms") !== "1") return back("Please agree to the Terms & Conditions.");
   const kids = new Map((await familyChildren(fam.id)).map((k) => [k.id, k.name]));
   const who = q.lines.map((l) => kids.get(v(`who:${l.code}`, 40)));
   if (who.some((w) => !w)) return back("Choose the student for each course.");
   const spread = v("spread") === "1";
-  const lines = q.lines.map((l, i) => `${l.level} ${l.subject} (${l.code}) for ${who[i]}: ${money(l.netPence)}${l.discountPence ? ` after ${money(l.discountPence)} bundle discount` : ""}`);
+  const lines = q.lines.map((l, i) => `${l.level} ${l.subject} (${l.code}) for ${who[i]}, starting ${l.start!.termName}${l.start!.from ? ` (first lesson ${l.start!.from})` : ""}${l.start!.lessons ? `, ${l.start!.lessons} lessons` : ""}: ${money(l.netPence)}${l.discountPence ? ` after ${money(l.discountPence)} bundle discount` : ""}`);
   const message = [...lines,
     q.coupon ? `Coupon ${q.coupon.code}: −${money(q.coupon.pence)}` : "",
     `Courses ${money(q.totalPence)} + registration fees ${money(q.feesPence)} = ${money(q.payPence)}`,
@@ -59,6 +72,6 @@ export async function checkout(form: FormData) {
   await withSchool((db) => db(`insert into enquiries (school_id, kind, name, email, child_name, subject, levels, message)
     values (current_school(), 'booking', $1, $2, $3, $4, $5, $6)`,
     [`${fam.first} ${fam.last}`, fam.email, [...new Set(who)].join(", "), `${q.lines.length} course${q.lines.length > 1 ? "s" : ""} · ${money(q.payPence)}`, [...new Set(q.lines.map((l) => l.level))], message]));
-  const jar = await cookies(); jar.delete(CART_COOKIE); jar.delete(COUPON_COOKIE);
+  const jar = await cookies(); jar.delete(CART_COOKIE); jar.delete(COUPON_COOKIE); jar.delete(START_COOKIE);
   redirect("/cart?sent=1");
 }

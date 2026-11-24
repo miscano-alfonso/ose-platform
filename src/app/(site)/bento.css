@@ -1271,3 +1271,8 @@ html:not([data-theme=dark]) .bt .rg-warn{color:#b3392a}
 /* 21 Nov: the footer always reaches the bottom of the window, even on short pages */
 .bt{display:flex;flex-direction:column;min-height:100vh;min-height:100dvh}
 .bt>main{flex:1 0 auto}.bt>.s-foot{flex-shrink:0}
+/* basket: when each course starts (24 Nov) */
+.bt .bk-start{margin-top:6px}.bt .bk-start label{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px;color:var(--b-sky)}
+.bt .bk-start select{font:inherit;font-size:14px;color:var(--b-ink);background:var(--b-inset);border:1px solid var(--b-line);border-radius:12px;padding:6px 10px;max-width:100%}
+.bt .bk-startone{margin:6px 0 0;font-size:13px;color:var(--b-sky)}
+.bt .bk-closed{margin:6px 0 0;font-size:14px;color:var(--b-ink)}.bt .bk-closed a{color:var(--b-sky)}

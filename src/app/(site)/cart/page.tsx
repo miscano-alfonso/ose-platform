@@ -5,12 +5,16 @@ import { currentFamily } from "@/lib/family-auth";
 import { familyChildren } from "@/lib/registration";
 import { money } from "@/lib/format";
 import { roundelFace, Roundel } from "../CourseCard";
-import { removeFromCart, applyCoupon, checkout } from "./actions";
+import { removeFromCart, applyCoupon, checkout, setStart } from "./actions";
+import { StartPicker } from "./StartPicker";
+import type { StartOption } from "@/lib/start-terms";
 
 export const dynamic = "force-dynamic";
 export const metadata: Metadata = { title: "Basket", robots: { index: false, follow: false } };
 const DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const TERMS_URL = "https://ohsoed.co.uk/terms-conditions";
+const dd = (d: string | null) => d ? new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London" }) : "";
+const startLabel = (o: StartOption) => `${o.key === "this" ? "This term" : "Next term"} (${o.termName}${o.from ? `, from ${dd(o.from)}` : ""}) · ${money(o.pence)}`;
 
 // The basket (31 Oct), from ohsoed.co.uk/cart in the new style: the courses on the left, the summary and checkout on the right.
 // Checkout sends the booking to the office (Admin → Enquiries), who confirm the places and email a secure payment link.
@@ -40,8 +44,11 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
               <Roundel subject={l.subject} className="bk-rd" size={58} />
               <div className="bk-name"><Link href={`/courses/${l.page_slug}`}><b>{l.subject}</b></Link>
                 <span>{l.level} · {l.years} year{l.years > 1 ? "s" : ""}</span>
-                {l.slots?.map((s, i) => <span key={i} className="bk-slot">{DAYS[s.d]} {s.t}</span>)}</div>
-              <div className="bk-price"><b>{money(l.netPence)}</b>{l.discountPence > 0 && <s>{money(l.listPence)}</s>}<span>or {money(l.perTermPence)} a term</span></div>
+                {l.slots?.map((s, i) => <span key={i} className="bk-slot">{DAYS[s.d]} {s.t}</span>)}
+                {!l.start ? <p className="bk-closed">This course can’t be joined at this point in the year. <Link href="/contact">Ask us about next year</Link></p>
+                  : l.starts.length > 1 ? <StartPicker code={l.code} value={l.start.key} action={setStart} options={l.starts.map((o) => ({ key: o.key, label: startLabel(o) }))} />
+                  : <p className="bk-startone">Starts {l.start.termName}{l.start.from ? `, from ${dd(l.start.from)}` : ""}</p>}</div>
+              <div className="bk-price">{l.start ? <><b>{money(l.netPence)}</b>{l.discountPence > 0 && <s>{money(l.listPence)}</s>}<span>{[l.start.lessons ? `${l.start.lessons} lessons` : "", l.terms > 1 ? `or ${money(l.perTermPence)} a term` : ""].filter(Boolean).join(" · ")}</span></> : <b>–</b>}</div>
               {parent && <label className="bk-who"><span>Student</span>{kids.length ? <select name={`who:${l.code}`} form="bk-checkout" required defaultValue={kids.length === 1 ? kids[0].id : ""}>
                   {kids.length > 1 && <option value="" disabled>Choose a child</option>}{kids.map((k) => <option key={k.id} value={k.id}>{k.name}</option>)}</select>
                 : <Link href="/register?next=/cart">Add a child first</Link>}</label>}
@@ -50,6 +57,7 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
             </li>; })}</ul>
           <ol className="bk-notes">
             <li>10% off when you take 3 or 4 courses, 15% off for 5 or more, applied automatically.</li>
+            <li>Starting part-way through the year? Choose This term or Next term: you pay only for the lessons from then to the end of the course year (holidays don’t count). A 1-year GCSE starts in Term 1, and a 2-year GCSE in Term 1 or 2.</li>
             <li>Registration fee: {q.lines[0] ? money(q.lines[0].feePence) : "£25"} per course (non-refundable).</li>
             <li>Spread the cost: pay each course in equal instalments, taken 2 weeks before each term starts.</li>
           </ol>
