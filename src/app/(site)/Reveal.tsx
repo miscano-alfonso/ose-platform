@@ -17,8 +17,14 @@ export function Reveal() {
       es.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top || a.boundingClientRect.left - b.boundingClientRect.left)
         .forEach((e) => { const el = e.target as HTMLElement; el.style.setProperty("--ri", String(Math.min(batch++, 8))); el.classList.add("rv-in"); io.unobserve(el); });
     }, { threshold: 0.08, rootMargin: "0px 0px -4% 0px" });
-    document.querySelectorAll<HTMLElement>(REVEAL).forEach((el) => { if (!el.classList.contains("rv-in")) io.observe(el); });
-    return () => io.disconnect();
+    const scan = () => document.querySelectorAll<HTMLElement>(REVEAL).forEach((el) => { if (!el.classList.contains("rv-in")) io.observe(el); });
+    scan();
+    // 25 Nov: blocks redrawn after an in-page update (e.g. the basket after changing a start term) are revealed too,
+    // instead of staying hidden until the CSS fallback
+    let t = 0;
+    const mo = new MutationObserver(() => { clearTimeout(t); t = window.setTimeout(scan, 30); });
+    const main = document.querySelector("main"); if (main) mo.observe(main, { childList: true, subtree: true });
+    return () => { io.disconnect(); mo.disconnect(); clearTimeout(t); };
   }, [path]);
   return null;
 }

@@ -33,7 +33,7 @@ export async function setStart(form: FormData) {
     const codes = new Set(await cartCodes()); for (const k of Object.keys(all)) if (!codes.has(k)) delete all[k];
     (await cookies()).set(START_COOKIE, JSON.stringify(all), keep);
   }
-  redirect("/cart");
+  revalidatePath("/cart");   // 25 Nov: refresh the basket in place (a redirect blanked the page while it reloaded)
 }
 
 export async function applyCoupon(form: FormData) {

@@ -1276,3 +1276,5 @@ html:not([data-theme=dark]) .bt .rg-warn{color:#b3392a}
 .bt .bk-start select{font:inherit;font-size:14px;color:var(--b-ink);background:var(--b-inset);border:1px solid var(--b-line);border-radius:12px;padding:6px 10px;max-width:100%}
 .bt .bk-startone{margin:6px 0 0;font-size:13px;color:var(--b-sky)}
 .bt .bk-closed{margin:6px 0 0;font-size:14px;color:var(--b-ink)}.bt .bk-closed a{color:var(--b-sky)}
+.bt .bk-busy{font-size:13px;color:var(--b-muted)}
+.bt .bk-row:has(.bk-start[aria-busy]) .bk-price{opacity:.5;transition:opacity .2s}
