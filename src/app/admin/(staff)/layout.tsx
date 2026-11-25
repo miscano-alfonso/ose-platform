@@ -38,11 +38,13 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       <span className="grow" /><a className="abtn sm side-btn" href="/admin">Back to the admin</a>
     </div><main className="main staffmain">{children}</main></div>;
 
-  const [c] = await withSchool((q) => q<{ msgs: number; reports: number }>(`select
+  const [c] = await withSchool((q) => q<{ msgs: number; reports: number; marking: number }>(`select
     (select count(*)::int from message_threads th join teachers t on t.id = th.teacher_id where t.user_id = $1 and th.status = 'open'
       and (select m.sender from messages m where m.thread_id = th.id order by m.created_at desc limit 1) = 'parent') as msgs,
     (select count(*)::int from report_entries e join report_cycles cy on cy.id = e.cycle_id join course_groups g on g.id = e.group_id join teachers t on t.id = g.teacher_id
-      where t.user_id = $1 and cy.status <> 'published' and e.status in ('todo','draft','returned')) as reports`, [me.id]));
+      where t.user_id = $1 and cy.status <> 'published' and e.status in ('todo','draft','returned')) as reports,
+    (select count(*)::int from classroom_submissions s join classroom_coursework cw on cw.id = s.coursework_id join course_groups g on g.id = cw.group_id join teachers t on t.id = g.teacher_id
+      where t.user_id = $1 and s.state = 'turned_in' and exists (select 1 from enrolments e where e.group_id = g.id and e.student_id = s.student_id and e.status in ('active', 'pending'))) as marking`, [me.id]));
 
   return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles />
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
@@ -52,7 +54,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {sch?.is_demo ? <a className="logo" href="/admin/teacher" title="My day" style={{ font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
         : <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>}
-        <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports }} groups={await teacherMenu()} />
+        <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports, "/admin/teacher/marking": c.marking }} groups={await teacherMenu()} />
         <SideFoot theme={theme} signOut={signOutAction} inline toggle />
       </aside>
       <main className="main"><TopBar />{children}</main>

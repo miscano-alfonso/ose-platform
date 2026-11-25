@@ -39,3 +39,18 @@ export function countdown(daysLeft: number): string {
   return daysLeft === 0 ? "Due today" : daysLeft === 1 ? "Due tomorrow" : `${daysLeft} days left`;
 }
 export const tone = (daysLeft: number) => daysLeft < 0 ? "bad" : daysLeft <= REMIND_DAYS ? "warn" : "ok";
+
+/** The Marking page (25 Nov): every handed-in piece of work still to be returned, one row per student's hand-in,
+ *  for this teacher's classes, with the link to that hand-in in Classroom. The countdown is the piece of work's. */
+export type MarkSub = { sid: string; cw: string; title: string; cwLink: string | null; link: string | null; gid: string; cls: string; code: string;
+  student: string; late: boolean; turnedIn: string | null; due: string | null };
+export async function markingSubmissions(teacherUserId: string): Promise<MarkSub[]> {
+  return withSchool((q) => q<MarkSub>(`select s.id as sid, c.id as cw, c.title, c.link as "cwLink", s.link, g.id as gid, l.name || ' ' || sj.name as cls, g.code,
+      st.first_name || ' ' || st.last_name as student, coalesce(s.late, false) as late, s.turned_in_at::text as "turnedIn", c.due_at::text as due
+    from classroom_submissions s join classroom_coursework c on c.id = s.coursework_id join course_groups g on g.id = c.group_id
+      join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join students st on st.id = s.student_id
+      join teachers t on t.id = g.teacher_id
+    where s.state = 'turned_in' and t.user_id = $1
+      and exists (select 1 from enrolments e where e.group_id = g.id and e.student_id = s.student_id and e.status in ('active', 'pending'))
+    order by s.turned_in_at nulls last, st.last_name`, [teacherUserId])).catch(() => []);
+}

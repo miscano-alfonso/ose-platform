@@ -1390,3 +1390,14 @@
 .sc-pick{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
 .sc-pick input[type=color]{width:44px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--panel);cursor:pointer}
 .sc-used{font-size:13.5px}
+/* Teacher → Marking (25 Nov) */
+.adm .mk-card{display:grid;gap:8px}.adm .mk-card h2 .muted{font-weight:400;font-size:.8em}
+.adm .mk-piece{border:1px solid var(--line);border-radius:12px;background:var(--soft)}
+.adm .mk-piece summary{display:flex;align-items:center;gap:12px;padding:12px 14px;cursor:pointer;list-style:none}.adm .mk-piece summary::-webkit-details-marker{display:none}
+.adm .mk-piece summary .t{flex:1;min-width:0;display:grid;gap:2px}.adm .mk-piece summary .t span{color:var(--muted);font-size:14px}
+.adm .mk-piece summary::before{content:"▸";color:var(--muted);transition:transform .15s}.adm .mk-piece[open] summary::before{transform:rotate(90deg)}
+.adm .mk-subs{list-style:none;margin:0;padding:0 14px 6px 36px;display:grid}
+.adm .mk-subs li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:8px 0;border-top:1px solid var(--line)}
+.adm .mk-who{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}.adm .mk-who>span:not(.pill){color:var(--muted);font-size:14px}
+.adm .mk-all{margin:0;padding:0 14px 12px 36px;font-size:14px}.adm .mk-all a{color:var(--ink)}
+@media (max-width:600px){.adm .mk-subs,.adm .mk-all{padding-left:14px}.adm .mk-subs li{flex-wrap:wrap}.adm .mk-piece summary{flex-wrap:wrap;row-gap:6px}.adm .mk-piece summary .t{flex-basis:calc(100% - 30px)}.adm .mk-piece summary .pill{margin-left:24px}}
