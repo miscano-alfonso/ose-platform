@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { PAGES, type Role, type Section } from "../content";
+import { PAGES, DASH, type Role, type Section } from "../content";
 
 // /newdashboard/teacher, /parent and /student (25 Nov): unlisted pages introducing the new dashboards, section by section,
-// with a sticky button that opens that dashboard in the demo school (made-up data, read-only).
+// with a sticky button in the header (layout.tsx) that opens the real dashboard in a new tab.
 export const dynamic = "force-dynamic";
 const ROLES = Object.keys(PAGES) as Role[];
 const page = (r: string) => (ROLES.includes(r as Role) ? PAGES[r as Role] : null);
@@ -36,11 +36,11 @@ function Block({ role, s, i }: { role: Role; s: Section; i: number }) {
   </section>;
 }
 
-export default async function NewDashboard({ params, searchParams }: { params: Promise<{ role: string }>; searchParams: Promise<{ demo?: string }> }) {
-  const [{ role }, sp] = await Promise.all([params, searchParams]);
+export default async function NewDashboard({ params }: { params: Promise<{ role: string }> }) {
+  const { role } = await params;
   const p = page(role);
   if (!p) notFound();
-  const demo = `/newdashboard/${p.role}/demo`, who = p.role === "teacher" ? "teacher" : p.role;
+  const dash = DASH[p.role], who = p.role;
   return (<>
     <section className="s-phead nd-head"><div className="wrap">
       <div className="nd-hgrid">
@@ -52,10 +52,9 @@ export default async function NewDashboard({ params, searchParams }: { params: P
         <Shot role={p.role} name="phone" alt={`The ${who} dashboard on a phone`} phone />
       </div>
     </div></section>
-    <div className="nd-sticky"><a className="nd-go" href={demo}>Try the demo {who} dashboard <span aria-hidden="true">→</span></a></div>
     <div className="s-sec nd-body"><div className="wrap">
-      {sp.demo && <p className="notice err" role="alert">{sp.demo.slice(0, 200)}</p>}
       <ul className="nd-high">{p.highlights.map((h) => <li key={h.t}><b>{h.t}</b><span>{h.d}</span></li>)}</ul>
+      <p className="nd-made">The screenshots show the dashboards with made-up students and families.</p>
       <nav className="nd-jump" aria-label="On this page">{p.sections.map((s) => <a key={s.id} href={`#${s.id}`}>{s.title}</a>)}</nav>
       {p.sections.map((s, i) => <Block key={s.id} role={p.role} s={s} i={i} />)}
       <section className="nd-start" aria-labelledby="h-start">
@@ -63,9 +62,9 @@ export default async function NewDashboard({ params, searchParams }: { params: P
         <ul>{p.signIn.map((x) => <li key={x.title}><b>{x.title}</b><span>{x.text}</span></li>)}</ul>
       </section>
       <section className="nd-end">
-        <h2>Have a look round</h2>
-        <p>{p.demoNote}</p>
-        <a className="wk-go" href={demo}>Try the demo {who} dashboard</a>
+        <h2>Ready when you are</h2>
+        <p>{p.endNote}</p>
+        <a className="wk-go" href={dash.href} target="_blank" rel="noopener">Go to your {who} dashboard<span className="sr-only"> (opens in a new tab)</span></a>
       </section>
     </div></div>
   </>);

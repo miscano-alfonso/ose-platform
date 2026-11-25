@@ -1,9 +1,13 @@
 // /newdashboard/<role> (25 Nov 2026): introducing the new dashboards to teachers, parents and students before the January switch.
-// Each section has a screenshot of Demo Academy (made-up data) in public/newdashboard/<role>-<shot>-<light|dark>.webp,
-// taken by scratch/qa/nd-shots.js. The sticky button opens that dashboard in the demo (/newdashboard/<role>/demo).
+// Each section has a screenshot in public/newdashboard/<role>-<shot>-<light|dark>.webp: OH-SO ED's dashboards with made-up
+// students and families (Demo Academy's data shown in OH-SO ED's look), taken by scratch/qa/nd-shots.js.
+// The sticky button in the header (see (site)/layout.tsx) opens the real dashboard in a new tab; signed out, it asks them to sign in.
+export const DASH = {
+  teacher: { href: "/admin/teacher" }, parent: { href: "/parent" }, student: { href: "/student" },
+} as const;
 export type Role = "teacher" | "parent" | "student";
 export type Section = { id: string; title: string; text: string; points: string[]; shot?: string; alt: string };
-export type Page = { role: Role; label: string; title: string; lead: string; highlights: { t: string; d: string }[]; sections: Section[]; signIn: { title: string; text: string }[]; demoNote: string };
+export type Page = { role: Role; label: string; title: string; lead: string; highlights: { t: string; d: string }[]; sections: Section[]; signIn: { title: string; text: string }[]; endNote: string };
 
 export const PAGES: Record<Role, Page> = {
   teacher: {
@@ -52,7 +56,7 @@ export const PAGES: Record<Role, Page> = {
       { title: "Google stays the same", text: "Keep teaching in Google Meet and setting and marking work in Google Classroom. The dashboard reads them; it doesn’t replace them." },
       { title: "Light or dark, phone or computer", text: "Choose light or dark at the bottom of the menu. Every page works on a phone." },
     ],
-    demoNote: "The demo opens a made-up school, Demo Academy, as one of its teachers. Everything in it is invented, so click anything: nothing is ever emailed, charged or posted.",
+    endNote: "Open your dashboard and sign in with your email address and password. If you haven’t set a password yet, use the link in your invitation email.",
   },
   parent: {
     role: "parent", label: "Parents",
@@ -97,7 +101,7 @@ export const PAGES: Record<Role, Page> = {
       { title: "Your children’s Google accounts", text: "Your children keep joining lessons in Google Meet and doing their work in Google Classroom with their own Google account. The dashboard shows you what’s happening there." },
       { title: "Light or dark, phone or computer", text: "Choose light or dark at the bottom of the menu. Every page works on a phone." },
     ],
-    demoNote: "The demo opens a made-up school, Demo Academy, as a parent with two children. Everything in it is invented, so click anything: nothing is ever emailed, charged or posted. If you’re already signed in to your own dashboard, the demo signs you out of it; sign in again when you’ve finished.",
+    endNote: "Open your dashboard and enter your email address: we’ll email you a link to sign in. Use the email address you gave us when you registered.",
   },
   student: {
     role: "student", label: "Students",
@@ -130,6 +134,6 @@ export const PAGES: Record<Role, Page> = {
       { title: "Google stays the same", text: "Your lessons are still in Google Meet and your work is still in Google Classroom, with your own Google account." },
       { title: "Light or dark, phone or computer", text: "Choose light or dark at the bottom of the menu. Every page works on a phone." },
     ],
-    demoNote: "The demo opens a made-up school, Demo Academy, as one of its students. Everything in it is invented, so click anything. If you’re already signed in to your own dashboard, the demo signs you out of it; sign in again when you’ve finished.",
+    endNote: "Open your dashboard and enter your email address: we’ll email you a link to sign in. Use the email address your parent gave us.",
   },
 };

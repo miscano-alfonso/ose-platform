@@ -1390,6 +1390,3 @@
 .sc-pick{display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer}
 .sc-pick input[type=color]{width:44px;height:34px;padding:2px;border:1px solid var(--line);border-radius:8px;background:var(--panel);cursor:pointer}
 .sc-used{font-size:13.5px}
-/* /newdashboard demo bar (25 Nov): the buttons never shrink or get cut off */
-.adm .viewbar .viewbar-btns,.adm:has(>.viewbar) .viewbar .viewbar-btns{display:flex;gap:8px;flex:none;margin-left:auto;overflow:visible;min-width:auto}
-.adm .viewbar .viewbar-btns a{white-space:nowrap;text-decoration:none}

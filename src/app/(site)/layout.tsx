@@ -16,6 +16,8 @@ import { NewsletterForm } from "./NewsletterForm";
 import { demoCss } from "./demo-theme";
 import { SiteTheme } from "./SiteTheme";
 import "./bento.css";
+import { headers } from "next/headers";
+import { DASH } from "./newdashboard/content";
 
 
 // every page depends on which school is shown (the demo website uses the same pages)
@@ -37,6 +39,9 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
   const duo = !site.demo && (logo.startsWith("/ose-logo.svg") || await isPlatformSchool());
   const inCart = site.demo ? 0 : (await cartCodes()).length;
   const css = stylesCss(styles), fonts = fontsHref(styles);
+  // /newdashboard/<role> (25 Nov): a stand-alone introduction, without the website's menu: the logo, light/dark and a sticky
+  // button to that dashboard (opening in a new tab), and only the legal line at the bottom
+  const nd = site.demo ? null : DASH[(/^\/newdashboard\/(teacher|parent|student)\/?$/.exec((await headers()).get("x-ose-path") ?? "") ?? [])[1] as keyof typeof DASH] ?? null;
   return (<div className={site.demo ? undefined : "bt"}>
       {!site.demo && <script dangerouslySetInnerHTML={{ __html: "if(!matchMedia('(prefers-reduced-motion: reduce)').matches)document.documentElement.classList.add('rv')" }} />}
         {fonts && <link id="ose-fonts" rel="stylesheet" href={fonts} />}
@@ -47,18 +52,23 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
         {site.demo && <><style dangerouslySetInnerHTML={{ __html: demoCss(site.primary, site.accent) }} />
           <div className="demo-bar"><div className="wrap"><span><b>Demo website.</b> {site.name} is a made-up school on OH-SO EdTech: browse and try booking, nothing is charged.</span>
             <span className="demo-links"><a href="/osedtech/demo">Its dashboard</a><a href="/osedtech">OH-SO EdTech</a><a href="/osedtech/demo/leave">Leave the demo</a></span></div></div></>}
-        <header className="s-nav"><div className="wrap">
+        {nd ? <header className="s-nav nd-nav"><div className="wrap">
+          <Link href="/" className="s-logo"><img src={duo ? "/ose-logo-duo.svg" : logo} className={duo ? "duo" : undefined} alt={`${site.name}: home`} width={773} height={224} /></Link>
+          <div className="s-icons"><SiteTheme /><a className="nd-go" href={nd.href} target="_blank" rel="noopener"><span><span className="nd-long">Go to y</span><span className="nd-short">Y</span>our dashboard</span><span aria-hidden="true">↗</span><span className="sr-only"> (opens in a new tab)</span></a></div>
+        </div></header>
+        : <header className="s-nav"><div className="wrap">
           <Link href="/" className="s-logo"><img src={duo ? "/ose-logo-duo.svg" : logo} className={duo ? "duo" : undefined} alt={`${site.name}: home`} width={773} height={224} /></Link>
           <div className="s-icons">{!site.demo && <SiteTheme />}<Link href="/cart" className="s-ico" aria-label={inCart ? `Basket, ${inCart} course${inCart > 1 ? "s" : ""}` : "Basket"}><Cart />{inCart > 0 && <span className="s-badge" aria-hidden="true">{inCart}</span>}</Link><Link href="/account" className="s-ico" aria-label="My account"><Person /></Link></div>
           <SiteNav items={NAV as [string, string][]} />
-        </div></header>
+        </div></header>}
         <main id="main">{children}</main>{!site.demo && <HeroNav />}{!site.demo && <ChalkTitles />}{!site.demo && <Reveal />}{!site.demo && <TiltTiles />}
-        <footer className="s-foot"><div className="wrap fgrid">
+        {nd ? <footer className="s-foot nd-foot"><div className="wrap copy"><span>© {new Date().getFullYear()} Oh-so Educate Ltd <span className="legal-links"> · <Link href="/privacy" className="adminlink">Privacy notice</Link> · <Link href="/cookies" className="adminlink">Cookies</Link></span></span></div></footer>
+        : <footer className="s-foot"><div className="wrap fgrid">
           {site.demo ? <div><div className="fl">{site.name}</div><p>A made-up online school, showing what OH-SO EdTech can do.</p></div>
           : <div><Link href="/" className="f-logo" aria-label="OH-SO ED: home"><img src={duo ? "/ose-logo-duo.svg" : logo} className={duo ? "duo" : undefined} alt="OH-SO ED" width={773} height={224} /></Link><p>Outstanding online education for home-educated students.</p>
             <h2 className="fh fh-follow">Follow us</h2><ul><li>Facebook /ohsoedonline</li><li>LinkedIn /ohsoed</li></ul></div>}
           <div className="fquick"><h2 className="fh">Quick links</h2><ul className="fcols"><li><Link href="/about">About us</Link></li>{[...NAV, ...MORE].map(([t, h]) => <li key={h}><Link href={h}>{t}</Link></li>)}<li><Link href="/jobs">Work with us</Link></li></ul></div>
           <NewsletterForm />
-        </div><div className="wrap copy"><span>© {new Date().getFullYear()} {site.demo ? `${site.name} (a made-up school)` : "Oh-so Educate Ltd"} <span className="legal-links"> · <Link href="/privacy" className="adminlink">Privacy notice</Link> · <Link href="/cookies" className="adminlink">Cookies</Link></span></span><span style={{ display: "flex", gap: 18, flexWrap: "wrap" }}><span>{site.demo ? "Runs on" : "Teach online yourself?"} <Link href="/osedtech" className="adminlink">OH-SO EdTech</Link></span>{site.demo ? <a href="/osedtech/demo" className="adminlink">Open the dashboard</a> : <Link href="/admin/login" className="adminlink">Admin login</Link>}</span></div></footer>
+        </div><div className="wrap copy"><span>© {new Date().getFullYear()} {site.demo ? `${site.name} (a made-up school)` : "Oh-so Educate Ltd"} <span className="legal-links"> · <Link href="/privacy" className="adminlink">Privacy notice</Link> · <Link href="/cookies" className="adminlink">Cookies</Link></span></span><span style={{ display: "flex", gap: 18, flexWrap: "wrap" }}><span>{site.demo ? "Runs on" : "Teach online yourself?"} <Link href="/osedtech" className="adminlink">OH-SO EdTech</Link></span>{site.demo ? <a href="/osedtech/demo" className="adminlink">Open the dashboard</a> : <Link href="/admin/login" className="adminlink">Admin login</Link>}</span></div></footer>}
       </div>);
 }

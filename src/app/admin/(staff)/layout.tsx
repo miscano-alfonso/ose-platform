@@ -1,4 +1,3 @@
-import { newDashRole, NewDashDemoBar } from "../../NewDashDemoBar";
 import { NotifyCenter } from "../../NotifyCenter";
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
@@ -27,7 +26,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   after(() => checkinsBackground()); // a school without Meet may only ever have teachers signed in
   const { logo } = await brandSrc();
   const sch = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string }; is_demo: boolean; name: string }>(`select brand, is_demo, name from schools where id = current_school()`)))[0];
-  const brand = sch?.brand ?? {}, palette = sch?.is_demo ? "demo" : undefined, nd = await newDashRole(sch?.is_demo);
+  const brand = sch?.brand ?? {}, palette = sch?.is_demo ? "demo" : undefined;
   const inkOn = (h: string) => { const n = parseInt(h.slice(1), 16), l = (0.299 * (n >> 16 & 255) + 0.587 * (n >> 8 & 255) + 0.114 * (n & 255)) / 255; return l < 0.6 ? "#ffffff" : "#0f1747"; };
   const hex = (v: unknown, d: string) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
   const style = { ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b"), ["--brand-accent-ink" as string]: inkOn(hex(brand.accent, "#e3cd4b")) };
@@ -46,7 +45,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       where t.user_id = $1 and cy.status <> 'published' and e.status in ('todo','draft','returned')) as reports`, [me.id]));
 
   return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles />
-    {me.viewing && nd ? <NewDashDemoBar role={nd} /> : me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
+    {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
     <LessonWindow /><NotifyCenter api="/admin/notify-api" role="teacher" /><div className="app">
       <aside className="side">
