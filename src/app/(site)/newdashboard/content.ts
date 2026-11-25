@@ -3,7 +3,8 @@
 // students and families (Demo Academy's data shown in OH-SO ED's look), taken by scratch/qa/nd-shots.js.
 // The sticky button in the header (see (site)/layout.tsx) opens the real dashboard in a new tab; signed out, it asks them to sign in.
 export const DASH = {
-  teacher: { href: "/admin/teacher" }, parent: { href: "/parent" }, student: { href: "/student" },
+  // through /admin/leave-demo, which first clears any Demo Academy visit in this browser
+  teacher: { href: "/admin/leave-demo?next=/admin/teacher" }, parent: { href: "/admin/leave-demo?next=/parent" }, student: { href: "/admin/leave-demo?next=/student" },
 } as const;
 export type Role = "teacher" | "parent" | "student";
 export type Section = { id: string; title: string; text: string; points: string[]; shot?: string; alt: string };
