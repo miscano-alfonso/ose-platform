@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PAGES, DASH, type Role, type Section } from "../content";
 import { JumpNav } from "../JumpNav";
+import { ZoomShots } from "../ZoomShots";
 
 // /newdashboard/teacher, /parent and /student (25 Nov): unlisted pages introducing the new dashboards, section by section,
 // with a sticky button in the header (layout.tsx) that opens the real dashboard in a new tab.
@@ -18,7 +19,7 @@ function Shot({ role, name, alt, phone }: { role: Role; name: string; alt: strin
   const src = (t: string) => `/newdashboard/${role}-${name}-${t}.webp`;
   const [w, h] = phone ? [780, 1328] : [1600, 1000];
   /* eslint-disable @next/next/no-img-element */
-  return <figure className={phone ? "nd-phone" : "nd-shot"}>
+  return <figure className={phone ? "nd-phone" : "nd-shot"} tabIndex={0} role="button" aria-label={`See larger: ${alt}`}>
     {!phone && <span className="nd-bar" aria-hidden="true"><i /><i /><i /></span>}
     <img className="nd-l" src={src("light")} alt={alt} width={w} height={h} loading="lazy" decoding="async" />
     <img className="nd-d" src={src("dark")} alt={alt} width={w} height={h} loading="lazy" decoding="async" />
@@ -43,6 +44,7 @@ export default async function NewDashboard({ params }: { params: Promise<{ role:
   if (!p) notFound();
   const dash = DASH[p.role], who = p.role;
   return (<>
+    <ZoomShots />{/* outside the sections, so the page's fade-in never hides it */}
     <section className="s-phead nd-head"><div className="wrap">
       <div className="nd-hgrid">
         <div>
