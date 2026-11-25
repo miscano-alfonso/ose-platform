@@ -7,7 +7,7 @@ export const DASH = {
   teacher: { href: "/admin/leave-demo?next=/admin/teacher" }, parent: { href: "/admin/leave-demo?next=/parent" }, student: { href: "/admin/leave-demo?next=/student" },
 } as const;
 export type Role = "teacher" | "parent" | "student";
-export type Section = { id: string; title: string; text: string; points: string[]; shot?: string; alt: string };
+export type Section = { id: string; title: string; nav?: string; text: string; points: string[]; shot?: string; alt: string };   // nav: a shorter name for the sticky links
 export type Page = { role: Role; label: string; title: string; lead: string; highlights: { t: string; d: string }[]; sections: Section[]; signIn: { title: string; text: string }[]; endNote: string };
 
 export const PAGES: Record<Role, Page> = {
@@ -42,7 +42,7 @@ export const PAGES: Record<Role, Page> = {
       { id: "reports", title: "Reports", shot: "reports", alt: "Reports to write: each class with how many comments are written, and a Write button",
         text: "Each term’s progress report comments, class by class, with how many you’ve written and the due date.",
         points: ["Write once the assessment is marked in Classroom", "Save as you go, then submit for the office to approve"] },
-      { id: "timetable", title: "My timetable, 1:1s and workshops", shot: "timetable", alt: "My timetable: your lessons for the week by day and time",
+      { id: "timetable", title: "My timetable, 1:1s and workshops", nav: "My timetable", shot: "timetable", alt: "My timetable: your lessons for the week by day and time",
         text: "Your week at a glance, plus your booked 1:1s and the hours you offer for them.",
         points: ["Set the hours parents can book you for 1:1s", "Each 1:1 has its own Meet link in your Google Calendar, and is logged as taught from Meet"] },
       { id: "points", title: "Reward points", shot: "points", alt: "Reward points: give 1 to 10 points to a student with a reason",

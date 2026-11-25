@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { PAGES, DASH, type Role, type Section } from "../content";
+import { JumpNav } from "../JumpNav";
 
 // /newdashboard/teacher, /parent and /student (25 Nov): unlisted pages introducing the new dashboards, section by section,
 // with a sticky button in the header (layout.tsx) that opens the real dashboard in a new tab.
@@ -53,9 +54,8 @@ export default async function NewDashboard({ params }: { params: Promise<{ role:
       </div>
     </div></section>
     <div className="s-sec nd-body"><div className="wrap">
-      <ul className="nd-high">{p.highlights.map((h) => <li key={h.t}><b>{h.t}</b><span>{h.d}</span></li>)}</ul>
+      <JumpNav items={p.sections.map((s) => ({ id: s.id, label: s.nav ?? s.title }))} />
       <p className="nd-made">The screenshots show the dashboards with made-up students and families.</p>
-      <nav className="nd-jump" aria-label="On this page">{p.sections.map((s) => <a key={s.id} href={`#${s.id}`}>{s.title}</a>)}</nav>
       {p.sections.map((s, i) => <Block key={s.id} role={p.role} s={s} i={i} />)}
       <section className="nd-start" aria-labelledby="h-start">
         <h2 id="h-start">Getting started</h2>
