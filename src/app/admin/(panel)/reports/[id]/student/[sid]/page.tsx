@@ -15,7 +15,8 @@ export default async function Preview({ params }: { params: Promise<{ id: string
     <p className="backlink"><Link className="abtn sm" href={`/admin/reports/${id}?tab=students`}>← Preview reports</Link></p>
     <section className="card" style={{ maxWidth: 820 }}>
       <div style={{ display: "flex", justifyContent: "space-between", flexWrap: "wrap", gap: 10 }}><div><h1 style={{ margin: 0 }}>{r.student}</h1><div className="sub">{r.cycle} · {r.school}</div></div>
-        <span className="muted">Published {new Date(r.publish_on + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</span></div>
+        <span style={{ display: "flex", gap: 10, alignItems: "center" }}><span className="muted">Published {new Date(r.publish_on + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</span>
+          {r.lines.some((l) => l.status === "approved") && <a className="abtn sm" href={`/admin/reports/${id}/student/${sid}/pdf`} target="_blank" rel="noopener">Download PDF</a>}</span></div>
       {r.lines.map((l, i) => <div key={i} style={{ borderTop: "1px solid var(--line)", paddingTop: 12, marginTop: 12 }}>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "baseline" }}><h2 style={{ margin: 0 }}>{l.subject}</h2><span className="muted">{l.level}{l.teacher ? ` · ${l.teacher}` : ""}</span>
           {l.status !== "approved" && <span className="pill warn">Not approved yet</span>}</div>

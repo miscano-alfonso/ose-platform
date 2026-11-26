@@ -503,11 +503,11 @@ export async function emailReportsAction(f: FormData): Promise<void> {
   if (!/^[0-9a-f-]{36}$/.test(id)) back("err", "Unknown report round.");
   const { emailReports } = await import("@/lib/report-email");
   if (f.get("test") === "1") {
-    const r = await emailReports(me.id, id, { email: me.email, name: me.name });
+    const r = await emailReports(me.id, id, { email: me.email, name: me.name }, me.name.split(" ")[0] || "OH-SO ED");
     back(r.error ? "err" : "ok", r.error ?? `Test sent to ${me.email}. Check it, then email the parents.`);
   }
   if (f.get("confirm") !== "on") back("err", "Tick the box to confirm the reports should go to parents.");
-  const r = await emailReports(me.id, id);
+  const r = await emailReports(me.id, id, undefined, me.name.split(" ")[0] || "OH-SO ED");
   revalidatePath(`/admin/reports/${id}`);
   back(r.error || r.failed ? "err" : "ok", r.error ?? (r.failed ? `${r.sent} sent, ${r.failed} didn’t go. Press the button again to retry the ones that didn’t.` : `${r.sent} report${r.sent === 1 ? "" : "s"} emailed to parents.`));
 }

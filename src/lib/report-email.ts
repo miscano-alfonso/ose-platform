@@ -2,38 +2,32 @@ import "server-only";
 import { withSchool } from "./db";
 import { studentReport } from "./reports";
 
-// 26 Nov: Reports → "Email the reports to parents". Each child's approved report, written out in full, to the account holder
+// 26 Nov: Reports → "Email the reports to parents". Each child's approved report as a PDF (laid out like the school's own reports,
+// src/lib/report-pdf.ts) with a short covering note, to the account holder
 // and a second parent who gets reports. Sent even while test mode is on (tag "report-full"), because the office presses the
 // button for it after reading the reports; nothing else is let through.
 export const REPORT_TAG = "report-full";
-type Family = { student_id: string; child: string; parent: string; email: string | null; g_first: string | null; g_email: string | null };
+type Family = { student_id: string; child: string; parent: string; parent_last: string; email: string | null; g_first: string | null; g_last: string | null; g_email: string | null };
 
 async function families(cycleId: string): Promise<Family[]> {
-  return withSchool((q) => q<Family>(`select distinct s.id as student_id, s.first_name as child, p.first_name as parent, p.email::text as email,
-      g.first_name as g_first, g.email::text as g_email
+  return withSchool((q) => q<Family>(`select distinct s.id as student_id, s.first_name as child, p.first_name as parent, p.last_name as parent_last, p.email::text as email,
+      g.first_name as g_first, g.last_name as g_last, g.email::text as g_email
     from report_entries e join students s on s.id = e.student_id join parents p on p.id = s.parent_id
     left join guardians g on g.parent_id = p.id and g.receives_reports
     where e.cycle_id = $1 and e.status = 'approved' order by s.first_name`, [cycleId]));
 }
 
-/** The email: a short note, then each subject (teacher, scores, grades, comment), then what the scores mean. */
-export async function reportEmail(cycleId: string, studentId: string, parentFirst: string): Promise<{ subject: string; body: string } | null> {
+/** The email: a short note like the school's own ("Please find attached…"), signed by whoever sends it, with the report as a PDF. */
+export async function reportEmail(cycleId: string, studentId: string, sender: string): Promise<{ subject: string; body: (to: string) => string; attachment: { name: string; content: string } } | null> {
   const r = await studentReport(cycleId, studentId);
-  if (!r) return null;
-  const lines = r.lines.filter((l) => l.status === "approved");
-  if (!lines.length) return null;
+  const { reportPdf } = await import("./report-pdf");
+  const pdf = r ? await reportPdf(cycleId, studentId) : null;
+  if (!r || !pdf) return null;
   const child = r.student.split(" ")[0];
-  const label = (n: number | null) => n == null ? "–" : `${n} (${r.bands.find((b) => b.score === n)?.label ?? ""})`.replace(" ()", "");
-  const parts = lines.map((l) => [
-    `${l.subject.toUpperCase()}${l.level ? ` · ${l.level}` : ""}${l.teacher ? ` · ${l.teacher}` : ""}`,
-    `Progress: ${label(l.progress)}   Effort: ${label(l.effort)}` + (l.working_grade != null ? `\nWorking grade: ${l.working_grade}   Predicted grade: ${l.predicted_grade ?? "–"}` : ""),
-    (l.comment || "").trim(),
-  ].filter(Boolean).join("\n"));
-  const key = r.bands.length ? `What the scores mean: ${r.bands.map((b) => `${b.score} ${b.label}`).join(", ")}.` : "";
   return {
-    subject: `${child}’s ${r.cycle}`,
-    body: [`Dear ${parentFirst},`, `Here is ${child}’s ${r.cycle} from ${r.school}, with a section from each of ${child}’s teachers.`,
-      ...parts, key, `If you have any questions about the report, just reply to this email and we’ll pass them on to the teacher.`, r.school].filter(Boolean).join("\n\n"),
+    subject: `${r.school} ${r.cycle}`,
+    body: (to) => [`Dear ${to},`, `Please find attached ${child}’s ${r.school} ${r.cycle}.`, `If you have any questions about the report, please do let me know.`, `Best wishes,\n${sender}`].join("\n\n"),
+    attachment: { name: pdf.filename, content: Buffer.from(pdf.bytes).toString("base64") },
   };
 }
 
@@ -48,23 +42,27 @@ export async function reportEmailStatus(cycleId: string): Promise<ReportEmailSta
 }
 
 /** Email every child's report that hasn't gone yet (or, with testTo, one example to that address only). */
-export async function emailReports(actorId: string, cycleId: string, testTo?: { email: string; name: string }): Promise<{ sent: number; failed: number; error?: string }> {
+export async function emailReports(actorId: string, cycleId: string, testTo?: { email: string; name: string }, sender = "OH-SO ED"): Promise<{ sent: number; failed: number; error?: string }> {
   const { sendOne } = await import("./email");
   const fam = await families(cycleId);
   if (!fam.length) return { sent: 0, failed: 0, error: "No approved reports in this round yet." };
   if (testTo) {
-    const f = fam[0], m = await reportEmail(cycleId, f.student_id, f.parent);
+    const f = fam[0], m = await reportEmail(cycleId, f.student_id, sender);
     if (!m) return { sent: 0, failed: 1, error: "Couldn’t build the example." };
-    const r = await sendOne([{ email: testTo.email, name: testTo.name }], `[Test] ${m.subject}`, `(Test: this is how ${f.parent}’s email will look. Only you received it.)\n\n${m.body}`, { tag: REPORT_TAG });
+    const r = await sendOne([{ email: testTo.email, name: testTo.name }], `[Test] ${m.subject}`, `(Test: this is how ${f.parent} ${f.parent_last}’s email will look, with ${f.child}’s report attached. Only you received it.)\n\n${m.body(`${f.parent} ${f.parent_last}`)}`, { tag: REPORT_TAG, attachments: [m.attachment] });
     return r.ok ? { sent: 1, failed: 0 } : { sent: 0, failed: 1, error: r.error };
   }
   const done = new Set((await withSchool((q) => q<{ student_id: string }>(`select student_id from report_emails where cycle_id = $1 and sent_at is not null`, [cycleId]))).map((r) => r.student_id));
   const todo = fam.filter((f) => !done.has(f.student_id) && f.email);
   let sent = 0, failed = 0;
   const one = async (f: Family) => {
-    const m = await reportEmail(cycleId, f.student_id, f.parent);
-    const to = [{ email: f.email!, name: f.parent }].concat(f.g_email && f.g_email.toLowerCase() !== f.email!.toLowerCase() ? [{ email: f.g_email, name: f.g_first ?? "" }] : []);
-    const r = m ? await sendOne(to, m.subject, m.body, { tag: REPORT_TAG }).catch((e) => ({ ok: false, error: String(e) } as { ok: boolean; error?: string })) : { ok: false, error: "No approved report." };
+    const m = await reportEmail(cycleId, f.student_id, sender);
+    const main = { email: f.email!, name: `${f.parent} ${f.parent_last}` }, second = f.g_email && f.g_email.toLowerCase() !== f.email!.toLowerCase() ? { email: f.g_email, name: `${f.g_first ?? ""} ${f.g_last ?? ""}`.trim() } : null;
+    // each parent gets their own copy, addressed to them by name
+    const send = async (t: { email: string; name: string }) => m ? sendOne([t], m.subject, m.body(t.name), { tag: REPORT_TAG, attachments: [m.attachment] }).catch((e) => ({ ok: false, error: String(e) } as { ok: boolean; error?: string })) : { ok: false, error: "No approved report." };
+    const res = [await send(main)].concat(second ? [await send(second)] : []);
+    const r = res.every((x) => x.ok) ? { ok: true } : { ok: false, error: res.find((x) => !x.ok)?.error };
+    const to = [main].concat(second ? [second] : []);
     if (r.ok) sent++; else failed++;
     await withSchool((q) => q(`insert into report_emails (school_id, cycle_id, student_id, sent_to, sent_by, sent_at, error) values (current_school(), $1, $2, $3, $4, $5, $6)
       on conflict (cycle_id, student_id) do update set sent_to = excluded.sent_to, sent_by = excluded.sent_by, sent_at = excluded.sent_at, error = excluded.error`,

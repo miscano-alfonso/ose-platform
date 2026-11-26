@@ -176,7 +176,7 @@ export async function sendHtml(subject: string, htmlContent: string, to: string[
 }
 
 /** One email (to one or more people, each sent separately), optionally scheduled with Brevo up to 72 hours ahead. Returns Brevo's message id(s). */
-export async function sendOne(to: Recipient[], subject: string, body: string, opts: { tag: string; scheduledAt?: string } ): Promise<{ ok: boolean; ids: string[]; error?: string; held?: number }> {
+export async function sendOne(to: Recipient[], subject: string, body: string, opts: { tag: string; scheduledAt?: string; attachments?: { name: string; content: string }[] } ): Promise<{ ok: boolean; ids: string[]; error?: string; held?: number }> {
   const c = await creds();
   if (!c) return { ok: false, ids: [], error: "Brevo isn’t connected yet." };
   if (!to.length) return { ok: false, ids: [], error: "No one to send it to." };
@@ -187,7 +187,8 @@ export async function sendOne(to: Recipient[], subject: string, body: string, op
   const res = await fetch(SMTP_URL(), {
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
     body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, false), textContent: body,
-      messageVersions: to.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [opts.tag], ...(opts.scheduledAt ? { scheduledAt: opts.scheduledAt } : {}) }),
+      messageVersions: to.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [opts.tag], ...(opts.scheduledAt ? { scheduledAt: opts.scheduledAt } : {}),
+      ...(opts.attachments?.length ? { attachment: opts.attachments } : {}) }),   // 26 Nov: e.g. a report PDF
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e), json: async () => ({}) }) as Response);
   if (!res.ok) return { ok: false, ids: [], error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
   const j = await res.json().catch(() => ({})) as { messageId?: string; messageIds?: string[] };
