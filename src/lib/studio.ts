@@ -5,7 +5,7 @@ import { getAiConfig } from "./social";
 // Sketch Studio (3 Nov): drawings in the home page's chalk style. Claude places shapes (a JSON "spec"); the page draws them.
 // The page calls ask() for every draft, check and change; the answer is streamed back as plain text while it is written.
 export class StudioError extends Error { constructor(msg: string, public status = 400) { super(msg); } }
-const PALETTES = ["house", "english", "maths", "geography", "history", "science", "business", "media", "economics", "technology"];
+const PALETTES = ["house", "english", "maths", "geography", "history", "science", "business", "media", "economics", "technology", "full"];   // "full": Full colour (26 Nov)
 
 export type Drawing = { id: string; title: string; prompt: string; bg: string; palette: string; hl: string; seed: number; spec: string; createdAt: string; updatedAt: string; needsPic: boolean };
 export async function listDrawings(): Promise<Drawing[]> {
