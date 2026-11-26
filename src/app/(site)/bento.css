@@ -1354,11 +1354,11 @@ html[data-theme=dark] .bt .nd-d{display:block}html[data-theme=dark] .bt .nd-l{di
 
 .bt .nd-jump::-webkit-scrollbar{display:none}.bt .nd-jump a{flex:none;white-space:nowrap}   /* always one line; scrolls sideways if the screen is too narrow */
 /* Resources (/resources, 21 Nov; restored 26 Nov after the 401 footer update dropped it): a section per subject with its
-   roundel and a grid of resource cards. The subject colour only marks the card's top edge and the heading rule, never text.
+   roundel and a grid of resource cards. The subject colour only marks the card's top edge, never text (26 Nov: no line under the heading).
    26 Nov: the kind label is yellow on cards that are links (Website, Watch, Listen, Read…); tips (no link) keep a plain label. */
 .bt .rs-wrap{display:grid;gap:56px}
 .bt .rs-sec{scroll-margin-top:calc(var(--navh,96px) + 80px);display:grid;gap:20px}
-.bt .rs-head{display:flex;align-items:center;gap:16px;padding-bottom:14px;border-bottom:3px solid var(--c,var(--b-line))}
+.bt .rs-head{display:flex;align-items:center;gap:16px}
 .bt .rs-head h2{margin:0;overflow-wrap:anywhere}
 .bt .rs-rd{width:64px;height:64px;flex:none;border-radius:50%}
 .bt .rs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:18px}
