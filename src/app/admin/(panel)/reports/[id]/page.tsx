@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCycle, getCycles, gradeBands, cycleStudents, byTeacher } from "@/lib/reports";
-import { createEntriesAction, reviewEntryAction, approveAllAction, publishCycleAction, saveBandAction, remindTeachersAction, emailReportsAction } from "../../../actions";
+import { createEntriesAction, deleteCycleAction, reviewEntryAction, approveAllAction, publishCycleAction, saveBandAction, remindTeachersAction, emailReportsAction } from "../../../actions";
 import { reportEmailStatus } from "@/lib/report-email";
 
 export const dynamic = "force-dynamic";
@@ -33,6 +33,7 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
       <div className="segl" role="tablist">{TABS.map(([k, l]) => <Link key={k} href={`/admin/reports/${id}?tab=${k}`} aria-current={tab === k ? "true" : undefined}>{l}</Link>)}</div>
       <span style={{ flex: 1 }} />
       {c.status !== "published" && <form action={createEntriesAction}><input type="hidden" name="id" value={c.id} /><button className="abtn sm" type="submit">{c.total ? "Add late joiners" : "Start: a report for every student"}</button></form>}
+      {c.status !== "published" && !c.total && <form action={deleteCycleAction}><input type="hidden" name="id" value={c.id} /><button className="abtn sm" type="submit">Delete this report round</button></form>}
       {c.status !== "published" ? <form action={publishCycleAction}><input type="hidden" name="id" value={c.id} /><button className="abtn pri" type="submit" disabled={!c.total || c.approved < c.total} title={c.approved < c.total ? "Every report has to be approved first" : undefined}>{c.total && c.approved >= c.total ? `Publish all ${c.total}` : `Publish (${c.approved} of ${c.total} approved)`}</button></form> : <span className="pill good">Published</span>}
     </div>
 

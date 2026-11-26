@@ -16,6 +16,7 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
   if (now && !sp.all && !sp.err) redirect(`/admin/reports/${now.id}${sp.tab ? `?tab=${sp.tab}${sp.ok ? `&ok=${encodeURIComponent(sp.ok)}` : ""}` : ""}`);
   return <>
     <div className="top"><div><h1>Reports</h1><div className="sub">Termly progress reports: teachers write one per student per class, you approve and publish them to families.</div></div></div>
+    {sp.ok && <p className="note msg">{sp.ok}</p>}
     {sp.err && <p className="note msg bad">{sp.err}</p>}
     {cycles.length === 0 ? <p className="empty">No reports set up for this year yet.</p> :
       <div className="tw"><table><thead><tr><th>Report</th><th>Comments due</th><th>Publish</th><th>Written</th><th>Approved</th><th>Status</th><th></th></tr></thead>

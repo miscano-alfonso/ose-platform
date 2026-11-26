@@ -104,10 +104,13 @@ export type WriteRow = { id: string; student: string; avg_pct: string | null; ma
   assess: string; assess_pct: number | null; assess_title: string | null; no_assessment: string | null;
   marks?: { pct: number; at: string; term: boolean; assess: boolean }[] };
 
+/** 26 Nov (Alfonso): teachers write comments and Effort in the last two weeks of the report term: from the Monday two
+ *  weeks before the term's last week ends (Term 2 ends Fri 11 Dec → opens Mon 30 Nov). Uses report_cycles c. */
+export const OPENS_SQL = `date_trunc('week', coalesce((select t.ends_on from terms t where t.id = c.term_id), c.marks_to))::date - 7`;
 export async function getWriteSheet(cycleId: string, groupId: string) {
   return withSchool(async (q) => {
-    const head = (await q<{ cycle: string; status: string; comments_due: string; code: string; name: string; gcse: boolean; teacher_user: string | null }>(`
-      select c.name as cycle, c.status::text, c.comments_due::text, g.code, l.name || ' ' || sj.name as name,
+    const head = (await q<{ cycle: string; status: string; comments_due: string; opens_on: string; code: string; name: string; gcse: boolean; teacher_user: string | null }>(`
+      select c.name as cycle, c.status::text, c.comments_due::text, (${OPENS_SQL})::text as opens_on, g.code, l.name || ' ' || sj.name as name,
         (l.name ilike '%GCSE%' and l.name not ilike 'Pre-%' and pp.year_of_course >= pp.course_years) as gcse, t.user_id as teacher_user
       from report_cycles c, course_groups g join price_plans pp on pp.id = g.price_plan_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id left join teachers t on t.id = g.teacher_id
       where c.id = $1 and g.id = $2`, [cycleId, groupId]))[0];
@@ -133,6 +136,11 @@ export async function saveWriteSheet(actor: { id: string; role: string }, cycleI
     const ok = (await q<{ ok: boolean }>(`select ($3 = 'school_admin' or exists (select 1 from course_groups g join teachers t on t.id = g.teacher_id where g.id = $1 and t.user_id = $2))
       and exists (select 1 from report_cycles c where c.id = $4 and c.status <> 'published') as ok`, [groupId, actor.id, actor.role, cycleId]))[0]?.ok;
     if (!ok) return "You can’t edit these reports.";
+    // 26 Nov: teachers write in the last two weeks of the report term (the office can any time)
+    if (actor.role !== "school_admin") {
+      const [o] = await q<{ open: boolean; opens: string }>(`select current_date >= (${OPENS_SQL}) as open, (${OPENS_SQL})::text as opens from report_cycles c where c.id = $1`, [cycleId]);
+      if (o && !o.open) return `Writing opens on ${new Date(o.opens + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}, two weeks before the end of term.`;
+    }
     const problems: string[] = []; let waiting = 0;
     for (const r of rows) {
       // the round's assessment must be marked in Classroom first, unless Classroom isn't connected or the teacher says why there isn't one
@@ -154,8 +162,8 @@ export async function saveWriteSheet(actor: { id: string; role: string }, cycleI
 }
 
 export async function teacherReportClasses(userId: string) {
-  return withSchool((q) => q<{ cycle_id: string; cycle: string; comments_due: string; group_id: string; name: string; code: string; total: number; done: number }>(`
-    select c.id as cycle_id, c.name as cycle, c.comments_due::text, g.id as group_id, l.name || ' ' || sj.name as name, g.code,
+  return withSchool((q) => q<{ cycle_id: string; cycle: string; comments_due: string; opens_on: string; group_id: string; name: string; code: string; total: number; done: number }>(`
+    select c.id as cycle_id, c.name as cycle, c.comments_due::text, (${OPENS_SQL})::text as opens_on, g.id as group_id, l.name || ' ' || sj.name as name, g.code,
       count(e.id)::int as total, count(e.id) filter (where e.status in ('submitted','approved'))::int as done
     from report_entries e join report_cycles c on c.id = e.cycle_id join course_groups g on g.id = e.group_id join teachers t on t.id = g.teacher_id
     join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id

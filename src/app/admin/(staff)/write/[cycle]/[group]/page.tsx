@@ -16,7 +16,10 @@ export default async function Write({ params, searchParams }: { params: Promise<
   const sheet = await getWriteSheet(cycle, group);
   if (!sheet || (me.role !== "school_admin" && sheet.head.teacher_user !== me.id)) notFound();
   const { head: h, rows } = sheet;
-  const locked = h.status === "published";
+  // 26 Nov: teachers can read the sheet before the writing window opens, but not fill it in yet
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+  const notYet = me.role !== "school_admin" && h.status !== "published" && today < h.opens_on;
+  const locked = h.status === "published" || notYet;
   return <>
     {/* 31 Oct: the page heading stays at the top while scrolling, with Submit all */}
     <div className="wr-head">
@@ -24,6 +27,7 @@ export default async function Write({ params, searchParams }: { params: Promise<
       <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · comments due {day(h.comments_due)}</div></div>
         <span className="grow" />{!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
           <AiDraftAll /><SubmitAll /></div>}</div>
+      {notYet && <p className="note msg">Writing opens on <b>{new Date(h.opens_on + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</b>, two weeks before the end of term. You can look through your class and their marks until then.</p>}
       {!sp.r && sp.ok && <p className="note msg">{sp.ok}</p>}{!sp.r && sp.err && <p className="note msg bad">{sp.err}</p>}
       <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters. A report can be submitted once the term’s assessment is marked in Classroom, or once you’ve said why there isn’t one.</p>
     </div>

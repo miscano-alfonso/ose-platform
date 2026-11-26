@@ -162,13 +162,13 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
         : <MoreList className="dx-list" limit={4}>{given.map((p) => <div key={p.id} className="dx-item good"><span className="t"><b>+{p.points} · {p.student}</b><span>{p.reason} · {p.class} · {dm(p.awarded_on)}</span></span></div>)}</MoreList>}
       <div style={{ marginTop: 12 }}><Link className="abtn sm" href="/admin/points">Give points</Link></div>
     </section> },
-    { id: "stream", title: "Classroom stream", size: "l", node: <section className="dx-card"><header><h2>Classroom stream</h2><a className="dx-more" href="https://classroom.google.com/" target="_blank" rel="noopener">Classroom →</a></header>
+    { id: "stream", title: "Classroom stream", size: "l", node: <section className="dx-card dx-tall"><header><h2>Classroom stream</h2><a className="dx-more" href="https://classroom.google.com/" target="_blank" rel="noopener">Classroom →</a></header>
       {stream.linked === 0 ? <p className="empty">None of your classes is linked to a Google Classroom course yet. The office links them.</p>
         : !stream.connected ? <p className="empty">The Classroom stream shows here once the office connects the recordings account.</p>
         : stream.items.length === 0 ? <p className="empty">No posts in your Classroom courses yet.</p>
-        : <MoreList className="dx-list" limit={5}>{stream.items.map((it) => { const inner = <><span className="t"><span className={`pill ${it.kind === "work" ? "warn" : it.kind === "material" ? "info" : "mute"}`}>{it.kind === "work" ? "Assignment" : it.kind === "material" ? "Material" : "Post"}</span>
+        : <div className="dx-list dx-scroll">{stream.items.map((it) => { const inner = <><span className="t"><span className={`pill ${it.kind === "work" ? "warn" : it.kind === "material" ? "info" : "mute"}`}>{it.kind === "work" ? "Assignment" : it.kind === "material" ? "Material" : "Post"}</span>
             <b>{it.title || "(no title)"}</b>{it.text && <span>{it.text.length > 120 ? it.text.slice(0, 120) + "…" : it.text}</span>}<span style={{ fontSize: 13 }}>{it.course}{it.at ? ` · ${dm(it.at.slice(0, 10))}` : ""}</span></span>{it.link && <span className="go" aria-hidden="true">{it.video ? "▶" : "→"}</span>}</>;
-          return it.link ? <a key={it.id} className="dx-item info" href={it.link} target="_blank" rel="noopener" title={it.video ? "Watch the video" : "Open in Google Classroom"} style={it.colour ? { borderLeftColor: it.colour } : undefined}>{inner}</a> : <div key={it.id} className="dx-item info">{inner}</div>; })}</MoreList>}
+          return it.link ? <a key={it.id} className="dx-item info" href={it.link} target="_blank" rel="noopener" title={it.video ? "Watch the video" : "Open in Google Classroom"} style={it.colour ? { borderLeftColor: it.colour } : undefined}>{inner}</a> : <div key={it.id} className="dx-item info">{inner}</div>; })}</div>}
     </section> },
   ];
   // class chats switched off for the school: that module is shown greyed out (26 Nov: Messages stays on; writing to families is off on the Messages page)

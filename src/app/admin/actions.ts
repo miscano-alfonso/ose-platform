@@ -478,6 +478,18 @@ export async function createEntriesAction(f: FormData): Promise<void> {
   revalidatePath(`/admin/reports/${id}`);
   redirect(`/admin/reports/${id}?ok=${encodeURIComponent(n ? `${n} reports created. Teachers can start writing from their dashboard.` : "Everyone already has a report.")}`);
 }
+/** 26 Nov: delete a report round that has no reports in it yet (e.g. one set up by mistake). */
+export async function deleteCycleAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40);
+  const done = await withSchool(async (q) => {
+    const r = await q<{ name: string }>(`delete from report_cycles c where c.id = $1 and c.status <> 'published' and not exists (select 1 from report_entries e where e.cycle_id = c.id) returning c.name`, [id]);
+    if (r[0]) await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'delete', 'report_cycle', $2, $3)`, [me.id, id, JSON.stringify({ name: r[0].name })]);
+    return r[0]?.name ?? null;
+  });
+  revalidatePath("/admin/reports");
+  redirect(done ? `/admin/reports?all=1&ok=${encodeURIComponent(`“${done}” deleted.`)}` : `/admin/reports/${id}?err=${encodeURIComponent("Only a report round with no reports in it can be deleted.")}`);
+}
 export async function reviewEntryAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const cycle = str(f, "cycle", 40);
@@ -743,13 +755,14 @@ export async function replyThreadAction(f: FormData): Promise<void> {
   const err = paused ? T.BETA.familyMsg : body ? await replyThread(me, id, body, false) : "Write a message first.";
   revalidatePath("/admin/messages");
   if (f.get("back") === "teacher") redirect(`/admin/teacher/messages?family=${id}${err ? "&err=" + encodeURIComponent(err) : ""}`);   // 26 Nov: the teacher's inbox
+  if (f.get("back") === "inbox") redirect(`/admin/messages?family=${id}${err ? "&err=" + encodeURIComponent(err) : ""}`);   // 26 Nov: the admin's inbox
   redirect(`/admin/messages/${id}${err ? "?err=" + encodeURIComponent(err) : ""}`);
 }
 export async function setThreadStatusAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const id = str(f, "id", 40);
   await setThreadStatus(me.id, id, str(f, "status", 6) === "closed" ? "closed" : "open");
-  revalidatePath("/admin/messages"); redirect(`/admin/messages/${id}`);
+  revalidatePath("/admin/messages"); redirect(f.get("back") === "inbox" ? `/admin/messages?family=${id}` : `/admin/messages/${id}`);
 }
 export async function startThreadAction(f: FormData): Promise<void> {
   const me = await requireSignedIn();
@@ -787,13 +800,15 @@ export async function officeReplyAction(f: FormData): Promise<void> {
   const { officeReply } = await import("@/lib/office-messages");
   const id = str(f, "id", 40), r = await officeReply(me.id, id, msgBody(f), f.get("email") === "1", await baseUrl());
   revalidatePath("/admin/messages");
-  redirect(`/admin/messages/office/${id}?${r.error ? "err=" + encodeURIComponent(r.error) : "ok=" + encodeURIComponent(r.held ? "Sent. Test mode held the email copy." : r.emailed ? "Sent, with a copy by email." : "Sent.")}`);
+  const msg = r.error ? "err=" + encodeURIComponent(r.error) : "ok=" + encodeURIComponent(r.held ? "Sent. Test mode held the email copy." : r.emailed ? "Sent, with a copy by email." : "Sent.");
+  if (f.get("back") === "inbox") redirect(`/admin/messages?office=${id}&${msg}`);   // 26 Nov: the admin's one inbox
+  redirect(`/admin/messages/office/${id}?${msg}`);
 }
 export async function officeStatusAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const { setOfficeStatus } = await import("@/lib/office-messages");
   const id = str(f, "id", 40); await setOfficeStatus(me.id, id, str(f, "status", 6) === "closed" ? "closed" : "open");
-  revalidatePath("/admin/messages"); redirect(`/admin/messages/office/${id}`);
+  revalidatePath("/admin/messages"); redirect(f.get("back") === "inbox" ? `/admin/messages?office=${id}` : `/admin/messages/office/${id}`);
 }
 /** A teacher replying on their Messages page to a message from the office. */
 export async function teacherOfficeReplyAction(f: FormData): Promise<void> {
@@ -1875,4 +1890,13 @@ export async function deleteResourceAction(f: FormData): Promise<void> {
   if (me.role === "school_admin") { const id = str(f, "id", 40); if (/^[0-9a-f-]{36}$/.test(id)) { const { deleteResource } = await import("@/lib/resources"); await deleteResource(me.id, id); } }
   revalidatePath("/resources"); revalidatePath("/admin/resources");
   redirect("/admin/resources?ok=Removed.");
+}
+
+/** 26 Nov: "Mark as unread" on the admin's Messages inbox. */
+export async function adminMarkUnreadAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { adminMarkUnread } = await import("@/lib/admin-inbox");
+  const kind = str(f, "kind", 10), id = str(f, "id", 40), tab = str(f, "f", 12);
+  if (kind === "office" || kind === "family") await adminMarkUnread(me.id, kind, id);
+  redirect(`/admin/messages${/^(unread|office|families)$/.test(tab) ? `?f=${tab}` : ""}`);
 }

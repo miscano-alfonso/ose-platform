@@ -1,55 +1,103 @@
 import Link from "next/link";
-import { listThreads } from "@/lib/community";
-import { officeThreads, officeCounts } from "@/lib/office-messages";
+import { requireStaff } from "@/lib/auth";
+import { getThread } from "@/lib/community";
+import { officeThread, officeThreads } from "@/lib/office-messages";
+import { adminInbox, markFamilySeen, type AdminItem } from "@/lib/admin-inbox";
+import { officeReplyAction, officeStatusAction, replyThreadAction, setThreadStatusAction, adminMarkUnreadAction } from "../../actions";
+import { NavCountSync } from "../../NavCountSync";
 
-const when = (s: string) => new Date(s).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
-const WHO: Record<string, string> = { parent: "Parent", teacher: "Teacher", office: "Office", student: "Student" };
+export const dynamic = "force-dynamic";
+const when = (s: string) => new Date(s).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+/** "10:42" today, "Yest." yesterday, otherwise "24 Nov" (London time). */
+function stamp(iso: string) {
+  const d = new Date(Date.parse(iso.replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00"))), f = (x: Date) => x.toLocaleDateString("en-GB", { timeZone: "Europe/London" }), now = new Date();
+  if (isNaN(d.getTime())) return "";
+  if (f(d) === f(now)) return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+  if (f(d) === f(new Date(now.getTime() - 864e5))) return "Yest.";
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
+}
+const TABS = [["all", "All"], ["unread", "Unread"], ["office", "Office"], ["families", "Families"]] as const;
+const KIND: Record<string, string> = { parent: "Parent", student: "Student", teacher: "Teacher" };
+const av = (k: AdminItem["kind"]) => k === "family" ? "fam" : "sch";
 
-// Admin → Messages: conversations between parents and teachers (safeguarding), and, since 5 Nov, the ones the office
-// starts with "New message" (to a parent, student or teacher, or everyone in a class or level, each privately).
-export default async function Messages({ searchParams }: { searchParams: Promise<{ show?: string; view?: string; batch?: string; ok?: string }> }) {
-  const sp = await searchParams;
-  const office = sp.view === "office";
-  const show = sp.show === "closed" || sp.show === "all" || (office && sp.show === "replies") ? sp.show : "open";
-  const [threads, all, oc] = await Promise.all([office ? Promise.resolve([]) : listThreads(null, show), listThreads(null, "all"), officeCounts().catch(() => ({ open: 0, unread: 0 }))]);
-  const mine = office ? await officeThreads(show, sp.batch ?? null) : [];
-  const open = all.filter((t) => t.status === "open"), cutoff = Date.now() - 2 * 864e5;
-  const waiting = open.filter((t) => t.last_sender === "parent" && Date.parse(t.last_message_at) < cutoff);
-  const batch = sp.batch ? mine[0] : undefined;
-  const q = (o: Record<string, string | undefined>) => "/admin/messages?" + new URLSearchParams(Object.entries({ view: office ? "office" : undefined, show, batch: sp.batch, ...o }).filter(([, v]) => v) as [string, string][]).toString();
+// Admin → Messages (26 Nov: one inbox like the teacher's, Option B): every conversation in one list on the left (messages
+// the office started, a class/level message as one row until someone replies, and parent ↔ teacher conversations),
+// unread in bold with a yellow count; the open conversation on the right with the reply box. ?office= / ?family= / ?batch=.
+export default async function Messages({ searchParams }: { searchParams: Promise<{ f?: string; office?: string; family?: string; batch?: string; ok?: string; err?: string }> }) {
+  const [sp, me] = await Promise.all([searchParams, requireStaff()]);
+  const f = TABS.some(([k]) => k === sp.f) ? sp.f! : "all";
+  // open the chosen conversation first (that marks it read), then build the list
+  const ot = sp.office ? await officeThread(sp.office, true) : null;
+  const ft = sp.family && /^[0-9a-f-]{36}$/.test(sp.family) ? await getThread(sp.family) : null;
+  if (ft) await markFamilySeen(me.id, ft.th.id);
+  const bt = sp.batch && /^[0-9a-f-]{36}$/.test(sp.batch) ? await officeThreads("all", sp.batch) : [];
+  const items = await adminInbox(me.id);
+  const unreadN = items.filter((i) => i.unread > 0).length;
+  const list = items.filter((i) => f === "unread" ? i.unread > 0 : f === "office" ? i.kind !== "family" : f === "families" ? i.kind === "family" : true);
+  const sel = ot ? `office:${ot.th.id}` : ft ? `family:${ft.th.id}` : bt.length ? `batch:${sp.batch}` : "";
+  const href = (it: AdminItem) => `/admin/messages?${it.kind}=${encodeURIComponent(it.id)}${f !== "all" ? `&f=${f}` : ""}`;
+  const chosen = !!sel;
+  const unreadBtn = (kind: AdminItem["kind"], id: string, cls: string, label: string) => <form action={adminMarkUnreadAction} className={cls}>
+    <input type="hidden" name="kind" value={kind} /><input type="hidden" name="id" value={id} /><input type="hidden" name="f" value={f} />
+    <button type="submit" className="abtn sm" title="Mark as unread"><span aria-hidden="true" className="ib-dot" />{label}</button></form>;
+  const head = (kind: AdminItem["kind"], initials: string, title: string, sub: React.ReactNode, tag: string, extra?: React.ReactNode) => <div className="ib-ch">
+    <span className={`ib-av ${av(kind)}`} aria-hidden="true">{initials}</span>
+    <div className="t"><h2>{title}</h2><span className="muted">{sub}</span></div>{extra}<span className={`ib-tag ${av(kind)}`}>{tag}</span></div>;
+  const bubble = (key: string, mine: boolean, who: string, at: string, body: React.ReactNode, note?: string) =>
+    <div key={key} className={`ib-b ${mine ? "me" : "them"}`}><div className="ib-body">{body}</div><small>{who} · {when(at)}{note ? ` · ${note}` : ""}</small></div>;
+  const itemFor = (kind: AdminItem["kind"], id: string) => items.find((i) => i.kind === kind && i.id === id);
+  const back = <Link className="abtn sm ib-back" href={`/admin/messages${f !== "all" ? `?f=${f}` : ""}`}>← All messages</Link>;
+
+  // ---------- the right-hand pane ----------
+  let pane: React.ReactNode = <div className="ib-empty"><b>{items.length ? "Choose a conversation" : "No messages yet"}</b>
+    <span>{items.length ? "Pick one on the left to read it and reply." : "Messages the office sends, and conversations between parents and teachers, show here."}</span>
+    <Link className="abtn pri" href="/admin/messages/write">New message</Link></div>;
+  if (ot) { const { th, msgs } = ot, it = itemFor("office", th.id); pane = <>
+    {head("office", it?.initials ?? "?", th.subject, <>{th.name}{th.email ? ` (${th.email})` : " (no email address)"} · {KIND[th.to_kind]}{th.about ? ` · about ${th.about}` : ""}
+      {th.batch && <> · part of a message to <Link href={`/admin/messages?batch=${th.batch_id}`}>{th.batch}</Link> ({th.batch_size})</>}{th.status === "closed" ? " · closed" : ""}</>, "Office",
+      msgs.some((m) => m.sender !== "office") ? unreadBtn("office", th.id, "ib-mu-h", "Mark as unread") : undefined)}
+    <div className="ib-msgs">{msgs.map((m) => bubble(m.id, m.sender === "office", m.sender === "office" ? (m.who === "The office" ? "The office" : `${m.who} · the office`) : `${m.who} · ${KIND[m.sender] ?? m.sender}`, m.created_at, m.body,
+      m.sender === "office" ? `${m.emailed ? "emailed" : "platform only"}${m.read_at ? " · read" : ""}` : undefined))}</div>
+    <form action={officeReplyAction} className="ib-reply wide"><input type="hidden" name="id" value={th.id} /><input type="hidden" name="back" value="inbox" />
+      <textarea name="body" required rows={3} maxLength={4500} placeholder={th.status === "closed" ? "Write a reply (this reopens it)…" : "Write a reply…"} aria-label="Reply" />
+      <label className="nm-check" style={{ fontSize: 14 }}><input type="checkbox" name="email" value="1" defaultChecked={!!th.email} disabled={!th.email} /> Also send a copy by email</label>
+      <button className="abtn pri" type="submit">Send</button></form>
+    <form action={officeStatusAction} className="ib-status"><input type="hidden" name="id" value={th.id} /><input type="hidden" name="back" value="inbox" /><input type="hidden" name="status" value={th.status === "open" ? "closed" : "open"} />
+      <button className="abtn sm" type="submit">{th.status === "open" ? "Close this conversation" : "Reopen"}</button></form></>; }
+  else if (ft) { const { th, msgs } = ft, it = itemFor("family", th.id); pane = <>
+    {head("family", it?.initials ?? "P", th.subject, `${th.parent} (${th.parent_email}) · about ${th.student} · teacher ${th.teacher}${th.status === "closed" ? " · closed" : ""}`, "Parents ↔ teachers",
+      unreadBtn("family", th.id, "ib-mu-h", "Mark as unread"))}
+    <div className="ib-msgs">{msgs.map((m) => bubble(m.id, m.sender === "office", `${m.who} · ${m.sender === "office" ? "the office" : m.sender === "teacher" ? "Teacher" : "Parent"}`, m.created_at, m.body))}</div>
+    <form action={replyThreadAction} className="ib-reply"><input type="hidden" name="id" value={th.id} /><input type="hidden" name="back" value="inbox" />
+      <textarea name="body" required rows={3} maxLength={5000} placeholder="Write a reply (sent as the office)…" aria-label="Reply" /><button className="abtn pri" type="submit">Send</button></form>
+    <form action={setThreadStatusAction} className="ib-status"><input type="hidden" name="id" value={th.id} /><input type="hidden" name="back" value="inbox" /><input type="hidden" name="status" value={th.status === "open" ? "closed" : "open"} />
+      <button className="abtn sm" type="submit">{th.status === "open" ? "Close this conversation" : "Reopen"}</button></form></>; }
+  else if (bt.length) { const t = bt[0]; pane = <>
+    {head("batch", itemFor("batch", sp.batch!)?.initials ?? "G", t.subject, `To ${t.batch ?? "a group"} · ${t.batch_size ?? bt.length} people, each privately`, "Group")}
+    <div className="ib-msgs"><ul className="ib-batch">{bt.map((r) => <li key={r.id}><Link href={`/admin/messages?office=${r.id}`}><b>{r.name}</b>
+      <span className="muted">{KIND[r.to_kind]}{r.about ? ` · about ${r.about}` : ""} · {r.messages > 1 ? `${r.messages} messages` : "no reply yet"}{r.unread ? " · new reply" : ""}</span></Link></li>)}</ul></div></>; }
+
   return <>
-    <div className="top"><div><h1>Messages</h1><div className="sub">Conversations between parents and teachers, which admins can read and reply to (safeguarding), and messages from the office.</div></div>
+    <div className="top"><div><h1>Messages</h1><div className="sub">Messages from the office, and conversations between parents and teachers, which admins can read and reply to (safeguarding).</div></div>
       <span className="grow" /><Link className="abtn pri" href="/admin/messages/write">New message</Link></div>
-    {sp.ok && <p className="note msg">{sp.ok}</p>}
-    <div className="tiles">
-      <div className="tile"><span className="k">Open conversations</span><span className="v">{open.length}</span><span className="h">{all.length} between parents and teachers</span></div>
-      <div className={`tile${waiting.length ? " alert" : ""}`}><span className="k">Waiting over 2 days</span><span className="v">{waiting.length}</span><span className="h">parent waiting for a teacher reply</span></div>
-      <div className="tile"><span className="k">Passed to the office</span><span className="v">{all.filter((t) => t.office_copied).length}</span><span className="h">by teachers</span></div>
-      <Link href="/admin/messages?view=office&show=replies" className={`tile${oc.unread ? " alert" : ""}`} style={{ textDecoration: "none", color: "inherit" }}><span className="k">Replies to the office</span><span className="v">{oc.unread}</span><span className="h">{oc.unread ? "not read yet" : `${oc.open} open from the office`}</span></Link>
+    {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+    <NavCountSync href="/admin/messages" count={unreadN} />
+    <div className={`card ib${chosen ? " has-sel" : ""}`}>
+      <div className="ib-list">
+        <div className="segl ib-tabs" role="group" aria-label="Show">{TABS.map(([k, l]) => <Link key={k} scroll={false} href={`/admin/messages${k !== "all" ? `?f=${k}` : ""}`} aria-current={f === k ? "true" : undefined}>
+          {l}{k === "unread" && unreadN > 0 && <b className="ib-n">{unreadN}</b>}</Link>)}</div>
+        {list.length === 0 ? <p className="empty">{f === "unread" ? "Nothing unread." : "No conversations yet."}</p>
+          : <nav className="ib-items" aria-label="Conversations">{list.map((it) => { const k = `${it.kind}:${it.id}`;
+            return <div key={k} className="ib-row"><Link href={href(it)} className={`ib-it${it.unread ? " unread" : " read"}${sel === k ? " sel" : ""}`} aria-current={sel === k ? "true" : undefined}>
+              <span className={`ib-av ${av(it.kind)}`} aria-hidden="true">{it.initials}</span>
+              <span className="t"><span className="n"><b>{it.who}</b><span className="d">{stamp(it.at)}</span></span>
+                <span className="s">{it.subject}</span><span className="p">{it.preview}</span>
+                <span className="m"><span className={`ib-tag ${av(it.kind)}`}>{it.tag}</span>{it.sub && <span className="muted">{it.sub}</span>}
+                  {it.waiting && <span className="pill warn">{it.kind === "family" ? "Waiting for the teacher" : "Waiting for your reply"}</span>}{it.closed && <span className="pill mute">Closed</span>}</span></span>
+              {it.unread > 0 && <span className="ib-n" aria-label={`${it.unread} unread`}>{it.unread}</span>}</Link>
+              {!it.unread && it.canUnread && unreadBtn(it.kind, it.id, "ib-mu", "Mark unread")}</div>; })}</nav>}
+      </div>
+      <section className="ib-conv" aria-label="Conversation">{chosen && back}{pane}</section>
     </div>
-    <div className="msg-views" role="tablist" aria-label="Which messages">
-      <Link role="tab" aria-selected={!office} className={`abtn sm${!office ? " pri" : ""}`} href="/admin/messages">Parents ↔ teachers</Link>
-      <Link role="tab" aria-selected={office} className={`abtn sm${office ? " pri" : ""}`} href="/admin/messages?view=office">From the office{oc.unread ? <span className="dx-count" style={{ marginLeft: 6 }}>{oc.unread}</span> : null}</Link>
-    </div>
-    <nav className="tabs" style={{ margin: "10px 0 14px" }}>{(office ? ["open", "replies", "closed", "all"] as const : ["open", "closed", "all"] as const).map((s) =>
-      <Link key={s} className={`abtn sm${s === show ? " pri" : ""}`} href={q({ show: s })}>{s === "replies" ? "With replies" : s[0].toUpperCase() + s.slice(1)}</Link>)}</nav>
-
-    {office ? <>
-      {sp.batch && <p className="note">{batch ? <>Showing the message “{batch.subject}” to <b>{batch.batch}</b> ({batch.batch_size}), one conversation each. </> : "Nothing here with this filter. "}<Link href={q({ batch: undefined })}>Show all</Link></p>}
-      {mine.length === 0 ? <p className="empty">No messages from the office{show === "open" ? " open" : ""} yet. Use “New message” to write to a parent, student or teacher, or to a whole class or level.</p> :
-        <div className="tw"><table><thead><tr><th>To</th><th>Subject</th><th>Last message</th><th></th></tr></thead>
-          <tbody>{mine.map((t) => <tr key={t.id} className={t.unread ? "row-new" : undefined}>
-            <td><b>{t.name}</b> <span className="pill mute">{WHO[t.to_kind]}</span>{t.about && <div className="muted" style={{ fontSize: 14 }}>about {t.about}</div>}</td>
-            <td><b>{t.subject}</b>{t.status === "closed" && <> <span className="pill mute">Closed</span></>}
-              {t.batch && !sp.batch && <div className="muted" style={{ fontSize: 14 }}>to <Link href={`/admin/messages?view=office&show=all&batch=${t.batch_id}`}>{t.batch}</Link> ({t.batch_size})</div>}</td>
-            <td>{when(t.last_message_at)}{t.unread > 0 && <> <span className="pill info">New reply</span></>}
-              <div className="muted" style={{ fontSize: 14 }}>{t.last_sender === "office" ? "You" : WHO[t.last_sender]} · {t.messages} message{t.messages === 1 ? "" : "s"}</div></td>
-            <td><Link className="abtn sm" href={`/admin/messages/office/${t.id}`}>Open</Link></td></tr>)}</tbody></table></div>}
-    </> : threads.length === 0 ? <p className="empty">No conversations yet. Teachers can write to a family from their dashboard; families will write from their account once the parent area is live.</p> :
-      <div className="tw"><table><thead><tr><th>Subject</th><th>Family</th><th>Teacher</th><th>Last message</th><th></th></tr></thead>
-        <tbody>{threads.map((t) => <tr key={t.id}><td><b>{t.subject}</b>{t.status === "closed" && <> <span className="pill mute">Closed</span></>}{t.office_copied && <> <span className="pill info">Passed to office</span></>}</td>
-          <td>{t.parent}<div className="muted" style={{ fontSize: 14 }}>about {t.student}</div></td><td>{t.teacher}</td>
-          <td>{when(t.last_message_at)}{t.status === "open" && t.last_sender === "parent" && Date.parse(t.last_message_at) < cutoff && <> <span className="pill bad">Waiting</span></>}<div className="muted" style={{ fontSize: 14 }}>{t.last_sender ? WHO[t.last_sender] : ""} · {t.messages} message{t.messages === 1 ? "" : "s"}</div></td>
-          <td><Link className="abtn sm" href={`/admin/messages/${t.id}`}>Open</Link></td></tr>)}</tbody></table></div>}
   </>;
 }
