@@ -174,7 +174,7 @@ export async function setOfficeStatus(actorId: string, id: string, status: "open
 // ---------- the person it was sent to ----------
 const OWN: Record<ToKind, string> = { parent: "th.parent_id", student: "th.student_id", teacher: "th.teacher_id" };
 const who = async (q: Q, kind: ToKind, id: string) => kind !== "teacher" ? id : (await q<{ id: string }>(`select id from teachers where user_id = $1`, [id]))[0]?.id ?? null;
-export type MineThread = { id: string; subject: string; status: string; about: string | null; last_at: string; last_sender: string; unread: boolean };
+export type MineThread = { id: string; subject: string; status: string; about: string | null; last_at: string; last_sender: string; unread: boolean; last_body?: string };
 /** kind teacher: id is the teacher's user id; otherwise the parent's or student's id. */
 export async function myOfficeThreads(kind: ToKind, id: string) {
   if (!okId(id)) return [];
@@ -182,6 +182,7 @@ export async function myOfficeThreads(kind: ToKind, id: string) {
     const me = await who(q, kind, id); if (!me) return [];
     return q<MineThread>(`select th.id, th.subject, th.status, (select first_name from students where id = th.student_id and th.to_kind = 'parent') as about, th.last_message_at::text as last_at,
         (select m.sender from office_messages m where m.thread_id = th.id order by m.created_at desc limit 1) as last_sender,
+        (select left(m.body, 200) from office_messages m where m.thread_id = th.id order by m.created_at desc limit 1) as last_body,
         exists (select 1 from office_messages m where m.thread_id = th.id and m.sender = 'office' and m.read_at is null) as unread
       from office_threads th where th.to_kind = $1 and ${OWN[kind]} = $2 order by th.last_message_at desc`, [kind, me]);
   });

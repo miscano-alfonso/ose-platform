@@ -22,6 +22,8 @@ const gbp = (p: number) => "£" + (p / 100).toLocaleString("en-GB", { minimumFra
 
 /** My day's modules: the teacher's next lesson with Join up top, reports, then the week (also used by the Solo dashboard). */
 export async function teacherModules(me: { id: string; name: string }): Promise<BoardModule[]> {
+  // 26 Nov: messages the office started with this teacher show in The school too (they were only on the Messages page)
+  const fromOffice = await import("@/lib/office-messages").then((o) => o.myOfficeThreads("teacher", me.id)).catch(() => []);
   const [d, threads, mail, chats, given, pclasses] = await Promise.all([myDay(me.id), listThreads(me.id, "open").catch(() => []), teacherEmails(me.id, 8),
     myChats(me.id).catch(() => []), pointsGiven(me.id).catch(() => []), classesForPoints(me.id, false).catch(() => [])]);
   const [stream, found] = await Promise.all([teacherStream(me.id).catch(() => ({ connected: false, linked: 0, items: [] })),
@@ -106,10 +108,19 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><Link className="abtn sm" href="/admin/messages/new">New message</Link></div>
     </section> },
     { id: "email", title: "The school", size: "l", node: <section className="dx-card dx-tall"><header><h2>The school</h2><span className="dx-sub">your messages</span><Link className="dx-more" href="/admin/teacher/messages">All messages →</Link></header>
-      {mail.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No messages yet</b><span>Message the school from here.</span></div>
-        : <MoreList className="dx-list" limit={4}>{mail.map((e) => <Link key={e.id} className={`dx-item ${e.replied_at ? "good" : "info"}`} href={`/admin/teacher/messages?school=${encodeURIComponent(e.thread_id)}#e-${e.id}`}>
-          <span className="t">{e.replied_at ? <span className="pill good">Replied</span> : <span className="pill mute">Sent</span>}<b>{e.subject || "(no subject)"}</b>
-            <span>{(e.reply_body ?? e.body).length > 110 ? (e.reply_body ?? e.body).slice(0, 110) + "…" : (e.reply_body ?? e.body)}</span><span style={{ fontSize: 13 }}>{dm((e.replied_at ?? e.at).slice(0, 10))}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
+      {(() => {
+        type Row = { key: string; at: string; node: React.ReactNode };
+        const rows: Row[] = [
+          ...fromOffice.map((t) => ({ key: "o" + t.id, at: t.last_at, node: <Link key={"o" + t.id} className={`dx-item ${t.unread ? "warn" : t.last_sender === "teacher" ? "good" : "info"}`} href={`/admin/teacher/messages?office=${t.id}`}>
+            <span className="t">{t.unread ? <span className="pill warn">New from the office</span> : t.last_sender === "teacher" ? <span className="pill good">You replied</span> : <span className="pill mute">From the office</span>}<b>{t.subject || "(no subject)"}</b>
+              {t.last_body && <span>{t.last_body.length > 110 ? t.last_body.slice(0, 110) + "…" : t.last_body}</span>}<span style={{ fontSize: 13 }}>{dm(t.last_at.slice(0, 10))}</span></span><span className="go" aria-hidden="true">→</span></Link> })),
+          ...mail.map((e) => ({ key: "e" + e.id, at: e.replied_at ?? e.at, node: <Link key={"e" + e.id} className={`dx-item ${e.replied_at ? "good" : "info"}`} href={`/admin/teacher/messages?school=${encodeURIComponent(e.thread_id)}#e-${e.id}`}>
+            <span className="t">{e.replied_at ? <span className="pill good">Replied</span> : <span className="pill mute">Sent</span>}<b>{e.subject || "(no subject)"}</b>
+              <span>{(e.reply_body ?? e.body).length > 110 ? (e.reply_body ?? e.body).slice(0, 110) + "…" : (e.reply_body ?? e.body)}</span><span style={{ fontSize: 13 }}>{dm((e.replied_at ?? e.at).slice(0, 10))}</span></span><span className="go" aria-hidden="true">→</span></Link> })),
+        ].sort((a, b) => b.at.localeCompare(a.at));
+        return rows.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No messages yet</b><span>Message the school from here.</span></div>
+          : <MoreList className="dx-list" limit={4}>{rows.map((r) => r.node)}</MoreList>;
+      })()}
       <div style={{ marginTop: 12 }}><Link className="abtn sm" href="/admin/teacher/messages">Message the school</Link></div>
     </section> },
     { id: "chats", title: "Class chats", size: "l", node: <section className="dx-card"><header><h2>Class chats</h2><Link className="dx-more" href="/admin/teacher/chats">All chats →</Link></header>
