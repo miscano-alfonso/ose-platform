@@ -44,7 +44,7 @@ const I = {
 export async function adminModules(me: Staff, plan: PlanId | null): Promise<BoardModule[]> {
   const [{ t, attention }, m, flags, box, threads, officeAll] = await Promise.all([getDashboard(), getDashboardMore(LOW), openFlags().catch(() => []), inboxStatus().catch(() => null), listThreads(null, "open").catch(() => []), officeThreads("replies").catch(() => [])]);
   const waitCut = Date.now() - 2 * 864e5, waiting = threads.filter((x) => x.last_sender === "parent" && Date.parse(x.last_message_at) < waitCut).length;
-  const [linkOpts, mine, so, la] = await Promise.all([linkOptions((h) => !notInPlan(plan, h)), myLinks(me.id), studentOverview().catch(() => null),
+  const [linkOpts, mine, so, la] = await Promise.all([linkOptions((h) => !notInPlan(plan, h)), myLinks(me.id), studentOverview({ termOnly: true }).catch(() => null),   // 26 Nov: this term's work only
     import("@/lib/lesson-access").then((m) => m.accessAlerts(7)).catch(() => ({ strangers: 0, open: 0 }))]);
   const sAgo = (iso: string) => { const n = Math.round((Date.now() - Date.parse(iso)) / 60000); return n < 1 ? "just now" : n < 60 ? `${n} min ago` : n < 1440 ? `${Math.round(n / 60)} h ago` : `${Math.round(n / 1440)} days ago`; };
   // students needing a nudge: most missing work first, then lowest attendance
@@ -190,12 +190,12 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
       <header><h2>Students</h2>{so && so.totals.withMissing > 0 && <span className="dx-count">{so.totals.withMissing}</span>}<Link className="dx-more" href="/admin/students">All students →</Link></header>
       {!so ? <p className="empty">Couldn’t load the students’ work.</p> : <>
         <div className="dx-mini">
-          <Link href="/admin/students"><b>{handRate == null ? "–" : `${handRate}%`}</b><span>work handed in</span></Link>
-          <Link href="/admin/students?show=missing" className={so.totals.missing ? "bad" : undefined}><b>{so.totals.missing}</b><span>pieces missing</span></Link>
+          <Link href="/admin/students"><b>{handRate == null ? "–" : `${handRate}%`}</b><span>work handed in{so.term ? ` in ${so.term.name}` : ""}</span></Link>
+          <Link href="/admin/students?show=missing" className={so.totals.missing ? "bad" : undefined}><b>{so.totals.missing}</b><span>pieces missing{so.term ? ` in ${so.term.name}` : ""}</span></Link>
           <Link href="/admin/students?show=attendance" className={so.totals.lowAtt ? "warn" : undefined}><b>{so.totals.lowAtt}</b><span>under 85% attendance</span></Link>
           <Link href="/admin/students?show=points"><b>{so.totals.points}</b><span>reward points</span></Link>
         </div>
-        {worry.length === 0 ? <div className="dx-clear"><Ico d={I.check} /><b>All on track</b><span>No missing work this school year and nobody under 85% attendance {so.term ? `in ${so.term.name}` : "lately"}.</span></div>
+        {worry.length === 0 ? <div className="dx-clear"><Ico d={I.check} /><b>All on track</b><span>No missing work {so.term ? `in ${so.term.name}` : "this term"} and nobody under 85% attendance {so.term ? `in ${so.term.name}` : "lately"}.</span></div>
           : <MoreList className="dx-list" limit={4}>{worry.map((r) => <Link key={r.id} className={`dx-item dx-wk ${r.missing >= 2 || (r.att != null && r.att < 70) ? "bad" : "warn"}`} href={`/admin/students/${r.id}`}>
             <span className="t"><b>{r.name}</b><span>{[r.missing && `${r.missing} piece${r.missing === 1 ? "" : "s"} of work missing`, r.att != null && r.held >= 3 && r.att < 85 && `attendance ${r.att}%`].filter(Boolean).join(" · ")}</span>
               {r.missingList[0] && <span style={{ fontSize: 13 }}>Latest: {r.missingList[0].title} · {r.classes.find((c) => c.id === r.missingList[0].gid)?.name ?? r.missingList[0].code}</span>}</span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}

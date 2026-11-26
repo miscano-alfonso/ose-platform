@@ -1496,3 +1496,8 @@
 @media (hover:none){.adm .ib-mu{display:none}}
 .adm .ib-mu .abtn,.adm .ib-mu-h .abtn{display:inline-flex;align-items:center;gap:6px}
 .adm .ib-dot{width:8px;height:8px;border-radius:50%;background:var(--pop,#e9f56a);box-shadow:0 0 0 1px rgba(0,0,0,.25)}
+/* 26 Nov: Marking: "2/6 handed in" on each piece, and the class list grouped when opened */
+.adm .mk-count{font-size:14px;color:var(--muted);white-space:nowrap;margin-right:4px}
+.adm .mk-subs .mk-grp{display:block;padding:10px 0 4px;border:0;font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.adm .mk-subs .mk-not .mk-who b{font-weight:500;color:var(--muted)}
+@media (max-width:600px){.adm .mk-count{order:3;flex-basis:100%;margin-left:24px}}

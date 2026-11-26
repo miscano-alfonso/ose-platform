@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { requireViewer } from "@/lib/auth";
-import { markingQueue, markingSubmissions, countdown, tone, TURNAROUND_DAYS, type MarkItem, type MarkSub } from "@/lib/marking";
+import { markingQueue, markingSubmissions, markingRoster, countdown, tone, TURNAROUND_DAYS, type MarkItem, type MarkSub, type RosterRow } from "@/lib/marking";
 import { dm } from "../fmt";
 import * as P from "@/lib/past-papers";
 import { paperDelayAction, paperReturnAction } from "../../../papers-actions";
@@ -13,13 +13,22 @@ const Pill = ({ m }: { m: MarkItem }) => <span className={`pill ${PILL[tone(m.da
 // Teacher → Marking (25 Nov): work handed in and waiting to be marked and returned in Google Classroom, from the last
 // Classroom read. "Each piece of work" lists them soonest deadline first; "By class" groups them under each class.
 // Each piece opens to the students who handed it in, each linking to their hand-in in Classroom, where marking stays.
-function Piece({ m, subs, showClass }: { m: MarkItem; subs: MarkSub[]; showClass: boolean }) {
+// 26 Nov: each piece shows "2/6 handed in", and opens to every student on the class: to mark (handed in, with Open in
+// Classroom), marked (returned, with the mark) and not handed in yet.
+function Piece({ m, subs, roster, showClass }: { m: MarkItem; subs: MarkSub[]; roster: RosterRow[]; showClass: boolean }) {
+  const handed = roster.filter((r) => r.state !== "not_in").length, total = roster.length;
+  const group = (state: RosterRow["state"], label: string) => { const rows = roster.filter((r) => r.state === state); if (!rows.length) return null;
+    return <><li className="mk-grp">{label} · {rows.length}</li>{rows.map((r) => { const link = r.link;
+      return <li key={r.studentId} className={state === "not_in" ? "mk-not" : undefined}>
+        <span className="mk-who"><b>{r.student}</b><span>{state === "not_in" ? "Not handed in" : r.turnedIn ? `Handed in ${dm(r.turnedIn)}` : "Handed in"}</span>
+          {r.late && <span className="pill warn">Late</span>}{state === "marked" && r.pct != null && <span className="pill good">{r.pct}%</span>}</span>
+        {state !== "not_in" && (link ? <a className="abtn sm" href={link} target="_blank" rel="noopener">Open in Classroom</a> : m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>)}
+      </li>; })}</>; };
   return <details className="mk-piece">
-    <summary><div className="t"><b>{m.title}</b><span>{showClass ? `${m.cls} · ` : ""}{m.toMark} to mark · return by {dm(m.deadline)}</span></div><Pill m={m} /></summary>
-    <ul className="mk-subs">{subs.map((s) => <li key={s.sid}>
-      <span className="mk-who"><b>{s.student}</b><span>{s.turnedIn ? `Handed in ${dm(s.turnedIn)}` : "Handed in"}</span>{s.late && <span className="pill warn">Late</span>}</span>
-      {s.link ? <a className="abtn sm" href={s.link} target="_blank" rel="noopener">Open in Classroom</a> : m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>}
-    </li>)}</ul>
+    <summary><div className="t"><b>{m.title}</b><span>{showClass ? `${m.cls} · ` : ""}{m.toMark} to mark · return by {dm(m.deadline)}</span></div>
+      {total > 0 && <span className="mk-count" title="Students who have handed it in, out of everyone on the class">{handed}/{total} handed in</span>}<Pill m={m} /></summary>
+    <ul className="mk-subs">{total ? <>{group("to_mark", "To mark")}{group("marked", "Marked")}{group("not_in", "Not handed in yet")}</>
+      : subs.map((x) => <li key={x.sid}><span className="mk-who"><b>{x.student}</b><span>{x.turnedIn ? `Handed in ${dm(x.turnedIn)}` : "Handed in"}</span></span></li>)}</ul>
     {m.link && <p className="mk-all"><a href={m.link} target="_blank" rel="noopener">All hand-ins for this work in Classroom ↗</a></p>}
   </details>;
 }
@@ -31,6 +40,8 @@ export default async function Marking({ searchParams }: { searchParams: Promise<
   const openPapers = papers.filter((p) => !p.returned_at).length;
   const classes = [...new Map(queue.map((m) => [m.gid, m.cls])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const subsOf = (cw: string) => subs.filter((s) => s.cw === cw);
+  const roster = await markingRoster(queue.map((m) => m.cw));
+  const rosterOf = (cw: string) => roster.filter((r) => r.cw === cw);
   return <>
     <div className="top"><div><h1>Marking</h1>
       <div className="sub">{papers.some((p) => !p.returned_at) && `${papers.filter((p) => !p.returned_at).length} past paper${papers.filter((p) => !p.returned_at).length === 1 ? "" : "s"} · `}{total ? `${total} hand-in${total === 1 ? "" : "s"} to mark in ${queue.length} piece${queue.length === 1 ? "" : "s"} of work` : "Nothing waiting"} · mark and return work in Google Classroom within {TURNAROUND_DAYS} days of its due date</div></div>
@@ -43,8 +54,8 @@ export default async function Marking({ searchParams }: { searchParams: Promise<
     {queue.length === 0 ? <section className="card"><p className="empty">All marked. Nothing handed in is waiting to be returned. Work shows here once students hand it in to Google Classroom (read every 2 hours).</p></section>
     : byClass ? classes.map(([gid, cls]) => { const items = queue.filter((m) => m.gid === gid);
         return <section className="card mk-card" key={gid}><h2>{cls} <span className="muted">· {items.reduce((a, m) => a + m.toMark, 0)} to mark</span></h2>
-          {items.map((m) => <Piece key={m.cw} m={m} subs={subsOf(m.cw)} showClass={false} />)}</section>; })
-    : <section className="card mk-card">{queue.map((m) => <Piece key={m.cw} m={m} subs={subsOf(m.cw)} showClass />)}</section>}
+          {items.map((m) => <Piece key={m.cw} m={m} subs={subsOf(m.cw)} roster={rosterOf(m.cw)} showClass={false} />)}</section>; })
+    : <section className="card mk-card">{queue.map((m) => <Piece key={m.cw} m={m} subs={subsOf(m.cw)} roster={rosterOf(m.cw)} showClass />)}</section>}
     <p className="note">Marked work counts as done once you return it to the student in Classroom. The list updates each time Classroom is read.</p></>}
   </>;
 }

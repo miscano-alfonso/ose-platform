@@ -21,7 +21,7 @@ export type Overview = { term: { id: string; name: string; starts_on: string; en
   classroom: { at: string | null; error: string | null; linked: number; granted: boolean | null; missing: string[] | null; by: string | null; classes?: number; work?: number; submissions?: number; problems?: string[]; unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number }[] } };
 
 /** opts.teacherUserId: only that teacher's classes (their own dashboard). */
-export async function studentOverview(opts: { teacherUserId?: string } = {}): Promise<Overview> {
+export async function studentOverview(opts: { teacherUserId?: string; termOnly?: boolean } = {}): Promise<Overview> {
   const { classroomMissing, googleConnectedBy } = await import("./meet");
   const [missing, by] = await Promise.all([classroomMissing().catch(() => null), googleConnectedBy().catch(() => null)]);
   const granted = missing == null ? null : missing.length === 0;
@@ -36,7 +36,8 @@ export async function studentOverview(opts: { teacherUserId?: string } = {}): Pr
     const tStart = term && term.starts_on <= new Date().toISOString().slice(0, 10) ? term.starts_on : null;
     // 5 Nov: work counts for the whole school year, the same as on each student's page (the term dividers there split it)
     const yStart = (await q<{ s: string }>(`select starts_on::text as s from academic_years where id = ${YEAR}`))[0]?.s ?? null;
-    const since = yStart && yStart < d28 ? yStart : d28, pSince = tStart ?? d28;
+    // 26 Nov: the admin dashboard's Students box counts only this term's work (termOnly); the Students page stays the year's
+    const since = opts.termOnly && tStart ? tStart : yStart && yStart < d28 ? yStart : d28, pSince = tStart ?? d28;
     const until = term && term.ends_on >= pSince ? term.ends_on : new Date().toISOString().slice(0, 10);
     const base = await q<{ id: string; name: string; parent_id: string; family: string; levels: string; classes: { id: string; code: string; name: string }[];
       has_send: string | null; needs: string[] | null; details: string | null; email: string | null; joined: string[] | null }>(`
