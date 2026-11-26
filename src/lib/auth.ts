@@ -68,6 +68,61 @@ export async function signIn(email: string, password: string): Promise<string | 
   return null;
 }
 
+// ---------- teachers sign in with an emailed link (26 Nov, db/098); admin accounts keep their password ----------
+const LINK_MINUTES = 30;
+/** Staff sign in → "Email me a sign-in link". A teacher gets a link; an admin gets a note to use their password; anyone
+ *  else gets nothing. The page answers the same way every time, so it can't be used to find out who has an account. */
+export async function sendStaffLink(email: string, base: string): Promise<string | null> {
+  email = email.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) return "Enter your email address.";
+  const { ip } = await clientInfo();
+  const r = await withSchool(async (q) => {
+    const [n] = await q<{ e: number; i: number }>(`select count(*) filter (where email = $1)::int as e, count(*) filter (where ip = $2)::int as i
+      from staff_link_requests where created_at > now() - interval '15 minutes'`, [email, ip]);
+    if (n.e >= 5 || n.i >= 20) return "busy" as const;
+    await q(`insert into staff_link_requests (school_id, email, ip) values (current_school(), $1, $2)`, [email, ip]);
+    const u = (await q<{ id: string; name: string; role: string }>(`select id, name, role::text from users
+      where lower(email::text) = $1 and role in ('school_admin', 'teacher') and disabled_at is null limit 1`, [email]))[0];
+    if (!u) return null;
+    const school = (await q<{ name: string }>(`select name from schools where id = current_school()`))[0]?.name ?? "OH-SO ED";
+    if (u.role !== "teacher") return { admin: true as const, name: u.name, school };
+    const token = randomBytes(32).toString("base64url");
+    await q(`insert into staff_links (school_id, user_id, token_hash, ip, expires_at) values (current_school(), $1, $2, $3, now() + make_interval(mins => $4))`,
+      [u.id, sha256(token), ip, LINK_MINUTES]);
+    return { admin: false as const, name: u.name, school, token };
+  });
+  if (r === "busy") return "Too many tries. Please wait 15 minutes and try again.";
+  if (!r) return null;
+  const first = (r.name || "").split(" ")[0] || "there";
+  const { sendOne } = await import("./email");
+  if (r.admin) await sendOne([{ name: r.name, email }], `Signing in to ${r.school}`,
+    `Hello ${first},\n\nSomeone asked for a sign-in link for your ${r.school} account. Admin accounts sign in with their password instead:\n\n${base}/admin/login?pw=1\n\nIf it wasn’t you, you can ignore this email.\n\n${r.school}`, { tag: "staff-sign-in-link" });
+  else await sendOne([{ name: r.name, email }], `Your ${r.school} sign-in link`,
+    `Hello ${first},\n\nUse this link to sign in to your ${r.school} teacher dashboard. It works once, for the next ${LINK_MINUTES} minutes:\n\n${base}/admin/login/link?t=${r.token}\n\nIf you didn’t ask for it, you can ignore this email.\n\n${r.school}`, { tag: "staff-sign-in-link" });
+  return null;
+}
+
+/** The button on the emailed link's page: signs the teacher in on this device. False when the link is used up or too old. */
+export async function redeemStaffLink(token: string): Promise<boolean> {
+  if (!token || token.length > 100) return false;
+  const { ip, ua } = await clientInfo();
+  const t = await withSchool(async (q) => {
+    const l = (await q<{ user_id: string }>(`update staff_links k set used_at = now() from users u
+      where k.token_hash = $1 and k.used_at is null and k.expires_at > now() and u.id = k.user_id and u.role = 'teacher' and u.disabled_at is null
+      returning k.user_id`, [sha256(token)]))[0];
+    if (!l) return null;
+    const token2 = randomBytes(32).toString("base64url");
+    await q(`insert into staff_sessions (school_id, user_id, token_hash, expires_at, ip, user_agent)
+             values (current_school(), $1, $2, now() + make_interval(hours => $3), $4, $5)`, [l.user_id, sha256(token2), SESSION_HOURS, ip, ua]);
+    await q(`update users set last_sign_in_at = now() where id = $1`, [l.user_id]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'sign_in', 'user', $1, '{"by":"email link"}')`, [l.user_id]);
+    return token2;
+  });
+  if (!t) return false;
+  (await cookies()).set(await sessionCookie(), t, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: SESSION_HOURS * 3600 });
+  return true;
+}
+
 /** The signed-in member of staff, or null. */
 export async function currentStaff(): Promise<Staff | null> {
   const token = (await cookies()).get(await sessionCookie())?.value;

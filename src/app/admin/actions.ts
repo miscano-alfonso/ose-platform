@@ -38,6 +38,20 @@ export async function signInAction(_: unknown, f: FormData): Promise<{ error?: s
   redirect(f.get("cms") === "1" ? "/admin/cms" : "/admin");   // from "Admin" on the OH-SO EdTech site: straight into its editor
 }
 
+// Staff sign in (26 Nov): teachers ask for an emailed link; the link's page signs them in.
+export async function staffLinkAction(f: FormData): Promise<void> {
+  const { sendStaffLink } = await import("@/lib/auth");
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "dev.ohsoed.co.uk";
+  const base = (process.env.SITE_URL && host === new URL(process.env.SITE_URL).host ? process.env.SITE_URL : `${h.get("x-forwarded-proto") || "https"}://${host}`).replace(/\/$/, "");
+  const err = await sendStaffLink(str(f, "email"), base);
+  redirect(err ? `/admin/login?err=${encodeURIComponent(err)}` : "/admin/login?sent=1");
+}
+export async function redeemStaffLinkAction(f: FormData): Promise<void> {
+  const { redeemStaffLink } = await import("@/lib/auth");
+  redirect(await redeemStaffLink(String(f.get("t") ?? "").slice(0, 100)) ? "/admin" : "/admin/login?expired=1");
+}
+
 export async function setupAction(_: unknown, f: FormData): Promise<{ error?: string; name?: string; email?: string }> {
   const name = str(f, "name", 120), email = str(f, "email").toLowerCase();
   const password = String(f.get("password") ?? "").slice(0, 200), confirm = String(f.get("confirm") ?? "").slice(0, 200);
