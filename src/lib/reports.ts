@@ -103,8 +103,8 @@ export async function getWriteSheet(cycleId: string, groupId: string) {
   return withSchool(async (q) => {
     const head = (await q<{ cycle: string; status: string; comments_due: string; code: string; name: string; gcse: boolean; teacher_user: string | null }>(`
       select c.name as cycle, c.status::text, c.comments_due::text, g.code, l.name || ' ' || sj.name as name,
-        (l.name ilike '%GCSE%' and l.name not ilike 'Pre-%') as gcse, t.user_id as teacher_user
-      from report_cycles c, course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id left join teachers t on t.id = g.teacher_id
+        (l.name ilike '%GCSE%' and l.name not ilike 'Pre-%' and pp.year_of_course >= pp.course_years) as gcse, t.user_id as teacher_user
+      from report_cycles c, course_groups g join price_plans pp on pp.id = g.price_plan_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id left join teachers t on t.id = g.teacher_id
       where c.id = $1 and g.id = $2`, [cycleId, groupId]))[0];
     if (!head) return null;
     const rows = await q<WriteRow>(`select e.id, s.first_name || ' ' || s.last_name as student, rl.avg_pct::text, rl.marked,

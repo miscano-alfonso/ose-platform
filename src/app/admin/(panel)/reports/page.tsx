@@ -10,7 +10,9 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
   const sp = await searchParams;
   const { cycles, terms } = await getCycles();
   // as in the prototype, Reports opens on the round being written now
-  const now = cycles.find((c) => c.status !== "published") ?? [...cycles].reverse()[0];
+  // the newest unwritten round that has started (an older round left unpublished shouldn't hide the current one)
+  const open = cycles.filter((c) => c.status !== "published"), today = new Date().toISOString().slice(0, 10);
+  const now = [...open].reverse().find((c) => c.marks_from <= today) ?? open[0] ?? [...cycles].reverse()[0];
   if (now && !sp.all && !sp.err) redirect(`/admin/reports/${now.id}${sp.tab ? `?tab=${sp.tab}${sp.ok ? `&ok=${encodeURIComponent(sp.ok)}` : ""}` : ""}`);
   return <>
     <div className="top"><div><h1>Reports</h1><div className="sub">Termly progress reports: teachers write one per student per class, you approve and publish them to families.</div></div></div>

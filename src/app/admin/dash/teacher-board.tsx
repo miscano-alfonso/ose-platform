@@ -6,7 +6,6 @@ import { teacherStream } from "@/lib/classroom-stream";
 import { SlidesButton } from "../(staff)/teacher/SlidesButton";
 import { findSlides } from "@/lib/lesson-slides";
 import { classesForPoints } from "@/lib/community";
-import { listThreads } from "@/lib/community";
 import type { BoardModule } from "../BentoBoard";
 import { studentOverview } from "@/lib/student-overview";
 import { MoreList } from "../MoreList";
@@ -18,13 +17,23 @@ import { markingQueue, countdown, tone, TURNAROUND_DAYS, REMIND_DAYS } from "@/l
 const DAY = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const wd = (d: string) => DAY[((new Date(d + "T12:00:00Z").getUTCDay() + 6) % 7) + 1];
 const dm = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+/** A Postgres or ISO timestamp as "26 Nov" (London). */
+const onDay = (s: string) => { const t = Date.parse(s.replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00")); return isNaN(t) ? "" : new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" }); };
 const gbp = (p: number) => "£" + (p / 100).toLocaleString("en-GB", { minimumFractionDigits: p % 100 ? 2 : 0, maximumFractionDigits: 2 });
 
 /** My day's modules: the teacher's next lesson with Join up top, reports, then the week (also used by the Solo dashboard). */
 export async function teacherModules(me: { id: string; name: string }): Promise<BoardModule[]> {
   // 26 Nov: messages the office started with this teacher show in The school too (they were only on the Messages page)
   const fromOffice = await import("@/lib/office-messages").then((o) => o.myOfficeThreads("teacher", me.id)).catch(() => []);
-  const [d, threads, mail, chats, given, pclasses] = await Promise.all([myDay(me.id), listThreads(me.id, "open").catch(() => []), teacherEmails(me.id, 8),
+  // 26 Nov: the Messages module shows the same one inbox as the Messages page (the office, the school, families), unread first
+  const inbox = await import("@/lib/teacher-inbox").then(async (m) => {
+    const ta = await import("@/lib/teacher-area");
+    const [contacts, office] = await Promise.all([ta.teacherContacts().catch(() => []), ta.officeInfo().catch(() => ({ label: "the office" }))]);
+    return (await m.teacherInbox(me.id, office.label, contacts)).items;
+  }).catch(() => []);
+  const unreadN = inbox.filter((i) => i.unread > 0).length;
+  const inboxSorted = [...inbox].sort((a, b) => Number(b.unread > 0) - Number(a.unread > 0));   // unread on top, then newest
+  const [d, mail, chats, given, pclasses] = await Promise.all([myDay(me.id), teacherEmails(me.id, 8),
     myChats(me.id).catch(() => []), pointsGiven(me.id).catch(() => []), classesForPoints(me.id, false).catch(() => [])]);
   const [stream, found] = await Promise.all([teacherStream(me.id).catch(() => ({ connected: false, linked: 0, items: [] })),
     findSlides(d.week.map((l) => ({ id: l.id, course: l.course_id ?? null, n: l.lesson_no ?? null, termStart: l.term_start ?? null, folder: l.slides_folder ?? null, term: l.term_no ?? null }))).catch(() => new Map())]);
@@ -34,7 +43,9 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
   const done = d.reportBars.reduce((a, r) => a + r.done, 0), total = d.reportBars.reduce((a, r) => a + r.total, 0);
   const rpct = total ? Math.round(done / total * 100) : null;
   const isToday = next?.d === today;
-  const waiting = threads.filter((t) => t.last_sender === "parent").length;
+  // 26 Nov: "Term 2 · Week 4 · Today · 13:00": the term and week of the term the next lesson falls in (weeks count Monday to Sunday)
+  const monday = (x: string) => { const t = new Date(x + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7)); return t.getTime(); };
+  const termWeek = next?.term_no && next.term_start ? `Term ${next.term_no} · Week ${Math.floor((monday(next.d) - monday(next.term_start)) / 6048e5) + 1}` : next && d.term?.name ? d.term.name : "";
   // 5 Nov: students behind on their Classroom work in this teacher's classes (this term)
   const so = await studentOverview({ teacherUserId: me.id }).catch(() => null);
   const behind = so ? so.rows.filter((r) => r.missing > 0).sort((a, b) => b.missing - a.missing || a.name.localeCompare(b.name)) : [];
@@ -44,7 +55,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
   const dueDay = (s: string) => new Date(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
   const modules: BoardModule[] = [
     { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">{next && <RefreshAt at={next.ends_at} />}
-        <p className={`fx-live${isToday ? "" : " next"}`}>{isToday && <i />}{next ? (isToday ? `Today · ${next.time.slice(0, 5)}` : <><span className="fx-live-k">Next lesson</span> · {wd(next.d)} {dm(next.d)} · {next.time.slice(0, 5)}</>) : d.term?.name ?? "My day"} <NotifyBell settingsHref="/admin/teacher/notifications" /></p>
+        <p className={`fx-live${isToday ? "" : " next"}`}>{isToday && <i />}{termWeek ? `${termWeek} · ` : ""}{next ? (isToday ? `Today · ${next.time.slice(0, 5)}` : <><span className="fx-live-k">Next lesson</span> · {wd(next.d)} {dm(next.d)} · {next.time.slice(0, 5)}</>) : d.term?.name ?? "My day"} <NotifyBell settingsHref="/admin/teacher/notifications" /></p>
         <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {me.name.split(" ")[0]}</span>{next && <><br /><Link className="fx-title-link" href={next.kind && next.kind !== "class" ? "/admin/teacher/ones" : `/admin/register/${next.id}`} title={next.kind && next.kind !== "class" ? "Your 1:1s and workshops" : "The lesson: who’s expected, SEND, tasters and the register"}>{next.name}</Link></>}</h1>
         <div className="fx-sub-row"><p className="fx-hero-s">{next ? next.kind === "one" ? next.detail : next.kind === "workshop" ? `${next.students} booked · ${next.detail}` : <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>{next && next.kind !== "one" && next.kind !== "workshop" && <SlidesButton eventId={next.id} url={next.slides_url ?? null} found={found.get(next.id) ?? null} n={next.lesson_no} />}</div>
       </div>{next && <div className="fx-side"><LessonClock date={next.d} time={next.time} />
@@ -101,11 +112,12 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
             <span className="t"><b>{m.title}</b><span>{m.cls} · {m.toMark} to mark{m.toMark <= 3 ? `: ${m.names.join(", ")}` : ""}</span></span>
             <span className={`dx-cd ${tone(m.daysLeft)}`}>{countdown(m.daysLeft)}</span></a>)}</MoreList></>}
     </section> },
-    { id: "messages", title: "Messages", size: "l", node: <section className="dx-card dx-tall"><header><h2>Messages</h2>{waiting > 0 && <span className="dx-count">{waiting}</span>}<Link className="dx-more" href="/admin/teacher/messages">All messages →</Link></header>
-      {threads.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No open conversations</b><span>Parents’ messages to you show here.</span></div>
-        : <MoreList className="dx-list" limit={4}>{threads.map((t) => <Link key={t.id} className={`dx-item ${t.last_sender === "parent" ? "warn" : "info"}`} href={`/admin/messages/${t.id}`}>
-          <span className="t">{t.last_sender === "parent" && <span className="pill warn">Waiting for your reply</span>}<b>{t.subject}</b><span>{t.parent} · about {t.student} · {dm(t.last_message_at.slice(0, 10))}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><Link className="abtn sm" href="/admin/messages/new">New message</Link></div>
+    { id: "messages", title: "Messages", size: "l", node: <section className="dx-card dx-tall"><header><h2>Messages</h2>{unreadN > 0 && <span className="dx-count">{unreadN}</span>}<Link className="dx-more" href="/admin/teacher/messages">All messages →</Link></header>
+      {inbox.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No messages yet</b><span>Messages from the office and families show here.</span></div>
+        : <MoreList className="dx-list" limit={4}>{inboxSorted.map((it) => <Link key={it.kind + it.id} className={`dx-item ${it.unread ? "warn" : "info"}`} href={`/admin/teacher/messages?${it.kind}=${encodeURIComponent(it.id)}`}>
+          <span className="t">{it.unread ? <span className="pill warn">{it.unread > 1 ? `${it.unread} new` : "New"}{it.kind === "family" ? " · family" : ""}</span> : <span className="pill mute">{it.kind === "family" ? "Family" : "School"}</span>}
+            <b>{it.subject || "(no subject)"}</b><span>{it.who}{it.preview ? ` · ${it.preview.length > 100 ? it.preview.slice(0, 100) + "…" : it.preview}` : ""}</span><span style={{ fontSize: 13 }}>{onDay(it.at)}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><Link className="abtn sm" href="/admin/teacher/messages?new=1">New message</Link></div>
     </section> },
     { id: "email", title: "The school", size: "l", node: <section className="dx-card dx-tall"><header><h2>The school</h2><span className="dx-sub">your messages</span><Link className="dx-more" href="/admin/teacher/messages">All messages →</Link></header>
       {(() => {
@@ -143,10 +155,10 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
           return it.link ? <a key={it.id} className="dx-item info" href={it.link} target="_blank" rel="noopener" title={it.video ? "Watch the video" : "Open in Google Classroom"} style={it.colour ? { borderLeftColor: it.colour } : undefined}>{inner}</a> : <div key={it.id} className="dx-item info">{inner}</div>; })}</MoreList>}
     </section> },
   ];
-  // messaging families and class chats switched off for the school: those modules are shown greyed out
+  // class chats switched off for the school: that module is shown greyed out (26 Nov: Messages stays on; writing to families is off on the Messages page)
   const { familyMsgsOn } = await import("@/lib/teacher-area");
   if (await familyMsgsOn()) return modules;
-  return modules.map((m) => m.id === "messages" || m.id === "chats" ? { ...m, node: <div className="is-off" title="Switched off for now">{m.node}<p className="off-note">Switched off for now</p></div> } : m);
+  return modules.map((m) => m.id === "chats" ? { ...m, node: <div className="is-off" title="Switched off for now">{m.node}<p className="off-note">Switched off for now</p></div> } : m);
 }
 
 export const TEACHER_BUILT_IN: { id: string; size: "s" | "q" | "m" | "l" | "xl" | "full"; h?: "s" | "m" | "l" }[] = [

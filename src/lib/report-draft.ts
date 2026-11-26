@@ -21,11 +21,11 @@ async function context(actor: { id: string; role: string }, entryId: string): Pr
   return withSchool(async (q) => {
     const e = (await q<Omit<Ctx, "previous" | "work" | "rewards" | "style"> & { student_id: string; teacher_user: string | null; teacher_id: string | null }>(`
       select e.student_id, nullif(s.gender, '') as gender, t.user_id as teacher_user, t.id as teacher_id, s.first_name || ' ' || s.last_name as student, coalesce(nullif(s.known_as, ''), s.first_name) as first, l.name || ' ' || sj.name as klass,
-        c.name as cycle, coalesce(tu.name, '') as teacher, (l.name ilike '%GCSE%' and l.name not ilike 'Pre-%') as gcse, e.group_id, c.marks_from::text, c.comments_due::text,
+        c.name as cycle, coalesce(tu.name, '') as teacher, (l.name ilike '%GCSE%' and l.name not ilike 'Pre-%' and pp.year_of_course >= pp.course_years) as gcse, e.group_id, c.marks_from::text, c.comments_due::text,
         (select round(100.0 * count(*) filter (where m.mark in ('present','late')) / nullif(count(*) filter (where m.mark <> 'approved_absence'), 0))::int
            from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id where ev.group_id = e.group_id and m.student_id = e.student_id and ev.lesson_date >= c.marks_from - 14) as att,
         (select count(*)::int from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id where ev.group_id = e.group_id and m.student_id = e.student_id and ev.lesson_date >= c.marks_from - 14) as lessons
-      from report_entries e join report_cycles c on c.id = e.cycle_id join students s on s.id = e.student_id join course_groups g on g.id = e.group_id
+      from report_entries e join report_cycles c on c.id = e.cycle_id join students s on s.id = e.student_id join course_groups g on g.id = e.group_id join price_plans pp on pp.id = g.price_plan_id
         join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id left join teachers t on t.id = g.teacher_id left join users tu on tu.id = t.user_id
       where e.id = $1 and ($3 = 'school_admin' or t.user_id = $2)`, [entryId, actor.id, actor.role]))[0];
     if (!e) return null;
