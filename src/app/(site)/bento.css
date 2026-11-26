@@ -1353,3 +1353,24 @@ html[data-theme=dark] .bt .nd-d{display:block}html[data-theme=dark] .bt .nd-l{di
 .nd-zclose:hover,.nd-zclose:focus-visible{background:#68bbe4}
 
 .bt .nd-jump::-webkit-scrollbar{display:none}.bt .nd-jump a{flex:none;white-space:nowrap}   /* always one line; scrolls sideways if the screen is too narrow */
+/* Resources (/resources, 21 Nov; restored 26 Nov after the 401 footer update dropped it): a section per subject with its
+   roundel and a grid of resource cards. The subject colour only marks the card's top edge and the heading rule, never text.
+   26 Nov: the kind label is yellow on cards that are links (Website, Watch, Listen, Read…); tips (no link) keep a plain label. */
+.bt .rs-wrap{display:grid;gap:56px}
+.bt .rs-sec{scroll-margin-top:calc(var(--navh,96px) + 80px);display:grid;gap:20px}
+.bt .rs-head{display:flex;align-items:center;gap:16px;padding-bottom:14px;border-bottom:3px solid var(--c,var(--b-line))}
+.bt .rs-head h2{margin:0;overflow-wrap:anywhere}
+.bt .rs-rd{width:64px;height:64px;flex:none;border-radius:50%}
+.bt .rs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,300px),1fr));gap:18px}
+.bt .rs-card{background-image:linear-gradient(var(--c,var(--b-sky)),var(--c,var(--b-sky)));background-size:100% 6px;background-repeat:no-repeat;overflow-wrap:anywhere}
+.bt .rs-card h3{font-size:20px}
+.bt a.rs-card .gd-k{background:var(--b-pop);color:var(--b-pop-ink)}
+.bt .rs-tip{background-color:var(--b-inset)}
+.bt .rs-tip .gd-k{background:var(--b-tile);color:var(--b-ink);border:1px solid var(--b-line)}
+.bt .rs-ask{padding:24px 28px;border-radius:22px;background:var(--b-tile);border:1px solid var(--b-line)}
+.bt .rs-ask p{margin:0;line-height:1.55;color:var(--b-ink)}.bt .rs-ask a{color:var(--b-ink);font-weight:600}
+/* lots of subjects: on narrow screens (or zoomed text) the jump links wrap and scroll away with the page, so nothing is ever covered or cut off */
+@media (max-width:760px){.bt .ph-sticky:has(.rs-jump){position:static;margin-top:18px;margin-bottom:0}
+  .bt .s-phead:has(+ .ph-sticky .rs-jump)>.wrap{padding-bottom:clamp(36px,6vh,64px)}
+  .bt .rs-jump{width:auto!important}.bt .ph-sticky .rs-jump a{padding:8px 16px}
+  .bt .rs-sec{scroll-margin-top:calc(var(--navh,96px) + 16px)}}
