@@ -34,9 +34,9 @@ export default async function Students({ searchParams }: { searchParams: Promise
   const th = (label: string, k: string, cls?: string) => { const on = sort === k; return <th className={cls} aria-sort={on ? (dir === 1 ? "ascending" : "descending") : undefined}>
     <Link scroll={false} className="thsort" href={href({ sort: k, dir: on && dir === 1 ? "desc" : undefined })}>{label}{on ? (dir === 1 ? " ↓" : " ↑") : ""}</Link></th>; };
   // Classroom accounts nobody matched, once each (the same person can be in several classes)
-  type Un = { userId: string; name: string; email: string | null; gids: string[]; codes: string[]; handed: { gid: string; titles: string[]; set: number | null; link: string | null }[] };
-  const unmatched = [...(o.classroom.unmatched ?? []).reduce((m, u) => { const x = m.get(u.userId) ?? { userId: u.userId, name: u.name, email: u.email, gids: [], codes: [], handed: [] };
-    x.gids.push(u.gid); x.codes.push(u.code); x.handed.push({ gid: u.gid, titles: u.handed ?? [], set: u.set ?? null, link: u.link ?? null }); return m.set(u.userId, x); }, new Map<string, Un>()).values()];
+  type Un = { userId: string; name: string; email: string | null; gids: string[]; codes: string[]; handed: { gid: string; titles: string[]; set: number | null; link: string | null }[]; taster: string | null };
+  const unmatched = [...(o.classroom.unmatched ?? []).reduce((m, u) => { const x = m.get(u.userId) ?? { userId: u.userId, name: u.name, email: u.email, gids: [], codes: [], handed: [], taster: null };
+    x.gids.push(u.gid); x.codes.push(u.code); if (u.taster) x.taster = u.taster; x.handed.push({ gid: u.gid, titles: u.handed ?? [], set: u.set ?? null, link: u.link ?? null }); return m.set(u.userId, x); }, new Map<string, Un>()).values()];
   // parents' emails, for a child using their parent's Google account (this page is admin-only; teachers never see these)
   const parentEmail = unmatched.some((u) => u.email) ? new Map((await withSchool((q) => q<{ id: string; email: string }>(`select s.id, lower(p.email::text) as email from students s join parents p on p.id = s.parent_id where s.id = any($1::uuid[])`,
     [o.rows.map((r) => r.id)])).catch(() => [])).map((x) => [x.id, x.email])) : new Map<string, string>();
@@ -89,6 +89,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
           <div className="t"><b>{u.name}</b><span className="muted">{u.email ?? "no email shared"} · in {u.gids.map((g, i) => <span key={g} title={u.codes[i]}>{i ? ", " : ""}{className.get(g) ?? u.codes[i]}</span>)}</span>
             {u.handed.map((h) => <span key={h.gid} className="st-handed"><b>{className.get(h.gid) ?? u.codes[u.gids.indexOf(h.gid)]}</b>: {h.titles.length ? <>handed in {h.titles.length}{h.set ? ` of ${h.set}` : ""} · {h.titles.slice(0, 8).join(" · ")}{h.titles.length > 8 ? " …" : ""}</> : "nothing handed in yet"}
               {h.link && <> · <a href={h.link} target="_blank" rel="noreferrer" title="Opens this account’s work in Google Classroom, which shows the student’s name">See who it is in Classroom ↗</a></>}</span>)}
+            {u.taster && <span className="st-taster">Possibly a taster · taster booked: {u.taster}</span>}
             {guesses[0] && <span className="st-guess">{top ? "Best guess" : "Possible"}: <b>{guesses[0].r.name}</b> · {guesses[0].why}</span>}</div>
           <select name="student" required defaultValue={top?.r.id ?? ""} className="mini" aria-label={`Who is ${u.name}?`}><option value="" disabled>Who is it?</option>
             {guesses.length > 0 && <optgroup label="Best guesses (same classes)">{guesses.map((g) => <option key={g.r.id} value={g.r.id}>{g.r.name} · {g.short}</option>)}</optgroup>}
@@ -97,6 +98,10 @@ export default async function Students({ searchParams }: { searchParams: Promise
             <button className="abtn sm" type="submit" formAction={removeClassroomAccountAction} formNoValidate title="Not a student here (e.g. a sibling, a parent or someone who has left): take it off this list">Remove</button></span></form>; })}
       <p className="note" style={{ margin: "10px 0 0" }}>To confirm who an account is: open that class in Google Classroom → Classwork → a piece of work they handed in → <b>Student work</b>. Classroom shows the student’s name there, so the one who handed in the same pieces is this account. Matching remembers that Classroom account for every class, then reads Classroom again. Teachers or other adults in the class can be left. <b>Remove</b> takes an account off this list (someone who isn’t a student here); it stays in Google Classroom.</p>
       {!!o.classroom.removedAccounts && <form action={removeClassroomAccountAction} className="muted" style={{ margin: "8px 0 0", fontSize: 14 }}><input type="hidden" name="all" value="1" />{o.classroom.removedAccounts} removed from this list · <button className="lnk" type="submit">Bring them back</button></form>}</details>}
+    {/* 26 Nov: tasters found in Classrooms, and trial classes */}
+    {(!!o.classroom.tasters?.length || !!o.classroom.trialSkipped) && <p className="muted" style={{ fontSize: 14, margin: "8px 0 0" }}>
+      {!!o.classroom.tasters?.length && <>In Classroom for a taster: {o.classroom.tasters.map((t) => `${t.name} (${className.get(t.gid) ?? t.code}, ${t.when})`).join(", ")}. </>}
+      {!!o.classroom.trialSkipped && <>{o.classroom.trialSkipped} account{o.classroom.trialSkipped === 1 ? "" : "s"} in trial classes, not listed for matching.</>}</p>}
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "14px 0" }}>
       <LiveSearch placeholder="Search student, parent or class" label="Search students" />
       <div className="segl" role="group" aria-label="Show">{[["all", "All"], ["missing", `Missing work (${t.withMissing})`], ["attendance", `Low attendance (${t.lowAtt})`], ["send", "SEND"], ["points", "Points"]].map(([k, l]) =>

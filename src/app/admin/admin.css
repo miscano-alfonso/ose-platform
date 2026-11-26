@@ -1565,3 +1565,4 @@
 .adm .cell-menu{display:grid;gap:2px;justify-items:end;margin-top:2px}
 .adm .joined-edit{display:inline}.adm .joined-edit>summary{display:inline;list-style:none;cursor:pointer}.adm .joined-edit>summary::-webkit-details-marker{display:none}
 .adm .joined-form{display:inline-flex;gap:6px;align-items:center;margin:4px 0}
+.adm .st-taster{display:block;color:var(--brand);font-weight:600;font-size:14px;margin-top:4px}

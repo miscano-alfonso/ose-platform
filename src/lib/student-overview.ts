@@ -18,7 +18,7 @@ export type StudentRow = {
 };
 export type Overview = { term: { id: string; name: string; starts_on: string; ends_on: string } | null; since: string; rows: StudentRow[];
   totals: { students: number; due: number; handed: number; missing: number; late: number; withMissing: number; lowAtt: number; points: number };
-  classroom: { at: string | null; error: string | null; linked: number; granted: boolean | null; missing: string[] | null; by: string | null; classes?: number; work?: number; submissions?: number; problems?: string[]; unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number; link?: string | null }[]; removedAccounts?: number } };
+  classroom: { at: string | null; error: string | null; linked: number; granted: boolean | null; missing: string[] | null; by: string | null; classes?: number; work?: number; submissions?: number; problems?: string[]; unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number; link?: string | null; taster?: string | null }[]; removedAccounts?: number; tasters?: { userId: string; name: string; gid: string; code: string; when: string }[]; trialSkipped?: number } };
 
 /** opts.teacherUserId: only that teacher's classes (their own dashboard). */
 export async function studentOverview(opts: { teacherUserId?: string; termOnly?: boolean } = {}): Promise<Overview> {
@@ -64,7 +64,7 @@ export async function studentOverview(opts: { teacherUserId?: string; termOnly?:
       where c.due_at >= $1::date and c.due_at < now() and g.academic_year_id = ${YEAR} and ($2::uuid[] is null or g.id = any($2::uuid[]))
       order by c.due_at desc`, [since, gids]);
     const pts = await q<{ id: string; points: number }>(`select student_id as id, sum(points)::int as points from reward_points where awarded_on between $1::date and $2::date and ($3::uuid[] is null or group_id = any($3::uuid[])) group by student_id`, [pSince, until, gids]);
-    const info = (await q<{ value: { at?: string; error?: string; classes?: number; work?: number; submissions?: number; problems?: string[]; unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number }[] } }>(`select value from meet_kv where key = 'classroom' limit 1`).catch(() => []))[0]?.value ?? {};
+    const info = (await q<{ value: { at?: string; error?: string; classes?: number; work?: number; submissions?: number; problems?: string[]; unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number; link?: string | null; taster?: string | null }[]; tasters?: { userId: string; name: string; gid: string; code: string; when: string }[]; trialSkipped?: number } }>(`select value from meet_kv where key = 'classroom' limit 1`).catch(() => []))[0]?.value ?? {};
     // 26 Nov: Classroom accounts the office removed from "Classroom accounts to match" (people not at the school)
     const removed = ((await q<{ value: { ids?: string[] } }>(`select value from meet_kv where key = 'classroom_removed'`).catch(() => []))[0]?.value?.ids ?? []).filter((x) => typeof x === "string");
     const linked = (await q<{ n: number }>(`select count(*)::int as n from course_groups g where g.academic_year_id = ${YEAR} and g.google_course_id is not null and g.status <> 'closed' and ($1::uuid[] is null or g.id = any($1::uuid[]))`, [gids]))[0]?.n ?? 0;
@@ -85,7 +85,7 @@ export async function studentOverview(opts: { teacherUserId?: string; termOnly?:
     return { term, since, rows,
       totals: { students: rows.length, due: sum("due"), handed: sum("handed"), missing: sum("missing"), late: sum("late"), withMissing: rows.filter((r) => r.missing > 0).length,
         lowAtt: rows.filter((r) => r.att != null && r.held >= 3 && r.att < 85).length, points: sum("points") },
-      classroom: { at: info.at ?? null, error: info.error ?? null, linked, granted, missing, by, classes: info.classes, work: info.work, submissions: info.submissions, problems: info.problems, unmatched: (info.unmatched ?? []).filter((u) => !removed.includes(u.userId)), removedAccounts: removed.length } };
+      classroom: { at: info.at ?? null, error: info.error ?? null, linked, granted, missing, by, classes: info.classes, work: info.work, submissions: info.submissions, problems: info.problems, unmatched: (info.unmatched ?? []).filter((u) => !removed.includes(u.userId)), removedAccounts: removed.length, tasters: info.tasters ?? [], trialSkipped: info.trialSkipped ?? 0 } };
   });
 }
 

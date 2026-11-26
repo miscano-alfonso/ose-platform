@@ -6,7 +6,7 @@ import { googleAccess, googleKv, googleKvSet, classroomGranted, MeetError } from
 // who has accepted their class invitation, the work set in each class, and each student's hand-ins and marks.
 // Parents see this under Assignments; report percentages come from the marks on returned work.
 const API = () => process.env.CLASSROOM_API_URL || "https://classroom.googleapis.com/v1";
-export type ClassroomInfo = { unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number; link?: string | null }[]; at?: string; classes?: number; work?: number; submissions?: number; joined?: number; problems?: string[]; error?: string; by?: string };
+export type ClassroomInfo = { unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number; link?: string | null; taster?: string | null }[]; tasters?: { userId: string; name: string; gid: string; code: string; when: string }[]; trialSkipped?: number; at?: string; classes?: number; work?: number; submissions?: number; joined?: number; problems?: string[]; error?: string; by?: string };
 
 type Page<T> = Record<string, T[] | string | undefined> & { nextPageToken?: string };
 async function all<T>(token: string, path: string, key: string): Promise<{ ok: true; items: T[] } | { ok: false; status: number }> {
@@ -40,8 +40,8 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
   let token: string;
   try { token = await googleAccess("google"); }
   catch (e) { const info = { at: new Date().toISOString(), by, error: e instanceof MeetError ? e.message : "Couldn’t reach Google." }; await googleKvSet("classroom", info); return info; }
-  const info: ClassroomInfo = { at: new Date().toISOString(), by, classes: 0, work: 0, submissions: 0, joined: 0, problems: [], unmatched: [] };
-  const groups = await withSchool((q) => q<{ id: string; code: string; course: string }>(`select g.id, g.code, g.google_course_id as course from course_groups g join academic_years y on y.id = g.academic_year_id
+  const info: ClassroomInfo = { at: new Date().toISOString(), by, classes: 0, work: 0, submissions: 0, joined: 0, problems: [], unmatched: [], tasters: [], trialSkipped: 0 };
+  const groups = await withSchool((q) => q<{ id: string; code: string; course: string; trial: boolean }>(`select g.id, g.code, g.google_course_id as course, g.trial from course_groups g join academic_years y on y.id = g.academic_year_id
     where y.ends_on >= current_date and g.google_course_id is not null and g.status <> 'closed' order by g.code`));
   const matchedSomewhere = new Set<string>();
   for (const g of groups) {
@@ -85,6 +85,20 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
           if (hits.length === 1) { uid.set(s.userId, hits[0].id); taken.add(hits[0].id); }
         }
         const still = roster.items.filter((s) => !uid.has(s.userId));
+        // 26 Nov: a trial class: everyone in it is trying it, so nobody is "to match"
+        if (g.trial) { info.trialSkipped! += still.length; still.length = 0; }
+        // 26 Nov: children with a taster booking on this class (a month either side): an account with their Google email or name is a
+        // taster, not a stranger; an account Google says nothing about is shown with the taster it might be
+        const tasterRows = still.length ? await q<{ name: string; email: string | null; on: string }>(`select r.child_name as name, lower(r.child_email::text) as email, ev.lesson_date::text as on
+            from taster_bookings tb join taster_requests r on r.id = tb.request_id join lesson_events ev on ev.id = tb.lesson_event_id
+            where ev.group_id = $1 and tb.status <> 'cancelled' and ev.lesson_date between current_date - 30 and current_date + 30 order by ev.lesson_date`, [g.id]) : [];
+        const day = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+        for (const s of [...still]) {
+          const em = (s.profile?.emailAddress ?? "").toLowerCase(), nm = norm(s.profile?.name?.fullName ?? "");
+          const t = tasterRows.find((r) => (em && r.email === em) || (nm && norm(r.name) === nm));
+          if (t) { info.tasters!.push({ userId: s.userId, name: t.name, gid: g.id, code: g.code, when: day(t.on) }); still.splice(still.indexOf(s), 1); }
+        }
+        const unknownTaster = still.length && tasterRows.length ? `${tasterRows.map((r) => `${r.name} (${day(r.on)})`).slice(0, 3).join(", ")}` : null;
         // what each of them handed in, so the office can check it against the named student work in Classroom
         const title = new Map(work.items.map((w) => [w.id, (w.title ?? "Untitled").slice(0, 120)]));
         for (const s of still) {
@@ -92,7 +106,8 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
           // 26 Nov: a link to one of their submissions in Classroom: Classroom shows the student's name there, even when Google
           // hides it from us
           const link = subs.items.find((x) => x.userId === s.userId && x.alternateLink)?.alternateLink ?? null;
-          info.unmatched!.push({ userId: s.userId, name: s.profile?.name?.fullName ?? "(no name)", email: s.profile?.emailAddress ?? null, gid: g.id, code: g.code, handed: handed.slice(0, 30), set: work.items.length, link });
+          info.unmatched!.push({ userId: s.userId, name: s.profile?.name?.fullName ?? "(no name)", email: s.profile?.emailAddress ?? null, gid: g.id, code: g.code, handed: handed.slice(0, 30), set: work.items.length, link,
+            taster: !handed.length && unknownTaster ? unknownTaster : null });
         }
       }
       for (const u of uid.keys()) matchedSomewhere.add(u);
