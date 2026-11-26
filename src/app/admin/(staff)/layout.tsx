@@ -41,8 +41,13 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   // Admin → Visitors: a teacher using their dashboard (not an admin, not "Viewing as")
   if (!me.viewing && me.role === "teacher") await import("@/lib/visitors").then((v) => v.logDashboard("teacher", me.id)).catch(() => null);
   const [c] = await withSchool((q) => q<{ msgs: number; reports: number; marking: number }>(`select
-    (select count(*)::int from message_threads th join teachers t on t.id = th.teacher_id where t.user_id = $1 and th.status = 'open'
-      and (select m.sender from messages m where m.thread_id = th.id order by m.created_at desc limit 1) = 'parent') as msgs,
+    -- 26 Nov: unread conversations in the Messages inbox (families, messages from the office, replies from the school)
+    ((select count(*)::int from message_threads th join teachers t on t.id = th.teacher_id where t.user_id = $1
+        and exists (select 1 from messages m where m.thread_id = th.id and m.sender = 'parent' and m.read_by_teacher_at is null))
+     + (select count(*)::int from office_threads th join teachers t on t.id = th.teacher_id where t.user_id = $1 and th.to_kind = 'teacher'
+        and exists (select 1 from office_messages m where m.thread_id = th.id and m.sender = 'office' and m.read_at is null))
+     + (select count(distinct im.thread_id)::int from inbox_messages im where im.kind = 'staff' and lower(im.from_email::text) = (select lower(email::text) from users where id = $1)
+        and im.replied_at > coalesce((select ts.seen_at from teacher_seen ts where ts.user_id = $1 and ts.key = 'school:' || im.thread_id), '2026-11-26T12:00:00Z'::timestamptz))) as msgs,
     (select count(*)::int from report_entries e join report_cycles cy on cy.id = e.cycle_id join course_groups g on g.id = e.group_id join teachers t on t.id = g.teacher_id
       where t.user_id = $1 and cy.status <> 'published' and e.status in ('todo','draft','returned')) as reports,
     (select count(*)::int from classroom_submissions s join classroom_coursework cw on cw.id = s.coursework_id join course_groups g on g.id = cw.group_id join teachers t on t.id = g.teacher_id

@@ -742,6 +742,7 @@ export async function replyThreadAction(f: FormData): Promise<void> {
   const T = await import("@/lib/test-mode"), paused = me.role === "teacher" && await T.betaOn();   // Beta (26 Nov): teachers' messages to families
   const err = paused ? T.BETA.familyMsg : body ? await replyThread(me, id, body, false) : "Write a message first.";
   revalidatePath("/admin/messages");
+  if (f.get("back") === "teacher") redirect(`/admin/teacher/messages?family=${id}${err ? "&err=" + encodeURIComponent(err) : ""}`);   // 26 Nov: the teacher's inbox
   redirect(`/admin/messages/${id}${err ? "?err=" + encodeURIComponent(err) : ""}`);
 }
 export async function setThreadStatusAction(f: FormData): Promise<void> {
