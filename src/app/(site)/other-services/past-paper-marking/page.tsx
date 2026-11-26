@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "@/app/(site)/HoverLink";
 import { money } from "@/lib/format";
 import { sendPaper } from "./actions";
-import { MARKING_SUBJECTS, MARKING_PRICE_PENCE } from "./subjects";
+import { markingSubjects, MARKING_PRICE_PENCE } from "./subjects";
 import { siteText } from "@/lib/site-content";
 
 export const metadata: Metadata = { title: "Past paper marking", description: "Send us an iGCSE English past paper: marked within 48 hours with written feedback and targets." };
 
 export default async function PastPaperMarking({ searchParams }: { searchParams: Promise<{ sent?: string; error?: string; subject?: string }> }) {
   const [sp, txt] = await Promise.all([searchParams, siteText()]);
+  const MARKING_SUBJECTS = markingSubjects(txt.marking_subjects);
   const pay = /^https:\/\//.test(txt.marking_pay_url ?? "") ? txt.marking_pay_url : null;
   const payBtn = pay && <a className="wk-go pp-pay" href={pay} target="_blank" rel="noopener noreferrer">Pay now · {money(MARKING_PRICE_PENCE)}</a>;
   return (<>
