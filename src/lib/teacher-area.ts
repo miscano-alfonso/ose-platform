@@ -34,12 +34,12 @@ export async function myDay(userId: string): Promise<MyDay> {
     const term = (await q<{ id: string; name: string; pay_date: string }>(`select id, name, term_pay_date(id)::text as pay_date from terms where id = ${TERM_NOW.replace("$1", "")}`))[0] ?? null;
     const [{ classes }] = await q<{ classes: number }>(`select count(*)::int as classes from course_groups g where g.teacher_id = ${ME} and g.academic_year_id = ${YEAR_NOW} and g.status <> 'hidden'`, [userId]);
     const reports = await q<{ group_id: string; cycle_id: string; cycle: string; due: string; name: string; done: number; total: number; left: number }>(`
-      select g.id as group_id, c.id as cycle_id, c.name as cycle, c.comments_due::text as due, l.name || ' ' || sj.name as name,
+      select g.id as group_id, c.id as cycle_id, c.name as cycle, c.comments_due::text as due, l.name || ' ' || coalesce(sj.short_name, sj.name) as name,
         count(*) filter (where e.status in ('submitted','approved'))::int as done, count(*)::int as total,
         count(*) filter (where e.status in ('todo','draft','returned'))::int as left
       from report_entries e join report_cycles c on c.id = e.cycle_id join course_groups g on g.id = e.group_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where g.teacher_id = ${ME} and c.status <> 'published' group by g.id, c.id, l.sort_order, l.name, sj.name order by c.comments_due, l.sort_order, sj.name`, [userId]);
+      where g.teacher_id = ${ME} and c.status <> 'published' group by g.id, c.id, l.sort_order, l.name, coalesce(sj.short_name, sj.name) order by c.comments_due, l.sort_order, coalesce(sj.short_name, sj.name)`, [userId]);
     const att = term ? (await q<{ pct: number | null }>(`select round(100.0 * count(*) filter (where m.mark in ('present','late')) / nullif(count(*) filter (where m.mark <> 'approved_absence'), 0))::int as pct
       from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id join course_groups g on g.id = ev.group_id
       where g.teacher_id = ${ME} and ev.term_id = $2`, [userId, term.id]))[0]?.pct ?? null : null;
@@ -47,7 +47,7 @@ export async function myDay(userId: string): Promise<MyDay> {
       and starts_at >= date_trunc('day', now()) and starts_at < date_trunc('day', now()) + interval '8 days'`, [userId]);
     const pay = term ? await myTermPay(q, userId, term.id) : 0;
     const week = await q<WeekLesson>(`
-      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, ((ev.lesson_date + sl.ends_at) at time zone 'Europe/London')::text as ends_at, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id, g.slides_folder, (select number from terms t where t.id = ev.term_id) as term_no,
+      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, ((ev.lesson_date + sl.ends_at) at time zone 'Europe/London')::text as ends_at, l.name || ' ' || coalesce(sj.short_name, sj.name) as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id, g.slides_folder, (select number from terms t where t.id = ev.term_id) as term_no,
         (select starts_on::text from terms t where t.id = ev.term_id) as term_start,
         (select count(*)::int from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.group_id = ev.group_id and e2.term_id = ev.term_id
           and e2.status <> 'cancelled' and (e2.lesson_date, s2.starts_at) <= (ev.lesson_date, sl.starts_at)) as lesson_no,
@@ -73,7 +73,7 @@ export async function myDay(userId: string): Promise<MyDay> {
         -- the rest of the teaching week (Monday to Sunday) that holds the teacher's next lesson, so a week starting after half term shows in full
         and ev.lesson_date <= (select date_trunc('week', min(e2.lesson_date))::date + 6 from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.teacher_id = ${ME} and e2.status <> 'cancelled' and (e2.lesson_date + s2.ends_at) at time zone 'Europe/London' > now())
       order by ev.lesson_date, sl.starts_at`, [userId]).catch(() => q<WeekLesson>(`
-      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, ((ev.lesson_date + sl.ends_at) at time zone 'Europe/London')::text as ends_at, l.name || ' ' || sj.name as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id, g.slides_folder, (select number from terms t where t.id = ev.term_id) as term_no,
+      select ev.id, ev.lesson_date::text as d, to_char(sl.starts_at,'HH24:MI') as time, ((ev.lesson_date + sl.ends_at) at time zone 'Europe/London')::text as ends_at, l.name || ' ' || coalesce(sj.short_name, sj.name) as name, g.code, ev.status::text, g.meet_url, ev.slides_url, g.google_course_id as course_id, g.slides_folder, (select number from terms t where t.id = ev.term_id) as term_no,
         (select starts_on::text from terms t where t.id = ev.term_id) as term_start,
         (select count(*)::int from lesson_events e2 join lesson_slots s2 on s2.id = e2.slot_id where e2.group_id = ev.group_id and e2.term_id = ev.term_id
           and e2.status <> 'cancelled' and (e2.lesson_date, s2.starts_at) <= (ev.lesson_date, sl.starts_at)) as lesson_no,
@@ -90,7 +90,7 @@ export async function myDay(userId: string): Promise<MyDay> {
       select b.id, (b.starts_at at time zone 'Europe/London')::date::text as d, to_char(b.starts_at at time zone 'Europe/London', 'HH24:MI') as time, (b.starts_at + make_interval(mins => b.minutes))::text as ends_at,
         '1:1 · ' || b.student_name as name, '1:1' as code, 'scheduled' as status, b.meet_url, 1 as students, 0 as not_in_classroom,
         '{}'::text[] as tasters, '{}'::text[] as absent, 0 as marked, 'one' as kind,
-        concat_ws(' · ', l.name || ' ' || sj.name, b.minutes || ' min', nullif(b.focus, '')) as detail, '[]'::json as birthdays, '{}'::text[] as send
+        concat_ws(' · ', l.name || ' ' || coalesce(sj.short_name, sj.name), b.minutes || ' min', nullif(b.focus, '')) as detail, '[]'::json as birthdays, '{}'::text[] as send
       from tutoring_bookings b left join levels l on l.id = b.level_id left join subjects sj on sj.id = b.subject_id
       where b.teacher_id = ${ME} and b.status = 'booked' and b.starts_at + make_interval(mins => b.minutes) > now() and b.starts_at < now() + interval '15 days'
       union all
@@ -165,17 +165,17 @@ export type PayItems = {
 export async function myPayItems(userId: string): Promise<Record<string, PayItems>> {
   return withSchool(async (q) => {
     const lessons = await q<{ term_id: string; cls: string; level: string; cover: boolean; n: number; taught: number; rate: number; pay: number }>(`
-      select e.term_id, l.name || ' ' || sj.name as cls, l.name as level, (e.teacher_id is distinct from s.teacher_id) as cover,
+      select e.term_id, l.name || ' ' || coalesce(sj.short_name, sj.name) as cls, l.name as level, (e.teacher_id is distinct from s.teacher_id) as cover,
         count(*)::int as n, count(*) filter (where e.status = 'taught')::int as taught, ${RATE("g.level_id", "e.teacher_id", "e.lesson_date")}::int as rate,
         sum(${RATE("g.level_id", "e.teacher_id", "e.lesson_date")})::int as pay
       from lesson_events e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         left join lesson_slots s on s.id = e.slot_id
       where e.teacher_id = ${ME} and e.status <> 'cancelled' and e.term_id in (select id from terms where academic_year_id = ${YEAR_NOW})
-      group by e.term_id, l.sort_order, l.name, sj.name, 4, 7 order by l.sort_order, sj.name, 4`, [userId]);
+      group by e.term_id, l.sort_order, l.name, coalesce(sj.short_name, sj.name), 4, 7 order by l.sort_order, coalesce(sj.short_name, sj.name), 4`, [userId]);
     // 1:1s and workshops, each paid with the term that ends next after it (as teacher_term_extras)
     const extras = await q<{ term_id: string; at: string; kind: "1:1" | "workshop"; what: string; minutes: number; status: string; pay: number }>(`
       with x as (
-        select b.starts_at, '1:1' as kind, b.student_name || ' · ' || coalesce(l.name || ' ', '') || sj.name as what, b.minutes, b.status::text as status, b.teacher_pay_pence as pay
+        select b.starts_at, '1:1' as kind, b.student_name || ' · ' || coalesce(l.name || ' ', '') || coalesce(sj.short_name, sj.name) as what, b.minutes, b.status::text as status, b.teacher_pay_pence as pay
           from tutoring_bookings b join subjects sj on sj.id = b.subject_id left join levels l on l.id = b.level_id
           where b.teacher_id = ${ME} and b.status in ('completed', 'no_show')
         union all
@@ -193,7 +193,7 @@ export async function myPayItems(userId: string): Promise<Record<string, PayItem
 
 export async function myTimetable(userId: string) {
   return withSchool((q) => q<{ slot_id: string; weekday: number; time: string; ends: string; level: string; subject: string; code: string; students: number }>(`
-    select s.id as slot_id, s.weekday, to_char(s.starts_at,'HH24:MI') as time, to_char(s.ends_at,'HH24:MI') as ends, l.name as level, sj.name as subject, g.code,
+    select s.id as slot_id, s.weekday, to_char(s.starts_at,'HH24:MI') as time, to_char(s.ends_at,'HH24:MI') as ends, l.name as level, coalesce(sj.short_name, sj.name) as subject, g.code,
       (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students
     from lesson_slots s join course_groups g on g.id = s.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
     where s.teacher_id = ${ME} and s.academic_year_id = ${YEAR_NOW} and s.one_off_on is null order by s.starts_at, s.weekday`, [userId]));
@@ -202,7 +202,7 @@ export async function myTimetable(userId: string) {
 export async function myOnes(userId: string) {
   return withSchool(async (q) => ({
     bookings: await q<{ id: string; at: string; minutes: number; child: string; level: string; subject: string; focus: string | null; audience: string; past: boolean }>(`
-      select b.id, b.starts_at::text as at, b.minutes, b.student_name as child, l.name as level, sj.name as subject, b.focus, b.audience::text, b.starts_at < now() as past
+      select b.id, b.starts_at::text as at, b.minutes, b.student_name as child, l.name as level, coalesce(sj.short_name, sj.name) as subject, b.focus, b.audience::text, b.starts_at < now() as past
       from tutoring_bookings b join levels l on l.id = b.level_id join subjects sj on sj.id = b.subject_id
       where b.teacher_id = ${ME} and b.status = 'booked' order by b.starts_at`, [userId]),
     workshops: await q<{ id: string; title: string; at: string; minutes: number; booked: number }>(`select w.id, w.title, w.starts_at::text as at, w.minutes,
@@ -228,10 +228,10 @@ export async function myChats(userId: string) {
   return withSchool(async (q) => {
     await q(`insert into student_chats (school_id, kind, group_id) select g.school_id, 'class', g.id from course_groups g
       where g.teacher_id = ${ME} and g.academic_year_id = ${YEAR_NOW} and not exists (select 1 from student_chats c where c.group_id = g.id)`, [userId]).catch(() => null);
-    return q<{ id: string; name: string; messages: number; last_at: string | null }>(`select c.id, l.name || ' ' || sj.name as name,
+    return q<{ id: string; name: string; messages: number; last_at: string | null }>(`select c.id, l.name || ' ' || coalesce(sj.short_name, sj.name) as name,
         (select count(*)::int from student_chat_messages m where m.chat_id = c.id) as messages, (select max(created_at)::text from student_chat_messages m where m.chat_id = c.id) as last_at
       from student_chats c join course_groups g on g.id = c.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where c.kind = 'class' and g.teacher_id = ${ME} and g.academic_year_id = ${YEAR_NOW} order by l.sort_order, sj.name`, [userId]);
+      where c.kind = 'class' and g.teacher_id = ${ME} and g.academic_year_id = ${YEAR_NOW} order by l.sort_order, coalesce(sj.short_name, sj.name)`, [userId]);
   });
 }
 export async function teacherOwnsChat(userId: string, chatId: string) {
@@ -250,7 +250,7 @@ export async function teacherPost(userId: string, chatId: string, body: string, 
 
 export async function pointsGiven(userId: string) {
   return withSchool((q) => q<{ id: string; student: string; class: string; points: number; reason: string; awarded_on: string; today: boolean }>(`select rp.id, s.first_name as student,
-      sj.name as class, rp.points, rp.reason, rp.awarded_on::text, rp.created_at > now() - interval '1 day' as today
+      coalesce(sj.short_name, sj.name) as class, rp.points, rp.reason, rp.awarded_on::text, rp.created_at > now() - interval '1 day' as today
     from reward_points rp join students s on s.id = rp.student_id join course_groups g on g.id = rp.group_id join subjects sj on sj.id = g.subject_id
     where rp.teacher_id = ${ME} order by rp.created_at desc limit 12`, [userId]));
 }
@@ -391,9 +391,9 @@ export async function setLessonSlides(userId: string, eventId: string, url: stri
 // ---------- the teacher's Google Drive page: a slides folder for each class ----------
 export async function myClassFolders(userId: string) {
   return withSchool((q) => q<{ id: string; name: string; code: string; folder: string | null; course: string | null }>(`
-    select g.id, l.name || ' ' || sj.name as name, g.code, g.slides_folder as folder, g.google_course_id as course
+    select g.id, l.name || ' ' || coalesce(sj.short_name, sj.name) as name, g.code, g.slides_folder as folder, g.google_course_id as course
     from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-    where g.teacher_id = ${ME} and g.academic_year_id = ${YEAR_NOW} and g.status <> 'hidden' order by l.sort_order, sj.name`, [userId]));
+    where g.teacher_id = ${ME} and g.academic_year_id = ${YEAR_NOW} and g.status <> 'hidden' order by l.sort_order, coalesce(sj.short_name, sj.name)`, [userId]));
 }
 /** A folder link or id → the folder id, or null. */
 export function folderId(v: string): string | null {
@@ -423,7 +423,7 @@ export type MyStudent = { id: string; name: string; known_as: string | null; has
 
 export async function myClasses(userId: string): Promise<MyClass[]> {
   return withSchool((q) => q<MyClass>(`
-    select g.id, g.code, l.name as level, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour, g.capacity, g.meet_url, g.slides_folder,
+    select g.id, g.code, l.name as level, coalesce(sj.short_name, sj.name) as subject, coalesce(sj.colour, '#8494c2') as colour, g.capacity, g.meet_url, g.slides_folder,
       case when g.google_course_id is not null then 'https://classroom.google.com/c/' || g.google_course_id end as classroom,
       (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students,
       (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at,'HH24:MI'), 'e', to_char(s.ends_at,'HH24:MI')) order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as slots,
@@ -435,7 +435,7 @@ export async function myClasses(userId: string): Promise<MyClass[]> {
         and ss.has_send = 'yes' and ss.share_with_teachers) as send
     from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join academic_years y on y.id = g.academic_year_id
     where y.ends_on >= current_date and g.status <> 'closed' and (g.teacher_id = ${ME} or exists (select 1 from lesson_slots s where s.group_id = g.id and s.one_off_on is null and s.teacher_id = ${ME}))
-    order by l.sort_order, sj.name, g.code`, [userId]));
+    order by l.sort_order, coalesce(sj.short_name, sj.name), g.code`, [userId]));
 }
 
 /** The teacher's students, in all their classes or in one (groupId). */
@@ -447,11 +447,11 @@ export async function myStudents(userId: string, groupId?: string): Promise<MySt
     select s.id, s.first_name || ' ' || s.last_name as name, nullif(s.known_as, '') as known_as, s.email is not null as has_google, s.date_of_birth::text as dob, s.year_group,
       coalesce(s.google_account_confirmed, false) as confirmed,
       (select bool_and(cm.state = 'joined') from classroom_memberships cm where cm.student_id = s.id and cm.group_id in (select id from mine)) as in_classroom,
-      (select json_agg(json_build_object('id', g.id, 'name', l.name || ' ' || sj.name, 'code', g.code,
+      (select json_agg(json_build_object('id', g.id, 'name', l.name || ' ' || coalesce(sj.short_name, sj.name), 'code', g.code,
           'att', (select round(100.0 * count(*) filter (where m.mark in ('present','late')) / nullif(count(*) filter (where m.mark <> 'approved_absence'), 0))::int
                   from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id where ev.group_id = g.id and m.student_id = s.id),
           'lessons', (select count(*)::int from attendance_marks m join lesson_events ev on ev.id = m.lesson_event_id where ev.group_id = g.id and m.student_id = s.id))
-        order by l.sort_order, sj.name)
+        order by l.sort_order, coalesce(sj.short_name, sj.name))
         from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         where e.student_id = s.id and e.status in ('pending','active') and not e.is_taster and g.id in (select id from mine)) as classes,
       -- attendance this term in this teacher's classes (marked lessons; approved absences don't count against it)
@@ -511,7 +511,7 @@ export async function upcomingOnes(userId: string, limit = 12): Promise<Upcoming
   return withSchool((q) => q<UpcomingOne>(`
     select * from (
       select b.id, 'one' as kind, b.starts_at::text as at, b.minutes, '1:1 · ' || b.student_name as title,
-        concat_ws(' · ', nullif(trim(coalesce(l.name, '') || ' ' || coalesce(sj.name, '')), ''), nullif(b.focus, '')) as detail, null::int as booked, null::int as capacity
+        concat_ws(' · ', nullif(trim(coalesce(l.name, '') || ' ' || coalesce(coalesce(sj.short_name, sj.name), '')), ''), nullif(b.focus, '')) as detail, null::int as booked, null::int as capacity
       from tutoring_bookings b left join levels l on l.id = b.level_id left join subjects sj on sj.id = b.subject_id
       where b.teacher_id = ${ME} and b.status = 'booked' and b.starts_at + make_interval(mins => b.minutes) > now() and b.starts_at < now() + interval '60 days'
       union all

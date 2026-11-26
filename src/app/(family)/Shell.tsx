@@ -9,6 +9,7 @@ import { FamilyNav } from "./FamilyNav";
 import { LessonWindow } from "../LessonWindow";
 import type { ResolvedGroup } from "@/lib/menus";
 import { SideFoot } from "../admin/TopBar";
+import { SETTINGS_HREFS } from "../SettingsTabs";
 import { cookies, headers } from "next/headers";
 
 // The parent and student areas share the admin's look: brand-coloured menu on the left, pages on the right.
@@ -28,8 +29,8 @@ export async function Shell({ f, groups, counts = {}, root, children }: { f: Fam
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {sch?.is_demo ? <a className="logo" href={root} title="Home" style={{ font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
           : <a className="logo" href={root} title="Home"><img src={logo} alt="OH-SO ED: home" width={773} height={224} /></a>}
-        <FamilyNav groups={groups} counts={counts} root={root} />
-        <SideFoot theme={theme} signOut={f.viewer ? undefined : familySignOutAction} preview={!!f.viewer} inline site={[{ href: "/", label: "View the website" }]} />
+        <FamilyNav groups={groups.map((g) => ({ ...g, items: g.items.filter((i) => !SETTINGS_HREFS.has(i.href)) })).filter((g) => g.items.length)} counts={counts} root={root} />
+        <SideFoot theme={theme} signOut={f.viewer ? undefined : familySignOutAction} preview={!!f.viewer} inline settings={`${root}/notifications`} site={[{ href: "/", label: "View the website" }]} />
 
       </aside>
       <main className="main">{beta && <p className="note beta-strip" role="note">{BETA.strip}</p>}{children}</main>

@@ -14,7 +14,7 @@ export type MarkItem = { cw: string; title: string; link: string | null; gid: st
 /** Handed-in work waiting to be returned, one row per piece of work, soonest deadline first. Only this teacher's classes when given. */
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 export async function markingQueue(teacherUserId: string | null = null, qq?: Q): Promise<MarkItem[]> {
-  const run = (q: Q) => q<Omit<MarkItem, "daysLeft">>(`select c.id as cw, c.title, c.link, g.id as gid, l.name || ' ' || sj.name as cls,
+  const run = (q: Q) => q<Omit<MarkItem, "daysLeft">>(`select c.id as cw, c.title, c.link, g.id as gid, l.name || ' ' || coalesce(sj.short_name, sj.name) as cls,
       t.user_id as "teacherUserId", u.name as teacher, u.email::text as "teacherEmail",
       count(*)::int as "toMark", min(coalesce(c.due_at, s.turned_in_at) + make_interval(days => $2))::text as deadline,
       array_agg(st.first_name || ' ' || st.last_name order by s.turned_in_at nulls last) as names
@@ -23,7 +23,7 @@ export async function markingQueue(teacherUserId: string | null = null, qq?: Q):
       left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id
     where s.state = 'turned_in' and coalesce(c.due_at, s.turned_in_at) is not null and ($1::uuid is null or t.user_id = $1)
       and exists (select 1 from enrolments e where e.group_id = g.id and e.student_id = s.student_id and e.status in ('active', 'pending'))
-    group by c.id, c.title, c.link, g.id, l.name, sj.name, t.user_id, u.name, u.email
+    group by c.id, c.title, c.link, g.id, l.name, coalesce(sj.short_name, sj.name), t.user_id, u.name, u.email
     order by min(coalesce(c.due_at, s.turned_in_at)), c.title`, [teacherUserId, TURNAROUND_DAYS]);
   const rows = await (qq ? run(qq) : withSchool(run)).catch(() => [] as Omit<MarkItem, "daysLeft">[]);
   // whole days in London time, so a deadline tomorrow evening reads "Due tomorrow", not "2 days left"
@@ -45,7 +45,7 @@ export const tone = (daysLeft: number) => daysLeft < 0 ? "bad" : daysLeft <= REM
 export type MarkSub = { sid: string; cw: string; title: string; cwLink: string | null; link: string | null; gid: string; cls: string; code: string;
   student: string; late: boolean; turnedIn: string | null; due: string | null };
 export async function markingSubmissions(teacherUserId: string): Promise<MarkSub[]> {
-  return withSchool((q) => q<MarkSub>(`select s.id as sid, c.id as cw, c.title, c.link as "cwLink", s.link, g.id as gid, l.name || ' ' || sj.name as cls, g.code,
+  return withSchool((q) => q<MarkSub>(`select s.id as sid, c.id as cw, c.title, c.link as "cwLink", s.link, g.id as gid, l.name || ' ' || coalesce(sj.short_name, sj.name) as cls, g.code,
       st.first_name || ' ' || st.last_name as student, coalesce(s.late, false) as late, s.turned_in_at::text as "turnedIn", c.due_at::text as due
     from classroom_submissions s join classroom_coursework c on c.id = s.coursework_id join course_groups g on g.id = c.group_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join students st on st.id = s.student_id

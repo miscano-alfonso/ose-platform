@@ -1554,3 +1554,8 @@
 .adm .wr-head .abtn:disabled,.adm .wr-card .abtn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}
 .adm .wr-wait{font-size:13px;align-self:center;margin-right:4px}
 .adm .abtn[aria-busy]{cursor:progress;opacity:.75}
+/* 26 Nov: Settings cog beside Sign out; Settings tabs on Notifications / Calendar sync / Google Drive */
+.adm .sf-icon{display:inline-grid;place-items:center;width:34px;height:34px;border-radius:50%;border:1px solid var(--line);color:var(--ink);background:var(--panel);margin-left:6px}
+.adm .sf-icon:hover{background:var(--hover)}
+.adm .set-tabs{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 18px}
+.adm .set-tabs .set-title{margin:0;font-size:28px}

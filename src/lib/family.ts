@@ -18,8 +18,8 @@ export async function kids(parentId: string): Promise<Kid[]> {
   return withSchool((q) => q<Kid>(`select s.id, s.first_name as first, s.last_name as last, s.email::text, s.chat_access, s.leaderboard_name, s.chat_rules_version, s.chat_rules_agreed_at::text,
       coalesce((select string_agg(distinct l.name, ', ') from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id where e.student_id = s.id and e.status = 'active' and not e.is_taster), '') as level,
       (select a.attendance_pct from student_term_attendance a where a.student_id = s.id and a.term_id = ${TERM_NOW}) as att,
-      coalesce((select json_agg(json_build_object('group_id', g.id, 'subject', sj.name, 'level', l.name, 'colour', coalesce(sj.colour,'#8494c2'), 'slots', ${SLOTS}, 'teacher', u.name, 'teacher_id', g.teacher_id,
-          'invited', exists (select 1 from classroom_memberships m where m.group_id = g.id and m.student_id = s.id and m.state = 'invited'), 'meet', g.meet_url) order by l.sort_order, sj.name)
+      coalesce((select json_agg(json_build_object('group_id', g.id, 'subject', coalesce(sj.short_name, sj.name), 'level', l.name, 'colour', coalesce(sj.colour,'#8494c2'), 'slots', ${SLOTS}, 'teacher', u.name, 'teacher_id', g.teacher_id,
+          'invited', exists (select 1 from classroom_memberships m where m.group_id = g.id and m.student_id = s.id and m.state = 'invited'), 'meet', g.meet_url) order by l.sort_order, coalesce(sj.short_name, sj.name))
         from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id where e.student_id = s.id and e.status = 'active' and not e.is_taster), '[]') as classes
     from students s where s.parent_id = $1 order by s.first_name`, [parentId]));
@@ -43,23 +43,23 @@ export const REASONS = ["Illness", "Medical or dental appointment", "Family even
 export async function parentAttendance(parentId: string) {
   return withSchool(async (q) => ({
     marks: await q<{ student_id: string; date: string; time: string; class: string; mark: string; late: boolean; early: boolean }>(`select m.student_id, e.lesson_date::text as date, to_char(sl.starts_at,'HH24:MI') as time,
-        l.name || ' ' || sj.name as class, m.mark::text, m.mark = 'late' as late, m.left_early as early
+        l.name || ' ' || coalesce(sj.short_name, sj.name) as class, m.mark::text, m.mark = 'late' as late, m.left_early as early
       from attendance_marks m join students s on s.id = m.student_id join lesson_events e on e.id = m.lesson_event_id join lesson_slots sl on sl.id = e.slot_id
       join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where s.parent_id = $1 and e.term_id = ${TERM_NOW} order by e.lesson_date desc, sl.starts_at desc`, [parentId]),
     upcoming: await q<{ id: string; student_id: string; date: string; time: string; class: string; absent: string | null }>(`select e.id, s.id as student_id, e.lesson_date::text as date, to_char(sl.starts_at,'HH24:MI') as time,
-        l.name || ' ' || sj.name as class, (select n.id::text from absence_notices n where n.lesson_event_id = e.id and n.student_id = s.id and n.cancelled_at is null) as absent
+        l.name || ' ' || coalesce(sj.short_name, sj.name) as class, (select n.id::text from absence_notices n where n.lesson_event_id = e.id and n.student_id = s.id and n.cancelled_at is null) as absent
       from students s join enrolments x on x.student_id = s.id and x.status = 'active' and not x.is_taster join lesson_events e on e.group_id = x.group_id
       join lesson_slots sl on sl.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where s.parent_id = $1 and e.status = 'scheduled' and (e.lesson_date + sl.ends_at) at time zone 'Europe/London' > now() and e.lesson_date <= current_date + 28
       union all   -- 24 Nov: booked tasters show too, so a new family sees their first lesson
-      select e.id, s.id, e.lesson_date::text, to_char(sl.starts_at,'HH24:MI'), l.name || ' ' || sj.name || ' (taster)', null
+      select e.id, s.id, e.lesson_date::text, to_char(sl.starts_at,'HH24:MI'), l.name || ' ' || coalesce(sj.short_name, sj.name) || ' (taster)', null
       from taster_bookings tb join taster_requests r on r.id = tb.request_id join students s on s.id = r.student_id join lesson_events e on e.id = tb.lesson_event_id
       join lesson_slots sl on sl.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where s.parent_id = $1 and tb.status = 'booked' and e.status = 'scheduled' and (e.lesson_date + sl.ends_at) at time zone 'Europe/London' > now() and e.lesson_date <= current_date + 28
       order by 3, 4`, [parentId]),
     notices: await q<{ id: string; student: string; date: string; time: string; class: string; reason: string; note: string | null; upcoming: boolean }>(`select n.id, s.first_name as student, e.lesson_date::text as date,
-        to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || sj.name as class, n.reason, n.note, e.lesson_date > current_date as upcoming
+        to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || coalesce(sj.short_name, sj.name) as class, n.reason, n.note, e.lesson_date > current_date as upcoming
       from absence_notices n join students s on s.id = n.student_id join lesson_events e on e.id = n.lesson_event_id join lesson_slots sl on sl.id = e.slot_id
       join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where s.parent_id = $1 and n.cancelled_at is null order by e.lesson_date desc limit 50`, [parentId]),
@@ -83,7 +83,7 @@ export async function cancelAbsence(parentId: string, id: string) {
 // ---------- assignments (from Google Classroom) ----------
 export async function assignments(studentIds: string[]) {
   return withSchool((q) => q<{ student_id: string; title: string; due_at: string | null; link: string | null; class: string; colour: string; status: string; points: number | null; max: number | null; late: boolean }>(`
-    select a.student_id, a.title, a.due_at::text, a.link, coalesce(l.name || ' ' || sj.name, '1:1 ' || coalesce(osj.name, oc.name, '')) as class,
+    select a.student_id, a.title, a.due_at::text, a.link, coalesce(l.name || ' ' || coalesce(sj.short_name, sj.name), '1:1 ' || coalesce(osj.name, oc.name, '')) as class,
       coalesce(sj.colour, osj.colour, '#8494c2') as colour, a.parent_status as status, a.points::float as points, a.max_points::float as max, a.late
     from student_assignments a left join course_groups g on g.id = a.group_id left join levels l on l.id = g.level_id left join subjects sj on sj.id = g.subject_id
       left join one_courses oc on oc.id = a.one_course_id left join subjects osj on osj.id = oc.subject_id   -- 2 Nov: 1:1 work too
@@ -93,11 +93,11 @@ export async function assignments(studentIds: string[]) {
 // ---------- 1:1s and workshops ----------
 export async function tutoringChoices(parentId: string) {
   return withSchool(async (q) => ({
-    options: await q<{ student_id: string; first: string; level_id: string; level: string; subject_id: string; subject: string }>(`select distinct s.id as student_id, s.first_name as first, l.id as level_id, l.name as level, sj.id as subject_id, sj.name as subject
+    options: await q<{ student_id: string; first: string; level_id: string; level: string; subject_id: string; subject: string }>(`select distinct s.id as student_id, s.first_name as first, l.id as level_id, l.name as level, sj.id as subject_id, coalesce(sj.short_name, sj.name) as subject
       from students s join enrolments e on e.student_id = s.id and e.status = 'active' join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where s.parent_id = $1 order by s.first_name, sj.name`, [parentId]),
+      where s.parent_id = $1 order by s.first_name, coalesce(sj.short_name, sj.name)`, [parentId]),
     booked: await q<{ id: string; at: string; minutes: number; teacher: string; child: string; subject: string; status: string; focus: string | null }>(`select b.id, b.starts_at::text as at, b.minutes, u.name as teacher, b.student_name as child,
-        sj.name as subject, b.status::text, b.focus from tutoring_bookings b join teachers t on t.id = b.teacher_id join users u on u.id = t.user_id join subjects sj on sj.id = b.subject_id
+        coalesce(sj.short_name, sj.name) as subject, b.status::text, b.focus from tutoring_bookings b join teachers t on t.id = b.teacher_id join users u on u.id = t.user_id join subjects sj on sj.id = b.subject_id
       where b.parent_id = $1 and b.status in ('booked','completed') order by b.starts_at desc limit 20`, [parentId]),
     price: (await q<{ price: number | null }>(`select min(price_pence) as price from tutoring_rates where audience = 'enrolled' and minutes = 45 and valid_from <= current_date`))[0]?.price ?? null,
   }));
@@ -105,7 +105,7 @@ export async function tutoringChoices(parentId: string) {
 export async function familyWorkshops(parentId: string) {
   return withSchool(async (q) => ({
     workshops: await q<{ id: string; title: string; slug: string; at: string; minutes: number; level: string | null; subject: string | null; teacher: string | null; summary: string | null; price: number; enrolled_price: number | null; places: number | null; booked: string[] }>(`
-      select w.id, w.title, w.slug, w.starts_at::text as at, w.minutes, l.name as level, sj.name as subject, u.name as teacher, w.summary, w.price_pence as price, w.enrolled_price_pence as enrolled_price,
+      select w.id, w.title, w.slug, w.starts_at::text as at, w.minutes, l.name as level, coalesce(sj.short_name, sj.name) as subject, u.name as teacher, w.summary, w.price_pence as price, w.enrolled_price_pence as enrolled_price,
         case when w.capacity is null then null else w.capacity - (select count(*) from workshop_bookings b where b.workshop_id = w.id and b.status in ('booked','attended','pending_payment'))::int end as places,
         coalesce((select array_agg(b.student_name) from workshop_bookings b where b.workshop_id = w.id and b.parent_id = $1 and b.status in ('booked','attended')), '{}') as booked
       from workshops w left join levels l on l.id = w.level_id left join subjects sj on sj.id = w.subject_id left join teachers t on t.id = w.teacher_id left join users u on u.id = t.user_id
@@ -186,17 +186,17 @@ export async function connect(parentId: string) {
     accepts: (await q<{ a: boolean }>(`select accepts_contact_requests as a from parents where id = $1`, [parentId]))[0]?.a ?? false,
     classmates: await q<{ to_parent: string; to_student: string; from_student: string; group_id: string; first: string; mine: string; class: string; parent_first: string }>(`
       select distinct on (op.id, my.id, g.id) op.id as to_parent, os.id as to_student, my.id as from_student, g.id as group_id, os.first_name as first, my.first_name as mine,
-        l.name || ' ' || sj.name as class, op.first_name as parent_first
+        l.name || ' ' || coalesce(sj.short_name, sj.name) as class, op.first_name as parent_first
       from students my join enrolments me on me.student_id = my.id and me.status = 'active' join course_groups g on g.id = me.group_id
       join enrolments oe on oe.group_id = g.id and oe.status = 'active' join students os on os.id = oe.student_id join parents op on op.id = os.parent_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where my.parent_id = $1 and op.id <> $1 and op.accepts_contact_requests
         and not exists (select 1 from contact_requests r where r.status in ('pending','accepted') and least(r.from_parent_id, r.to_parent_id) = least($1::uuid, op.id) and greatest(r.from_parent_id, r.to_parent_id) = greatest($1::uuid, op.id))`, [parentId]),
     incoming: await q<{ id: string; from_first: string; child: string; mine: string; class: string; message: string | null }>(`select r.id, fp.first_name as from_first, fs.first_name as child, ts.first_name as mine,
-        l.name || ' ' || sj.name as class, r.message from contact_requests r join parents fp on fp.id = r.from_parent_id join students fs on fs.id = r.from_student_id join students ts on ts.id = r.to_student_id
+        l.name || ' ' || coalesce(sj.short_name, sj.name) as class, r.message from contact_requests r join parents fp on fp.id = r.from_parent_id join students fs on fs.id = r.from_student_id join students ts on ts.id = r.to_student_id
         join course_groups g on g.id = r.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where r.to_parent_id = $1 and r.status = 'pending' and r.expires_at > now()`, [parentId]),
-    sent: await q<{ id: string; to_child: string; class: string; status: string }>(`select r.id, ts.first_name as to_child, l.name || ' ' || sj.name as class, r.status::text
+    sent: await q<{ id: string; to_child: string; class: string; status: string }>(`select r.id, ts.first_name as to_child, l.name || ' ' || coalesce(sj.short_name, sj.name) as class, r.status::text
       from contact_requests r join students ts on ts.id = r.to_student_id join course_groups g on g.id = r.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where r.from_parent_id = $1 and r.status in ('pending','declined','expired') order by r.created_at desc limit 20`, [parentId]),
     shared: await q<{ parent_id: string; name: string; email: string; child_first_name: string; class_name: string }>(`select parent_id, name, email::text, child_first_name, class_name from shared_contacts($1)`, [parentId]),
@@ -306,7 +306,7 @@ export async function studentHome(studentId: string) {
   return withSchool(async (q) => ({
     me: (await q<{ first: string; chat_access: string }>(`select first_name as first, chat_access from students where id = $1`, [studentId]))[0],
     classes: await q<{ group_id: string; subject: string; level: string; colour: string; teacher: string | null; slots: string | null; meet: string | null; invited: boolean;
-      next: string | null; next_end: string | null; next_id: string | null }>(`select g.id as group_id, sj.name as subject, l.name as level, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, ${SLOTS} as slots, g.meet_url as meet,
+      next: string | null; next_end: string | null; next_id: string | null }>(`select g.id as group_id, coalesce(sj.short_name, sj.name) as subject, l.name as level, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, ${SLOTS} as slots, g.meet_url as meet,
         exists (select 1 from classroom_memberships m where m.group_id = g.id and m.student_id = $1 and m.state = 'invited') as invited,
         (select ((e.lesson_date + s.starts_at) at time zone sc.timezone)::text from lesson_events e join lesson_slots s on s.id = e.slot_id join schools sc on sc.id = e.school_id
           where e.group_id = g.id and e.status = 'scheduled' and (e.lesson_date + s.ends_at) at time zone sc.timezone > now() order by e.lesson_date, s.starts_at limit 1) as next,
@@ -314,13 +314,13 @@ export async function studentHome(studentId: string) {
           where e.group_id = g.id and e.status = 'scheduled' and (e.lesson_date + s.ends_at) at time zone sc.timezone > now() order by e.lesson_date, s.starts_at limit 1) as next_end,
         null as next_id
       from enrolments x join course_groups g on g.id = x.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id where x.student_id = $1 and x.status = 'active' and not x.is_taster order by l.sort_order, sj.name`, [studentId]),
+      left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id where x.student_id = $1 and x.status = 'active' and not x.is_taster order by l.sort_order, coalesce(sj.short_name, sj.name)`, [studentId]),
     points: (await q<{ points: number; rank: number | null }>(`select coalesce(lb.points, 0)::int as points, lb.rank::int as rank from (select 1) x left join term_leaderboard(${TERM_NOW}) lb on lb.student_id = $1`, [studentId]).catch(() => [{ points: 0, rank: null }]))[0],
   }));
 }
 export async function studentClass(studentId: string, groupId: string) {
   return withSchool(async (q) => {
-    const g = (await q<{ subject: string; level: string; teacher: string | null; meet: string | null; slots: string | null }>(`select sj.name as subject, l.name as level, u.name as teacher, g.meet_url as meet, ${SLOTS} as slots
+    const g = (await q<{ subject: string; level: string; teacher: string | null; meet: string | null; slots: string | null }>(`select coalesce(sj.short_name, sj.name) as subject, l.name as level, u.name as teacher, g.meet_url as meet, ${SLOTS} as slots
       from course_groups g join enrolments x on x.group_id = g.id and x.student_id = $1 and x.status = 'active' join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id where g.id = $2`, [studentId, groupId]))[0];
     if (!g) return null;
@@ -341,14 +341,14 @@ export async function studentChats(studentId: string) {
       where x.student_id = $1 and x.status = 'active' and not exists (select 1 from student_chats c where c.group_id = g.id)`, [studentId]).catch(() => null);
     return {
       access: (await q<{ a: string }>(`select chat_access as a from students where id = $1`, [studentId]))[0]?.a ?? "none",
-      chats: await q<{ id: string; kind: string; name: string; last: string | null }>(`select c.id, c.kind, case when c.kind = 'class' then l.name || ' ' || sj.name
+      chats: await q<{ id: string; kind: string; name: string; last: string | null }>(`select c.id, c.kind, case when c.kind = 'class' then l.name || ' ' || coalesce(sj.short_name, sj.name)
           else (select string_agg(s.first_name, ', ') from student_chat_members m join students s on s.id = m.student_id where m.chat_id = c.id and s.id <> $1) end as name,
           (select max(created_at)::text from student_chat_messages x where x.chat_id = c.id) as last
         from student_chats c left join course_groups g on g.id = c.group_id left join levels l on l.id = g.level_id left join subjects sj on sj.id = g.subject_id
         where (c.kind = 'class' and exists (select 1 from enrolments x where x.group_id = c.group_id and x.student_id = $1 and x.status = 'active'))
            or (c.kind = 'direct' and exists (select 1 from student_chat_members m where m.chat_id = c.id and m.student_id = $1))
         order by c.kind, last desc nulls last`, [studentId]),
-      mates: await q<{ id: string; first: string; class: string }>(`select distinct on (s.id) s.id, s.first_name || ' ' || left(s.last_name, 1) || '.' as first, l.name || ' ' || sj.name as class
+      mates: await q<{ id: string; first: string; class: string }>(`select distinct on (s.id) s.id, s.first_name || ' ' || left(s.last_name, 1) || '.' as first, l.name || ' ' || coalesce(sj.short_name, sj.name) as class
         from enrolments me join enrolments x on x.group_id = me.group_id and x.status = 'active' join students s on s.id = x.student_id join course_groups g on g.id = me.group_id
         join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         where me.student_id = $1 and me.status = 'active' and s.id <> $1 and s.chat_access = 'class_and_private' order by s.id`, [studentId]),
@@ -389,7 +389,7 @@ export async function reportMessage(studentId: string, messageId: string) {
 }
 export async function studentRewards(studentId: string) {
   return withSchool(async (q) => ({
-    mine: await q<{ points: number; reason: string; class: string; on: string; teacher: string }>(`select rp.points, rp.reason, sj.name as class, rp.awarded_on::text as on, u.name as teacher
+    mine: await q<{ points: number; reason: string; class: string; on: string; teacher: string }>(`select rp.points, rp.reason, coalesce(sj.short_name, sj.name) as class, rp.awarded_on::text as on, u.name as teacher
       from reward_points rp join course_groups g on g.id = rp.group_id join subjects sj on sj.id = g.subject_id join teachers t on t.id = rp.teacher_id join users u on u.id = t.user_id
       where rp.student_id = $1 order by rp.created_at desc limit 40`, [studentId]),
     board: await q<{ rank: number; name: string; points: number; me: boolean }>(`select lb.rank::int as rank, case when s.leaderboard_name = 'hidden' and s.id <> $1 then 'A student' else s.first_name || ' ' || left(s.last_name, 1) || '.' end as name,
@@ -402,7 +402,7 @@ export async function studentRewards(studentId: string) {
 export async function requestOne(parentId: string, studentId: string, subjectId: string, teacherId: string, startsAt: string, focus: string | null): Promise<string | null> {
   return withSchool(async (q) => {
     const r = (await q<{ parent: string; email: string; child: string; subject: string; level: string; teacher: string }>(`select p.first_name || ' ' || p.last_name as parent, p.email::text, s.first_name || ' ' || s.last_name as child,
-        sj.name as subject, (select string_agg(distinct l.name, ', ') from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id where e.student_id = s.id and e.status = 'active') as level,
+        coalesce(sj.short_name, sj.name) as subject, (select string_agg(distinct l.name, ', ') from enrolments e join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id where e.student_id = s.id and e.status = 'active') as level,
         u.name as teacher from parents p join students s on s.parent_id = p.id, subjects sj, teachers t join users u on u.id = t.user_id
       where p.id = $1 and s.id = $2 and sj.id = $3 and t.id = $4`, [parentId, studentId, subjectId, teacherId]))[0];
     if (!r) return "Choose one of the times shown.";
@@ -441,7 +441,7 @@ export async function parentSwap(parentId: string, enrolmentId: string, toGroup:
 /** The student's next 1:1 (1 Nov), with its Google Meet link once ose@ has made it. */
 export async function studentNextOne(studentId: string): Promise<{ id: string; at: string; minutes: number; subject: string; level: string | null; teacher: string; meet: string | null } | null> {
   return (await withSchool((q) => q<{ id: string; at: string; minutes: number; subject: string; level: string | null; teacher: string; meet: string | null }>(`
-    select b.id, b.starts_at::text as at, b.minutes, sj.name as subject, l.name as level, u.name as teacher, b.meet_url as meet
+    select b.id, b.starts_at::text as at, b.minutes, coalesce(sj.short_name, sj.name) as subject, l.name as level, u.name as teacher, b.meet_url as meet
     from tutoring_bookings b join students s on s.id = $1 join subjects sj on sj.id = b.subject_id left join levels l on l.id = b.level_id
       join teachers t on t.id = b.teacher_id join users u on u.id = t.user_id
     where (b.student_id = s.id or (b.student_id is null and lower(b.student_email::text) = lower(s.email::text)))

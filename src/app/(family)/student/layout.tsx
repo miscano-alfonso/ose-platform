@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: "My classes", robots: { index: false,
 
 export default async function StudentLayout({ children }: { children: React.ReactNode }) {
   const f = await requireStudent();
-  const classes = await withSchool((q) => q<{ id: string; subject: string }>(`select g.id, sj.name as subject from enrolments x join course_groups g on g.id = x.group_id join subjects sj on sj.id = g.subject_id
-    join levels l on l.id = g.level_id where x.student_id = $1 and x.status = 'active' and not x.is_taster order by l.sort_order, sj.name`, [f.id]));
+  const classes = await withSchool((q) => q<{ id: string; subject: string }>(`select g.id, coalesce(sj.short_name, sj.name) as subject from enrolments x join course_groups g on g.id = x.group_id join subjects sj on sj.id = g.subject_id
+    join levels l on l.id = g.level_id where x.student_id = $1 and x.status = 'active' and not x.is_taster order by l.sort_order, coalesce(sj.short_name, sj.name)`, [f.id]));
   return <Shell f={f} root="/student" groups={await menuFor("student", classes.map((c) => ({ label: c.subject, href: `/student/class/${c.id}`, icon: "cls" })))}>{children}</Shell>;
 }

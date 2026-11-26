@@ -64,7 +64,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         {sch?.is_demo ? <a className="logo" href="/admin/teacher" title="My day" style={{ font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
         : <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>}
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports, "/admin/teacher/marking": c.marking }} groups={await teacherMenu()} />
-        <SideFoot theme={theme} signOut={signOutAction} inline toggle />
+        <SideFoot theme={theme} signOut={signOutAction} inline toggle settings="/admin/teacher/notifications" />
       </aside>
       <main className="main"><TopBar />{await import("@/lib/test-mode").then(async (t) => await t.betaOn() ? <p className="note beta-strip" role="note">{t.BETA.stripTeacher}</p> : null)}{children}</main>
     </div></div>;
@@ -74,10 +74,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
 async function teacherMenu() {
   const [groups, on] = await Promise.all([menuFor("teacher"), import("@/lib/teacher-area").then((t) => t.familyMsgsOn())]);
   const marked = on ? groups : groups.map((g) => ({ ...g, items: g.items.map((i) => i.href === "/admin/teacher/chats" ? { ...i, off: true } : i) }));
-  // 26 Nov (Alfonso): Calendar sync, Google Drive and Notifications sit in a Settings section at the bottom of the menu
-  // (also when the school's saved teacher menu is a single list)
-  if (marked.length !== 1) return marked;
-  const SET = ["/admin/teacher/calendar", "/admin/teacher/drive", "/admin/teacher/notifications"];
-  const settings = marked[0].items.filter((i) => SET.includes(i.href));
-  return settings.length ? [{ ...marked[0], items: marked[0].items.filter((i) => !SET.includes(i.href)) }, { ...marked[0], title: "Settings", items: settings }] : marked;
+  // 26 Nov (Alfonso): Calendar sync, Google Drive and Notifications left the menu; the cog beside Sign out opens them as Settings tabs
+  const { SETTINGS_HREFS } = await import("@/app/SettingsTabs");
+  return marked.map((g) => ({ ...g, items: g.items.filter((i) => !SETTINGS_HREFS.has(i.href)) })).filter((g) => g.items.length);
 }
