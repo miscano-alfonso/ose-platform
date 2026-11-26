@@ -1,3 +1,4 @@
+import { later } from "./background";
 import "server-only";
 import { withSchool } from "./db";
 
@@ -42,6 +43,7 @@ export async function replyThread(actor: { id: string; role: string }, id: strin
       if (th.status === "closed" && sender !== "office") return "This conversation is closed.";
       await q(`insert into messages (school_id, thread_id, sender, sender_user_id, body, read_by_teacher_at) values (current_school(), $1, $2, $3, $4, case when $2 = 'teacher' then now() end)`, [id, sender, actor.id, body]);
       await audit(q, actor.id, "reply", "message_thread", id, { sender });
+      await later(() => import("./message-email").then((m) => m.emailNewMessage("family", id, sender, body)));   // 26 Nov: to the parent, if they chose email
       return null;
     });
   } catch (e) { return (e as Error).message.includes("closed") ? "This conversation is closed." : "Couldn’t send that message."; }
@@ -63,6 +65,7 @@ export async function startThread(actorId: string, studentId: string, subject: s
         [r.parent_id, r.teacher_id, studentId, subject]))[0];
       await q(`insert into messages (school_id, thread_id, sender, sender_user_id, body, read_by_teacher_at) values (current_school(), $1, 'teacher', $2, $3, now())`, [th.id, actorId, body]);
       await audit(q, actorId, "start", "message_thread", th.id);
+      await later(() => import("./message-email").then((m) => m.emailNewMessage("family", th.id, "teacher", body)));
       return { id: th.id };
     });
   } catch (e) { return { error: (e as Error).message.includes("who teach") ? "You can only write about students in your classes." : "Couldn’t start the conversation." }; }

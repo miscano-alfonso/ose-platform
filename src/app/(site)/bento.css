@@ -1389,3 +1389,10 @@ html[data-theme=dark] .bt .nd-d{display:block}html[data-theme=dark] .bt .nd-l{di
 .bt .ndl-share a{font-size:15px;font-weight:500;padding:8px 16px;border-radius:999px;background:var(--b-inset);color:var(--b-ink);text-decoration:none}
 .bt .ndl-share a:hover,.bt .ndl-share a:focus-visible{background:var(--b-pop);color:var(--b-pop-ink)}
 .bt .ndl-open{margin-top:auto;padding-top:8px;font-weight:600;color:var(--b-ink)}
+/* 26 Nov (Alfonso): on a wide window the words sit near the top of the hero, under the menu, and the two buttons are
+   bigger and sit at the bottom of the window */
+@media (min-width:761px) and (min-aspect-ratio:1/1){
+  .bh-home .bh-hero{justify-content:flex-start;padding-top:calc(var(--navh,96px) + clamp(16px,4vh,48px));padding-bottom:calc(var(--peek) + clamp(20px,3.5vh,36px))}
+  .bh-home .bh-hero .btns{margin-top:auto;gap:14px}
+  .bh-home .bh-hero .btns .btn{font-size:clamp(18px,1.35vw,21px);padding:clamp(16px,2vh,20px) clamp(28px,2.4vw,38px);min-height:60px}
+}

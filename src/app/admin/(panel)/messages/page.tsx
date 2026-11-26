@@ -60,7 +60,6 @@ export default async function Messages({ searchParams }: { searchParams: Promise
       m.sender === "office" ? `${m.emailed ? "emailed" : "platform only"}${m.read_at ? " · read" : ""}` : undefined))}</div>
     <form action={officeReplyAction} className="ib-reply wide"><input type="hidden" name="id" value={th.id} /><input type="hidden" name="back" value="inbox" />
       <textarea name="body" required rows={3} maxLength={4500} placeholder={th.status === "closed" ? "Write a reply (this reopens it)…" : "Write a reply…"} aria-label="Reply" />
-      <label className="nm-check" style={{ fontSize: 14 }}><input type="checkbox" name="email" value="1" defaultChecked={!!th.email} disabled={!th.email} /> Also send a copy by email</label>
       <button className="abtn pri" type="submit">Send</button></form>
     <form action={officeStatusAction} className="ib-status"><input type="hidden" name="id" value={th.id} /><input type="hidden" name="back" value="inbox" /><input type="hidden" name="status" value={th.status === "open" ? "closed" : "open"} />
       <button className="abtn sm" type="submit">{th.status === "open" ? "Close this conversation" : "Reopen"}</button></form></>; }

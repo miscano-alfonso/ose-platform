@@ -1,3 +1,4 @@
+import { later } from "./background";
 import "server-only";
 import { withSchool } from "./db";
 
@@ -159,6 +160,7 @@ export async function parentReply(parentId: string, id: string, body: string): P
       const ok = await q(`select 1 from message_threads where id = $1 and parent_id = $2`, [id, parentId]);
       if (!ok.length) return "That conversation wasn’t found.";
       await q(`insert into messages (school_id, thread_id, sender, body, read_by_parent_at) values (current_school(), $1, 'parent', $2, now())`, [id, body]);
+      await later(() => import("./message-email").then((m) => m.emailNewMessage("family", id, "parent", body)));   // 26 Nov: to the teacher, if they chose email
       return null;
     });
   } catch (e) { return (e as Error).message.includes("closed") ? "This conversation is closed. Start a new message instead." : "Couldn’t send that."; }
@@ -172,6 +174,7 @@ export async function parentStartThread(parentId: string, studentId: string, gro
       const th = (await q<{ id: string }>(`insert into message_threads (school_id, parent_id, teacher_id, student_id, subject, started_by) values (current_school(), $1, $2, $3, $4, 'parent') returning id`,
         [parentId, g.teacher_id, studentId, subject]))[0];
       await q(`insert into messages (school_id, thread_id, sender, body, read_by_parent_at) values (current_school(), $1, 'parent', $2, now())`, [th.id, body]);
+      await later(() => import("./message-email").then((m) => m.emailNewMessage("family", th.id, "parent", body)));
       return { id: th.id };
     });
   } catch { return { error: "Couldn’t start the conversation." }; }

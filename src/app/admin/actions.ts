@@ -800,7 +800,7 @@ export async function officeReplyAction(f: FormData): Promise<void> {
   const { officeReply } = await import("@/lib/office-messages");
   const id = str(f, "id", 40), r = await officeReply(me.id, id, msgBody(f), f.get("email") === "1", await baseUrl());
   revalidatePath("/admin/messages");
-  const msg = r.error ? "err=" + encodeURIComponent(r.error) : "ok=" + encodeURIComponent(r.held ? "Sent. Test mode held the email copy." : r.emailed ? "Sent, with a copy by email." : "Sent.");
+  const msg = r.error ? "err=" + encodeURIComponent(r.error) : "ok=" + encodeURIComponent(r.held ? "Sent. They get messages by email, but test mode held it." : r.emailed ? "Sent, and emailed (they chose to get messages by email)." : "Sent.");
   if (f.get("back") === "inbox") redirect(`/admin/messages?office=${id}&${msg}`);   // 26 Nov: the admin's one inbox
   redirect(`/admin/messages/office/${id}?${msg}`);
 }

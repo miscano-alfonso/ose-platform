@@ -27,6 +27,7 @@ export async function GET(req: NextRequest) {
   await import("@/lib/retention").then((m) => m.clearBackground()).catch((e) => console.error("year-end clear-out", e)); // once a day, if switched on
   await import("@/lib/stripe-pay").then((m) => m.collectDue()).catch((e) => console.error("termly collection", e)); // termly payments, when switched on
   await import("@/lib/past-papers").then((m) => m.paperPaymentsBackground()).catch((e) => console.error("past papers", e)); // past paper marking paid by Stripe
+  if (new Date().getUTCHours() < 12) await import("@/lib/message-email").then((m) => m.messageDigests()).catch((e) => console.error("message round-ups", e)); // 26 Nov: the morning run only
   await runAutomations(400).catch((e) => console.error("automations cron", e)); // books the next 48 hours of lesson reminders with Brevo
   return NextResponse.json({ ok: true });
 }

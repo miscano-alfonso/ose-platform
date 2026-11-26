@@ -31,6 +31,14 @@ export function NotifySettingsForm({ api, role, initial, viewing }: { api: strin
         <button type="button" className="abtn sm" onClick={() => playSound(it.sound)} aria-label={`Play the ${t.label} sound`}>▶ Play</button>
       </div>; })}
     </section>
+    {/* 26 Nov: by email, both off until ticked */}
+    <section className="card"><h2>By email</h2>
+      <p className="muted" style={{ margin: "0 0 8px" }}>Sent to the email address on your account. These work whether or not your dashboard is open.</p>
+      <div className="ntf-row"><label className="ntf-tick"><input type="checkbox" checked={!!s.email?.messages} disabled={viewing} onChange={(e) => save({ ...s, email: { messages: e.target.checked, digest: !!s.email?.digest } })} />
+        <span><b>Send my messages to my email too</b><small>Each new message to you is also emailed, with a link to reply</small></span></label></div>
+      <div className="ntf-row"><label className="ntf-tick"><input type="checkbox" checked={!!s.email?.digest} disabled={viewing} onChange={(e) => save({ ...s, email: { messages: !!s.email?.messages, digest: e.target.checked } })} />
+        <span><b>Daily round-up</b><small>Each morning, a list of messages still waiting for your reply (only when there are some)</small></span></label></div>
+    </section>
     {msg && <p className="note msg" role="status">{msg}</p>}
   </div>;
 }

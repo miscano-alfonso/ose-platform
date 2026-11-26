@@ -13,3 +13,11 @@ export async function inBackground(key: string, fn: () => Promise<unknown>): Pro
   try { after(job); }
   catch { await job(); }   // outside a request: just do it now
 }
+
+/** 26 Nov: run something after the response is sent (e.g. emailing a copy of a message), as the same school; if there's
+ *  no request to wait for, it just runs now. Never throws. */
+export async function later(fn: () => Promise<unknown>): Promise<void> {
+  const slug = await activeSchool().catch(() => null);
+  const job = () => (slug ? runAsSchool(slug, fn) : fn()).catch((e) => console.error("later", e));
+  try { after(job); } catch { await job(); }
+}

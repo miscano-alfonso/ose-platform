@@ -1,3 +1,4 @@
+import { later } from "./background";
 import "server-only";
 import { withSchool } from "./db";
 import { sendBatch, type Recipient } from "./email";
@@ -161,7 +162,13 @@ export async function officeReply(actorId: string, id: string, body: string, ema
     await q(`update office_messages set read_at = now() where thread_id = $1 and sender <> 'office' and read_at is null`, [id]);
     return m.id;
   });
-  if (!email || !t.th.email) return {};
+  // 26 Nov: no more "Also send a copy by email" tick: the person gets it by email if they chose that in Notifications
+  void email;
+  const { getNotify } = await import("./notify");
+  const who = t.th.to_kind === "teacher" ? (await withSchool((q) => q<{ u: string }>(`select t.user_id as u from office_threads th join teachers t on t.id = th.teacher_id where th.id = $1`, [id])))[0]?.u
+    : (await withSchool((q) => q<{ p: string | null; s: string | null }>(`select parent_id as p, student_id as s from office_threads where id = $1`, [id])))[0]?.[t.th.to_kind === "parent" ? "p" : "s"];
+  const opted = who ? (await getNotify({ role: t.th.to_kind, id: who }).catch(() => null))?.email?.messages === true : false;
+  if (!opted || !t.th.email) return {};
   const r = await sendBatch(/^re:/i.test(t.th.subject) ? t.th.subject : `Re: ${t.th.subject}`, text + footer(base, t.th.to_kind, id), [{ name: t.th.name, email: t.th.email }], false);
   if (r.sent) await withSchool((q) => q(`update office_messages set emailed = true where id = $1`, [mid]));
   return r.error ? { error: `Saved, but the email didn’t send: ${r.error}` } : { emailed: r.sent > 0, held: (r.held ?? 0) > 0 };
@@ -211,6 +218,7 @@ export async function myOfficeReply(kind: ToKind, id: string, threadId: string, 
     await q(`insert into office_messages (school_id, thread_id, sender, sender_user_id, body) values (current_school(), $1, $2, $3, $4)`, [threadId, kind, kind === "teacher" ? id : null, text]);
     await q(`update office_threads set last_message_at = now() where id = $1`, [threadId]);
   });
+  await later(() => import("./message-email").then((m) => m.emailNewMessage("office", threadId, kind, text)));   // 26 Nov: to admins who chose email
   return null;
 }
 
@@ -226,6 +234,7 @@ export async function startMyOfficeThread(kind: "parent" | "student", id: string
     const th = (await q<{ id: string }>(`insert into office_threads (school_id, to_kind, parent_id, student_id, subject) values (current_school(), $1, $2, $3, $4) returning id`,
       [kind, kind === "parent" ? id : null, kind === "student" ? id : student, s]))[0];
     await q(`insert into office_messages (school_id, thread_id, sender, body) values (current_school(), $1, $2, $3)`, [th.id, kind, b]);
+    await later(() => import("./message-email").then((m) => m.emailNewMessage("office", th.id, kind, b)));
     return { id: th.id };
   });
 }

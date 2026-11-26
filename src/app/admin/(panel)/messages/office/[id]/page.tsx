@@ -26,7 +26,6 @@ export default async function OfficeConversation({ params, searchParams }: { par
     <form action={officeReplyAction} className="card" style={{ display: "grid", gap: 10 }}>
       <input type="hidden" name="id" value={th.id} />
       <label className="fld">Reply{th.status === "closed" ? " (this reopens the conversation)" : ""}<textarea name="body" required rows={5} maxLength={4500} className="mini" style={{ width: "100%" }} /></label>
-      <label className="nm-check"><input type="checkbox" name="email" value="1" defaultChecked={!!th.email} disabled={!th.email} /> Also send a copy by email</label>
       <div><button className="abtn pri" type="submit">Send</button></div>
     </form>
     <form action={officeStatusAction} style={{ marginTop: 10 }}><input type="hidden" name="id" value={th.id} /><input type="hidden" name="status" value={th.status === "open" ? "closed" : "open"} />
