@@ -8,7 +8,20 @@ import { NextResponse, type NextRequest } from "next/server";
 const DEMO_SITE = "demo-academy";
 const demoKey = () => process.env.SITE_PASSWORD || process.env.ADMIN_SETUP_KEY || "";
 
+// 26 Nov: the platform moved from ose.miscano.co.uk to dev.ohsoed.co.uk. Once SITE_URL names the new address, page visits
+// to the old one are sent there (same path and query). /api/ (Stripe webhook, cron jobs, sign-in callbacks) and form posts
+// still work on the old address until each of those services has been pointed at the new one.
+const OLD_HOSTS = ["ose.miscano.co.uk"];
+function moved(req: NextRequest): NextResponse | null {
+  const site = process.env.SITE_URL; if (!site) return null;
+  const host = (req.headers.get("x-forwarded-host") || req.headers.get("host") || "").toLowerCase().split(":")[0];
+  if (!OLD_HOSTS.includes(host) || (req.method !== "GET" && req.method !== "HEAD") || req.nextUrl.pathname.startsWith("/api/")) return null;
+  let to: URL; try { to = new URL(req.nextUrl.pathname + req.nextUrl.search, site); } catch { return null; }
+  return to.hostname === host ? null : NextResponse.redirect(to, 308);
+}
+
 export async function middleware(req: NextRequest) {
+  const gone = moved(req); if (gone) return gone;
   const path = req.nextUrl.pathname;
   const hdrs = new Headers(req.headers); hdrs.delete("x-ose-site");
   hdrs.set("x-ose-path", path);   // for the admin layout ("not in your plan")

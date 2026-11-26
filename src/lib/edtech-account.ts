@@ -22,7 +22,7 @@ const RESERVED = new Set(["ohsoed", "oh-so-ed", "demo", "demo-academy", "admin",
 
 async function origin(): Promise<string> {
   if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/$/, "");
-  const h = await headers(), host = h.get("x-forwarded-host") || h.get("host") || "ose.miscano.co.uk";
+  const h = await headers(), host = h.get("x-forwarded-host") || h.get("host") || "dev.ohsoed.co.uk";
   return `${h.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https")}://${host}`;
 }
 

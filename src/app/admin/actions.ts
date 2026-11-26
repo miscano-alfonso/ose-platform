@@ -141,7 +141,7 @@ export async function inviteAction(_: unknown, f: FormData): Promise<{ error?: s
   const r = await createInvite(me.id, name, email, role, teacherId);   // 5 Nov: an admin invite can take over a teacher profile too (e.g. the principal)
   if (r.error) return { error: r.error };
   const h = await headers();
-  const host = h.get("x-forwarded-host") || h.get("host") || "ose.miscano.co.uk";
+  const host = h.get("x-forwarded-host") || h.get("host") || "dev.ohsoed.co.uk";
   const proto = h.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
   revalidatePath("/admin/staff");
   // in an OH-SO EdTech customer school the link first picks that school (and gets past the private-preview password)
@@ -168,7 +168,7 @@ export async function inviteTeacherAction(_: unknown, f: FormData): Promise<{ er
   const r = await createInvite(me.id, t.name, email, "teacher", teacherId);
   if (r.error) return { error: r.error };
   const h = await headers();
-  const host = h.get("x-forwarded-host") || h.get("host") || "ose.miscano.co.uk";
+  const host = h.get("x-forwarded-host") || h.get("host") || "dev.ohsoed.co.uk";
   const proto = h.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
   const slug = await activeSchool();
   const link = slug !== siteSchool() ? `${proto}://${host}/osedtech/join?s=${slug}&t=${r.token}` : `${proto}://${host}/admin/invite/${r.token}`;

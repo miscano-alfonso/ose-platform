@@ -20,7 +20,7 @@ export async function sendAllTests(to: Recipient): Promise<{ sent: string[]; fai
   if (t.on && ![...t.admins, ...t.allow.map((x) => x.trim().toLowerCase())].includes(addr))
     return { sent: [], failed: [], error: `Test mode is on and ${addr} isn’t one of the admins or on the allowed list. Add it on Admin → Test mode, then send again.` };
   const school = (await withSchool((q) => q<{ name: string }>(`select name from schools where id = current_school()`)))[0]?.name ?? "OH-SO ED";
-  const base = (process.env.SITE_URL || "https://ose.miscano.co.uk").replace(/\/$/, "");
+  const base = (process.env.SITE_URL || "https://dev.ohsoed.co.uk").replace(/\/$/, "");
   const first = to.name.split(" ")[0] || "there";
   const sent: string[] = [], failed: string[] = [];
   const log = (name: string, r: { ok: boolean; error?: string } | { sent: number; error?: string }) => { if ("ok" in r ? r.ok : r.sent > 0) sent.push(name); else failed.push(r.error ? `${name} (${r.error})` : name); };
