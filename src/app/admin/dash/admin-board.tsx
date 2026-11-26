@@ -14,6 +14,8 @@ import { money, dayMonth, yearLabel } from "@/lib/format";
 import { MoreList } from "../MoreList";
 import { notInPlan, type PlanId } from "@/lib/plan";
 import type { BoardModule } from "../BentoBoard";
+import { LiveMessages } from "../LiveMessages";
+import { messagesStamp } from "@/lib/live-stamp";
 
 const PILL: Record<string, [string, string]> = { failed: ["bad", "Payment failed"], full: ["warn", "Class full"], almost: ["warn", "Almost full"], enquiry: ["info", "New enquiry"], waitlist: ["mute", "Waiting list"],
   clash: ["bad", "Timetable clash"], lesson: ["warn", "Lesson change"], access: ["bad", "Lesson access"], low: ["warn", "Low attendance"], chat: ["bad", "Chat alert"] };
@@ -44,6 +46,7 @@ const I = {
 export async function adminModules(me: Staff, plan: PlanId | null): Promise<BoardModule[]> {
   const [{ t, attention }, m, flags, box, threads, officeAll] = await Promise.all([getDashboard(), getDashboardMore(LOW), openFlags().catch(() => []), inboxStatus().catch(() => null), listThreads(null, "open").catch(() => []), officeThreads("replies").catch(() => [])]);
   const waitCut = Date.now() - 2 * 864e5, waiting = threads.filter((x) => x.last_sender === "parent" && Date.parse(x.last_message_at) < waitCut).length;
+  const liveStamp = await messagesStamp();   // 26 Nov: the Messages box updates by itself
   const [linkOpts, mine, so, la] = await Promise.all([linkOptions((h) => !notInPlan(plan, h)), myLinks(me.id), studentOverview({ termOnly: true }).catch(() => null),   // 26 Nov: this term's work only
     import("@/lib/lesson-access").then((m) => m.accessAlerts(7)).catch(() => ({ strangers: 0, open: 0 }))]);
   const sAgo = (iso: string) => { const n = Math.round((Date.now() - Date.parse(iso)) / 60000); return n < 1 ? "just now" : n < 60 ? `${n} min ago` : n < 1440 ? `${Math.round(n / 60)} h ago` : `${Math.round(n / 1440)} days ago`; };
@@ -175,7 +178,7 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
       <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginTop: 12 }}><Link className="abtn sm" href="/admin/email?tab=inbox">Reply to families</Link><Link className="abtn sm" href="/admin/email?tab=compose">Write an email</Link></div>
     </section> },
     { id: "messages", title: "Messages", node: <section className="dx-card">
-      <header><h2>Messages</h2>{fromParent > 0 && <span className="dx-count">{fromParent}</span>}<Link className="dx-more" href="/admin/messages">All messages →</Link></header>
+      <header><h2>Messages</h2>{fromParent > 0 && <span className="dx-count">{fromParent}</span>}<LiveMessages stamp={liveStamp} seconds={8} /><Link className="dx-more" href="/admin/messages">All messages →</Link></header>
       {replies.length > 0 && <MoreList className="dx-list" limit={3}>{replies.map((x) => <Link key={x.id} className="dx-item warn" href={`/admin/messages/office/${x.id}`}>
         <span className="t"><b>{x.subject}</b><span>Reply from {x.name} to the office</span><span style={{ fontSize: 13 }}>{ago(x.last_message_at)}{x.batch ? ` · ${x.batch}` : ""}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</MoreList>}
       {threads.length === 0 ? replies.length > 0 ? null : <div className="dx-clear"><Ico d={I.check} /><b>No open conversations</b><span>Messages between parents and teachers will show here.</span></div>

@@ -36,7 +36,7 @@ export const TYPES: Record<NotifyRole, NotifyType[]> = {
 export type NotifySettings = { on: boolean; items: Record<string, { on: boolean; sound: SoundId }>;
   /** 26 Nov: by email (opt in): every message to me, and a daily round-up of messages waiting for my reply */ email?: { messages: boolean; digest: boolean } };
 export function defaultsFor(role: NotifyRole): NotifySettings {
-  return { on: true, items: Object.fromEntries(TYPES[role].map((t) => [t.id, { on: true, sound: t.sound }])), email: { messages: false, digest: false } };
+  return { on: true, items: Object.fromEntries(TYPES[role].map((t) => [t.id, { on: true, sound: t.sound }])), email: { messages: true, digest: false } };
 }
 /** A saved setting tidied against the role's types (new types appear switched on, unknown ones dropped). */
 export function cleanSettings(role: NotifyRole, raw: unknown): NotifySettings {
@@ -47,6 +47,6 @@ export function cleanSettings(role: NotifyRole, raw: unknown): NotifySettings {
     const x = r.items?.[t.id];
     items[t.id] = { on: typeof x?.on === "boolean" ? x.on : true, sound: x?.sound && ids.has(x.sound) ? x.sound : d.items[t.id].sound };
   }
-  return { on: typeof r.on === "boolean" ? r.on : true, items, email: { messages: r.email?.messages === true, digest: r.email?.digest === true } };
+  return { on: typeof r.on === "boolean" ? r.on : true, items, email: { messages: r.email?.messages !== false, digest: r.email?.digest === true } };   // 26 Nov: messages by email on unless switched off
 }
 export type NotifyEvent = { id: string; type: string; title: string; body: string; href: string | null; at: string };

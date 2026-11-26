@@ -42,7 +42,7 @@ export default async function Timetable({ searchParams }: { searchParams: Promis
         <Link className="abtn sm" href={`/admin/register/${l.id}?back=${encodeURIComponent(q({}))}`}>Attendance</Link>
         {l.course && <a className="abtn sm" href={classroomUrl(l.course)} target="_blank" rel="noopener">Classroom</a>}
         <Link className="abtn sm" href={`/admin/timetable-setup#c-${l.group_id}`}>Lesson times</Link>
-        {s === "soon" && <Link className="abtn sm" href={`/admin/register/${l.id}?back=${encodeURIComponent(q({}))}#change`}>Cancel or move</Link>}
+        {s === "soon" && <Link className="abtn sm" href={`/admin/register/${l.id}?back=${encodeURIComponent(q({}))}#change`}>Reschedule</Link>}
       </div>
     </div>
   </details>; };

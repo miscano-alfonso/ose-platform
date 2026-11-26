@@ -102,8 +102,16 @@ export async function sendOfficeMessage(actorId: string, d: { aud: Audience; tar
   if ("error" in made) return { error: made.error };
   const { to, ids, batch } = made;
   let emailed = 0, held = 0, emailError: string | undefined;
-  const withEmail = to.map((r, i) => ({ ...r, id: ids[i] })).filter((r) => r.email);
-  if (d.email && withEmail.length) {
+  // 26 Nov (Alfonso): messages go by email too unless the person switched that off in Notifications (no tick any more)
+  void d.email;
+  const out = await withSchool(async (q) => {
+    const tu = new Map((await q<{ id: string; u: string }>(`select id, user_id as u from teachers where id = any($1::uuid[])`, [to.filter((r) => r.teacher_id).map((r) => r.teacher_id)])).map((r) => [r.id, r.u]));
+    const keyOf = (r: To) => r.kind === "parent" ? `notify:p:${r.parent_id}` : r.kind === "student" ? `notify:s:${r.student_id}` : `notify:u:${tu.get(r.teacher_id ?? "") ?? ""}`;
+    const off = new Set((await q<{ key: string }>(`select key from meet_kv where key = any($1::text[]) and (value->'email'->>'messages') = 'false'`, [to.map(keyOf)])).map((r) => r.key));
+    return new Set(to.filter((r) => off.has(keyOf(r))));
+  }).catch(() => new Set<To>());
+  const withEmail = to.map((r, i) => ({ ...r, id: ids[i] })).filter((r, i) => r.email && !out.has(to[i]));
+  if (withEmail.length) {
     // one email per kind of person (the link differs); a single person gets a link straight to their conversation
     for (const kind of ["parent", "student", "teacher"] as ToKind[]) {
       const list = withEmail.filter((r) => r.kind === kind); if (!list.length) continue;

@@ -67,7 +67,9 @@ export function MenuNav({ id, label, groups, counts = {}, root, alias = {}, tabb
   return <>
     <button className="abtn side-btn menu-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>{open ? "Close menu" : "Menu"}</button>
     <nav id={id} className={`nav${open ? " open" : ""}${tabbed && groups.length > 1 ? " tabbed" : ""}`} aria-label={label}>
-      {groups.length === 1 ? list(groups[0]) : stacked ? groups.map((g, i) => <div key={i} className="ngrp-st">{i > 0 && <p className="ngrp-t">{g.title}</p>}{list(g)}</div>)
+      {groups.length === 1 ? list(groups[0]) : stacked ? groups.map((g, i) => i === 0 ? <div key={i} className="ngrp-st">{list(g)}</div>
+        // 26 Nov: the later sections (Settings) open and close; open when you're on one of their pages
+        : <details key={i} className="ngrp-st ngrp-fold" open={g.items.some((x) => here(x.href)) || undefined}><summary className="ngrp-t">{g.title}</summary>{list(g)}</details>)
       : groups.map((g, i) => <div key={i} className="ngrp">
         <button type="button" className="ngrp-h" aria-expanded={section === g.title} onClick={() => setSection(section === g.title ? start?.title ?? "" : g.title)}>{g.title}</button>
         {section === g.title && list(g)}</div>)}

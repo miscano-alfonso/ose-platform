@@ -10,6 +10,8 @@ import type { BoardModule } from "../BentoBoard";
 import { studentOverview } from "@/lib/student-overview";
 import { MoreList } from "../MoreList";
 import { NavCountSync } from "../NavCountSync";
+import { LiveMessages } from "../LiveMessages";
+import { messagesStamp } from "@/lib/live-stamp";
 import { Ring, Ico, IC } from "../DashBits";
 import { joinLabel } from "@/lib/video";
 import { markingQueue, countdown, tone, TURNAROUND_DAYS, REMIND_DAYS } from "@/lib/marking";
@@ -45,6 +47,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
     studentOverview({ teacherUserId: me.id }).catch(() => null),   // 5 Nov: students behind on their Classroom work
     markingQueue(me.id).catch(() => []),   // 6 Nov: handed-in work to mark and return within 7 days
     import("@/lib/teacher-area").then((t) => t.familyMsgsOn()).catch(() => false)]);
+  const stamp = await messagesStamp();
   const [ones, mCounts] = await Promise.all([onesP, import("@/lib/marking").then((m) => m.markingCounts(marking.map((x) => x.cw))).catch(() => new Map<string, { handed: number; total: number }>())]);
   const found = await findSlides(d.week.map((l) => ({ id: l.id, course: l.course_id ?? null, n: l.lesson_no ?? null, termStart: l.term_start ?? null, folder: l.slides_folder ?? null, term: l.term_no ?? null }))).catch(() => new Map());
   const unreadN = inbox.filter((i) => i.unread > 0).length;
@@ -130,9 +133,9 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
             <span className="t"><b>{m.title}</b><span>{m.cls}</span>{c && c.total > 0 && <span>{c.handed}/{c.total} handed in</span>}</span>
             <span className="dx-mk-r"><span className={`dx-cd ${tone(m.daysLeft)}`}>{countdown(m.daysLeft)}</span><span className="dx-mk-n">{m.toMark} to mark</span></span></a>; })}</div></>}
     </section> },
-    { id: "messages", title: "Messages", size: "l", node: <section className="dx-card dx-tall"><header><h2>Messages</h2>{unreadN > 0 && <span className="dx-count">{unreadN}</span>}<NavCountSync href="/admin/teacher/messages" count={unreadN} /><Link className="abtn sm" style={{ marginLeft: "auto" }} href="/admin/teacher/messages?new=1">New message</Link><Link className="dx-more" style={{ marginLeft: 0, whiteSpace: "nowrap" }} href="/admin/teacher/messages" title="All messages">All →</Link></header>
+    { id: "messages", title: "Messages", size: "l", node: <section className="dx-card dx-tall"><header><h2>Messages</h2>{unreadN > 0 && <span className="dx-count">{unreadN}</span>}<NavCountSync href="/admin/teacher/messages" count={unreadN} /><LiveMessages stamp={stamp} seconds={8} /><Link className="abtn sm" style={{ marginLeft: "auto" }} href="/admin/teacher/messages?new=1">New message</Link><Link className="dx-more" style={{ marginLeft: 0, whiteSpace: "nowrap" }} href="/admin/teacher/messages" title="All messages">All →</Link></header>
       {inbox.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No messages yet</b><span>Messages from the office and families show here.</span></div>
-        : <div className="dx-list dx-scroll">{inboxSorted.slice(0, 12).map((it) => <Link key={it.kind + it.id} className={`dx-item ${it.unread ? "warn" : "info"}`} href={`/admin/teacher/messages?${it.kind}=${encodeURIComponent(it.id)}`}>
+        : <div className="dx-list dx-scroll">{inboxSorted.slice(0, 12).map((it) => <Link key={it.kind + it.id} className={`dx-item ${it.unread ? "info" : "plain"}`} href={`/admin/teacher/messages?${it.kind}=${encodeURIComponent(it.id)}`}>
           <span className="t">{it.unread ? <span className="pill warn">{it.unread > 1 ? `${it.unread} new` : "New"}{it.kind === "family" ? " · family" : ""}</span> : <span className="pill mute">{it.kind === "family" ? "Family" : "School"}</span>}
             <b>{it.subject || "(no subject)"}</b><span>{it.who}{it.preview ? ` · ${it.preview.length > 70 ? it.preview.slice(0, 70) + "…" : it.preview}` : ""}</span><span style={{ fontSize: 13 }}>{onDay(it.at)}</span></span><span className="go" aria-hidden="true">→</span></Link>)}</div>}
     </section> },

@@ -203,9 +203,9 @@ export const mailNote = (m: { sent: number; held: number; error?: string } | nul
   !m ? "" : m.error ? ` The email to families didn't send: ${m.error}` : m.held ? ` ${m.held} email${m.held === 1 ? " was" : "s were"} held by test mode${m.sent ? `, ${m.sent} sent` : ""}.` : m.sent ? ` ${m.sent} famil${m.sent === 1 ? "y member was" : "y members were"} emailed.` : " Nobody in the class had an email address to send to.";
 
 /** A teacher's lessons in the next three weeks (My timetable → Coming up), with any request waiting and any moved-in lesson. */
-export type UpcomingLesson = { id: string; date: string; start: string; end: string; cls: string; status: string; moved_from: string | null; note: string | null; pending: "cancel" | "move" | null };
+export type UpcomingLesson = { id: string; slot_id: string; date: string; start: string; end: string; cls: string; status: string; moved_from: string | null; note: string | null; pending: "cancel" | "move" | null };
 export async function teacherUpcoming(userId: string, days = 21): Promise<UpcomingLesson[]> {
-  return withSchool((q) => q<UpcomingLesson>(`select e.id, e.lesson_date::text as date, to_char(s.starts_at, 'HH24:MI') as start, to_char(s.ends_at, 'HH24:MI') as end,
+  return withSchool((q) => q<UpcomingLesson>(`select e.id, e.slot_id, e.lesson_date::text as date, to_char(s.starts_at, 'HH24:MI') as start, to_char(s.ends_at, 'HH24:MI') as end,
       l.name || ' ' || sj.name as cls, e.status::text, e.moved_from, e.note,
       (select r.kind from lesson_change_requests r where r.event_id = e.id and r.status = 'pending') as pending
     from lesson_events e join lesson_slots s on s.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id

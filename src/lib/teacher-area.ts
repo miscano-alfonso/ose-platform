@@ -192,8 +192,8 @@ export async function myPayItems(userId: string): Promise<Record<string, PayItem
 }
 
 export async function myTimetable(userId: string) {
-  return withSchool((q) => q<{ weekday: number; time: string; ends: string; level: string; subject: string; code: string; students: number }>(`
-    select s.weekday, to_char(s.starts_at,'HH24:MI') as time, to_char(s.ends_at,'HH24:MI') as ends, l.name as level, sj.name as subject, g.code,
+  return withSchool((q) => q<{ slot_id: string; weekday: number; time: string; ends: string; level: string; subject: string; code: string; students: number }>(`
+    select s.id as slot_id, s.weekday, to_char(s.starts_at,'HH24:MI') as time, to_char(s.ends_at,'HH24:MI') as ends, l.name as level, sj.name as subject, g.code,
       (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students
     from lesson_slots s join course_groups g on g.id = s.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
     where s.teacher_id = ${ME} and s.academic_year_id = ${YEAR_NOW} and s.one_off_on is null order by s.starts_at, s.weekday`, [userId]));

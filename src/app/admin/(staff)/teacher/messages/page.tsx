@@ -7,6 +7,8 @@ import { myOfficeThread } from "@/lib/office-messages";
 import { teacherInbox, markSchoolSeen, familyThread, type InboxItem } from "@/lib/teacher-inbox";
 import { markUnreadAction } from "./actions";
 import { NavCountSync } from "../../../NavCountSync";
+import { LiveMessages } from "../../../LiveMessages";
+import { messagesStamp } from "@/lib/live-stamp";
 
 export const dynamic = "force-dynamic";
 const when = (s: string) => new Date(s).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
@@ -112,7 +114,7 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
     <div className="top"><div><h1>Messages</h1><div className="sub">Talk to the school, and to the parents of the students you teach.</div></div>
       <span className="grow" /><Link className="abtn pri" href="/admin/teacher/messages?new=1">New message</Link></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
-    {!me.viewing && <NavCountSync href="/admin/teacher/messages" count={unreadN} />}
+    {!me.viewing && <NavCountSync href="/admin/teacher/messages" count={unreadN} />}<LiveMessages stamp={await messagesStamp()} />
     <div className={`card ib${chosen ? " has-sel" : ""}`}>
       <div className="ib-list">
         <div className="segl ib-tabs" role="group" aria-label="Show">{TABS.map(([k, l]) => <Link key={k} scroll={false} href={`/admin/teacher/messages${k !== "all" ? `?f=${k}` : ""}`} aria-current={f === k ? "true" : undefined}>

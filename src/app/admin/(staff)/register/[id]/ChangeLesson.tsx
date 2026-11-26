@@ -22,7 +22,7 @@ export async function ChangeLesson({ id, admin, backInput }: { id: string; admin
   const pending = reqs.find((r) => r.status === "pending"), past = reqs.filter((r) => r.status !== "pending").slice(0, 3);
   const what = (r: (typeof reqs)[number]) => r.kind === "move" ? `Move to ${whenText(r.new_date!, r.new_start!)}` : "Cancel this lesson";
   return <section className="card cl-card" id="change">
-    <h2>{admin ? "Cancel or move this lesson" : "Need to cancel or move this lesson?"}</h2>
+    <h2>{admin ? "Reschedule this lesson" : "Need to reschedule this lesson?"}</h2>
     <p className="cs">{admin ? "New times are ones that don’t clash with the teacher’s lessons, 1:1s or workshops, any lesson in the same level group (KS3, Pre-GCSE, GCSE), or the students’ other lessons."
       : "Ask the office. You can only choose times that don’t clash with your lessons, 1:1s or workshops, any lesson in the same level group (KS3, Pre-GCSE, GCSE), or the students’ other lessons."}</p>
     {pending && <div className="cl-req">

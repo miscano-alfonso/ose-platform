@@ -10,7 +10,7 @@ const SITE = () => (process.env.SITE_URL || "https://dev.ohsoed.co.uk").replace(
 const cut = (s: string, n = 600) => { const t = s.trim(); return t.length > n ? t.slice(0, n) + "…" : t; };
 type Person = Who & { name: string; email: string | null; link: string };
 
-async function wants(w: Who, what: "messages" | "digest") { return (await getNotify(w).catch(() => null))?.email?.[what] === true; }
+async function wants(w: Who, what: "messages" | "digest") { const e = (await getNotify(w).catch(() => null))?.email; return what === "messages" ? e?.messages !== false : e?.digest === true; }
 async function send(to: Person, subject: string, body: string, tag: string) {
   if (!to.email) return false;
   const { sendOne } = await import("./email");
@@ -53,7 +53,7 @@ export async function emailNewMessage(kind: "family" | "office", threadId: strin
     for (const p of people) {
       if (!p.id || !p.email || !(await wants(p, "messages"))) continue;
       const who = fromName || from || "Someone";
-      if (await send(p, `New message: ${subject}`, `Hello ${first(p.name)},\n\n${who} wrote:\n\n${cut(body)}\n\nRead and reply: ${SITE()}${p.link}\n\nYou get messages by email because you chose it in Notifications. You can switch it off there.`, "message-copy")) n++;
+      if (await send(p, `New message: ${subject}`, `Hello ${first(p.name)},\n\n${who} wrote:\n\n${cut(body)}\n\nRead and reply: ${SITE()}${p.link}\n\nYou can stop getting messages by email in your Notifications settings.`, "message-copy")) n++;
     }
     return n;
   } catch { return 0; }

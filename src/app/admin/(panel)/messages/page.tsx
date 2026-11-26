@@ -5,6 +5,8 @@ import { officeThread, officeThreads } from "@/lib/office-messages";
 import { adminInbox, markFamilySeen, type AdminItem } from "@/lib/admin-inbox";
 import { officeReplyAction, officeStatusAction, replyThreadAction, setThreadStatusAction, adminMarkUnreadAction } from "../../actions";
 import { NavCountSync } from "../../NavCountSync";
+import { LiveMessages } from "../../LiveMessages";
+import { messagesStamp } from "@/lib/live-stamp";
 
 export const dynamic = "force-dynamic";
 const when = (s: string) => new Date(s).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
@@ -80,7 +82,7 @@ export default async function Messages({ searchParams }: { searchParams: Promise
     <div className="top"><div><h1>Messages</h1><div className="sub">Messages from the office, and conversations between parents and teachers, which admins can read and reply to (safeguarding).</div></div>
       <span className="grow" /><Link className="abtn pri" href="/admin/messages/write">New message</Link></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
-    <NavCountSync href="/admin/messages" count={unreadN} />
+    <NavCountSync href="/admin/messages" count={unreadN} /><LiveMessages stamp={await messagesStamp()} />
     <div className={`card ib${chosen ? " has-sel" : ""}`}>
       <div className="ib-list">
         <div className="segl ib-tabs" role="group" aria-label="Show">{TABS.map(([k, l]) => <Link key={k} scroll={false} href={`/admin/messages${k !== "all" ? `?f=${k}` : ""}`} aria-current={f === k ? "true" : undefined}>

@@ -61,7 +61,7 @@ export function WriteForm({ opts, action, initial, testMode }: { opts: Options; 
     {reach && <p className="nm-reach">Goes to <b>{reach}</b>{!/^1 /.test(reach) ? ", each privately. Replies come back to you, one conversation each." : "."}</p>}
     <label className="fld">Subject<input name="subject" required maxLength={160} autoComplete="off" /></label>
     <label className="fld">Message<textarea name="body" required rows={8} maxLength={4500} autoComplete="off" /></label>
-    <label className="nm-check"><input type="checkbox" name="email" value="1" defaultChecked /> Also send a copy by email<span className="cs"> (replies to the email arrive in Email › Inbox)</span></label>
+    <p className="cs">Everyone also gets it by email, unless they’ve switched that off in their Notifications. Replies to the email arrive in Email › Inbox.</p>
     {testMode && <p className="note" style={{ margin: 0 }}>Test mode is on, so emails to families, students and teachers are held. The messages still appear on the platform.</p>}
     <div className="nm-btns"><button className="abtn pri" type="submit" disabled={!!kind.pick && !target}>Send</button><a className="abtn" href="/admin/messages" onClick={(e) => { if (dirty && !confirm("Leave without sending?")) e.preventDefault(); }}>Cancel</a></div>
   </form>;
