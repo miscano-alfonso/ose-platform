@@ -992,6 +992,7 @@
 .adm[data-palette=demo] .fx .dx-hero .fx-btns a.go.fx-meet.wait{color:#ffb3c6;border-color:#ffb3c6}
 /* more room between "Hello Jade" and the course title */
 .adm .fx .dx-hero .fx-hero-t .fx-hi{display:inline-block;margin-bottom:12px}
+.adm .fx-nextk{display:block;margin:0 0 8px;font:600 15px/1.2 "Space Grotesk","Jost",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.72)}   /* 26 Nov: "Next lesson" between Hello and the class */
 /* the SEND box: an "S" badge, one student per line; the whole box opens the class list */
 .adm .fx .dx-hero a.fx-send{color:#fff;text-decoration:none;transition:background-color .15s,border-color .15s}
 .adm .fx .dx-hero a.fx-send:hover{background:rgba(255,255,255,.14);border-color:rgba(255,255,255,.55)}
