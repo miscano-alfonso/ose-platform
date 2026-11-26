@@ -1,9 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCycle, getCycles, gradeBands, cycleStudents, byTeacher } from "@/lib/reports";
-import { createEntriesAction, reviewEntryAction, approveAllAction, publishCycleAction, saveBandAction, remindTeachersAction } from "../../../actions";
+import { createEntriesAction, reviewEntryAction, approveAllAction, publishCycleAction, saveBandAction, remindTeachersAction, emailReportsAction } from "../../../actions";
+import { reportEmailStatus } from "@/lib/report-email";
 
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;   // emailing a whole round of reports
 const day = (d: string) => new Date(d.slice(0, 10) + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 const Score = ({ n }: { n: number | null }) => <span className={`pill ${n == null ? "mute" : n >= 4 ? "good" : n === 3 ? "info" : "warn"}`}>{n ?? "–"}</span>;
 
@@ -16,6 +18,7 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
   const tab = ["review", "classes", "students", "key", "past"].includes(sp.tab ?? "") ? sp.tab! : "review";
   const [bands, students, teachers, all] = await Promise.all([gradeBands(), tab === "students" ? cycleStudents(id) : Promise.resolve([]), tab === "classes" ? byTeacher(id) : Promise.resolve([]), getCycles()]);
   const done = c.submitted + c.approved;
+  const st = c.status === "published" ? await reportEmailStatus(id) : null;
   const TABS: [string, string][] = [["review", `To review (${c.submitted})`], ["classes", "Classes and teachers"], ["students", "Preview reports"], ["key", "Grading key"], ["past", "All reports"]];
   return <>
     <div className="top"><div><h1>Reports</h1><div className="sub">{c.name} · comments due {day(c.comments_due)} · reports go to parents {day(c.publish_on)}</div></div></div>
@@ -33,6 +36,18 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
       {c.status !== "published" ? <form action={publishCycleAction}><input type="hidden" name="id" value={c.id} /><button className="abtn pri" type="submit" disabled={!c.total || c.approved < c.total} title={c.approved < c.total ? "Every report has to be approved first" : undefined}>{c.total && c.approved >= c.total ? `Publish all ${c.total}` : `Publish (${c.approved} of ${c.total} approved)`}</button></form> : <span className="pill good">Published</span>}
     </div>
 
+    {st && (() => { const left = st.children - st.sent - st.noEmail;   // 26 Nov
+      return <section className="card">
+        <h2 style={{ display: "flex", gap: 10, alignItems: "center" }}>Email the reports to parents {st.sent > 0 && <span className={`pill ${left ? "warn" : "good"}`}>{st.sent} of {st.children - st.noEmail} sent</span>}</h2>
+        <p className="cs">Each family gets one email per child with the whole report written out (every subject, the teacher, the scores and the comment), so parents can read it without signing in. It goes to the account holder, and to a second parent who gets reports. Replies come to the school inbox. <b>This goes to real parents even while test mode is on</b>; nothing else does.{st.noEmail ? ` ${st.noEmail} child${st.noEmail === 1 ? " has" : "ren have"} no parent email, so they’re left out.` : ""}{st.lastAt ? ` Last sent ${new Date(st.lastAt).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" })}.` : ""}</p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
+          <form action={emailReportsAction}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="test" value="1" /><button className="abtn" type="submit">Send me a test first</button></form>
+          {left > 0 ? <form action={emailReportsAction} style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}><input type="hidden" name="id" value={c.id} />
+            <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="confirm" /> I’ve checked the reports and the test email</label>
+            <button className="abtn pri" type="submit">{st.sent ? `Email the other ${left}` : `Email ${left} report${left === 1 ? "" : "s"} to parents`}</button></form>
+            : <span className="muted">Every report has been emailed.</span>}
+        </div>
+      </section>; })()}
     {tab === "review" && <div className="dstack">
       {review.length === 0 ? <p className="empty">Nothing waiting for review.</p> : review.map((r) => <section className="card" key={r.id} style={{ margin: 0 }}>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}><b>{r.student}</b><span className="muted">{r.class} · {r.teacher}</span><span style={{ flex: 1 }} />

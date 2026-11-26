@@ -219,7 +219,8 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
     if (c) {
       const rows = await q<{ cycle: string; name: string; sid: string; child: string; parent: string; email: string }>(`select distinct c.id as cycle, c.name, s.id as sid, s.first_name as child, p.first_name as parent, p.email::text
         from report_cycles c join report_entries e on e.cycle_id = c.id and e.status = 'approved' join students s on s.id = e.student_id join parents p on p.id = s.parent_id
-        where c.status = 'published' and c.published_at > now() - interval '14 days'`);
+        where c.status = 'published' and c.published_at > now() - interval '14 days'
+          and not exists (select 1 from report_emails re where re.cycle_id = c.id and re.student_id = s.id and re.sent_at is not null)`);   // 26 Nov: already emailed in full
       for (const r of rows) await deliver(q, "report_published", c, { ref: `${r.cycle}:${r.sid}`, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent, child: r.child, report: r.name, school } }, budget);
     }
     // take back booked reminders that no longer apply: lesson cancelled, absence reported, left the class, taster cancelled

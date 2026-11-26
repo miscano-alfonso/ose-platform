@@ -40,6 +40,7 @@ export async function gate<T extends { email: string; name?: string }>(to: T[], 
   try { t = await testMode(); } catch { t = { on: true, allow: [], admins: [] }; }
   if (!t.on) return { send: to, held: [], monitor: null, copy: [] };
   if (t.beta && m.tag && SIGN_IN_TAGS.has(m.tag)) return { send: to, held: [], monitor: null, copy: [] };   // beta: sign-in emails go out
+  if (m.tag === "report-full") return { send: to, held: [], monitor: null, copy: [] };   // 26 Nov: reports the office chose to email (Reports → Email the reports)
   const ok = new Set([...t.admins, ...t.allow.map(norm)]);
   const send = to.filter((r) => ok.has(norm(r.email))), held = to.filter((r) => !ok.has(norm(r.email)));
   let copy: T[] = [];

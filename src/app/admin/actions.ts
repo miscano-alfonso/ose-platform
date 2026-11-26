@@ -496,6 +496,21 @@ export async function publishCycleAction(f: FormData): Promise<void> {
   revalidatePath(`/admin/reports/${id}`); revalidatePath("/admin/reports");
   redirect(`/admin/reports/${id}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Published. It will show in each family’s account once the parent area is live.")}`);
 }
+// 26 Nov: Reports → Email the reports to parents (the whole report in the email), or a test to yourself first
+export async function emailReportsAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); const id = str(f, "id", 40);
+  const back = (k: "ok" | "err", m: string) => redirect(`/admin/reports/${id}?${k}=${encodeURIComponent(m)}`);
+  if (!/^[0-9a-f-]{36}$/.test(id)) back("err", "Unknown report round.");
+  const { emailReports } = await import("@/lib/report-email");
+  if (f.get("test") === "1") {
+    const r = await emailReports(me.id, id, { email: me.email, name: me.name });
+    back(r.error ? "err" : "ok", r.error ?? `Test sent to ${me.email}. Check it, then email the parents.`);
+  }
+  if (f.get("confirm") !== "on") back("err", "Tick the box to confirm the reports should go to parents.");
+  const r = await emailReports(me.id, id);
+  revalidatePath(`/admin/reports/${id}`);
+  back(r.error || r.failed ? "err" : "ok", r.error ?? (r.failed ? `${r.sent} sent, ${r.failed} didn’t go. Press the button again to retry the ones that didn’t.` : `${r.sent} report${r.sent === 1 ? "" : "s"} emailed to parents.`));
+}
 export async function saveWriteSheetAction(f: FormData): Promise<void> {
   const me = await requireSignedIn();
   const cycle = str(f, "cycle", 40), group = str(f, "group", 40);
