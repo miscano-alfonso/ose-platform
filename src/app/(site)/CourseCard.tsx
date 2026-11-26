@@ -59,6 +59,7 @@ export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }
       </ul>
       {c.is_full
         ? <p className="when wl">This group is full. Join the waiting list and we’ll email you if a place comes up or a new group opens.</p>
+        : c.trial ? <p className="when wl">A new course: it starts once {c.needed ?? 5} families sign up. Try a lesson free first.</p>
         : c.status === "waitlist" ? <p className="when wl">Days and times announced when the course opens</p>
         : c.slots?.length ? <ul className="slots">{c.slots.map((s, i) => <li key={i}>{DAYS[s.d]} – {s.t}</li>)}</ul> : null}
       {c.is_next && <p className="starts">Starts {monthYear(c.year_start)}</p>}

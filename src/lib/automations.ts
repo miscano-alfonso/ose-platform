@@ -30,7 +30,15 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "child", "class", "book_link", "school"],
     subject: "How did {{child}}’s taster go?",
     body: "Dear {{parent}},\n\nThank you for bringing {{child}} to the {{class}} taster lesson. We hope they enjoyed it.\n\nIf you’d like {{child}} to join the class, you can book a place here: {{book_link}}\n\nPlaces are limited, so do get in touch if you have any questions.\n\n{{school}}" },
-  { key: "trial_opened", name: "Trial course opens: tell the taster families", when: "When a trial class is opened for booking (Classes → untick Trial), to each family whose child had a taster in it and isn’t booked on it.", timing: null, to_parent: true, to_student: false,
+  { key: "trial_waitlist_invite", name: "After a trial taster: join the waiting list", when: "After a taster lesson in a trial class (a new course that isn’t running yet), instead of “After a taster: invite to book”. The link adds the child to the class’s waiting list in one click.", timing: { label: "hours after the lesson ends", unit: "hours", default: 2 }, to_parent: true, to_student: false,
+    fields: ["parent", "child", "class", "needed", "join_link", "school"],
+    subject: "Would {{child}} like to join {{class}}?",
+    body: "Dear {{parent}},\n\nThank you for bringing {{child}} to the {{class}} taster lesson. We hope they enjoyed it.\n\n{{class}} is a new course, and it will only start once {{needed}} families have signed up for it. If you’d like {{child}} to take part, please add them to the waiting list here: {{join_link}}\n\nJoining the list is free and doesn’t commit you to anything. As soon as enough families have joined, we’ll email you and you can book {{child}}’s place before anyone else.\n\n{{school}}" },
+  { key: "waitlist_joined", name: "Waiting list: you’re on the list", when: "When a family joins a class’s waiting list and the class hasn’t reached its target yet.", timing: null, to_parent: true, to_student: false,
+    fields: ["parent", "child", "class", "count", "needed", "school"],
+    subject: "{{child}} is on the waiting list for {{class}}",
+    body: "Dear {{parent}},\n\nThank you, {{child}} is on the waiting list for {{class}}.\n\nPlease note the course only goes ahead once {{needed}} families have signed up. So far {{count}} have. We’ll email you as soon as it’s going ahead, and you’ll be able to book {{child}}’s place before anyone else. There’s nothing to pay until then.\n\nIf you know anyone else who might be interested, do let them know.\n\n{{school}}" },
+  { key: "trial_opened", name: "Trial course opens: tell the taster families", when: "When a trial class opens to everyone (it reached its waiting-list target, or you unticked Trial), to each family whose child had a taster in it, isn’t booked on it and isn’t on its waiting list (they’ve already been told).", timing: null, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "book_link", "school"],
     subject: "{{class}} is now open for booking",
     body: "Dear {{parent}},\n\nThank you for {{child}} trying {{class}} with us. We’re pleased to say the course is now open, and you can book {{child}}’s place here: {{book_link}}\n\nPlaces are limited, so do get in touch if you have any questions.\n\n{{school}}" },
@@ -165,9 +173,11 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
     }
     // tasters: thank-you now, joining link before the lesson, then (from Meet attendance) an invitation to book, or another date if they missed it
     await q(`select settle_tasters()`).catch((e) => console.error("settle tasters", e));
-    const tasters = await q<{ id: string; status: string; starts: string; ends: string; class: string; teacher: string | null; meet: string | null; child: string; cemail: string; parent: string; pemail: string; created: string }>(`
+    const tasters = await q<{ id: string; status: string; starts: string; ends: string; class: string; teacher: string | null; meet: string | null; child: string; cemail: string; parent: string; pemail: string; created: string; trial: boolean; token: string; needed: number; was_trial: boolean }>(`
       select b.id, b.status::text, ((e.lesson_date + s.starts_at) at time zone sc.timezone)::text as starts, ((e.lesson_date + s.ends_at) at time zone sc.timezone)::text as ends,
-        l.name || ' ' || sj.name as class, u.name as teacher, g.meet_url as meet, r.child_name as child, r.child_email::text as cemail, r.parent_first_name as parent, r.parent_email::text as pemail, b.created_at::text as created
+        l.name || ' ' || sj.name as class, u.name as teacher, g.meet_url as meet, r.child_name as child, r.child_email::text as cemail, r.parent_first_name as parent, r.parent_email::text as pemail, b.created_at::text as created,
+        g.trial, b.join_token::text as token, g.waitlist_threshold as needed,
+        (g.trial_ended_at is not null and e.lesson_date <= (g.trial_ended_at at time zone sc.timezone)::date) as was_trial
       from taster_bookings b join taster_requests r on r.id = b.request_id join lesson_events e on e.id = b.lesson_event_id join lesson_slots s on s.id = e.slot_id
       join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join schools sc on sc.id = b.school_id
       left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id
@@ -184,25 +194,41 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
       c = cfg("taster_missed");
       if (c && t.status === "no_show") { const at = Date.parse(t.ends) + (c.minutes ?? 3) * 3600e3;
         if (at < now + horizon) await deliver(q, "taster_missed", c, { ref: t.id, to: who(c), vars: { ...vars, taster_link: tasterLink }, at: at > now + 60e3 ? new Date(at) : undefined }, budget); }
+      c = cfg("trial_waitlist_invite");   // 26 Nov: a trial class isn't running yet, so invite to the waiting list rather than to book
+      if (c && t.status === "attended" && t.trial) { const at = Date.parse(t.ends) + (c.minutes ?? 2) * 3600e3;
+        if (at < now + horizon) { await deliver(q, "trial_waitlist_invite", c, { ref: t.id, to: who(c), vars: { ...vars, needed: String(t.needed), join_link: base ? `${base}/waitlist/join?t=${t.token}` : "our website" }, at: at > now + 60e3 ? new Date(at) : undefined }, budget);
+          await q(`update taster_bookings set followed_up_at = coalesce(followed_up_at, now()) where id = $1`, [t.id]); } }
       c = cfg("taster_follow_up");
-      if (c && t.status === "attended") { const at = Date.parse(t.ends) + (c.minutes ?? 2) * 3600e3;
+      if (c && t.status === "attended" && !t.trial && !t.was_trial) {   // a taster from while the class was a trial: they hear through the waiting list or "trial course opens"
+        const at = Date.parse(t.ends) + (c.minutes ?? 2) * 3600e3;
         if (at < now + horizon) { await deliver(q, "taster_follow_up", c, { ref: t.id, to: who(c), vars, at: at > now + 60e3 ? new Date(at) : undefined }, budget); await q(`update taster_bookings set followed_up_at = coalesce(followed_up_at, now()) where id = $1`, [t.id]); } }
     }
 
     // 26 Nov: a trial class opened for booking (in the last 14 days): each taster family whose child isn't booked on it yet
+    await q(`select open_expired_priority()`).catch((e) => console.error("open priority classes", e));   // head starts that have ended: open to everyone
     c = cfg("trial_opened");
     if (c) {
       const rows = await q<{ id: string; class: string; child: string; cemail: string; parent: string; pemail: string }>(`select distinct on (r.id) r.id, l.name || ' ' || sj.name as class,
           r.child_name as child, r.child_email::text as cemail, r.parent_first_name as parent, r.parent_email::text as pemail
         from course_groups g join lesson_events e on e.group_id = g.id join taster_bookings b on b.lesson_event_id = e.id join taster_requests r on r.id = b.request_id
           join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-        where g.trial_ended_at > now() - interval '14 days' and not g.trial and b.status <> 'cancelled'
+        where g.trial_ended_at > now() - interval '14 days' and not g.trial and g.status = 'open' and b.status <> 'cancelled'
+          and not exists (select 1 from waitlist_entries w where w.group_id = g.id and (w.taster_booking_id = b.id or lower(w.email::text) = lower(r.parent_email::text)))
           and not exists (select 1 from enrolments x where x.group_id = g.id and x.status in ('pending', 'active') and not x.is_taster
             and (x.student_id = r.student_id or x.student_id in (select s.id from students s where lower(s.email::text) = lower(r.child_email::text))))`);
       for (const r of rows) await deliver(q, "trial_opened", c, { ref: r.id, to: [...(c.to_parent ? [{ name: r.parent, email: r.pemail }] : []), ...(c.to_student ? [{ name: r.child.split(" ")[0], email: r.cemail }] : [])],
         vars: { parent: r.parent, child: r.child.split(" ")[0], class: r.class, book_link: book, school } }, budget);
     }
 
+    // 26 Nov: waiting list joined: tell them the course only runs once enough families sign up
+    c = cfg("waitlist_joined");
+    if (c) {
+      const rows = await q<{ id: string; parent: string; child: string; email: string; class: string; count: number; needed: number }>(`select w.id, w.parent_name as parent, w.child_name as child, w.email::text,
+          l.name || ' ' || sj.name as class, (select count(*)::int from waitlist_entries x where x.group_id = g.id and x.enrolled_at is null) as count, g.waitlist_threshold as needed
+        from waitlist_entries w join course_groups g on g.id = w.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+        where w.created_at > now() - interval '7 days' and w.emailed_at is null and w.enrolled_at is null and (g.status = 'waitlist' or g.trial)`);
+      for (const r of rows) await deliver(q, "waitlist_joined", c, { ref: r.id, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent.split(" ")[0], child: r.child.split(" ")[0], class: r.class, count: String(r.count), needed: String(r.needed), school } }, budget);
+    }
     // waiting list: places open for the families on the list
     c = cfg("waitlist_open");
     if (c) {
@@ -247,7 +273,7 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
         (a.key = 'lesson_reminder' and exists (select 1 from lesson_events e where e.id::text = split_part(a.ref, ':', 1) and (e.status = 'cancelled'
           or exists (select 1 from absence_notices n where n.lesson_event_id = e.id and n.student_id::text = split_part(a.ref, ':', 2) and n.cancelled_at is null)
           or not exists (select 1 from enrolments x where x.group_id = e.group_id and x.student_id::text = split_part(a.ref, ':', 2) and x.status = 'active'))))
-        or (a.key in ('taster_link', 'taster_follow_up') and exists (select 1 from taster_bookings b where b.id::text = a.ref and b.status in ('cancelled', 'booked_course'))))`);
+        or (a.key in ('taster_link', 'taster_follow_up', 'trial_waitlist_invite') and exists (select 1 from taster_bookings b where b.id::text = a.ref and b.status in ('cancelled', 'booked_course'))))`);
     for (const r of stale) { if (r.message_id) await cancelScheduled(r.message_id); await q(`update automation_sends set status = 'cancelled' where id = $1`, [r.id]); }
   });
   return { sent: limit - budget.n };

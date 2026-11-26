@@ -106,6 +106,8 @@ export async function updateGroupAction(f: FormData) {
   await withSchool(async (q) => {
     if (meet !== undefined) await q(`update course_groups set meet_url = $2 where id = $1`, [id, meet]);
     // 26 Nov: a trial / taster class (everyone in its Classroom is trying it)
+    { const n = Number(f.get("waitlist_threshold")); if (f.has("waitlist_threshold") && Number.isInteger(n) && n >= 1 && n <= 99) { await q(`update course_groups set waitlist_threshold = $2 where id = $1`, [id, n]); await q(`select waitlist_recheck($1)`, [id]); } }
+    if (f.has("trial_on_form") && f.get("trial") !== "1") await q(`select waitlist_recheck($1, true)`, [id]);   // unticking Trial opens it now: the waiting list gets its head start first
     if (f.has("trial_on_form")) await q(`update course_groups set trial = $2, trial_ended_at = case when trial and not $2 then now() when $2 then null else trial_ended_at end where id = $1`, [id, f.get("trial") === "1"]);
     // 26 Nov: the class's Google Classroom: a classroom.google.com link (its /c/<id> part is the course id in base64) or the number
     if (f.has("classroom")) {

@@ -72,8 +72,8 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
             {q.bundlePence > 0 && <div className="bk-off"><dt>Bundle discount <sup>1</sup> · {q.bundlePct}%</dt><dd>−{money(q.bundlePence)}</dd></div>}
             {q.coupon && <div className="bk-off"><dt>Coupon {q.coupon.code}{q.coupon.label ? ` · ${q.coupon.label}` : ""}</dt><dd>−{money(q.coupon.pence)}</dd></div>}
             <div><dt>Courses total</dt><dd>{money(q.totalPence)}</dd></div>
-            <div className="bk-sp"><dt>First instalment{q.lines.length > 1 ? "s" : ""} <sup>3</sup></dt><dd>{money(q.firstPence)}</dd></div>
             <div><dt>Registration fees <sup>2</sup></dt><dd>{money(q.feesPence)}</dd></div>
+            <div className="bk-sp"><dt>First instalment{q.lines.length > 1 ? "s" : ""} <sup>3</sup></dt><dd>{money(q.firstPence)}</dd></div>
             <div className="bk-big bk-full"><dt>Total payment</dt><dd>{money(q.payPence)}</dd></div>
             <div className="bk-big bk-sp"><dt>Total payment today</dt><dd>{money(q.todayPence)}</dd></div>
           </dl>

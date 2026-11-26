@@ -72,7 +72,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
           const pct = g.capacity ? Math.min(100, Math.round((g.taken / g.capacity) * 100)) : 0;
           return <tbody key={g.id}>
             <tr>
-              <td><span className="dot" style={{ background: g.colour }} /><b>{g.level} {g.subject}</b>{g.trial && <> <span className="pill info">Trial</span></>}<div className="muted" style={{ fontSize: 15.5, marginLeft: 18 }}>{g.code}</div></td>
+              <td><span className="dot" style={{ background: g.colour }} /><b>{g.level} {g.subject}</b>{g.trial && <> <span className="pill info" title="Opens for booking by itself once this many families join its waiting list">Trial · {g.waiting} of {g.waitlist_threshold} signed up</span></>}<div className="muted" style={{ fontSize: 15.5, marginLeft: 18 }}>{g.code}</div></td>
               <td>{g.teacher ?? <span className="muted">Not set</span>}</td>
               <td>{g.slots ?? <span className="muted">No lessons yet</span>}</td>
               <td><div className="fill"><div className="track"><i className={g.is_full ? "full" : ""} style={{ width: `${pct}%` }} /></div><span>{g.taken}/{g.capacity ?? "∞"}</span></div>
@@ -96,6 +96,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
                   <label className="fld">Position<input type="number" name="homepage_order" min={1} max={99} placeholder="Auto" defaultValue={g.homepage_order ?? ""} style={{ width: 80 }} /></label>
                   <label className="fld">Lesson link ({tool.id === "other" ? "any video tool" : tool.name}, or any https link)<input type="url" name="meet_url" placeholder={tool.example} defaultValue={g.meet_url ?? ""} style={{ width: 340 }} /></label>
                   <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="hidden" name="trial_on_form" value="1" /><input type="checkbox" name="trial" value="1" defaultChecked={g.trial} /> Trial / taster class (everyone in its Classroom is trying it: never counted as a student or listed to match)</label>
+                  <label className="fld">Sign-ups needed to open (waiting list)<input type="number" name="waitlist_threshold" min={1} max={99} defaultValue={g.waitlist_threshold} style={{ width: 80 }} /></label>
                   <label className="fld">Google Classroom (paste the class’s Classroom link)<input name="classroom" placeholder="https://classroom.google.com/c/…" defaultValue={g.course_id ? `https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64")}` : ""} style={{ width: 340 }} /></label>
                   <button className="abtn pri" type="submit">Save</button>
                 </form></details></td></tr>

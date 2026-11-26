@@ -919,7 +919,7 @@ a.ct-tile:hover,a.ct-tile:focus-visible{transform:translateY(-6px);border-color:
 @media (max-width:600px){.bt .ph-sticky{margin-top:-70px;padding-bottom:18px;margin-bottom:-12px}}
 /* menu pill (31 Oct): no gap between the pill's ends and a highlighted item; the room comes from the items themselves instead */
 @media (min-width:1081px){.bt .s-nav .s-links{padding-inline:5px}}
-@media (min-width:1361px){.bt .s-nav .s-links a{padding-inline:14px}}
+@media (min-width:1361px){.bt .s-nav .s-links a{padding-inline:10px}.bt .s-nav .s-links{padding-inline:9px}}   /* 26 Nov: closer together; the outer edge stays 19px */
 /* the stuck level-button band keeps the title panel's curved bottom corners */
 .bt .ph-sticky.stuck{border-radius:0 0 44px 44px}
 @media (max-width:600px){.bt .ph-sticky.stuck{border-radius:0 0 28px 28px}}
