@@ -70,7 +70,7 @@ export async function cartQuote(): Promise<CartQuote> {
              pp.cost_per_lesson_pence as cpl, pp.lessons as plan_lessons, pp.registration_fee_pence as fee, pp.term_count as terms, pp.total_pence as first_year,
              g.academic_year_id as year_id, g.level_id, y.label as year_label,
              lower(regexp_replace(l.name, '[^A-Za-z0-9]+', '-', 'g')) || '/' || lower(regexp_replace(sj.name, '[^A-Za-z0-9]+', '-', 'g')) as page_slug,
-             (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at, 'HH24:MI')) order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id) as slots
+             (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at, 'HH24:MI')) order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as slots
       from course_group_availability a join course_groups g on g.id = a.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       join price_plans pp on pp.id = g.price_plan_id join academic_years y on y.id = g.academic_year_id
       where g.code = any($1) and a.on_sale and a.bookable and a.status not in ('hidden', 'closed')

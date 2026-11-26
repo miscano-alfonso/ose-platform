@@ -74,7 +74,8 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
             {l.tasters.length ? ` · ${l.tasters.length} taster${l.tasters.length > 1 ? "s" : ""}: ${l.tasters.join(", ")}` : ""}
             {l.absent.length ? ` · away: ${l.absent.join(", ")}` : ""}</span></div>}
           {l.id !== next?.id && l.kind !== "one" && l.kind !== "workshop" && <SlidesButton compact eventId={l.id} url={l.slides_url ?? null} found={found.get(l.id) ?? null} />}
-          {l.kind !== "one" && l.kind !== "workshop" && (l.d < today || l.status !== "scheduled") && <Link className="abtn sm" href={`/admin/register/${l.id}`}>Attendance</Link>}{/* the lesson link is only in the hero */}
+          {l.kind !== "one" && l.kind !== "workshop" && (l.d < today || l.status !== "scheduled") && <Link className="abtn sm" href={`/admin/register/${l.id}`}>Attendance</Link>}
+          {l.kind !== "one" && l.kind !== "workshop" && l.d >= today && l.status === "scheduled" && <Link className="abtn sm" href={`/admin/register/${l.id}#change`} title="Ask the office to cancel or move this lesson">Change</Link>}{/* the lesson link is only in the hero */}
         </div>)}</div>}
       </section> },
     { id: "reports", title: "Reports progress", node: <section className="dx-card c5 dx-tall"><header><h2>{d.reportCycle ?? "Reports"}</h2><Link className="dx-more" href="/admin/teacher/reports">Write →</Link></header>

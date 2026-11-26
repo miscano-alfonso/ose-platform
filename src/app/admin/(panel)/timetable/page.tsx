@@ -14,6 +14,7 @@ export default async function Timetable({ searchParams }: { searchParams: Promis
   const today = todayLondon(), thisWeek = mondayOf(today);
   let monday = /^\d{4}-\d{2}-\d{2}$/.test(sp.w ?? "") ? mondayOf(sp.w!) : thisWeek;
   let lessons = await weekLessons(monday);
+  const reqs = await import("@/lib/lesson-changes").then((m) => m.pendingRequestCount()).catch(() => 0);
   let skipped = false;
   if (!sp.w && lessons.length === 0) { const nx = await nextTeachingWeek(today); if (nx && nx !== monday) { monday = nx; lessons = await weekLessons(monday); skipped = true; } }
   const levels = [...new Set(lessons.map((l) => l.level))];
@@ -41,12 +42,14 @@ export default async function Timetable({ searchParams }: { searchParams: Promis
         <Link className="abtn sm" href={`/admin/register/${l.id}?back=${encodeURIComponent(q({}))}`}>Attendance</Link>
         {l.course && <a className="abtn sm" href={classroomUrl(l.course)} target="_blank" rel="noopener">Classroom</a>}
         <Link className="abtn sm" href={`/admin/timetable-setup#c-${l.group_id}`}>Lesson times</Link>
+        {s === "soon" && <Link className="abtn sm" href={`/admin/register/${l.id}?back=${encodeURIComponent(q({}))}#change`}>Cancel or move</Link>}
       </div>
     </div>
   </details>; };
 
   return <>
-    <div className="top"><div><h1>Timetable</h1><div className="sub">The week’s lessons. Click a lesson to join it, open its register or its Google Classroom. Lesson times and teachers are set in <Link href="/admin/timetable-setup">Timetable setup</Link>.</div></div></div>
+    <div className="top"><div><h1>Timetable</h1><div className="sub">The week’s lessons. Click a lesson to join it, open its register or its Google Classroom. Lesson times and teachers are set in <Link href="/admin/timetable-setup">Timetable setup</Link>.</div></div>
+      <Link className="abtn sm" href="/admin/lesson-changes">Lesson changes{reqs ? ` (${reqs} waiting)` : ""}</Link></div>
     <div className="tools" style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 12 }}>
       <div className="segl" role="group" aria-label="Week">
         <Link href={q({ w: addDays(monday, -7) })} aria-label="Previous week">←</Link>

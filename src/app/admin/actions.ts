@@ -330,11 +330,57 @@ export async function correctMarksAction(f: FormData): Promise<void> {
 }
 export async function cancelLessonAction(f: FormData): Promise<void> {
   const me = await requireStaff();
-  const id = str(f, "id", 40);
-  await cancelLesson(me.id, id, str(f, "note", 200));
-  await import("@/lib/automations").then((a) => a.cancelLessonReminders(id)).catch(() => null);
+  const id = str(f, "id", 40), note = str(f, "note", 200);
+  const L = await import("@/lib/lesson-changes");
+  const b = await L.lessonBrief(id);
+  const err = await L.cancelOne(me.id, id, note);
+  if (err) redirect(`/admin/register/${id}?err=${encodeURIComponent(err)}${regBack(f)}`);
+  const mail = f.get("email") === "1" && b ? await L.emailFamilies(b, "cancel", note) : null;
   revalidatePath("/admin/attendance");
-  redirect(`/admin/register/${id}?ok=${encodeURIComponent("Lesson cancelled. Any tasters booked into it were cancelled too.")}${regBack(f)}`);
+  redirect(`/admin/register/${id}?ok=${encodeURIComponent("Lesson cancelled. Any tasters booked into it were cancelled too." + L.mailNote(mail))}${regBack(f)}`);
+}
+// 26 Nov: move a lesson to a free time (the office); teachers ask the office to cancel or move one of their lessons
+export async function moveLessonAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40), note = str(f, "note", 200), [date, start] = str(f, "to", 20).split("|");
+  const L = await import("@/lib/lesson-changes");
+  const b = await L.lessonBrief(id);
+  const m = await L.moveOne(me.id, id, date ?? "", start ?? "", note);
+  if (m.error || !m.id) redirect(`/admin/register/${id}?err=${encodeURIComponent(m.error ?? "Couldn't move the lesson.")}${regBack(f)}#change`);
+  const mail = f.get("email") === "1" && b ? await L.emailFamilies(b, "move", note, { date: date!, start: start! }) : null;
+  revalidatePath("/admin/timetable");
+  redirect(`/admin/register/${m.id}?ok=${encodeURIComponent(`Lesson moved to ${L.whenText(date!, start!)}. This is the new lesson; the old one shows as cancelled.` + L.mailNote(mail))}${regBack(f)}`);
+}
+export async function requestLessonChangeAction(f: FormData): Promise<void> {
+  const me = await requireViewer();
+  const id = str(f, "id", 40), kind = str(f, "kind", 10) === "move" ? "move" : "cancel", [date, start] = str(f, "to", 20).split("|");
+  const L = await import("@/lib/lesson-changes");
+  const b = await L.lessonBrief(id);
+  if (!b || b.teacher_user !== me.id) redirect("/admin/teacher");
+  const err = await L.requestChange(me.id, id, kind, str(f, "reason", 300), date, start);
+  redirect(`/admin/register/${id}?${err ? `err=${encodeURIComponent(err)}` : `ok=${encodeURIComponent("Sent to the office. You'll get an email when they've dealt with it.")}`}${regBack(f)}#change`);
+}
+export async function withdrawLessonRequestAction(f: FormData): Promise<void> {
+  const me = await requireViewer();
+  const id = str(f, "id", 40);
+  const L = await import("@/lib/lesson-changes");
+  const b = await L.lessonBrief(id);
+  if (!b || (b.teacher_user !== me.id && me.role !== "school_admin")) redirect("/admin/teacher");
+  await L.withdrawRequest(me.id, str(f, "request", 40));
+  redirect(`/admin/register/${id}?ok=${encodeURIComponent("Request withdrawn.")}${regBack(f)}#change`);
+}
+export async function decideLessonRequestAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const rid = str(f, "request", 40), ev = str(f, "id", 40), from = str(f, "from", 20) === "list" ? "/admin/lesson-changes" : `/admin/register/${ev}`;
+  const L = await import("@/lib/lesson-changes");
+  const sep = from.includes("?") ? "&" : "?";
+  if (str(f, "decision", 10) === "decline") {
+    const err = await L.declineRequest(me.id, rid, str(f, "note", 300));
+    redirect(`${from}${sep}${err ? `err=${encodeURIComponent(err)}` : `ok=${encodeURIComponent("Declined. The teacher has been emailed.")}`}`);
+  }
+  const r = await L.approveRequest(me.id, rid, f.get("email") === "1");
+  revalidatePath("/admin/timetable");
+  redirect(`${from}${sep}${r.error ? `err=${encodeURIComponent(r.error)}` : `ok=${encodeURIComponent("Approved and done. The teacher has been emailed." + (r.note ?? ""))}`}`);
 }
 
 // ---------- tasters ----------

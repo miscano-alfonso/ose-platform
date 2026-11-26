@@ -196,7 +196,7 @@ export async function myTimetable(userId: string) {
     select s.weekday, to_char(s.starts_at,'HH24:MI') as time, to_char(s.ends_at,'HH24:MI') as ends, l.name as level, sj.name as subject, g.code,
       (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students
     from lesson_slots s join course_groups g on g.id = s.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-    where s.teacher_id = ${ME} and s.academic_year_id = ${YEAR_NOW} order by s.starts_at, s.weekday`, [userId]));
+    where s.teacher_id = ${ME} and s.academic_year_id = ${YEAR_NOW} and s.one_off_on is null order by s.starts_at, s.weekday`, [userId]));
 }
 
 export async function myOnes(userId: string) {
@@ -425,7 +425,7 @@ export async function myClasses(userId: string): Promise<MyClass[]> {
     select g.id, g.code, l.name as level, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour, g.capacity, g.meet_url, g.slides_folder,
       case when g.google_course_id is not null then 'https://classroom.google.com/c/' || g.google_course_id end as classroom,
       (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students,
-      (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at,'HH24:MI'), 'e', to_char(s.ends_at,'HH24:MI')) order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id) as slots,
+      (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at,'HH24:MI'), 'e', to_char(s.ends_at,'HH24:MI')) order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as slots,
       (select json_build_object('id', ev.id, 'd', ev.lesson_date::text, 't', to_char(sl.starts_at,'HH24:MI')) from lesson_events ev join lesson_slots sl on sl.id = ev.slot_id
         where ev.group_id = g.id and ev.status <> 'cancelled' and (ev.lesson_date + sl.ends_at) at time zone 'Europe/London' > now() order by ev.lesson_date, sl.starts_at limit 1) as next,
       (select round(100.0 * count(*) filter (where m.mark in ('present','late')) / nullif(count(*) filter (where m.mark <> 'approved_absence'), 0))::int
@@ -433,7 +433,7 @@ export async function myClasses(userId: string): Promise<MyClass[]> {
       (select count(*)::int from enrolments e join student_support ss on ss.student_id = e.student_id where e.group_id = g.id and e.status in ('pending','active')
         and ss.has_send = 'yes' and ss.share_with_teachers) as send
     from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join academic_years y on y.id = g.academic_year_id
-    where y.ends_on >= current_date and g.status <> 'closed' and (g.teacher_id = ${ME} or exists (select 1 from lesson_slots s where s.group_id = g.id and s.teacher_id = ${ME}))
+    where y.ends_on >= current_date and g.status <> 'closed' and (g.teacher_id = ${ME} or exists (select 1 from lesson_slots s where s.group_id = g.id and s.one_off_on is null and s.teacher_id = ${ME}))
     order by l.sort_order, sj.name, g.code`, [userId]));
 }
 
@@ -441,7 +441,7 @@ export async function myClasses(userId: string): Promise<MyClass[]> {
 export async function myStudents(userId: string, groupId?: string): Promise<MyStudent[]> {
   return withSchool((q) => q<MyStudent>(`
     with mine as (select g.id from course_groups g join academic_years y on y.id = g.academic_year_id
-      where y.ends_on >= current_date and (g.teacher_id = ${ME} or exists (select 1 from lesson_slots s where s.group_id = g.id and s.teacher_id = ${ME}))
+      where y.ends_on >= current_date and (g.teacher_id = ${ME} or exists (select 1 from lesson_slots s where s.group_id = g.id and s.one_off_on is null and s.teacher_id = ${ME}))
         and ($2::uuid is null or g.id = $2::uuid))
     select s.id, s.first_name || ' ' || s.last_name as name, nullif(s.known_as, '') as known_as, s.email is not null as has_google, s.date_of_birth::text as dob, s.year_group,
       coalesce(s.google_account_confirmed, false) as confirmed,

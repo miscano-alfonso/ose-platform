@@ -73,8 +73,10 @@
 .adm .msg{white-space:pre-wrap;max-width:60ch}
 /* sign-in */
 .adm-auth{min-height:100vh;display:grid;place-items:center;background:#0f1747;padding:24px;font-family:"Space Grotesk","Jost",system-ui,sans-serif}
-.adm-auth .box{background:#fff;color:#171b2b;border-radius:16px;padding:28px;width:min(420px,100%);display:grid;gap:14px}
-.adm-auth .box img{height:44px;width:auto;background:#0f1747;border-radius:8px;padding:6px 10px;justify-self:start}
+.adm-auth .box{background:#fff;color:#171b2b;border-radius:16px;padding:28px;width:100%;box-sizing:border-box;display:grid;gap:14px}
+.adm-auth .auth-wrap{width:min(420px,100%);display:grid;gap:22px}
+.adm-auth .auth-logo{height:64px;width:auto;justify-self:center}.adm-auth .auth-logo.chip{background:#fff;border-radius:10px;padding:8px 12px;height:56px}
+.adm-auth .auth-name{font:600 26px/1.15 Jost,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:#fff;text-align:center;margin:0}
 .adm-auth h1{margin:0;font:600 27.5px "Space Grotesk","Jost",sans-serif}.adm-auth p{margin:0;color:#5c6378;font-size:16px}
 .adm-auth label{display:grid;gap:5px;font-weight:600;font-size:16px}
 .adm-auth input{font:18.5px "Space Grotesk","Jost",sans-serif;padding:11px 12px;border:1.5px solid #d5d9ea;border-radius:10px}
@@ -1401,3 +1403,16 @@
 .adm .mk-who{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}.adm .mk-who>span:not(.pill){color:var(--muted);font-size:14px}
 .adm .mk-all{margin:0;padding:0 14px 12px 36px;font-size:14px}.adm .mk-all a{color:var(--ink)}
 @media (max-width:600px){.adm .mk-subs,.adm .mk-all{padding-left:14px}.adm .mk-subs li{flex-wrap:wrap}.adm .mk-piece summary{flex-wrap:wrap;row-gap:6px}.adm .mk-piece summary .t{flex-basis:calc(100% - 30px)}.adm .mk-piece summary .pill{margin-left:24px}}
+/* Lesson page → Cancel or move this lesson (26 Nov) */
+.adm .cl-card{margin-top:16px;display:grid;gap:12px;scroll-margin-top:70px}.adm .cl-card h3{margin:0 0 4px;font-size:17px}
+.adm .cl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.adm .cl-grid .eform,.adm .cl-card>.eform{display:grid;gap:10px;align-content:start;max-width:none}
+.adm .cl-req{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:12px;background:var(--warn-bg)}
+.adm .cl-req .t{display:grid;gap:4px;min-width:0}.adm .cl-req .t .pill{justify-self:start}
+.adm .cl-decide{display:grid;gap:8px}.adm .cl-row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.adm .cl-row input[name=note]{min-width:200px}
+.adm .cl-kind{display:flex;flex-wrap:wrap;gap:16px}.adm .cl-kind label{display:flex;gap:6px;align-items:center;font-weight:500}
+.adm .cl-past p{margin:4px 0;font-size:14px;color:var(--muted)}
+.adm .chk{display:flex;gap:8px;align-items:center;font-size:14.5px}
+.adm .cl-li{align-items:flex-start;flex-wrap:wrap;gap:12px}.adm .cl-li .t a{font-size:14px;color:var(--ink)}
+.adm .tt-coming{margin-top:16px}

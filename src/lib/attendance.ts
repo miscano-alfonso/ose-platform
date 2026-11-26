@@ -37,8 +37,8 @@ export async function attendanceOverview(termId: string | null, classId: string 
       order by l.sort_order, sj.name, g.code`);
     // every class this year, for linking a Meet code (including classes with no lesson times yet)
     const allClasses = await q<ClassOpt & { has_times: boolean; meet: string | null; code: string; times: string | null }>(`select g.id, l.name || ' ' || sj.name || ' (' || g.code || ')' as name,
-        exists (select 1 from lesson_slots s where s.group_id = g.id) as has_times, g.meet_url as meet, g.code,
-        (select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id) as times
+        exists (select 1 from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as has_times, g.meet_url as meet, g.code,
+        (select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as times
       from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where g.academic_year_id = ${YEAR_SQL} and g.status <> 'closed' order by l.sort_order, sj.name, g.code`);
     const cls = classes.find((c) => c.id === classId) ?? classes[0] ?? null;

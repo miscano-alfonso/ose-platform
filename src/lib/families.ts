@@ -135,7 +135,7 @@ export async function cancelCourse(actorId: string, enrolmentId: string, waive: 
 
 export async function swapOptions(enrolmentId: string) {
   return withSchool((q) => q<{ id: string; name: string; slots: string | null; places: number | null }>(`select g.id, l.name || ' ' || sj.name || ' (' || g.code || ')' as name,
-      (select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday) from lesson_slots s where s.group_id = g.id) as slots,
+      (select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday) from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as slots,
       (select a.places_left from course_group_availability a where a.group_id = g.id)::int as places
     from enrolments e join course_groups cur on cur.id = e.group_id join course_groups g on g.academic_year_id = cur.academic_year_id and g.level_id = cur.level_id and g.id <> cur.id
     join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id

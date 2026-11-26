@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
 import { getRegister, lessonJoins } from "@/lib/ops";
 import { classroomUrl } from "@/lib/week-timetable";
-import { correctMarksAction, cancelLessonAction, refreshJoinsAction } from "../../../actions";
+import { correctMarksAction, refreshJoinsAction } from "../../../actions";
+import { ChangeLesson } from "./ChangeLesson";
 import { AutoRefresh } from "../../../AutoRefresh";
 import { sendLabels } from "@/lib/send";
 import { liveArrivals, studentFirsts } from "@/lib/meet-live";
@@ -109,9 +110,6 @@ export default async function RegisterPage({ params, searchParams }: { params: P
         <span className={`pill ${t.status === "attended" ? "good" : t.status === "no_show" ? "bad" : "info"}`}>{t.status === "attended" ? "Came" : t.status === "no_show" ? "Didn’t come" : "Booked"}</span></div>)}</section>}
     </div>}
     </div>
-    {me.role === "school_admin" && r.status === "scheduled" && <form action={cancelLessonAction} className="eform" style={{ marginTop: 16 }}>
-      <input type="hidden" name="id" value={r.id} />{backInput}
-      <label className="fld">Cancel this lesson — reason<input name="note" required maxLength={200} placeholder="e.g. Teacher ill" /></label>
-      <button className="abtn" type="submit">Cancel lesson</button></form>}
+    {r.status === "scheduled" && r.lesson_date >= today && <ChangeLesson id={r.id} admin={me.role === "school_admin"} backInput={backInput} />}
   </>;
 }

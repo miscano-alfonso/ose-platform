@@ -16,14 +16,14 @@ export async function getTimetable(): Promise<{ year: string | null; slots: Slot
         s.weekday, to_char(s.starts_at,'HH24:MI') as starts_at, to_char(s.ends_at,'HH24:MI') as ends_at, u.name as teacher, s.teacher_id
       from lesson_slots s join course_groups g on g.id = s.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       left join teachers t on t.id = s.teacher_id left join users u on u.id = t.user_id
-      where s.academic_year_id = ${YEAR_SQL} order by s.weekday, s.starts_at, l.sort_order, g.code`);
+      where s.academic_year_id = ${YEAR_SQL} and s.one_off_on is null order by s.weekday, s.starts_at, l.sort_order, g.code`);
     const classes = await q<TClass>(`select g.id, g.code, l.name || ' ' || sj.name as name, coalesce(sj.colour,'#8494c2') as colour, g.status::text, g.lesson_minutes as minutes,
         g.teacher_id, u.name as teacher,
         (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students,
-        (select count(*)::int from lesson_slots s where s.group_id = g.id) as slots
+        (select count(*)::int from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as slots
       from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id
-      where g.academic_year_id = ${YEAR_SQL} and g.status <> 'closed' order by (select count(*) from lesson_slots s where s.group_id = g.id) > 0, l.sort_order, sj.name, g.code`);
+      where g.academic_year_id = ${YEAR_SQL} and g.status <> 'closed' order by (select count(*) from lesson_slots s where s.group_id = g.id and s.one_off_on is null) > 0, l.sort_order, sj.name, g.code`);
     const teachers = await q<TeacherOpt>(`select t.id, u.name from teachers t join users u on u.id = t.user_id where t.archived_at is null order by u.name`);
     return { year: y?.label ?? null, slots, classes, teachers };
   });
@@ -249,7 +249,7 @@ export async function getTasters(groupId: string | null): Promise<{ rows: Taster
       from taster_list tl join taster_bookings b on b.id = tl.id join lesson_events ev on ev.id = b.lesson_event_id left join teachers t on t.id = ev.teacher_id left join users u on u.id = t.user_id where tl.lesson_date >= current_date - 120 order by tl.lesson_date desc, tl.starts_at`),
     requests: await q(`select id, name, email::text, levels, message, created_at::text from enquiries where kind = 'taster' and handled_at is null order by created_at desc`),
     classes: await q<OpenClass>(`select g.id, g.code, l.name || ' ' || sj.name as name from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-      where g.status in ('open','priority') and g.academic_year_id = ${YEAR_SQL} and exists (select 1 from lesson_slots s where s.group_id = g.id) order by l.sort_order, sj.name, g.code`),
+      where g.status in ('open','priority') and g.academic_year_id = ${YEAR_SQL} and exists (select 1 from lesson_slots s where s.group_id = g.id and s.one_off_on is null) order by l.sort_order, sj.name, g.code`),
     lessons: groupId ? await q<TasterLesson>(`select lesson_event_id, lesson_date::text, to_char(starts_at,'HH24:MI') as starts_at, places_left from taster_lessons($1, 42) where places_left > 0`, [groupId]) : [],
   }));
 }

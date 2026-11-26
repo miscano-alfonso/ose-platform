@@ -31,7 +31,7 @@ export async function studioData(): Promise<StudioData> {
     const levels = await q<{ name: string; min: number | null; max: number | null }>(`select name, min_age as min, max_age as max from levels order by sort_order`);
     const courses = await q<StudioCourse>(`select g.id, l.name as level, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour, g.code, u.name as teacher, g.status::text as status,
         coalesce((select string_agg(case s.weekday when 1 then 'Mondays' when 2 then 'Tuesdays' when 3 then 'Wednesdays' when 4 then 'Thursdays' when 5 then 'Fridays' when 6 then 'Saturdays' else 'Sundays' end
-          || ' @' || to_char(s.starts_at, 'FMHH12.MI') || lower(to_char(s.starts_at, 'am')), ', ' order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id), '') as times
+          || ' @' || to_char(s.starts_at, 'FMHH12.MI') || lower(to_char(s.starts_at, 'am')), ', ' order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id and s.one_off_on is null), '') as times
       from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join academic_years y on y.id = g.academic_year_id
       left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id
       where y.ends_on >= current_date and g.status <> 'closed' order by l.sort_order, sj.name, g.code`);

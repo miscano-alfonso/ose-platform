@@ -70,7 +70,7 @@ export async function getGroups(): Promise<AdminGroup[]> {
     select g.id, g.code, l.name as level, sj.name as subject, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, y.label as year_label,
            g.status::text, g.capacity, g.capacity_mode::text, g.sticky_label::text, g.homepage, g.homepage_order, g.meet_url, g.google_course_id is not null as classroom, a.bookable, a.taken, a.places_left, a.is_full, a.waiting, a.label, g.waitlist_threshold,
            (select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end
-              || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id) as slots
+              || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as slots
     from course_groups g join course_group_availability a on a.group_id = g.id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
     join academic_years y on y.id = g.academic_year_id left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id
     where y.ends_on >= current_date
@@ -214,7 +214,7 @@ export async function getDashboardMore(lowPct = 50): Promise<DashMore> {
     const clashes = await q<DashMore["clashes"][number]>(`
       select la.name || ' ' || sa.name || ' and ' || lb.name || ' ' || sb.name as title,
         (array['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'])[a.weekday + 1] || ' ' || to_char(a.starts_at,'HH24:MI') || ' · ' || count(distinct ea.student_id) || ' student' || case when count(distinct ea.student_id) > 1 then 's' else '' end || ' take both' as detail
-      from lesson_slots a join lesson_slots b on b.weekday = a.weekday and b.academic_year_id = a.academic_year_id and b.group_id > a.group_id and a.minutes && b.minutes
+      from lesson_slots a join lesson_slots b on b.weekday = a.weekday and b.academic_year_id = a.academic_year_id and b.group_id > a.group_id and a.minutes && b.minutes and a.one_off_on is null and b.one_off_on is null
       join enrolments ea on ea.group_id = a.group_id and ea.status in ('pending','active') and not ea.allow_clash
       join enrolments eb on eb.group_id = b.group_id and eb.student_id = ea.student_id and eb.status in ('pending','active') and not eb.allow_clash
       join course_groups ga on ga.id = a.group_id join levels la on la.id = ga.level_id join subjects sa on sa.id = ga.subject_id

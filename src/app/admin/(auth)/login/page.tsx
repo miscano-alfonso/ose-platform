@@ -15,8 +15,8 @@ export default async function AdminLogin({ searchParams }: { searchParams: Promi
   const [site, own] = await Promise.all([siteInfo(), isPlatformSchool()]);
   return <>
     <SchoolNote />
-    <h1>Admin sign in</h1>
-    <p>For {own ? "OH-SO ED" : site.name} staff.</p>
+    <h1>Staff sign in</h1>
+    <p>For {own ? "OH-SO ED" : site.name} teachers and office staff.</p>
     {setup ? <p className="ok">No admin account has been set up yet. <Link href="/admin/setup">Set one up</Link>.</p> : <><LoginForm cms={cms} /><p style={{ marginTop: 16 }}><Link href={own ? "/admin/reset" : "/osedtech/login/forgot"}>Forgotten your password?</Link></p></>}
   </>;
 }

@@ -69,7 +69,7 @@ const TOOLS: Tool[] = [
       join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join terms t on t.id = i.term_id where i.status = 'failed' order by i.due_on`)) },
   { name: "classes", description: "Classes this year with code, level, subject, teacher, weekly lessons, students booked, capacity, waiting list and status (open, waitlist, priority, closed, hidden). Optionally filter by level (KS3, Pre-GCSE, iGCSE, A-Level).",
     input_schema: obj({ level: { type: "string" } }), run: async ({ level }) => withSchool((q) => q(`select g.code, l.name as level, sj.name as subject, u.name as teacher, g.status::text as status, a.taken as booked, g.capacity, a.waiting as waiting_list,
-        (select string_agg((array['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'])[s.weekday + 1] || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday) from lesson_slots s where s.group_id = g.id) as lessons
+        (select string_agg((array['','Mon','Tue','Wed','Thu','Fri','Sat','Sun'])[s.weekday + 1] || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday) from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as lessons
       from course_groups g join course_group_availability a on a.group_id = g.id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id
       where g.academic_year_id = ${YEAR} and ($1::text is null or lower(l.name) = lower($1)) order by l.sort_order, sj.name`, [level ? String(level) : null])) },

@@ -6,7 +6,7 @@ import { withSchool } from "./db";
 const YEAR = `(select id from academic_years where ends_on >= current_date order by starts_on limit 1)`;
 // this term, or in the holidays the term just finished (so attendance and points still show)
 const TERM_NOW = `(select coalesce((select id from terms where starts_on <= current_date and academic_year_id = ${YEAR} order by starts_on desc limit 1), (select id from terms where ends_on >= current_date order by starts_on limit 1)))`;
-const SLOTS = `(select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday) from lesson_slots s where s.group_id = g.id)`;
+const SLOTS = `(select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday) from lesson_slots s where s.group_id = g.id and s.one_off_on is null)`;
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 const audit = (q: Q, act: string, ent: string, id: string | null, d: unknown = {}) =>
   q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), null, $1, $2, $3, $4)`, [act, ent, id, JSON.stringify(d)]);

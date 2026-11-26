@@ -31,7 +31,7 @@ const COURSE_SQL = `
          (select total_pence from course_price(pp.id)) as course_total_pence,
          y.label as year_label, to_char(y.starts_on, 'YYYY-MM-DD') as year_start, y.starts_on > current_date as is_next,
          (select json_agg(json_build_object('d', s.weekday, 't', to_char(s.starts_at, 'HH24:MI')) order by s.weekday, s.starts_at)
-            from lesson_slots s where s.group_id = g.id) as slots
+            from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as slots
   from course_group_availability a
   join course_groups g on g.id = a.group_id
   join levels l on l.id = g.level_id
