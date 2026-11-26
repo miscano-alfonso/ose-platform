@@ -112,7 +112,7 @@ export async function getWriteSheet(cycleId: string, groupId: string) {
         a.state as assess, a.pct::float as assess_pct, a.title as assess_title, e.no_assessment,
         -- every marked piece in this class this school year up to the report window's end, for suggested grades
         coalesce((select json_agg(json_build_object('pct', round(cs.points / cw.max_points * 100, 1), 'at', coalesce(cw.due_at, cs.graded_at)::date::text,
-            'term', cs.graded_at::date between c.marks_from and c.marks_to and not other_term_work(cw.title, (select t.number from terms t where t.id = c.term_id)), 'assess', a.title is not null and cw.title = a.title) order by coalesce(cw.due_at, cs.graded_at))
+            'term', cs.graded_at::date between c.marks_from and c.marks_to and not outside_round(cw.title, (select t.number from terms t where t.id = c.term_id)), 'assess', a.title is not null and cw.title = a.title) order by coalesce(cw.due_at, cs.graded_at))
           from classroom_submissions cs join classroom_coursework cw on cw.id = cs.coursework_id
           where cw.group_id = e.group_id and cs.student_id = e.student_id and cs.state = 'returned' and cs.points is not null and cw.max_points is not null
             and cs.graded_at::date <= c.marks_to and cs.graded_at::date >= c.marks_to - 330), '[]') as marks

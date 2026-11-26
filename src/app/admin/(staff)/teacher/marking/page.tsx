@@ -18,8 +18,8 @@ const Pill = ({ m }: { m: MarkItem }) => <span className={`pill ${PILL[tone(m.da
 function Piece({ m, subs, roster, showClass }: { m: MarkItem; subs: MarkSub[]; roster: RosterRow[]; showClass: boolean }) {
   const handed = roster.filter((r) => r.state !== "not_in").length, total = roster.length;
   const group = (state: RosterRow["state"], label: string) => { const rows = roster.filter((r) => r.state === state); if (!rows.length) return null;
-    return <><li className="mk-grp">{label} · {rows.length}</li>{rows.map((r) => { const link = r.link;
-      return <li key={r.studentId} className={state === "not_in" ? "mk-not" : undefined}>
+    return <><li className={`mk-grp ${state}`}>{label} · {rows.length}</li>{rows.map((r) => { const link = r.link;
+      return <li key={r.studentId} className={`mk-st ${state}${state === "not_in" ? " mk-not" : ""}`}>
         <span className="mk-who"><b>{r.student}</b><span>{state === "not_in" ? "Not handed in" : r.turnedIn ? `Handed in ${dm(r.turnedIn)}` : "Handed in"}</span>
           {r.late && <span className="pill warn">Late</span>}{state === "marked" && r.pct != null && <span className="pill good">{r.pct}%</span>}</span>
         {state !== "not_in" && (link ? <a className="abtn sm" href={link} target="_blank" rel="noopener">Open in Classroom</a> : m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>)}

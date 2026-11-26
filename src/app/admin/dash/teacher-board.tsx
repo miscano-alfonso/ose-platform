@@ -9,6 +9,7 @@ import { classesForPoints } from "@/lib/community";
 import type { BoardModule } from "../BentoBoard";
 import { studentOverview } from "@/lib/student-overview";
 import { MoreList } from "../MoreList";
+import { NavCountSync } from "../NavCountSync";
 import { Ring, Ico, IC } from "../DashBits";
 import { joinLabel } from "@/lib/video";
 import { markingQueue, countdown, tone, TURNAROUND_DAYS, REMIND_DAYS } from "@/lib/marking";
@@ -128,7 +129,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
             <span className="t"><b>{m.title}</b><span>{m.cls} · {m.toMark} to mark{m.toMark <= 3 ? `: ${m.names.join(", ")}` : ""}</span></span>
             <span className={`dx-cd ${tone(m.daysLeft)}`}>{countdown(m.daysLeft)}</span></a>)}</MoreList></>}
     </section> },
-    { id: "messages", title: "Messages", size: "l", node: <section className="dx-card dx-tall"><header><h2>Messages</h2>{unreadN > 0 && <span className="dx-count">{unreadN}</span>}<Link className="abtn sm" style={{ marginLeft: "auto" }} href="/admin/teacher/messages?new=1">New message</Link><Link className="dx-more" style={{ marginLeft: 0, whiteSpace: "nowrap" }} href="/admin/teacher/messages" title="All messages">All →</Link></header>
+    { id: "messages", title: "Messages", size: "l", node: <section className="dx-card dx-tall"><header><h2>Messages</h2>{unreadN > 0 && <span className="dx-count">{unreadN}</span>}<NavCountSync href="/admin/teacher/messages" count={unreadN} /><Link className="abtn sm" style={{ marginLeft: "auto" }} href="/admin/teacher/messages?new=1">New message</Link><Link className="dx-more" style={{ marginLeft: 0, whiteSpace: "nowrap" }} href="/admin/teacher/messages" title="All messages">All →</Link></header>
       {inbox.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No messages yet</b><span>Messages from the office and families show here.</span></div>
         : <div className="dx-list dx-scroll">{inboxSorted.slice(0, 12).map((it) => <Link key={it.kind + it.id} className={`dx-item ${it.unread ? "warn" : "info"}`} href={`/admin/teacher/messages?${it.kind}=${encodeURIComponent(it.id)}`}>
           <span className="t">{it.unread ? <span className="pill warn">{it.unread > 1 ? `${it.unread} new` : "New"}{it.kind === "family" ? " · family" : ""}</span> : <span className="pill mute">{it.kind === "family" ? "Family" : "School"}</span>}

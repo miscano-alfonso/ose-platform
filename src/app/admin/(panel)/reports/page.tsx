@@ -34,6 +34,6 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
         <label className="fld">Publish on<input type="date" name="publish" required /></label>
         <button className="abtn pri" type="submit">Create</button>
       </form>
-      <p className="cs" style={{ marginTop: 8 }}>Google Classroom marks returned between the two “marks” dates set each student’s Progress score once Classroom is connected; teachers can overrule it.</p></section>
+      <p className="cs" style={{ marginTop: 8 }}>Reports go out every two terms: Term 2 (covering Terms 1 and 2), Term 4 (Terms 3 and 4) and Term 6 (Terms 5 and 6). Set “Marks from” to the start of the first of the two terms. Google Classroom marks returned between the two “marks” dates set each student’s Progress score (work titled with another term is left out); the end-of-term assessment is the report term’s own. Teachers can overrule the score.</p></section>
   </>;
 }

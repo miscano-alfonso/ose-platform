@@ -1501,3 +1501,12 @@
 .adm .mk-subs .mk-grp{display:block;padding:10px 0 4px;border:0;font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 .adm .mk-subs .mk-not .mk-who b{font-weight:500;color:var(--muted)}
 @media (max-width:600px){.adm .mk-count{order:3;flex-basis:100%;margin-left:24px}}
+/* 26 Nov: the three groups colour coded: to mark blue, marked green, not handed in red (heading, a short bar, the names) */
+.adm{--mk-blue:#1a5fd0;--mk-green:#1d7a3c;--mk-red:#c4262e}
+.adm[data-theme=dark]{--mk-blue:#86b4ff;--mk-green:#7fe0aa;--mk-red:#ff8f8f}
+@media (prefers-color-scheme:dark){.adm:not([data-theme=light]){--mk-blue:#86b4ff;--mk-green:#7fe0aa;--mk-red:#ff8f8f}}
+.adm .mk-subs .mk-grp{position:relative;padding-bottom:8px}
+.adm .mk-subs .mk-grp::after{content:"";position:absolute;left:0;bottom:2px;width:96px;height:3px;border-radius:2px;background:currentColor}
+.adm .mk-subs .mk-grp.to_mark,.adm .mk-subs .mk-st.to_mark .mk-who b{color:var(--mk-blue)}
+.adm .mk-subs .mk-grp.marked,.adm .mk-subs .mk-st.marked .mk-who b{color:var(--mk-green)}
+.adm .mk-subs .mk-grp.not_in,.adm .mk-subs .mk-st.not_in .mk-who b{color:var(--mk-red)}
