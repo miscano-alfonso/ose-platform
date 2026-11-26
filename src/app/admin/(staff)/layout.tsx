@@ -38,6 +38,8 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       <span className="grow" /><a className="abtn sm side-btn" href="/admin">Back to the admin</a>
     </div><main className="main staffmain">{children}</main></div>;
 
+  // Admin → Visitors: a teacher using their dashboard (not an admin, not "Viewing as")
+  if (!me.viewing && me.role === "teacher") await import("@/lib/visitors").then((v) => v.logDashboard("teacher", me.id)).catch(() => null);
   const [c] = await withSchool((q) => q<{ msgs: number; reports: number; marking: number }>(`select
     (select count(*)::int from message_threads th join teachers t on t.id = th.teacher_id where t.user_id = $1 and th.status = 'open'
       and (select m.sender from messages m where m.thread_id = th.id order by m.created_at desc limit 1) = 'parent') as msgs,

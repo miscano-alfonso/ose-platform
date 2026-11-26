@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { PAGES, DASH, type Role, type Section } from "../content";
 import { JumpNav } from "../JumpNav";
 import { ZoomShots } from "../ZoomShots";
+import { Beacon } from "../Beacon";
 
 // /newdashboard/teacher, /parent and /student (25 Nov): unlisted pages introducing the new dashboards, section by section,
 // with a sticky button in the header (layout.tsx) that opens the real dashboard in a new tab.
@@ -44,7 +45,7 @@ export default async function NewDashboard({ params }: { params: Promise<{ role:
   if (!p) notFound();
   const dash = DASH[p.role], who = p.role;
   return (<>
-    <ZoomShots />{/* outside the sections, so the page's fade-in never hides it */}
+    <ZoomShots /><Beacon page={p.role} />{/* outside the sections, so the page's fade-in never hides it */}
     <section className="s-phead nd-head"><div className="wrap">
       <div className="nd-hgrid">
         <div>

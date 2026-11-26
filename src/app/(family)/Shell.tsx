@@ -14,6 +14,7 @@ import { cookies } from "next/headers";
 // The parent and student areas share the admin's look: brand-coloured menu on the left, pages on the right.
 export async function Shell({ f, groups, counts = {}, root, children }: { f: Family; groups: ResolvedGroup[]; counts?: Record<string, number>; root: string; children: React.ReactNode }) {
   const { logo } = await brandSrc();
+  if (!f.viewer) await import("@/lib/visitors").then((v) => v.logDashboard(f.kind, f.id)).catch(() => null);   // Admin → Visitors
   const tv = (await cookies()).get("ose_theme")?.value, theme = tv === "light" || tv === "dark" ? tv : undefined;
   const sch = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string }; name: string; is_demo: boolean }>(`select brand, name, is_demo from schools where id = current_school()`)))[0];
   const brand = sch?.brand ?? {};

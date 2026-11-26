@@ -1416,3 +1416,10 @@
 .adm .chk{display:flex;gap:8px;align-items:center;font-size:14.5px}
 .adm .cl-li{align-items:flex-start;flex-wrap:wrap;gap:12px}.adm .cl-li .t a{font-size:14px;color:var(--ink)}
 .adm .tt-coming{margin-top:16px}
+/* Admin → Visitors (26 Nov) */
+.adm .vs-tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:16px}
+.adm .vs-tile{display:grid;gap:4px;padding:16px 18px;border-radius:16px;background:var(--panel);border:1px solid var(--line);color:var(--ink);text-decoration:none}
+.adm .vs-tile.on{border-color:var(--ink)}.adm .vs-tile .k{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.adm .vs-tile b{font-size:30px;font-weight:600}.adm .vs-tile b small{font-size:15px;font-weight:400;color:var(--muted)}.adm .vs-tile>span:not(.k){font-size:14px;color:var(--muted)}
+.adm .vs-bar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;margin-bottom:12px}
+.adm .vs-table td{vertical-align:top}.adm .vs-table td>*{display:block}.adm .vs-table td .pill{display:inline-flex;margin:2px 0}.adm .vs-table td .muted{font-size:13.5px}
