@@ -1374,3 +1374,18 @@ html[data-theme=dark] .bt .nd-d{display:block}html[data-theme=dark] .bt .nd-l{di
   .bt .s-phead:has(+ .ph-sticky .rs-jump)>.wrap{padding-bottom:clamp(36px,6vh,64px)}
   .bt .rs-jump{width:auto!important}.bt .ph-sticky .rs-jump a{padding:8px 16px}
   .bt .rs-sec{scroll-margin-top:calc(var(--navh,96px) + 16px)}}
+/* /newdashboard (26 Nov): a card per introduction page, with its link to copy or share */
+.bt .ndl-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:22px}
+.bt .ndl-card{display:flex;flex-direction:column;border-radius:22px;background:var(--b-tile);border:1px solid var(--b-line);overflow:hidden}
+.bt .ndl-pic{display:block;background:var(--b-inset);border-bottom:1px solid var(--b-line)}
+.bt .ndl-pic img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;object-position:top left}
+.bt .ndl-body{display:flex;flex-direction:column;gap:10px;padding:22px 24px 24px;flex:1}
+.bt .ndl-body h2{margin:0;font-size:22px;line-height:1.25}.bt .ndl-body p{margin:0;color:var(--b-muted);line-height:1.5}
+.bt .ndl-url{display:block;padding:9px 12px;border-radius:10px;background:var(--b-inset);color:var(--b-ink);font-size:14px;overflow-wrap:anywhere}
+.bt .ndl-acts{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.bt .ndl-btn{font:inherit;font-weight:500;font-size:15px;padding:9px 18px;border-radius:999px;border:1.5px solid var(--b-ink);background:transparent;color:var(--b-ink);cursor:pointer}
+.bt .ndl-btn:hover,.bt .ndl-btn:focus-visible{background:var(--b-pop);border-color:var(--b-pop);color:var(--b-pop-ink)}
+.bt .ndl-share{display:flex;gap:8px;width:100%}
+.bt .ndl-share a{font-size:15px;font-weight:500;padding:8px 16px;border-radius:999px;background:var(--b-inset);color:var(--b-ink);text-decoration:none}
+.bt .ndl-share a:hover,.bt .ndl-share a:focus-visible{background:var(--b-pop);color:var(--b-pop-ink)}
+.bt .ndl-open{margin-top:auto;padding-top:8px;font-weight:600;color:var(--b-ink)}
