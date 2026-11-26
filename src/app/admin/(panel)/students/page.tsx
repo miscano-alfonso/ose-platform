@@ -2,6 +2,7 @@ import Link from "next/link";
 import LiveSearch from "../../LiveSearch";
 import { studentOverview, type StudentRow } from "@/lib/student-overview";
 import { readClassroomAction, linkClassroomAction } from "../../actions";
+import { BusyButton } from "../../BusyButton";
 import { StudentsTabs } from "../../StudentsTabs";
 import { RowLink } from "../../RowLink";
 import { withSchool } from "@/lib/db";
@@ -78,7 +79,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
           Press <b>Connect Google again</b>, choose the Google Workspace super admin account used before{o.classroom.by ? ` (it was connected from ${o.classroom.by}’s login)` : ""}, and tick <b>every</b> box on Google’s screen. The site checks that account can still read the Meet log before switching, so attendance can’t break; it stays read-only.
           <div style={{ marginTop: 8 }}><a className="abtn pri sm" href="/admin/meet-api?action=login">Connect Google again</a></div></>}</div>
       : <><span className="muted">{o.classroom.linked === 0 ? "No classes are linked to a Google Classroom yet (Classes → Classroom link)." : o.classroom.error ? `Classroom couldn’t be read: ${o.classroom.error}` : o.classroom.at ? `Classroom last read ${ago(o.classroom.at)} (every 2 hours).` : "Classroom hasn’t been read yet."}</span>
-      <form action={readClassroomAction}><input type="hidden" name="back" value="/admin/students" /><button className="abtn sm" type="submit">Read Classroom now</button></form></>}
+      <form action={readClassroomAction}><input type="hidden" name="back" value="/admin/students" /><BusyButton className="abtn sm" busy="Reading Classroom…">Read Classroom now</BusyButton></form></>}
     </div>
     {o.classroom.at && <p className="muted" style={{ fontSize: 13.5, margin: "6px 0 0" }}>Last Classroom read {ago(o.classroom.at)}: {o.classroom.classes ?? 0} class{o.classroom.classes === 1 ? "" : "es"} read, {o.classroom.work ?? 0} pieces of work, {o.classroom.submissions ?? 0} hand-ins · {o.classroom.linked} class{o.classroom.linked === 1 ? "" : "es"} this year {o.classroom.linked === 1 ? "has" : "have"} a Classroom link{o.classroom.error ? ` · error: ${o.classroom.error}` : ""}.
       {!!o.classroom.problems?.length && <> Couldn’t read: {o.classroom.problems.slice(0, 5).join("; ")}{o.classroom.problems.length > 5 ? "…" : ""}</>}</p>}
@@ -91,7 +92,7 @@ export default async function Students({ searchParams }: { searchParams: Promise
           <select name="student" required defaultValue={top?.r.id ?? ""} className="mini" aria-label={`Who is ${u.name}?`}><option value="" disabled>Who is it?</option>
             {guesses.length > 0 && <optgroup label="Best guesses (same classes)">{guesses.map((g) => <option key={g.r.id} value={g.r.id}>{g.r.name} · {g.short}</option>)}</optgroup>}
             <optgroup label="Everyone">{o.rows.filter((r) => !guesses.some((g) => g.r.id === r.id)).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</optgroup></select>
-          <button className="abtn sm pri" type="submit">Match</button></form>; })}
+          <BusyButton busy="Matching… reading Classroom">Match</BusyButton></form>; })}
       <p className="note" style={{ margin: "10px 0 0" }}>To confirm who an account is: open that class in Google Classroom → Classwork → a piece of work they handed in → <b>Student work</b>. Classroom shows the student’s name there, so the one who handed in the same pieces is this account. Matching remembers that Classroom account for every class, then reads Classroom again. Teachers or other adults in the class can be left.</p></details>}
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "14px 0" }}>
       <LiveSearch placeholder="Search student, parent or class" label="Search students" />

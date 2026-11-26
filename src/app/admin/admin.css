@@ -1553,3 +1553,4 @@
 /* 26 Nov: report tools before writing opens: shown, greyed out */
 .adm .wr-head .abtn:disabled,.adm .wr-card .abtn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}
 .adm .wr-wait{font-size:13px;align-self:center;margin-right:4px}
+.adm .abtn[aria-busy]{cursor:progress;opacity:.75}
