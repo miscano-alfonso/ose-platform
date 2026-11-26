@@ -116,8 +116,17 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
       // work Classroom no longer has (deleted or unpublished) goes too
       await q(`delete from classroom_coursework where group_id = $1 and not (coursework_id = any($2::text[]))`, [g.id, work.items.map((w) => w.id)]);
       // each student's hand-in and mark
-      for (const s of subs.items) {
-        const sid = uid.get(s.userId), cw = wid.get(s.courseWorkId); if (!sid || !cw) continue;
+      // 26 Nov: a student can have two Classroom accounts (e.g. a parent's at first, then their own): per piece of work keep
+      // the most complete hand-in (marked > returned > handed in > not handed in), so an empty one doesn't hide the real one
+      const rank = (x: Sub) => (x.state === "RETURNED" && typeof x.assignedGrade === "number" ? 4 : x.state === "RETURNED" ? 3 : x.state === "TURNED_IN" ? 2 : 1);
+      const best = new Map<string, Sub>();
+      for (const x of subs.items) {
+        const sid = uid.get(x.userId), cw = wid.get(x.courseWorkId); if (!sid || !cw) continue;
+        const k = `${sid}|${cw}`, cur = best.get(k);
+        if (!cur || rank(x) > rank(cur)) best.set(k, x);
+      }
+      for (const s of best.values()) {
+        const sid = uid.get(s.userId)!, cw = wid.get(s.courseWorkId)!;
         const st = STATE[s.state ?? ""] ?? "assigned";
         const turned = [...(s.submissionHistory ?? [])].reverse().find((h) => h.stateHistory?.state === "TURNED_IN")?.stateHistory?.stateTimestamp ?? null;
         const pts = st === "returned" && typeof s.assignedGrade === "number" ? s.assignedGrade : null;
