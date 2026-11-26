@@ -66,7 +66,7 @@ export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }
       <div className="cbtns">
         {stickerOf(c) && <span className={`sticky ${stickerOf(c)!.cls}`}>{stickerOf(c)!.text}</span>}
         <Link className="btn sm btn-line cread" href={`/courses/${c.page_slug}`}>Read more</Link>
-        {c.trial ? <Link className="btn sm btn-brand" href={`/taster?level=${encodeURIComponent(c.level)}&subject=${encodeURIComponent(c.subject)}`}>Book a free taster</Link>
+        {c.trial ? <Link className="btn sm btn-line" href={`/taster?level=${encodeURIComponent(c.level)}&subject=${encodeURIComponent(c.subject)}`}>Book a free taster</Link>
           : c.shows_waitlist || !c.bookable || mark !== "OH–SO" ? <span className="btn sm btn-line" aria-disabled="true" title="Booking opens in the next update">
           {c.shows_waitlist ? "Join waiting list" : c.is_full ? "Full" : "Add to cart"}
         </span> : <AddToCart code={c.code} label={`${c.level} ${c.subject}`} />}
