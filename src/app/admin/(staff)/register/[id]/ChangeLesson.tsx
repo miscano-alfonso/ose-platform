@@ -1,4 +1,4 @@
-import { freeTimes, requestsFor, whenText, type FreeTime } from "@/lib/lesson-changes";
+import { freeTimes, requestsFor, whenText, emailClassByDefault, type FreeTime } from "@/lib/lesson-changes";
 import { cancelLessonAction, moveLessonAction, requestLessonChangeAction, withdrawLessonRequestAction, decideLessonRequestAction } from "../../../actions";
 
 // The lesson page's "Cancel or move this lesson" (26 Nov). The office cancels or moves it straight away (and can email the
@@ -15,10 +15,11 @@ function TimePicker({ times, required }: { times: FreeTime[]; required?: boolean
         <option key={t.start} value={`${t.date}|${t.start}`}>{dayLabel(d)}, {t.start}–{t.end}</option>)}</optgroup>)}
     </select></label>;
 }
-const Email = () => <label className="chk"><input type="checkbox" name="email" value="1" defaultChecked /> Email the class’s parents and students</label>;
+// 27 Nov: the email's wording is set in Automations ("Lesson rescheduled / cancelled: tell the class"); ticked unless that's switched off
+const Email = ({ on }: { on: boolean }) => <label className="chk"><input type="checkbox" name="email" value="1" defaultChecked={on} /> Email the class’s parents and students</label>;
 
 export async function ChangeLesson({ id, admin, backInput }: { id: string; admin: boolean; backInput: React.ReactNode }) {
-  const [times, reqs] = await Promise.all([freeTimes(id), requestsFor(id)]);
+  const [times, reqs, mv, cn] = await Promise.all([freeTimes(id), requestsFor(id), emailClassByDefault("move"), emailClassByDefault("cancel")]);
   const pending = reqs.find((r) => r.status === "pending"), past = reqs.filter((r) => r.status !== "pending").slice(0, 3);
   const what = (r: (typeof reqs)[number]) => r.kind === "move" ? `Move to ${whenText(r.new_date!, r.new_start!)}` : "Cancel this lesson";
   return <section className="card cl-card" id="change">
@@ -29,7 +30,7 @@ export async function ChangeLesson({ id, admin, backInput }: { id: string; admin
       <div className="t"><span className="pill warn">Waiting for the office</span><b>{what(pending)}</b><span>{pending.requester ? `${pending.requester}: ` : ""}“{pending.reason}”</span></div>
       {admin ? <div className="cl-decide">
           <form action={decideLessonRequestAction} className="cl-row"><input type="hidden" name="id" value={id} /><input type="hidden" name="request" value={pending.id} /><input type="hidden" name="decision" value="approve" />
-            <Email /><button className="abtn pri" type="submit">Approve</button></form>
+            <Email on={pending.kind === "move" ? mv : cn} /><button className="abtn pri" type="submit">Approve</button></form>
           <form action={decideLessonRequestAction} className="cl-row"><input type="hidden" name="id" value={id} /><input type="hidden" name="request" value={pending.id} /><input type="hidden" name="decision" value="decline" />
             <input name="note" maxLength={300} placeholder="Why not (optional)" aria-label="Why it's declined" /><button className="abtn" type="submit">Decline</button></form></div>
         : <form action={withdrawLessonRequestAction}><input type="hidden" name="id" value={id} /><input type="hidden" name="request" value={pending.id} />{backInput}<button className="abtn sm" type="submit">Withdraw</button></form>}
@@ -38,10 +39,10 @@ export async function ChangeLesson({ id, admin, backInput }: { id: string; admin
         <form action={moveLessonAction} className="eform"><input type="hidden" name="id" value={id} />{backInput}
           <h3>Move it</h3><TimePicker times={times} required />
           <label className="fld">Reason<input name="note" required maxLength={200} placeholder="e.g. Teacher at a training day" /></label>
-          <Email /><button className="abtn pri" type="submit" disabled={!times.length}>Move lesson</button></form>
+          <Email on={mv} /><button className="abtn pri" type="submit" disabled={!times.length}>Move lesson</button></form>
         <form action={cancelLessonAction} className="eform"><input type="hidden" name="id" value={id} />{backInput}
           <h3>Cancel it</h3><label className="fld">Reason<input name="note" required maxLength={200} placeholder="e.g. Teacher ill" /></label>
-          <Email /><button className="abtn" type="submit">Cancel lesson</button></form></div>
+          <Email on={cn} /><button className="abtn" type="submit">Cancel lesson</button></form></div>
       : !pending && <form action={requestLessonChangeAction} className="eform"><input type="hidden" name="id" value={id} />{backInput}
           <div className="cl-kind" role="radiogroup" aria-label="What do you need?">
             <label><input type="radio" name="kind" value="move" defaultChecked /> Move it to another time</label>

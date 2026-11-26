@@ -63,27 +63,33 @@ async function stillFree(eventId: string, date: string, start: string): Promise<
   return (await freeTimes(eventId, ahead)).some((t) => t.date === date && t.start === start);
 }
 
-/** Parents and students of the class (current places, not tasters), one email each. */
-async function classFamilies(groupId: string): Promise<Recipient[]> {
+/** Parents and/or students of the class (current places, not tasters), one email each. */
+async function classFamilies(groupId: string, parents = true, students = true): Promise<Recipient[]> {
   return withSchool((q) => q<Recipient>(`select distinct on (lower(x.email)) x.name, x.email from (
       select p.first_name || ' ' || p.last_name as name, p.email::text as email from enrolments e join students st on st.id = e.student_id join parents p on p.id = st.parent_id
-        where e.group_id = $1 and e.status = 'active' and not e.is_taster
+        where $2 and e.group_id = $1 and e.status = 'active' and not e.is_taster
       union all
       select st.first_name || ' ' || st.last_name, st.email::text from enrolments e join students st on st.id = e.student_id
-        where e.group_id = $1 and e.status = 'active' and not e.is_taster and st.email is not null) x
-    where x.email is not null and x.email <> '' order by lower(x.email)`, [groupId])).catch(() => []);
+        where $3 and e.group_id = $1 and e.status = 'active' and not e.is_taster and st.email is not null) x
+    where x.email is not null and x.email <> '' order by lower(x.email)`, [groupId, parents, students])).catch(() => []);
 }
 
+/** 27 Nov: emails the class about a rescheduled or cancelled lesson, in the wording set in Automations
+ *  ("Lesson rescheduled: tell the class" / "Lesson cancelled: tell the class"), to parents and/or students as set there. */
 export async function emailFamilies(b: LessonBrief, kind: "cancel" | "move", reason: string, to?: { date: string; start: string }): Promise<{ sent: number; held: number; error?: string }> {
-  const people = await classFamilies(b.group_id);
+  const A = await import("./automations");
+  const w = await A.lessonChangeEmail(kind === "move" ? "lesson_moved" : "lesson_cancelled");
+  const people = await classFamilies(b.group_id, w.to_parent, w.to_student);
   if (!people.length) return { sent: 0, held: 0 };
-  const was = whenText(b.date, b.start);
-  const subject = kind === "move" && to ? `${b.cls}: lesson moved to ${whenText(to.date, to.start)}` : `${b.cls}: lesson cancelled on ${was}`;
-  const body = kind === "move" && to
-    ? `Hello,\n\nThe ${b.cls} lesson on ${was} has moved to ${whenText(to.date, to.start)}${reason ? ` (${reason})` : ""}.\n\nIt uses the class's usual Google Meet link, and the new time is already on your dashboard and in your calendar. Students join from their dashboard or the lesson link as usual.\n\nThank you,\nThe office`
-    : `Hello,\n\nThe ${b.cls} lesson on ${was} is cancelled${reason ? ` (${reason})` : ""}.\n\nWe're sorry for any inconvenience. If we arrange a replacement lesson, we'll let you know and it will show on your dashboard and in your calendar.\n\nThank you,\nThe office`;
-  const r = await sendBatch(subject, body, people, false).catch((e) => ({ sent: 0, failed: people.length, error: String(e), held: 0 }));
+  const [g] = await withSchool((q) => q<{ meet: string | null; school: string }>(`select g.meet_url as meet, sc.name as school from course_groups g join schools sc on sc.id = g.school_id where g.id = $1`, [b.group_id]));
+  const vars = { class: b.cls, teacher: b.teacher ?? "your teacher", old_when: whenText(b.date, b.start), new_when: to ? whenText(to.date, to.start) : "",
+    reason: reason.trim() ? ` Reason: ${reason.trim().replace(/[.\s]+$/, "")}.` : "", meet_link: g?.meet ?? "the class’s usual Google Meet link", school: g?.school ?? "The office" };
+  const r = await sendBatch(A.fillEmail(w.subject, vars), A.fillBody(w.body, vars), people, false).catch((e) => ({ sent: 0, failed: people.length, error: String(e), held: 0 }));
   return { sent: r.sent, held: r.held ?? 0, error: r.error };
+}
+/** Whether "Email the class's parents and students" starts ticked (it does unless the automation is saved as switched off). */
+export async function emailClassByDefault(kind: "cancel" | "move"): Promise<boolean> {
+  return (await (await import("./automations")).lessonChangeEmail(kind === "move" ? "lesson_moved" : "lesson_cancelled")).on;
 }
 
 /** Cancels the lesson (and any tasters booked into it). */
@@ -98,7 +104,7 @@ export async function cancelOne(actorId: string, eventId: string, reason: string
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'cancel', 'lesson_event', $2, $3)`,
       [actorId, eventId, JSON.stringify({ note: reason })]);
   });
-  await import("./automations").then(async (a) => { if ((await a.reminderOpts()).skip_cancelled) await a.cancelLessonReminders(eventId); }).catch(() => null);
+  await import("./automations").then((a) => a.cancelLessonReminders(eventId)).catch(() => null);
   return null;
 }
 
@@ -123,7 +129,8 @@ export async function moveOne(actorId: string, eventId: string, date: string, st
       [actorId, eventId, JSON.stringify({ to: ev.id, date, start, reason })]);
     return ev.id;
   });
-  await import("./automations").then((a) => a.cancelLessonReminders(eventId)).catch(() => null);
+  // take back the old time's reminders, and book the reminder for the new time straight away (if it's within 2 days)
+  await import("./automations").then(async (a) => { await a.cancelLessonReminders(eventId); await a.runAutomations(60); }).catch(() => null);
   return { id };
 }
 

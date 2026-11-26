@@ -1453,7 +1453,6 @@ export async function saveAutomationAction(f: FormData): Promise<void> {
     redirect(`/admin/automations?open=${key}&${r.ok ? "ok=" + encodeURIComponent(`Test sent to ${me.email}.`) : "err=" + encodeURIComponent(r.error ?? "Couldn’t send the test.")}#${key}`);
   }
   const err = await A.saveAutomation(me.id, key, d);
-  if (!err && key === "lesson_reminder" && f.has("opts_on_form")) await A.saveReminderOpts(me.id, { skip_cancelled: f.get("skip_cancelled") === "on", skip_moved: f.get("skip_moved") === "on" });
   if (!err && d.enabled) await A.runAutomations(60).catch(() => null);
   redirect(`/admin/automations?${err ? `open=${key}&err=` + encodeURIComponent(err) : "ok=" + encodeURIComponent(d.enabled ? "Saved and switched on." : "Saved. It’s switched off.")}#${key}`);
 }

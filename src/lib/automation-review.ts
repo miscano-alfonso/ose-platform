@@ -49,5 +49,6 @@ export function sampleVars(key: string, school: string, base: string): Record<st
   if (key === "waitlist_open") v.book_link = `${site}/waitlist/book?w=…`;
   if (key === "marking_reminder") { v.count = "4 pieces of work"; v.teacher = "Leanne"; }
   if (key === "lesson_reminder") v.class = "Pre-GCSE History";
+  if (key === "lesson_moved" || key === "lesson_cancelled") Object.assign(v, { class: "Pre-GCSE History", old_when: "Thursday 3 December at 14:00", new_when: "Friday 4 December at 11:30", reason: " Reason: Leanne is at a training day." });
   return v;
 }

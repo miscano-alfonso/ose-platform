@@ -1610,4 +1610,3 @@
 @media (prefers-color-scheme:dark){.adm:not([data-theme=light]) .fins-link{color:#8fb4ff}}.adm[data-theme=dark] .fins-link{color:#8fb4ff}
 .adm .fins-custom{display:grid;gap:8px;padding:6px}
 .adm .fins-custom input{width:100%;box-sizing:border-box}
-.adm .ro-box{display:grid;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-size:14.5px}

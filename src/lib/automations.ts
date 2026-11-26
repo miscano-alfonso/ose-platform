@@ -12,7 +12,7 @@ import { linkWords } from "./email-layout";
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 type Cfg = { enabled: boolean; subject: string; body: string; minutes: number | null; to_parent: boolean; to_student: boolean };
 export type Timing = { label: string; unit: "minutes" | "hours" | "days"; default: number } | null;
-export type AutoDef = { key: string; name: string; when: string; timing: Timing; to_parent: boolean; to_student: boolean; to_teacher?: boolean; subject: string; body: string; fields: string[] };
+export type AutoDef = { key: string; name: string; when: string; timing: Timing; to_parent: boolean; to_student: boolean; to_teacher?: boolean; subject: string; body: string; fields: string[]; default_on?: boolean };
 
 export const DEFS: AutoDef[] = [
   { key: "taster_booked", name: "Taster booked: thank you", when: "As soon as a taster lesson is booked (on the website or by the office).", timing: null, to_parent: true, to_student: false,
@@ -27,6 +27,16 @@ export const DEFS: AutoDef[] = [
     fields: ["child", "class", "time", "teacher", "meet_link", "school"],
     subject: "{{class}} starts at {{time}}",
     body: "Hi {{child}},\n\nJust a quick reminder that your **{{class}}** lesson with {{teacher}} starts at **{{time}}**.\n\nPlease join a few minutes early so you’re settled in and ready:\n\n👉 [Join Google Meet]({{meet_link}})\n\nSee you there!\n{{school}}" },
+  // 27 Nov: sent when the office reschedules or cancels a lesson (Reschedule on the lesson, Timetable, or a teacher's request
+  // approved) with "Email the class's parents and students" ticked. Ticked unless this automation is saved as switched off.
+  { key: "lesson_moved", name: "Lesson rescheduled: tell the class", default_on: true, when: "When a lesson is moved to a new time (Reschedule), to every parent and student in the class. The lesson reminder then goes before the new time.", timing: null, to_parent: true, to_student: true,
+    fields: ["class", "teacher", "old_when", "new_when", "reason", "meet_link", "school"],
+    subject: "{{class}}: lesson moved to {{new_when}}",
+    body: "Hello,\n\nThe **{{class}}** lesson on {{old_when}} has moved to **{{new_when}}**.{{reason}}\n\nIt uses the class’s usual Google Meet, and the new time is already on your dashboard and in your calendar. We’ll send the usual reminder before it starts.\n\n👉 [Join Google Meet]({{meet_link}})\n\nThank you,\n{{school}}" },
+  { key: "lesson_cancelled", name: "Lesson cancelled: tell the class", default_on: true, when: "When a lesson is cancelled, to every parent and student in the class. No reminder is sent for it.", timing: null, to_parent: true, to_student: true,
+    fields: ["class", "teacher", "old_when", "reason", "school"],
+    subject: "{{class}}: lesson cancelled on {{old_when}}",
+    body: "Hello,\n\nThe **{{class}}** lesson on {{old_when}} is cancelled.{{reason}}\n\nWe’re sorry for any inconvenience. If we arrange a replacement lesson, we’ll let you know and it will show on your dashboard and in your calendar.\n\nThank you,\n{{school}}" },
   { key: "taster_follow_up", name: "After a taster: invite to book", when: "After a taster lesson the child came to.", timing: { label: "hours after the lesson ends", unit: "hours", default: 2 }, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "book_link", "school"],
     subject: "How did {{child}}’s taster go?",
@@ -82,7 +92,7 @@ export async function automations(): Promise<{ rows: AutoRow[]; ready: boolean; 
       from automation_sends order by created_at desc limit 40`),
   }));
   return { ready: await emailReady(), recent, rows: DEFS.map((d) => { const r = saved.find((x) => x.key === d.key), st = stats.find((x) => x.key === d.key);
-    return { ...d, enabled: r?.enabled ?? false, subject: r?.subject ?? d.subject, body: r?.body ?? d.body, minutes: r ? r.minutes : d.timing?.default ?? null,
+    return { ...d, enabled: r?.enabled ?? d.default_on ?? false, subject: r?.subject ?? d.subject, body: r?.body ?? d.body, minutes: r ? r.minutes : d.timing?.default ?? null,
       to_parent: r?.to_parent ?? d.to_parent, to_student: r?.to_student ?? d.to_student, custom: !!r, sent7: st?.sent7 ?? 0, scheduled: st?.scheduled ?? 0, failed7: st?.failed7 ?? 0 }; }) };
 }
 
@@ -136,7 +146,6 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
 
     // lesson reminders: every student in the class, the set number of minutes before each lesson
     let c = cfg("lesson_reminder");
-    const ro = await reminderOpts(q);
     if (c) {
       const m = c.minutes ?? 15;
       const vid = await videoSettings(q);
@@ -147,11 +156,9 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
         from lesson_events e join lesson_slots s on s.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         join schools sc on sc.id = e.school_id left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id
         join enrolments x on x.group_id = g.id and x.status = 'active' and not x.is_taster join students st on st.id = x.student_id join parents p on p.id = st.parent_id
-        where e.lesson_date between current_date and current_date + 3
-          and (e.status = 'scheduled' or (not $1::boolean and e.status = 'cancelled' and not exists (select 1 from lesson_events mv where mv.moved_from = e.id)))   -- a moved lesson's old time never gets one
-          and not ($2::boolean and e.moved_from is not null)   -- rescheduled: the lesson at its new time
+        where e.status = 'scheduled' and e.lesson_date between current_date and current_date + 3   -- cancelled lessons never; a rescheduled one at its new time
           and not exists (select 1 from absence_notices a where a.lesson_event_id = e.id and a.student_id = st.id and a.cancelled_at is null)
-        order by e.lesson_date, s.starts_at`, [ro.skip_cancelled, ro.skip_moved]);
+        order by e.lesson_date, s.starts_at`);
       for (const r of rows) {
         const at = Date.parse(r.starts) - m * 60e3; if (at < now + 60e3 || at > now + horizon) continue;
         const to = [...(c.to_student && r.semail ? [{ name: r.child, email: r.semail }] : []), ...(c.to_parent ? [{ name: r.parent, email: r.pemail }] : [])];
@@ -274,34 +281,24 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
     // take back booked reminders that no longer apply: lesson cancelled, absence reported, left the class, taster cancelled
     const stale = await q<{ id: number; message_id: string | null }>(`select a.id, a.message_id from automation_sends a
       where a.status = 'scheduled' and a.scheduled_for > now() and (
-        (a.key = 'lesson_reminder' and exists (select 1 from lesson_events e where e.id::text = split_part(a.ref, ':', 1) and ((e.status = 'cancelled' and ($1::boolean or exists (select 1 from lesson_events mv where mv.moved_from = e.id)))
-          or ($2::boolean and e.moved_from is not null)
+        (a.key = 'lesson_reminder' and exists (select 1 from lesson_events e where e.id::text = split_part(a.ref, ':', 1) and (e.status = 'cancelled'
           or exists (select 1 from absence_notices n where n.lesson_event_id = e.id and n.student_id::text = split_part(a.ref, ':', 2) and n.cancelled_at is null)
           or not exists (select 1 from enrolments x where x.group_id = e.group_id and x.student_id::text = split_part(a.ref, ':', 2) and x.status = 'active'))))
-        or (a.key in ('taster_link', 'taster_follow_up', 'trial_waitlist_invite') and exists (select 1 from taster_bookings b where b.id::text = a.ref and b.status in ('cancelled', 'booked_course'))))`, [ro.skip_cancelled, ro.skip_moved]);
+        or (a.key in ('taster_link', 'taster_follow_up', 'trial_waitlist_invite') and exists (select 1 from taster_bookings b where b.id::text = a.ref and b.status in ('cancelled', 'booked_course'))))`);
     for (const r of stale) { if (r.message_id) await cancelScheduled(r.message_id); await q(`update automation_sends set status = 'cancelled' where id = $1`, [r.id]); }
   });
   return { sent: limit - budget.n };
 }
 
-// 27 Nov: lesson reminder options (Automations → Lesson reminder): leave out cancelled lessons, and lessons moved to a
-// new time (rescheduled). Both on unless switched off. meet_kv "lesson_reminder_opts".
-export type ReminderOpts = { skip_cancelled: boolean; skip_moved: boolean };
-export async function reminderOpts(q?: Q): Promise<ReminderOpts> {
-  const run = async (qq: Q) => (await qq<{ value: Partial<ReminderOpts> }>(`select value from meet_kv where key = 'lesson_reminder_opts'`))[0]?.value ?? {};
-  const v = q ? await run(q) : await withSchool((qq) => run(qq));
-  return { skip_cancelled: v.skip_cancelled !== false, skip_moved: v.skip_moved !== false };
+/** 27 Nov: the wording and recipients for "Lesson rescheduled" / "Lesson cancelled" (saved, or the standard wording), and
+ *  whether the office's "Email the class" tick starts ticked (unless the automation is saved as switched off). */
+export async function lessonChangeEmail(key: "lesson_moved" | "lesson_cancelled"): Promise<{ subject: string; body: string; to_parent: boolean; to_student: boolean; on: boolean }> {
+  const d = DEFS.find((x) => x.key === key)!;
+  const r = (await withSchool((q) => q<Cfg>(`select enabled, subject, body, minutes, to_parent, to_student from automations where key = $1`, [key])).catch(() => []))[0];
+  return { subject: r?.subject ?? d.subject, body: r?.body ?? d.body, to_parent: r?.to_parent ?? d.to_parent, to_student: r?.to_student ?? d.to_student, on: r ? r.enabled : true };
 }
-export async function saveReminderOpts(actorId: string, o: ReminderOpts): Promise<void> {
-  await withSchool(async (q) => {
-    await q(`insert into meet_kv (school_id, key, value) values (current_school(), 'lesson_reminder_opts', $1::jsonb) on conflict (school_id, key) do update set value = excluded.value`, [JSON.stringify(o)]);
-    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'save', 'automation', null, $2)`, [actorId, JSON.stringify({ key: "lesson_reminder", ...o })]);
-  });
-  if (o.skip_moved) {   // take back reminders already booked for rescheduled lessons
-    const ids = await withSchool((q) => q<{ id: string }>(`select id from lesson_events where moved_from is not null and lesson_date >= current_date`));
-    for (const r of ids) await cancelLessonReminders(r.id);
-  }
-}
+export const fillEmail = (t: string, v: Record<string, string>) => fill(t, v);
+export const fillBody = (t: string, v: Record<string, string>) => fill(linkWords(t), v);
 
 /** A cancelled lesson: take back the reminders already booked with Brevo. */
 export async function cancelLessonReminders(eventId: string) {
@@ -318,7 +315,9 @@ export async function testAutomation(key: string, to: Recipient, d: { subject: s
   const vars = { parent: to.name.split(" ")[0], child: "Sam", class: "KS3 Maths", date: fmtDate(new Date(Date.now() + 864e5).toISOString().slice(0, 10)), time: "16:00", teacher: "Becky",
     meet_link: "https://meet.google.com/abc-defg-hij", book_link: (process.env.SITE_URL || "") + "/courses", amount: "£150.00", hours: "48", report: "Term 1 Progress Report", school,
     how: "collected by Direct Debit", payments_link: (process.env.SITE_URL || "") + "/parent/payments", count: "2 pieces of work", list: "• Essay plan (iGCSE English Language) · 3 to mark · 2 days left\n• Poetry comparison (iGCSE English Language) · 1 to mark · 1 day overdue", dashboard_link: (process.env.SITE_URL || "") + "/admin/teacher" };
-  return sendOne([to], `[Test] ${fill(d.subject, vars)}`, fill(linkWords(d.body), vars), { tag: `auto-test-${key}` });
+  const { sampleVars } = await import("./automation-review");   // 27 Nov: the same examples as the previews, for anything not set above
+  const all = { ...sampleVars(key, school, process.env.SITE_URL || ""), ...vars, ...(key.startsWith("lesson_") || key.startsWith("trial") || key.startsWith("waitlist") ? sampleVars(key, school, process.env.SITE_URL || "") : {}), parent: vars.parent };
+  return sendOne([to], `[Test] ${fill(d.subject, all)}`, fill(linkWords(d.body), all), { tag: `auto-test-${key}` });
 }
 
 let last = 0;

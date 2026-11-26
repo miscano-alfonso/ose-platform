@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { automations, DEFS, reminderOpts } from "@/lib/automations";
+import { automations, DEFS } from "@/lib/automations";
 import { saveAutomationAction, runAutomationsAction, sendAllTestsAction } from "../../actions";
 import { emailDesign, senderName } from "@/lib/email";
 import { EmailPreview } from "../../EmailPreview";
@@ -12,7 +12,7 @@ const NAME = Object.fromEntries(DEFS.map((d) => [d.key, d.name]));
 
 export default async function Automations({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; open?: string }> }) {
   const sp = await searchParams;
-  const [{ rows, ready, recent }, design, from, ok, ro] = await Promise.all([automations(), emailDesign(), senderName(), approvals(), reminderOpts()]);
+  const [{ rows, ready, recent }, design, from, ok] = await Promise.all([automations(), emailDesign(), senderName(), approvals()]);
   const base = (process.env.SITE_URL || "https://dev.ohsoed.co.uk").replace(/\/$/, "");
   const st = Object.fromEntries(rows.map((r) => [r.key, approvalState(ok[r.key], wordingHash(r))]));
   const toApprove = rows.filter((r) => st[r.key] !== "approved").length;
@@ -47,10 +47,6 @@ export default async function Automations({ searchParams }: { searchParams: Prom
             <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="to_parent" defaultChecked={r.to_parent} /> Parent</label>
             <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="to_student" defaultChecked={r.to_student} /> Student (their Google account)</label></>}
           </div>
-          {r.key === "lesson_reminder" && <div className="ro-box"><input type="hidden" name="opts_on_form" value="1" />
-            <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}><input type="checkbox" name="skip_cancelled" defaultChecked={ro.skip_cancelled} /> <span><b>Don’t send for cancelled lessons</b><br /><span className="muted">A reminder already booked is taken back as soon as the lesson is cancelled.</span></span></label>
-            <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}><input type="checkbox" name="skip_moved" defaultChecked={ro.skip_moved} /> <span><b>Don’t send for rescheduled lessons</b><br /><span className="muted">No reminder for the old time or the new time. Untick to send one before the lesson at its new time.</span></span></label>
-          </div>}
           <label className="fld">Subject<input name="subject" defaultValue={r.subject} maxLength={200} required className="mini" style={{ width: "100%" }} /></label>
           <FieldInserter fields={r.fields} />
           <label className="fld">Message<textarea name="body" defaultValue={r.body} rows={8} maxLength={5000} required className="mini" style={{ width: "100%" }} /></label>
