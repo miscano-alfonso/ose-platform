@@ -95,6 +95,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
                   <label className="fld">Space Available on homepage<select name="homepage" defaultValue={g.homepage}>{Object.entries(HOME).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
                   <label className="fld">Position<input type="number" name="homepage_order" min={1} max={99} placeholder="Auto" defaultValue={g.homepage_order ?? ""} style={{ width: 80 }} /></label>
                   <label className="fld">Lesson link ({tool.id === "other" ? "any video tool" : tool.name}, or any https link)<input type="url" name="meet_url" placeholder={tool.example} defaultValue={g.meet_url ?? ""} style={{ width: 340 }} /></label>
+                  <label className="fld">Google Classroom (paste the class’s Classroom link)<input name="classroom" placeholder="https://classroom.google.com/c/…" defaultValue={g.course_id ? `https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64")}` : ""} style={{ width: 340 }} /></label>
                   <button className="abtn pri" type="submit">Save</button>
                 </form></details></td></tr>
           </tbody>;

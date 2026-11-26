@@ -7,13 +7,14 @@ import { withSchool } from "./db";
 // Terms already paid in TechSaga (from the import note "TechSaga terms paid: 110000") are marked paid.
 export type ScheduleReport = { places: number; instalments: number; markedPaid: number; skipped: number };
 
-export async function buildSchedules(actorId: string): Promise<ScheduleReport> {
+export async function buildSchedules(actorId: string, onlyEnrolment?: string): Promise<ScheduleReport> {
   const rep: ScheduleReport = { places: 0, instalments: 0, markedPaid: 0, skipped: 0 };
   await withSchool(async (q) => {
     const rows = await q<{ id: string; student_id: string; year_id: string; plan_id: string; term_count: number; level_id: string; course_years: number; note: string | null; agreed: number | null }>(`
       select e.id, e.student_id, g.academic_year_id as year_id, pp.id as plan_id, pp.term_count, pp.level_id, pp.course_years, e.admin_note as note, e.course_total_pence as agreed
       from enrolments e join course_groups g on g.id = e.group_id join price_plans pp on pp.id = g.price_plan_id
-      where e.status = 'active' and not e.is_taster and not exists (select 1 from instalments i where i.enrolment_id = e.id)`);
+      where e.status = 'active' and not e.is_taster and not exists (select 1 from instalments i where i.enrolment_id = e.id)
+        and ($1::uuid is null or e.id = $1::uuid)`, [onlyEnrolment ?? null]);
     for (const e of rows) {
       // courses this student takes this year decide the bundle discount (3 = 10%, 5 = 15%)
       const count = (await q<{ n: number }>(`select count(*)::int as n from enrolments x join course_groups g on g.id = x.group_id
@@ -43,7 +44,7 @@ export async function buildSchedules(actorId: string): Promise<ScheduleReport> {
       await q(`update enrolments set list_price_pence = $2::int, discount_pence = $2::int - $3::int where id = $1`, [e.id, list, perTerm * e.term_count]);
       rep.places++;
     }
-    await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'build', 'payment_schedules', $2)`,
+    if (!onlyEnrolment) await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'build', 'payment_schedules', $2)`,
       [actorId, JSON.stringify(rep)]);
   });
   return rep;

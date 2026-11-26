@@ -105,6 +105,15 @@ export async function updateGroupAction(f: FormData) {
   const meet = cleanLessonLink(str(f, "meet_url", 500)); // Google Meet, Zoom, Teams, Whereby, Jitsi or any https link
   await withSchool(async (q) => {
     if (meet !== undefined) await q(`update course_groups set meet_url = $2 where id = $1`, [id, meet]);
+    // 26 Nov: the class's Google Classroom: a classroom.google.com link (its /c/<id> part is the course id in base64) or the number
+    if (f.has("classroom")) {
+      const raw = str(f, "classroom", 300).trim();
+      let cid: string | null = null;
+      const m = /classroom\.google\.com\/(?:u\/\d+\/)?[cr]\/([A-Za-z0-9_-]+)/.exec(raw);
+      if (m) { try { const d = Buffer.from(m[1], "base64").toString("utf8"); cid = /^\d{6,20}$/.test(d) ? d : null; } catch { cid = null; } }
+      else if (/^\d{6,20}$/.test(raw)) cid = raw;
+      if (raw === "" || cid) await q(`update course_groups set google_course_id = $2 where id = $1`, [id, cid]);
+    }
     const before = await q(`select capacity, capacity_mode, sticky_label, status, homepage, homepage_order from course_groups where id = $1`, [id]);
     if (!before[0]) return;
     await q(`update course_groups set capacity = $2, capacity_mode = $3::capacity_mode, sticky_label = $4::sticky_label, status = $5::group_status, homepage = $6, homepage_order = $7 where id = $1`,
@@ -474,9 +483,11 @@ export async function createCycleAction(f: FormData): Promise<void> {
 }
 export async function createEntriesAction(f: FormData): Promise<void> {
   const me = await requireStaff();
-  const id = str(f, "id", 40), n = await createEntries(me.id, id);
+  const id = str(f, "id", 40), { added: n, removed } = await createEntries(me.id, id);
   revalidatePath(`/admin/reports/${id}`);
-  redirect(`/admin/reports/${id}?ok=${encodeURIComponent(n ? `${n} reports created. Teachers can start writing from their dashboard.` : "Everyone already has a report.")}`);
+  const msg = [n ? `${n} report${n === 1 ? "" : "s"} created. Teachers can start writing from their dashboard.` : "Everyone already has a report.",
+    removed ? `${removed} unwritten report${removed === 1 ? "" : "s"} removed for children who have left a class.` : ""].filter(Boolean).join(" ");
+  redirect(`/admin/reports/${id}?ok=${encodeURIComponent(msg)}`);
 }
 /** 26 Nov: delete a report round that has no reports in it yet (e.g. one set up by mistake). */
 export async function deleteCycleAction(f: FormData): Promise<void> {
@@ -1252,6 +1263,14 @@ export async function matchJoinAction(f: FormData): Promise<void> {
 }
 
 // ---------- families (the prototype's family drawer, as a page) ----------
+export async function addCourseAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { addCourse } = await import("@/lib/families");
+  const joined = /^\d{4}-\d{2}-\d{2}$/.test(str(f, "joined", 10)) ? str(f, "joined", 10) : null;
+  const err = await addCourse(me.id, str(f, "student", 40), str(f, "group", 40), joined, f.get("paid") === "1", str(f, "note", 200) || null);
+  revalidatePath("/admin/payments"); revalidatePath("/admin/students");
+  famBack(str(f, "family", 40), f.get("paid") === "1" ? "Course added, with every term marked paid." : "Course added, with its termly payments.", err);
+}
 export async function waiveNoticeAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const { waiveNotice } = await import("@/lib/families");

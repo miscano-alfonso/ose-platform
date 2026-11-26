@@ -33,8 +33,9 @@ export async function createCycle(actorId: string, d: { name: string; termId: st
   } catch (e) { return (e as { code?: string }).code === "23505" ? "There’s already a report with that name this year." : "Couldn’t create that report."; }
 }
 
-/** One entry for every student in every class (taught classes only); safe to run again for late joiners. */
-export async function createEntries(actorId: string, cycleId: string): Promise<number> {
+/** One entry for every student in every class (taught classes only); safe to run again for late joiners (and it clears unwritten
+ *  reports for children who have left a class). */
+export async function createEntries(actorId: string, cycleId: string): Promise<{ added: number; removed: number }> {
   return withSchool(async (q) => {
     const r = await q(`insert into report_entries (school_id, cycle_id, student_id, group_id, teacher_id)
       select current_school(), c.id, e.student_id, g.id, g.teacher_id from report_cycles c
@@ -45,9 +46,13 @@ export async function createEntries(actorId: string, cycleId: string): Promise<n
         and not (coalesce(t.number, 0) >= 5 and (pp.term_count < t.number
           or (l.name ilike '%GCSE%' and l.name not ilike 'Pre-%' and pp.year_of_course >= pp.course_years)))
       on conflict (cycle_id, student_id, group_id) do nothing returning id`, [cycleId]);
+    // 26 Nov: a child who has left the class since (course cancelled or swapped): their report goes, if nothing has been written yet
+    const gone = await q(`delete from report_entries r using report_cycles c where r.cycle_id = c.id and c.id = $1 and c.status <> 'published'
+        and r.status = 'todo' and r.comment is null and r.effort is null
+        and not exists (select 1 from enrolments e where e.student_id = r.student_id and e.group_id = r.group_id and e.status = 'active' and not e.is_taster) returning r.id`, [cycleId]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'entries', 'report_cycle', $2, $3)`,
-      [actorId, cycleId, JSON.stringify({ added: r.length })]);
-    return r.length;
+      [actorId, cycleId, JSON.stringify({ added: r.length, removed: gone.length })]);
+    return { added: r.length, removed: gone.length };
   });
 }
 

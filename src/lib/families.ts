@@ -133,6 +133,42 @@ export async function cancelCourse(actorId: string, enrolmentId: string, waive: 
   } catch (e) { const m = (e as Error).message; return m.includes("already") ? "Notice was already given for this course." : m.includes("only an active") ? "Only an active course can be cancelled." : "Couldn’t cancel the course."; }
 }
 
+/** 26 Nov (Alfonso): the office adds a course a child is booked on but that's missing here (e.g. Heidi Brandish: signed up to
+ *  KS3 English Language and Literature, only Literature came over from TechSaga). The place gets its termly payments like any
+ *  other; "already paid in full" marks them all paid (paid outside the platform). Nothing is emailed or charged. */
+export async function addCourseOptions(studentId: string) {
+  return withSchool((q) => q<{ id: string; name: string; places: number | null }>(`select g.id, l.name || ' ' || sj.name || ' (' || g.code || ')' as name,
+      (select a.places_left from course_group_availability a where a.group_id = g.id)::int as places
+    from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join academic_years y on y.id = g.academic_year_id
+    where y.ends_on >= current_date and g.status <> 'closed'
+      and not exists (select 1 from enrolments x where x.student_id = $1 and x.group_id = g.id and x.status in ('pending','active'))
+    order by l.sort_order, sj.name, g.code`, [studentId]).catch(() => []));
+}
+export async function addCourse(actorId: string, studentId: string, groupId: string, joined: string | null, paidInFull: boolean, note: string | null): Promise<string | null> {
+  if (!/^[0-9a-f-]{36}$/.test(studentId) || !/^[0-9a-f-]{36}$/.test(groupId)) return "Choose the class.";
+  try {
+    const id = await withSchool(async (q) => {
+      if ((await q(`select 1 from enrolments where student_id = $1 and group_id = $2 and status in ('pending','active')`, [studentId, groupId])).length) throw new Error("already");
+      // a class whose capacity is worked out automatically grows by one rather than refusing a child who is already in it
+      if ((await q<{ full: boolean }>(`select group_is_full($1) as full`, [groupId]))[0]?.full) await q(`update course_groups set capacity = coalesce(capacity, 0) + 1 where id = $1 and capacity_mode = 'auto'`, [groupId]);
+      const memo = [note, "Added by the office", paidInFull ? "TechSaga terms paid: 111111" : null].filter(Boolean).join(" · ");
+      const [e] = await q<{ id: string }>(`insert into enrolments (school_id, student_id, group_id, status, list_price_pence, allow_clash, enrolled_at, admin_note, source, course_total_pence)
+        select current_school(), $1, g.id, 'active', pp.total_pence, true, coalesce($2::date, now()), $3, 'office', (select total_pence from course_price(pp.id))
+        from course_groups g join price_plans pp on pp.id = g.price_plan_id where g.id = $4 returning id`, [studentId, joined, memo, groupId]);
+      if (!e) throw new Error("nogroup");
+      await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'add_course', 'enrolment', $2, $3)`,
+        [actorId, e.id, JSON.stringify({ group: groupId, paidInFull, joined })]);
+      return e.id;
+    });
+    const { buildSchedules } = await import("./payments");
+    await buildSchedules(actorId, id);
+    return null;
+  } catch (e) {
+    const m = (e as Error).message;
+    return m === "already" ? "That child is already booked on that class." : m.includes("full") ? "That class is full." : m.includes("year") ? "That class isn’t in a year the child can be booked on." : "Couldn’t add the course.";
+  }
+}
+
 /** 26 Nov: a course already cancelled with notice can be ended now after all (the rest of the notice waived): its
  *  payments still to come aren't charged and the child leaves the class today, as "Cancel now, waive the notice" does. */
 export async function waiveNotice(actorId: string, enrolmentId: string): Promise<string | null> {
