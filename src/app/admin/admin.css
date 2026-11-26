@@ -1550,3 +1550,6 @@
 /* 26 Nov: Reschedule in each lesson of the teacher's weekly timetable (the next one of that lesson) */
 .adm .ttcell{position:relative}
 .adm .ttcell .tt-res{justify-self:end;margin-top:4px;font-size:13px;padding:3px 10px}
+/* 26 Nov: report tools before writing opens: shown, greyed out */
+.adm .wr-head .abtn:disabled,.adm .wr-card .abtn:disabled{opacity:.45;cursor:not-allowed;filter:grayscale(.3)}
+.adm .wr-wait{font-size:13px;align-self:center;margin-right:4px}

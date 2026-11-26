@@ -16,25 +16,26 @@ export default async function Write({ params, searchParams }: { params: Promise<
   const sheet = await getWriteSheet(cycle, group);
   if (!sheet || (me.role !== "school_admin" && sheet.head.teacher_user !== me.id)) notFound();
   const { head: h, rows } = sheet;
-  // 26 Nov: teachers can read the sheet before the writing window opens, but not fill it in yet
+  // 26 Nov (Alfonso): teachers can write, save drafts and use AI any time; Submit to the office opens in the term's last week
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
   const notYet = me.role !== "school_admin" && h.status !== "published" && today < h.opens_on;
-  const locked = h.status === "published" || notYet;
+  const locked = h.status === "published";
+  const wait = notYet ? `Submitting opens ${new Date(h.opens_on + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}` : "";
   return <>
     {/* 31 Oct: the page heading stays at the top while scrolling, with Submit all */}
     <div className="wr-head">
     <p className="backlink"><a className="abtn sm" href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a></p>
       <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · comments due {day(h.comments_due)}</div></div>
         <span className="grow" />{!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
-          <AiDraftAll /><SubmitAll /></div>}</div>
-      {notYet && <p className="note msg">Writing opens on <b>{new Date(h.opens_on + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</b>, two weeks before the end of term. You can look through your class and their marks until then.</p>}
+          {wait && <span className="muted wr-wait">{wait}</span>}<AiDraftAll /><SubmitAll off={wait} /></div>}</div>
+      {notYet && <p className="note msg">You can write and save drafts now. <b>Submit</b> opens on <b>{new Date(h.opens_on + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</b>, the last week of term.</p>}
       {!sp.r && sp.ok && <p className="note msg">{sp.ok}</p>}{!sp.r && sp.err && <p className="note msg bad">{sp.err}</p>}
       <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters. A report can be submitted once the term’s assessment is marked in Classroom, or once you’ve said why there isn’t one.</p>
     </div>
     {rows.length === 0 ? <p className="empty">No reports for this class yet.</p> :
     <form action={saveWriteSheetAction} id="wr-form">
       <input type="hidden" name="cycle" value={cycle} /><input type="hidden" name="group" value={group} />
-      {rows.map((r) => { const ro = locked || r.status === "approved"; const here = sp.r === r.id; const sg = h.gcse ? suggestGrades(r.marks ?? []) : null;
+      {rows.map((r) => { const ro = locked || r.status === "approved"; const tools = !ro; const here = sp.r === r.id; const sg = h.gcse ? suggestGrades(r.marks ?? []) : null;
         return <section className="card wr-card" key={r.id} id={`r-${r.id}`}>
         <input type="hidden" name="ids" value={r.id} />
         <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>{r.student}</h2><span className={`pill ${PILL[r.status][1]}`}>{PILL[r.status][0]}</span>
@@ -57,11 +58,11 @@ export default async function Write({ params, searchParams }: { params: Promise<
           </div>
           <div className="aid-wrap">
             <div className="wr-chead"><label className="fld" htmlFor={`comment_${r.id}`}>Comment and targets</label>
-              {!ro && <div className="wr-acts">
+              {tools && <div className="wr-acts">
                 <button className="abtn sm" type="submit" name="one" value={`${r.id}:0`}>Save draft</button>
-                <button className="abtn sm pri" type="submit" name="one" value={`${r.id}:1`}>Submit</button></div>}</div>
+                <button className="abtn sm pri" type="submit" name="one" value={`${r.id}:1`} disabled={!!wait} title={wait || undefined}>Submit</button></div>}</div>
             <div className="aid-box"><textarea id={`comment_${r.id}`} name={`comment_${r.id}`} defaultValue={r.comment ?? ""} rows={7} maxLength={2000} disabled={ro} className="mini" style={{ width: "100%" }} />
-              {!ro && <AiDraft id={r.id} auto={r.auto_progress ?? null} has={!!r.comment} />}</div></div>
+              {tools && <AiDraft id={r.id} auto={r.auto_progress ?? null} has={!!r.comment} />}</div></div>
         </div>
       </section>; })}
     </form>}
@@ -70,6 +71,6 @@ export default async function Write({ params, searchParams }: { params: Promise<
 
 // "Submit all": saves every report on the page and submits the ones that are ready (the others stay as drafts, with a note).
 // It sits in the sticky heading, outside the form, so it's tied to it with form="wr-form"; it posts a flag via formAction.
-function SubmitAll() {
-  return <button className="abtn sm pri" type="submit" form="wr-form" formAction={async (f: FormData) => { "use server"; f.set("submit", "1"); f.delete("one"); const { saveWriteSheetAction } = await import("../../../../actions"); return saveWriteSheetAction(f); }}>Submit all</button>;
+function SubmitAll({ off = "" }: { off?: string }) {
+  return <button className="abtn sm pri" type="submit" form="wr-form" disabled={!!off} title={off || undefined} formAction={async (f: FormData) => { "use server"; f.set("submit", "1"); f.delete("one"); const { saveWriteSheetAction } = await import("../../../../actions"); return saveWriteSheetAction(f); }}>Submit all</button>;
 }

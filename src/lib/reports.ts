@@ -104,9 +104,9 @@ export type WriteRow = { id: string; student: string; avg_pct: string | null; ma
   assess: string; assess_pct: number | null; assess_title: string | null; no_assessment: string | null;
   marks?: { pct: number; at: string; term: boolean; assess: boolean }[] };
 
-/** 26 Nov (Alfonso): teachers write comments and Effort in the last two weeks of the report term: from the Monday two
- *  weeks before the term's last week ends (Term 2 ends Fri 11 Dec → opens Mon 30 Nov). Uses report_cycles c. */
-export const OPENS_SQL = `date_trunc('week', coalesce((select t.ends_on from terms t where t.id = c.term_id), c.marks_to))::date - 7`;
+/** 26 Nov (Alfonso, changed later that day): teachers can write and save drafts any time, but can only submit reports to the
+ *  office in the term's last week: from its Monday (Term 2 ends Fri 11 Dec → submitting opens Mon 7 Dec). Uses report_cycles c. */
+export const OPENS_SQL = `date_trunc('week', coalesce((select t.ends_on from terms t where t.id = c.term_id), c.marks_to))::date`;
 export async function getWriteSheet(cycleId: string, groupId: string) {
   return withSchool(async (q) => {
     const head = (await q<{ cycle: string; status: string; comments_due: string; opens_on: string; code: string; name: string; gcse: boolean; teacher_user: string | null }>(`
@@ -136,10 +136,11 @@ export async function saveWriteSheet(actor: { id: string; role: string }, cycleI
     const ok = (await q<{ ok: boolean }>(`select ($3 = 'school_admin' or exists (select 1 from course_groups g join teachers t on t.id = g.teacher_id where g.id = $1 and t.user_id = $2))
       and exists (select 1 from report_cycles c where c.id = $4 and c.status <> 'published') as ok`, [groupId, actor.id, actor.role, cycleId]))[0]?.ok;
     if (!ok) return "You can’t edit these reports.";
-    // 26 Nov: teachers write in the last two weeks of the report term (the office can any time)
-    if (actor.role !== "school_admin") {
+    // 26 Nov: teachers submit only in the report term's last week (saving drafts works any time; the office can submit any time)
+    let held = "";
+    if (actor.role !== "school_admin" && submit) {
       const [o] = await q<{ open: boolean; opens: string }>(`select current_date >= (${OPENS_SQL}) as open, (${OPENS_SQL})::text as opens from report_cycles c where c.id = $1`, [cycleId]);
-      if (o && !o.open) return `Writing opens on ${new Date(o.opens + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}, two weeks before the end of term.`;
+      if (o && !o.open) { submit = false; held = `Saved as drafts. Submitting to the office opens on ${new Date(o.opens + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}, the last week of term.`; }
     }
     const problems: string[] = []; let waiting = 0;
     for (const r of rows) {
@@ -156,6 +157,7 @@ export async function saveWriteSheet(actor: { id: string; role: string }, cycleI
         [r.id, r.progress, r.effort, r.working, r.predicted, r.comment.trim().slice(0, 2000), status, cycleId, groupId]);
       if (r.noAssessment !== undefined) await q(`update report_entries set no_assessment = nullif($2, '') where id = $1 and cycle_id = $3`, [r.id, r.noAssessment.trim().slice(0, 200), cycleId]);
     }
+    if (held) return held;
     if (!problems.length) return null;
     return `${problems.length} report${problems.length === 1 ? " was" : "s were"} saved as a draft: each needs an Effort score, a comment of at least 20 characters${waiting ? `, and the assessment marked in Classroom (or a reason there isn’t one: ${waiting} waiting)` : ""}.`;
   });

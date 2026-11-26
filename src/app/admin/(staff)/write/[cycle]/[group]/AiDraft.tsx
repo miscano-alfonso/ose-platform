@@ -9,7 +9,7 @@ const scoresOf = (id: string, auto: number | null) => ({ effort: num(id, "effort
 function put(t: HTMLTextAreaElement, text: string) { t.value = text; t.dispatchEvent(new Event("input", { bubbles: true })); }
 
 /** In each comment box: "Draft with AI" for an empty box, "Redo with AI" once there's a comment; Undo puts back what was there (31 Oct, 1 Nov). */
-export function AiDraft({ id, auto, has }: { id: string; auto: number | null; has?: boolean }) {
+export function AiDraft({ id, auto, has, off = "" }: { id: string; auto: number | null; has?: boolean; off?: string }) {
   const [busy, start] = useTransition();
   const [err, setErr] = useState("");
   const [prev, setPrev] = useState<string | null>(null);
@@ -24,14 +24,14 @@ export function AiDraft({ id, auto, has }: { id: string; auto: number | null; ha
   return <div className="aid">
     {err && <span className="aid-err" role="alert">{err}</span>}
     {prev !== null && !busy && <button type="button" className="lnk" onClick={() => { const t = box(id); if (t) put(t, prev); setPrev(null); setFilled(!!prev); }}>Undo</button>}
-    <button type="button" className="abtn sm aid-go" data-aid={id} onClick={go} disabled={busy} title="A first attempt in your voice, from this term’s Classroom work, reward points, lesson chat and earlier reports. Read and edit it before saving.">
+    <button type="button" className="abtn sm aid-go" data-aid={id} onClick={go} disabled={busy || !!off} title={off || "A first attempt in your voice, from this term’s Classroom work, reward points, lesson chat and earlier reports. Read and edit it before saving."}>
       <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z" fill="currentColor"/></svg>
       {busy ? "Drafting…" : filled ? "Redo with AI" : "Draft with AI"}</button>
   </div>;
 }
 
 /** "Draft all with AI" in the page heading: fills every empty comment box on the page, one at a time (comments already written are left alone). */
-export function AiDraftAll() {
+export function AiDraftAll({ off = "" }: { off?: string }) {
   const [state, setState] = useState<{ n: number; of: number } | null>(null);
   const [msg, setMsg] = useState("");
   const run = async () => {
@@ -50,7 +50,7 @@ export function AiDraftAll() {
   };
   return <span className="aid-all">
     {msg && <span className="aid-all-msg" role="status">{msg}</span>}
-    <button type="button" className="abtn sm aid-go" onClick={run} disabled={!!state}>
+    <button type="button" className="abtn sm aid-go" onClick={run} disabled={!!state || !!off} title={off || undefined}>
       <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path d="M12 2l1.8 5.2L19 9l-5.2 1.8L12 16l-1.8-5.2L5 9l5.2-1.8zM19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z" fill="currentColor"/></svg>
       {state ? `Drafting ${state.n} of ${state.of}…` : "Draft all with AI"}</button>
   </span>;
