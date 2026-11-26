@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { FRONT_COOKIE, frontPassword, frontToken, sameText } from "@/lib/front-door";
 
 // While SITE_PASSWORD is set (the test period) search engines are told not to index anything; remove the variable at launch.
 // (Until 31 Oct it also put a password prompt in front of the dashboards; that prompt is now off, see below.)
@@ -20,8 +21,25 @@ function moved(req: NextRequest): NextResponse | null {
   return to.hostname === host ? null : NextResponse.redirect(to, 308);
 }
 
+// 26 Nov: while FRONT_PASSWORD is set, every page needs that password first (/front-door; cookie ose_front, 30 days).
+// Left open: the password page, Stripe and cron (/api/), calendar feeds, lesson join links and the pictures/links
+// that Facebook, Instagram and emails fetch.
+const OPEN = /^\/(front-door|api)(\/|$)|^\/(social-img|s|newsletter|teacher-photo|people-photo|workshop-image|brand|join|cal)\/|^\/teachers\/[\w.-]+\.(webp|jpe?g|png)$|^\/ose-(logo|logo-blue|logo-white|logo-duo|icon)\.(png|svg)$|^\/robots\.txt$/;
+async function frontDoor(req: NextRequest): Promise<NextResponse | null> {
+  const pass = frontPassword(); if (!pass) return null;
+  const path = req.nextUrl.pathname;
+  if (OPEN.test(path)) return null;
+  const have = req.cookies.get(FRONT_COOKIE)?.value;
+  if (have && sameText(have, await frontToken(pass))) return null;
+  if (req.method !== "GET" && req.method !== "HEAD") return new NextResponse("Password needed", { status: 401, headers: { "X-Robots-Tag": "noindex, nofollow" } });
+  const to = new URL("/front-door", req.url); to.searchParams.set("next", path + req.nextUrl.search);
+  const res = NextResponse.redirect(to, 307); res.headers.set("X-Robots-Tag", "noindex, nofollow"); res.headers.set("Cache-Control", "no-store");
+  return res;
+}
+
 export async function middleware(req: NextRequest) {
   const gone = moved(req); if (gone) return gone;
+  const shut = await frontDoor(req); if (shut) return shut;
   const path = req.nextUrl.pathname;
   const hdrs = new Headers(req.headers); hdrs.delete("x-ose-site");
   hdrs.set("x-ose-path", path);   // for the admin layout ("not in your plan")
