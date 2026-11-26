@@ -115,6 +115,29 @@ export async function setFamilyTerm(actorId: string, parentId: string, termNumbe
   });
 }
 
+/** 26 Nov: one course's term on its own (the family page's per-term menu): paid, due again, or not charged. Payments taken
+ *  through Stripe aren't changed here. */
+export async function setInstalment(actorId: string, id: string, to: "paid" | "waived" | "scheduled"): Promise<string | null> {
+  if (!/^[0-9a-f-]{36}$/.test(id)) return "That payment wasn’t found.";
+  return withSchool(async (q) => {
+    const r = await q<{ id: string }>(`update instalments set status = $2::text::instalment_status, paid_at = case when $2::text = 'paid' then coalesce(paid_at, now()) else null end
+      where id = $1 and stripe_payment_intent_id is null and status in ('scheduled', 'failed', 'paid', 'waived', 'cancelled') returning id`, [id, to]);
+    if (!r.length) return "That payment can’t be changed here (it was taken through Stripe).";
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'set_instalment', 'instalment', $2, $3)`, [actorId, id, JSON.stringify({ to })]);
+    return null;
+  });
+}
+/** 26 Nov: correct when a child joined a course (e.g. the old system had the wrong start). */
+export async function setJoined(actorId: string, enrolmentId: string, on: string): Promise<string | null> {
+  if (!/^[0-9a-f-]{36}$/.test(enrolmentId) || !/^\d{4}-\d{2}-\d{2}$/.test(on)) return "Give a date.";
+  return withSchool(async (q) => {
+    const r = await q<{ id: string }>(`update enrolments set enrolled_at = $2::date where id = $1 returning id`, [enrolmentId, on]);
+    if (!r.length) return "That course wasn’t found.";
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'set_joined', 'enrolment', $2, $3)`, [actorId, enrolmentId, JSON.stringify({ on })]);
+    return null;
+  });
+}
+
 export type InstRow = { id: string; parent_id: string; family: string; student: string; course: string; term: number; due_on: string; amount: number };
 /** The prototype's Payments cards: failed payments to chase, and what's charged in the next 60 days. */
 export async function getPaymentLists(): Promise<{ failed: InstRow[]; upcoming: InstRow[]; upcomingCount: number }> {

@@ -1560,3 +1560,8 @@
 .adm .set-tabs{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 18px}
 .adm .set-tabs .set-title{margin:0;font-size:28px}
 .adm .st-unm-btns{display:flex;gap:6px;flex-wrap:wrap}
+/* 26 Nov: family page: change one course's term; edit the join date */
+.adm .cell-more{font-size:12.5px;text-align:right}.adm .cell-more>summary{list-style:none;cursor:pointer}.adm .cell-more>summary::-webkit-details-marker{display:none}
+.adm .cell-menu{display:grid;gap:2px;justify-items:end;margin-top:2px}
+.adm .joined-edit{display:inline}.adm .joined-edit>summary{display:inline;list-style:none;cursor:pointer}.adm .joined-edit>summary::-webkit-details-marker{display:none}
+.adm .joined-form{display:inline-flex;gap:6px;align-items:center;margin:4px 0}

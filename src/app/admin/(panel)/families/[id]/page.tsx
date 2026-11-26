@@ -2,7 +2,7 @@ import { sendLabels, NEEDS } from "@/lib/send";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { familyDetail, cancelPreview, swapOptions, type Cell } from "@/lib/families";
-import { cancelCourseAction, waiveNoticeAction, swapCourseAction, familyTermAction, familyCheckAction, viewAsFamilyAction, saveStudentSendAction } from "../../../actions";
+import { cancelCourseAction, waiveNoticeAction, setInstalmentAction, setJoinedAction, swapCourseAction, familyTermAction, familyCheckAction, viewAsFamilyAction, saveStudentSendAction } from "../../../actions";
 import { money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -19,7 +19,12 @@ function CellView({ c, term, family }: { c: Cell; term: number; family: string }
   const [tone, label] = CELL[c.status] ?? ["mute", c.status];
   return <div style={{ display: "grid", gap: 2, justifyItems: "end" }}><span>{money(c.amount)}</span><span className={`pill ${tone}`} style={{ fontSize: 12.5 }}>{label}</span>
     {(c.status === "scheduled" || c.status === "failed") && <form action={familyTermAction}><input type="hidden" name="parent" value={family} /><input type="hidden" name="term" value={term} /><input type="hidden" name="to" value="paid" />
-      <button className="lnk" type="submit" title={`Mark term ${term} paid for the whole family`}>Mark paid</button></form>}</div>;
+      <button className="lnk" type="submit" title={`Mark term ${term} paid for the whole family`}>Mark paid</button></form>}
+    {/* 26 Nov: change this course's term on its own (the line above changes the whole family's term) */}
+    {!["processing", "refunded", "part_refunded"].includes(c.status) && <details className="cell-more"><summary className="lnk" title="Change this course’s term only">This course…</summary>
+      <div className="cell-menu">{([["paid", "Paid"], ["scheduled", "Due"], ["waived", "Not charged"]] as const).filter(([k]) => k !== c.status && !(k === "waived" && c.status === "cancelled")).map(([k, l]) =>
+        <form key={k} action={setInstalmentAction}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="family" value={family} /><input type="hidden" name="to" value={k} />
+          <button className="lnk" type="submit">{l}</button></form>)}</div></details>}</div>;
 }
 
 export default async function Family({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; err?: string }> }) {
@@ -62,7 +67,9 @@ export default async function Family({ params, searchParams }: { params: Promise
               <form action={waiveNoticeAction} style={{ display: "inline" }}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="family" value={f.id} />
                 <button className="abtn sm" type="submit" title="Leaves the class today; the payments still to come aren’t charged">End now, waive the rest of the notice</button></form></>}
             {c.needs_check && <> <span className="pill warn">Needs a check</span></>}
-            <br /><span className="muted" style={{ fontSize: 14 }}>joined {day(c.enrolled_on)} · {c.notice_terms ?? 1} term{(c.notice_terms ?? 1) > 1 ? "s’" : "’s"} notice{c.discount ? ` · was ${money(c.list)}` : ""}{c.end_reason ? ` · ${c.end_reason}` : ""}{c.note ? ` · ${c.note}` : ""}</span>
+            <div className="muted" style={{ fontSize: 14 }}><details className="joined-edit"><summary className="lnk" title="Change the join date">joined {day(c.enrolled_on)}</summary>
+              <form action={setJoinedAction} className="joined-form"><input type="hidden" name="id" value={c.id} /><input type="hidden" name="family" value={f.id} />
+                <input type="date" name="on" className="mini" defaultValue={c.enrolled_on.slice(0, 10)} required /><button className="abtn sm" type="submit">Save</button></form></details> · {c.notice_terms ?? 1} term{(c.notice_terms ?? 1) > 1 ? "s’" : "’s"} notice{c.discount ? ` · was ${money(c.list)}` : ""}{c.end_reason ? ` · ${c.end_reason}` : ""}{c.note ? ` · ${c.note}` : ""}</div>
             {x && <details className="edit" style={{ marginTop: 6 }}><summary className="abtn sm">Cancel or swap</summary>
               <div style={{ display: "grid", gap: 10, background: "var(--soft)", borderRadius: 10, padding: 12, marginTop: 8, maxWidth: 560 }}>
                 {x.pre && <form action={cancelCourseAction} style={{ display: "grid", gap: 8 }}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="family" value={f.id} />

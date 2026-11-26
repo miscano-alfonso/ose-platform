@@ -1271,6 +1271,20 @@ export async function addCourseAction(f: FormData): Promise<void> {
   revalidatePath("/admin/payments"); revalidatePath("/admin/students");
   famBack(str(f, "family", 40), f.get("paid") === "1" ? "Course added, with every term marked paid." : "Course added, with its termly payments.", err);
 }
+export async function setInstalmentAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const to = str(f, "to", 10);
+  const { setInstalment } = await import("@/lib/payments");
+  const err = ["paid", "waived", "scheduled"].includes(to) ? await setInstalment(me.id, str(f, "id", 40), to as "paid" | "waived" | "scheduled") : "Choose what to do.";
+  revalidatePath("/admin/payments");
+  famBack(str(f, "family", 40), to === "paid" ? "Marked paid for this course." : to === "waived" ? "This course’s term won’t be charged." : "This course’s term is due again.", err);
+}
+export async function setJoinedAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { setJoined } = await import("@/lib/payments");
+  const err = await setJoined(me.id, str(f, "id", 40), str(f, "on", 10));
+  famBack(str(f, "family", 40), "Join date changed.", err);
+}
 export async function waiveNoticeAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const { waiveNotice } = await import("@/lib/families");
