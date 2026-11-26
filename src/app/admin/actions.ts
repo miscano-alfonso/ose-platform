@@ -1736,6 +1736,15 @@ export async function undoStripeMatchAction(f: FormData): Promise<void> {
 }
 
 // ---------- Test mode (nothing goes to families, students or teachers) ----------
+export async function setBetaAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); if (me.role !== "school_admin") redirect("/admin");
+  const on = f.get("beta") === "1";
+  const { setBeta } = await import("@/lib/test-mode");
+  await setBeta(me.email, on);
+  await withSchool((q) => q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'beta_mode', 'setting', $2)`, [me.id, JSON.stringify({ on })]));
+  revalidatePath("/admin/test-mode");
+  redirect(`/admin/test-mode?ok=${encodeURIComponent(on ? "Beta is on: sign-in emails now go out to anyone who asks for one. Everything else is still held." : "Beta is off: sign-in emails are held again.")}`);
+}
 export async function setTestModeAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const { setTestMode } = await import("@/lib/test-mode");

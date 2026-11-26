@@ -10,7 +10,9 @@ const scrypt = promisify(scryptCb) as (pw: string, salt: Buffer, len: number, op
 export const SESSION_COOKIE = "ose_admin";
 /** Each school has its own staff sign-in, so switching to the demo school doesn't sign you out of your own. */
 export async function sessionCookie(): Promise<string> { const s = await activeSchool(); return s === siteSchool() ? SESSION_COOKIE : `${SESSION_COOKIE}_${s.replace(/[^a-z0-9]/g, "_")}`; }
-const SESSION_HOURS = 12;
+const SESSION_HOURS = 12;          // admin accounts
+const TEACHER_SESSION_HOURS = 30 * 24;   // 26 Nov: teachers stay signed in for 30 days on their device, like families
+const sessionHours = (role: string) => role === "teacher" ? TEACHER_SESSION_HOURS : SESSION_HOURS;
 const MAX_FAILS_PER_EMAIL = 5;     // in 15 minutes
 const MAX_FAILS_PER_IP = 20;       // in 15 minutes
 export const MIN_PASSWORD = 12;
@@ -48,22 +50,22 @@ export async function signIn(email: string, password: string): Promise<string | 
       select count(*) filter (where email = $1)::int as by_email, count(*) filter (where ip = $2)::int as by_ip
       from sign_in_attempts where not ok and created_at > now() - interval '15 minutes'`, [email, ip]);
     if (fails[0].by_email >= MAX_FAILS_PER_EMAIL || fails[0].by_ip >= MAX_FAILS_PER_IP) return "locked";
-    const u = await q<{ id: string; password_hash: string | null }>(
-      `select id, password_hash from users where email = $1 and role in ('school_admin', 'teacher') and disabled_at is null`, [email]);
+    const u = await q<{ id: string; password_hash: string | null; role: string }>(
+      `select id, password_hash, role::text from users where email = $1 and role in ('school_admin', 'teacher') and disabled_at is null`, [email]);
     const ok = await checkPassword(password, u[0]?.password_hash ?? null);
     await q(`insert into sign_in_attempts (school_id, email, ip, ok) values (current_school(), $1, $2, $3)`, [email, ip, ok]);
     if (!ok) return "bad";
     const token = randomBytes(32).toString("base64url");
     await q(`insert into staff_sessions (school_id, user_id, token_hash, expires_at, ip, user_agent)
-             values (current_school(), $1, $2, now() + make_interval(hours => $3), $4, $5)`, [u[0].id, sha256(token), SESSION_HOURS, ip, ua]);
+             values (current_school(), $1, $2, now() + make_interval(hours => $3), $4, $5)`, [u[0].id, sha256(token), sessionHours(u[0].role), ip, ua]);
     await q(`update users set last_sign_in_at = now() where id = $1`, [u[0].id]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'sign_in', 'user', $1)`, [u[0].id]);
-    return { token };
+    return { token, hours: sessionHours(u[0].role) };
   });
   if (result === "locked") return "Too many attempts. Please wait 15 minutes and try again.";
   if (result === "bad") return "That email and password don’t match.";
   (await cookies()).set(await sessionCookie(), result.token, {
-    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: SESSION_HOURS * 3600,
+    httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: result.hours * 3600,
   });
   return null;
 }
@@ -113,13 +115,13 @@ export async function redeemStaffLink(token: string): Promise<boolean> {
     if (!l) return null;
     const token2 = randomBytes(32).toString("base64url");
     await q(`insert into staff_sessions (school_id, user_id, token_hash, expires_at, ip, user_agent)
-             values (current_school(), $1, $2, now() + make_interval(hours => $3), $4, $5)`, [l.user_id, sha256(token2), SESSION_HOURS, ip, ua]);
+             values (current_school(), $1, $2, now() + make_interval(hours => $3), $4, $5)`, [l.user_id, sha256(token2), TEACHER_SESSION_HOURS, ip, ua]);
     await q(`update users set last_sign_in_at = now() where id = $1`, [l.user_id]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'sign_in', 'user', $1, '{"by":"email link"}')`, [l.user_id]);
     return token2;
   });
   if (!t) return false;
-  (await cookies()).set(await sessionCookie(), t, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: SESSION_HOURS * 3600 });
+  (await cookies()).set(await sessionCookie(), t, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/admin", maxAge: TEACHER_SESSION_HOURS * 3600 });
   return true;
 }
 

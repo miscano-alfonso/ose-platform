@@ -8,7 +8,10 @@ import { withSchool } from "./db";
 // A school with no setting is in test mode, so a new site never surprises anyone.
 
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
-export type TestCfg = { on: boolean; allow: string[]; monitor?: string; at?: string; by?: string };
+export type TestCfg = { on: boolean; allow: string[]; monitor?: string; at?: string; by?: string; beta?: boolean; betaAt?: string; betaBy?: string };
+/** Beta (26 Nov): while test mode is on, sign-in emails still go out, so trusted families, students and teachers can sign in
+ *  and try the dashboards. Everything else stays held. */
+export const SIGN_IN_TAGS = new Set(["sign-in-link", "staff-sign-in-link", "register-verify"]);
 /** At most this many monitoring copies a day (Brevo plans have daily limits); the rest are only listed. */
 export const MONITOR_DAY_CAP = 200;
 const KEY = "test_mode";
@@ -16,7 +19,8 @@ const norm = (e: string) => e.trim().toLowerCase();
 
 async function cfgQ(q: Q): Promise<TestCfg> {
   const v = (await q<{ value: Partial<TestCfg> }>(`select value from meet_kv where key = $1`, [KEY]))[0]?.value;
-  return { on: v?.on !== false, allow: Array.isArray(v?.allow) ? v!.allow.map(String) : [], monitor: typeof v?.monitor === "string" && v.monitor ? v.monitor : undefined, at: v?.at, by: v?.by };
+  return { on: v?.on !== false, allow: Array.isArray(v?.allow) ? v!.allow.map(String) : [], monitor: typeof v?.monitor === "string" && v.monitor ? v.monitor : undefined, at: v?.at, by: v?.by,
+    beta: v?.beta === true, betaAt: v?.betaAt, betaBy: v?.betaBy };
 }
 /** The setting, with everyone allowed to receive email while it's on (admins + the extra addresses). */
 export async function testMode(): Promise<TestCfg & { admins: string[] }> {
@@ -35,6 +39,7 @@ export async function gate<T extends { email: string; name?: string }>(to: T[], 
   let t: Awaited<ReturnType<typeof testMode>>;
   try { t = await testMode(); } catch { t = { on: true, allow: [], admins: [] }; }
   if (!t.on) return { send: to, held: [], monitor: null, copy: [] };
+  if (t.beta && m.tag && SIGN_IN_TAGS.has(m.tag)) return { send: to, held: [], monitor: null, copy: [] };   // beta: sign-in emails go out
   const ok = new Set([...t.admins, ...t.allow.map(norm)]);
   const send = to.filter((r) => ok.has(norm(r.email))), held = to.filter((r) => !ok.has(norm(r.email)));
   let copy: T[] = [];
@@ -82,10 +87,21 @@ export async function holdBooked(): Promise<number> {
 export async function setTestMode(by: string, on: boolean, allow: string[], monitor = ""): Promise<{ held?: number; released?: number }> {
   const isMail = (e: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
   const list = [...new Set(allow.map(norm).filter(isMail))].slice(0, 50), mon = isMail(norm(monitor)) ? norm(monitor) : undefined;
+  const prev = await withSchool((q) => cfgQ(q));   // keeps the beta setting as it was
   await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2)
-    on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [KEY, JSON.stringify({ on, allow: list, monitor: mon, at: new Date().toISOString(), by } satisfies TestCfg)]));
+    on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [KEY, JSON.stringify({ on, allow: list, monitor: mon, at: new Date().toISOString(), by,
+      beta: prev.beta, betaAt: prev.betaAt, betaBy: prev.betaBy } satisfies TestCfg)]));
   if (on) return { held: await holdBooked() };
   // going live: reminders held for lessons still to come are booked again on the next run; ones whose time has passed stay held
   const released = await withSchool((q) => q(`delete from automation_sends where status = 'held' and scheduled_for > now() returning id`));
   return { released: released.length };
+}
+
+/** Beta on or off (only matters while test mode is on). */
+export async function setBeta(by: string, beta: boolean): Promise<void> {
+  await withSchool(async (q) => {
+    const c = await cfgQ(q);
+    await q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2)
+      on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [KEY, JSON.stringify({ ...c, beta, betaAt: new Date().toISOString(), betaBy: by } satisfies TestCfg)]);
+  });
 }

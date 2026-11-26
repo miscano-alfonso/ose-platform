@@ -9,7 +9,7 @@ export default async function StaffLink({ searchParams }: { searchParams: Promis
   const { t } = await searchParams;
   return <>
     <h1>Sign in</h1>
-    <p>Press the button to sign in to your teacher dashboard on this device.</p>
+    <p>Press the button to sign in to your teacher dashboard. You’ll stay signed in on this device for 30 days, unless you sign out.</p>
     <form action={redeemStaffLinkAction} style={{ display: "grid", gap: 14 }}>
       <input type="hidden" name="t" value={t ?? ""} />
       <button type="submit">Sign in</button>

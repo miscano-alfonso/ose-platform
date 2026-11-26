@@ -8,7 +8,7 @@ import { recStatus } from "@/lib/recordings";
 import { inviteCfg } from "@/lib/classroom-invites";
 import { stripeStatus } from "@/lib/stripe-read";
 import { siteBase } from "@/lib/social";
-import { setTestModeAction, clearHeldAction } from "../../actions";
+import { setTestModeAction, clearHeldAction, setBetaAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 const when = (s?: string) => s ? new Date(s).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : "";
@@ -37,9 +37,17 @@ export default async function TestMode({ searchParams }: { searchParams: Promise
           <li>Family emails arrive in the Inbox</li><li>Stripe payments are read</li><li>Recordings are watched (filed and posted by the Apps Script as now)</li>
           <li>Inbox replies you write are sent (you send each one yourself)</li></ul></div>
         <div><b>Held while test mode is on</b><ul style={{ margin: "6px 0 0", paddingLeft: 20, lineHeight: 1.6 }}>
-          <li>Every email to anyone not on the list below: automatic emails (lesson reminders, payment, tasters, reports), emails from Send an email, sign-in links, alerts to teachers</li>
+          <li>Every email to anyone not on the list below: automatic emails (lesson reminders, payment, tasters, reports), emails from Send an email, alerts to teachers, and sign-in links (unless Beta is on)</li>
           <li>Google Classroom invitations and removals</li><li>Recording posts to Classroom, and renaming or moving recordings</li><li>Newsletters</li></ul></div>
       </div>
+      {t.on && <div className="note" style={{ margin: "0 0 16px", display: "grid", gap: 8, maxWidth: 720 }}>
+        <b style={{ display: "flex", gap: 10, alignItems: "center" }}>Beta: let people sign in <span className={`pill ${t.beta ? "good" : "mute"}`}>{t.beta ? "On" : "Off"}</span></b>
+        <span>{t.beta
+          ? <>Sign-in emails go out to the parents, students and teachers who ask for one (and families registering get their confirmation email), so the people you’ve given the website password to can sign in and try their dashboards. Everything else above is still held.{t.betaAt ? ` Switched on ${when(t.betaAt)}${t.betaBy ? ` by ${t.betaBy}` : ""}.` : ""}</>
+          : <>Turn this on to let trusted parents, students and teachers sign in while test mode is on: their sign-in emails go out, and everything else stays held. Only people who have the website password can reach the sign-in pages.</>}</span>
+        <form action={setBetaAction}><input type="hidden" name="beta" value={t.beta ? "0" : "1"} />
+          <button className={`abtn${t.beta ? "" : " pri"}`} type="submit">{t.beta ? "Turn beta off" : "Turn beta on"}</button></form>
+      </div>}
       <form action={setTestModeAction} className="eform" style={{ display: "grid", gap: 10, maxWidth: 720 }}>
         <label className="fld">Emails still really go to these addresses (one per line or separated by commas)
           <textarea name="allow" rows={3} defaultValue={t.allow.join("\n")} className="mini" placeholder="e.g. leanne@ohsoed.co.uk" /></label>
