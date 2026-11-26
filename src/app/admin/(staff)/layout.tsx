@@ -31,7 +31,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   const hex = (v: unknown, d: string) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
   const style = { ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b"), ["--brand-accent-ink" as string]: inkOn(hex(brand.accent, "#e3cd4b")) };
 
-  if (me.role === "school_admin") return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles />
+  if (me.role === "school_admin") return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles who="teacher" />
     <LessonWindow /><NotifyCenter api="/admin/notify-api" role="admin" /><div className="staffbar">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <a href="/admin"><img src={logo} alt="OH-SO ED" width={773} height={224} /></a>
@@ -55,7 +55,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     -- 26 Nov: past papers paid for and not sent back yet
     + (select count(*)::int from marking_jobs j join teachers t on t.id = j.teacher_id where t.user_id = $1 and j.paid_at is not null and j.returned_at is null) as marking`, [me.id]));
 
-  return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles />
+  return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles who="teacher" />
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
     <LessonWindow /><NotifyCenter api="/admin/notify-api" role="teacher" /><div className="app">

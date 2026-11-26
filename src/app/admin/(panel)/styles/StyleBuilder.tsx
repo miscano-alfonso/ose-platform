@@ -8,11 +8,17 @@ const SITE_PAGES: [string, string][] = [["Homepage", "/"], ["Courses", "/courses
 const WIDTH: Record<Device, number> = { desktop: 1440, phone: 390 };
 const DASH_PAGES: [string, string][] = [["Admin dashboard", "/admin"], ["Families", "/admin/families"], ["Payments", "/admin/payments"], ["Classes", "/admin/classes"],
   ["Timetable", "/admin/timetable"], ["Jobs", "/admin/jobs"], ["Registers", "/admin/attendance"], ["Messages", "/admin/messages"]];
+// 26 Nov: each dashboard has its own preview pages
+const WHO_PAGES: Record<string, [string, string][]> = {
+  teacher: [["My day", "/admin/teacher"], ["My classes", "/admin/teacher/classes"], ["Marking", "/admin/teacher/marking"], ["Messages", "/admin/teacher/messages"], ["Reports", "/admin/teacher/reports"], ["My timetable", "/admin/teacher/timetable"]],
+  parent: [["Home", "/parent"], ["Messages", "/parent/messages"], ["Reports", "/parent/reports"], ["Payments", "/parent/payments"], ["Attendance", "/parent/attendance"], ["Workshops", "/parent/workshops"]],
+  student: [["Home", "/student"], ["Messages", "/student/messages"], ["Chat", "/student/chat"], ["Rewards", "/student/rewards"], ["Resources", "/student/resources"]],
+};
 const HEAD_IDS = /^(hero_h1|page_h1|sec_h2|card_h3|d_h1|d_h2|d_tile)$/;
 
-export function StyleBuilder({ saved, kind = "site" }: { saved: SiteStyles; kind?: StyleKind }) {
+export function StyleBuilder({ saved, kind = "site", who = "admin", own = false }: { saved: SiteStyles; kind?: StyleKind; who?: string; own?: boolean }) {
   const { tokens: TOKENS, scopes: SCOPES } = scheme(kind);
-  const PAGES = kind === "dash" ? DASH_PAGES : SITE_PAGES;
+  const PAGES = kind === "dash" ? WHO_PAGES[who] ?? DASH_PAGES : SITE_PAGES;
   const PROBES = useMemo(() => TOKENS.map(({ id, sel, prop }) => ({ id, sel, prop })), [TOKENS]);
   const noun = kind === "dash" ? "dashboard" : "website";
   const [styles, setStyles] = useState<SiteStyles>(saved);
@@ -108,10 +114,11 @@ export function StyleBuilder({ saved, kind = "site" }: { saved: SiteStyles; kind
         })}
       </details>)}
       <form action={saveStylesAction} className="sb-save">
-        <input type="hidden" name="styles" value={JSON.stringify(styles)} /><input type="hidden" name="kind" value={kind} />
+        <input type="hidden" name="styles" value={JSON.stringify(styles)} /><input type="hidden" name="kind" value={kind} /><input type="hidden" name="who" value={who} />
         <button className="abtn pri" type="submit" disabled={!dirty}>{dirty ? "Save and publish" : "Saved"}</button>
         <button className="abtn" type="button" disabled={!dirty} onClick={() => setStyles(saved)}>Undo changes</button>
         <button className="abtn" type="button" onClick={() => setStyles((s) => ({ ...s, [device]: {} }))} disabled={!changed}>Reset all {device}</button>
+        {kind === "dash" && who !== "admin" && own && <button className="abtn" type="submit" name="reset" value="1" title={`Forget the ${who} dashboard's own styles`}>Use the admin styles</button>}
       </form>
     </div>
     <div className="sb-view" ref={wrap}>

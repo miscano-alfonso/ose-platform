@@ -20,7 +20,7 @@ export async function Shell({ f, groups, counts = {}, root, children }: { f: Fam
   const brand = sch?.brand ?? {};
   const { betaOn, BETA } = await import("@/lib/test-mode"), beta = await betaOn();
   const hex = (v: unknown, d: string) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
-  return <div className="adm" data-theme={theme} data-palette={sch?.is_demo ? "demo" : undefined} style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b") }}><DashStyles />
+  return <div className="adm" data-theme={theme} data-palette={sch?.is_demo ? "demo" : undefined} style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b") }}><DashStyles who={root.startsWith("/student") ? "student" : "parent"} />
     {f.viewer && <form action={familySignOutAction} className="viewbar"><span>Viewing as <b>{f.first} {f.last}</b> ({f.kind}). You see exactly what they see; nothing can be changed or sent from here.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
     <LessonWindow /><NotifyCenter api={`${root}/notify-api`} role={f.kind} /><div className="app">

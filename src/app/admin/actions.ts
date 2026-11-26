@@ -1015,6 +1015,13 @@ export async function saveStylesAction(f: FormData): Promise<void> {
   let raw: unknown = null;
   try { raw = JSON.parse(String(f.get("styles") ?? "")); } catch { /* treated as empty */ }
   const kind = f.get("kind") === "dash" ? "dash" : "site";
+  const who = String(f.get("who") ?? "admin");
+  if (kind === "dash" && ["teacher", "parent", "student"].includes(who)) {   // 26 Nov: a dashboard's own styles
+    const { saveDashStyles } = await import("@/lib/site-content");
+    await saveDashStyles(me.id, f.get("reset") === "1" ? null : cleanStyles(raw, "dash"), who as "teacher" | "parent" | "student");
+    revalidatePath("/", "layout");
+    redirect(`/admin/styles?tab=dash&who=${who}&ok=${encodeURIComponent(f.get("reset") === "1" ? `The ${who} dashboard uses the admin styles again.` : `Saved. The ${who} dashboard uses the new styles now.`)}`);
+  }
   await saveStyles(me.id, cleanStyles(raw, kind), kind);
   revalidatePath("/", "layout");
   redirect(`/admin/styles?${kind === "dash" ? "tab=dash&" : ""}ok=${encodeURIComponent(kind === "dash" ? "Saved. The dashboards use the new styles now." : "Saved. The website uses the new sizes now.")}`);

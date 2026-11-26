@@ -105,6 +105,25 @@ export async function getStyles(kind: StyleKind = "site"): Promise<SiteStyles> {
     return cleanStyles(rows[0] ? JSON.parse(rows[0].value) : null, kind);
   } catch { return { desktop: {}, phone: {} }; }
 }
+/** 26 Nov: each dashboard can have its own styles: "admin" is the shared set (dash_styles); teacher, parent and student
+ *  use their own when one is saved, otherwise the admin's. */
+export type DashWho = "admin" | "teacher" | "parent" | "student";
+const dashKey = (who: DashWho) => who === "admin" ? STYLE_KEY.dash : `${STYLE_KEY.dash}_${who}`;   // keys are a-z and _ only
+export async function getDashStyles(who: DashWho): Promise<SiteStyles & { own?: boolean }> {
+  if (who !== "admin") {
+    const rows = await withSchool((q) => q<{ value: string }>(`select value from site_content where key = $1`, [dashKey(who)])).catch(() => []);
+    if (rows[0]) { try { return { ...cleanStyles(JSON.parse(rows[0].value), "dash"), own: true }; } catch { /* fall back */ } }
+  }
+  return getStyles("dash");
+}
+export async function saveDashStyles(actorId: string, s: SiteStyles | null, who: DashWho) {
+  if (who === "admin") return saveStyles(actorId, s ?? { desktop: {}, phone: {} }, "dash");
+  await withSchool(async (q) => {
+    if (!s) await q(`delete from site_content where key = $1`, [dashKey(who)]);   // back to the admin's
+    else await q(`insert into site_content (school_id, key, value, updated_by) values (current_school(), $3, $1, $2) on conflict (school_id, key) do update set value = excluded.value, updated_at = now(), updated_by = excluded.updated_by`, [JSON.stringify(s), actorId, dashKey(who)]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'update', 'dashboard_styles', $2)`, [actorId, JSON.stringify({ who, reset: !s })]);
+  });
+}
 export async function saveStyles(actorId: string, s: SiteStyles, kind: StyleKind = "site") {
   await withSchool(async (q) => {
     if (isEmptyStyles(s)) await q(`delete from site_content where key = $1`, [STYLE_KEY[kind]]);
