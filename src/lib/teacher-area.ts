@@ -319,12 +319,13 @@ export async function saveTeacherContacts(list: { user_id: string; label: string
   await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), 'teacher_contacts', $1)
     on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [JSON.stringify(clean)]));
 }
-export async function teacherEmails(userId: string, limit = 60): Promise<TeacherEmail[]> {
+export async function teacherEmails(userId: string, limit = 60, threads: string[] | null = null): Promise<TeacherEmail[]> {
   return withSchool((q) => q<TeacherEmail>(`
     select m.id, m.thread_id, m.subject, coalesce(m.body, m.snippet) as body, m.received_at::text as at, m.replied_at::text, m.reply_body, m.reply_from::text, m.gmail_id like 'local:%' as local, coalesce((select string_agg(x.name, ' & ' order by array_position(m.to_users, x.id)) from users x where x.id = any(m.to_users)), tu.name) as to_name, null::text as to_label, m.links,
       coalesce((select json_agg(json_build_object('id', f.id, 'name', f.name, 'size', f.size) order by f.created_at) from inbox_attachments f where f.message_id = m.id), '[]'::json) as files
     from inbox_messages m left join users tu on tu.id = m.to_user where m.kind = 'staff' and lower(m.from_email::text) = (select lower(email::text) from users where id = $1)
-    order by greatest(m.received_at, coalesce(m.replied_at, m.received_at)) desc limit $2`, [userId, limit])).catch(() => []);
+      and ($3::text[] is null or m.thread_id = any($3::text[]))   -- 26 Nov: just these threads (older ones with unread replies)
+    order by greatest(m.received_at, coalesce(m.replied_at, m.received_at)) desc limit $2`, [userId, limit, threads])).catch(() => []);
 }
 export async function sendTeacherEmail(user: { id: string; name: string; email: string }, subject: string, body: string, thread?: string, to?: string,
   extra: { links?: string[]; files?: File[] } = {}): Promise<string | null> {

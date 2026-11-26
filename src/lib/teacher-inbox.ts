@@ -29,6 +29,14 @@ export async function teacherInbox(userId: string, officeLabel: string, contacts
     withSchool((q) => q<{ key: string; seen_at: string }>(`select key, seen_at::text from teacher_seen where user_id = $1`, [userId])).catch(() => []),
   ]);
   const seenAt = new Map(seen.map((r) => [r.key, r.seen_at]));
+  // 26 Nov: threads with a reply not yet seen but older than the newest 60 emails were left out of the list while the menu
+  // still counted them ("Messages 1" with nothing unread). Those threads are added, using the menu's own rule.
+  const have = new Set(mails.map((e) => e.thread_id));
+  const older = (await withSchool((q) => q<{ t: string }>(`select distinct im.thread_id as t from inbox_messages im
+      where im.kind = 'staff' and lower(im.from_email::text) = (select lower(email::text) from users where id = $1)
+        and im.replied_at > coalesce((select ts.seen_at from teacher_seen ts where ts.user_id = $1 and ts.key = 'school:' || im.thread_id), $2::timestamptz)`,
+    [userId, SEEN_FROM])).catch(() => [])).map((r) => r.t).filter((t) => !have.has(t));
+  if (older.length) mails.push(...await teacherEmails(userId, 200, older));
   const items: InboxItem[] = [];
   for (const t of office) {
     const who = cap(t.office_name || officeLabel);
