@@ -3,10 +3,11 @@ import { redirect } from "next/navigation";
 import { withSchool } from "@/lib/db";
 import { markingSubjects } from "./subjects";
 import { siteText } from "@/lib/site-content";
+import { newPaperJob, afterStripeSync } from "@/lib/past-papers";
 
 const TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"];
 
-/** A past paper marking request: saved as an enquiry (kind "marking") with the paper attached, for the office to mark and invoice. */
+/** A past paper marking request: saved as an enquiry (kind "marking") with the paper attached, plus its order (marking_jobs) for the subject's teacher. */
 export async function sendPaper(form: FormData) {
   const v = (k: string, n = 200) => String(form.get(k) ?? "").trim().slice(0, n);
   const back = (m: string) => redirect(`/other-services/past-paper-marking?error=${encodeURIComponent(m)}`);
@@ -19,7 +20,11 @@ export async function sendPaper(form: FormData) {
   if (!TYPES.includes(file.type)) return back("The paper must be a PDF, Word document or photo (JPG, PNG).");
   if (file.size > 3.5 * 1024 * 1024) return back("The file must be under 3.5 MB. For a bigger file, send it to us by email.");
   const data = Buffer.from(await file.arrayBuffer());
-  await withSchool((q) => q(`insert into enquiries (school_id, kind, name, email, child_name, subject, message, file, file_name, file_type)
-    values (current_school(), 'marking', $1, $2, $3, $4, $5, $6, $7, $8)`, [`${first} ${last}`, email, child || null, subject, message || null, data, file.name.slice(0, 160), file.type]));
+  await withSchool(async (q) => {
+    const [e] = await q<{ id: string }>(`insert into enquiries (school_id, kind, name, email, child_name, subject, message, file, file_name, file_type)
+      values (current_school(), 'marking', $1, $2, $3, $4, $5, $6, $7, $8) returning id`, [`${first} ${last}`, email, child || null, subject, message || null, data, file.name.slice(0, 160), file.type]);
+    await newPaperJob(q, e.id, subject);   // 26 Nov: an order for the subject's teacher once it's paid
+  });
+  await afterStripeSync().catch(() => 0);   // paid before sending: picked up now
   redirect("/other-services/past-paper-marking?sent=1");
 }

@@ -856,8 +856,8 @@ export async function givePointsAction(f: FormData): Promise<void> {
 // ---------- website text ----------
 export async function saveSiteTextAction(f: FormData): Promise<void> {
   const me = await requireStaff();
-  const vals: Record<string, string> = {};
-  for (const k of Object.keys(DEFAULTS)) vals[k] = String(f.get(k) ?? "").replace(/\r\n/g, "\n").slice(0, k === "about_text" ? 4000 : 1000);
+  const vals: Record<string, string> = {};   // 26 Nov: only the boxes on the form (past paper marking moved to Workshops)
+  for (const k of Object.keys(DEFAULTS)) if (f.has(k)) vals[k] = String(f.get(k) ?? "").replace(/\r\n/g, "\n").slice(0, k === "about_text" ? 4000 : 1000);
   await saveSiteText(me.id, vals);
   revalidatePath("/", "layout"); redirect(`/admin/website?ok=${encodeURIComponent("Saved. The website shows the new text now.")}`);
 }

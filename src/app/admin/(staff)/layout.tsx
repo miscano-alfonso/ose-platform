@@ -51,7 +51,9 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     (select count(*)::int from report_entries e join report_cycles cy on cy.id = e.cycle_id join course_groups g on g.id = e.group_id join teachers t on t.id = g.teacher_id
       where t.user_id = $1 and cy.status <> 'published' and e.status in ('todo','draft','returned')) as reports,
     (select count(*)::int from classroom_submissions s join classroom_coursework cw on cw.id = s.coursework_id join course_groups g on g.id = cw.group_id join teachers t on t.id = g.teacher_id
-      where t.user_id = $1 and s.state = 'turned_in' and exists (select 1 from enrolments e where e.group_id = g.id and e.student_id = s.student_id and e.status in ('active', 'pending'))) as marking`, [me.id]));
+      where t.user_id = $1 and s.state = 'turned_in' and exists (select 1 from enrolments e where e.group_id = g.id and e.student_id = s.student_id and e.status in ('active', 'pending')))
+    -- 26 Nov: past papers paid for and not sent back yet
+    + (select count(*)::int from marking_jobs j join teachers t on t.id = j.teacher_id where t.user_id = $1 and j.paid_at is not null and j.returned_at is null) as marking`, [me.id]));
 
   return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles />
     {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>

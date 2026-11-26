@@ -68,7 +68,7 @@
 .adm .editrow td{background:var(--soft)}
 .adm .eform{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
 .adm .fld{display:grid;gap:4px;font-size:14.5px;font-weight:600;color:var(--muted)}
-.adm .fld input,.adm .fld select{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 9px;font:16px "Space Grotesk","Jost",sans-serif;min-width:0}
+.adm .fld input,.adm .fld select,.adm .pp-set input:not([type=checkbox]),.adm .pp-set select{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:7px 9px;font:16px "Space Grotesk","Jost",sans-serif;min-width:0}
 .adm .note{font-size:15px;color:var(--muted)}
 .adm .msg{white-space:pre-wrap;max-width:60ch}
 /* sign-in */
@@ -1403,6 +1403,9 @@
 .adm .mk-who{display:flex;align-items:center;gap:10px;flex-wrap:wrap;min-width:0}.adm .mk-who>span:not(.pill){color:var(--muted);font-size:14px}
 .adm .mk-all{margin:0;padding:0 14px 12px 36px;font-size:14px}.adm .mk-all a{color:var(--ink)}
 @media (max-width:600px){.adm .mk-subs,.adm .mk-all{padding-left:14px}.adm .mk-subs li{flex-wrap:wrap}.adm .mk-piece summary{flex-wrap:wrap;row-gap:6px}.adm .mk-piece summary .t{flex-basis:calc(100% - 30px)}.adm .mk-piece summary .pill{margin-left:24px}}
+.adm .pp-job{padding:4px 16px 16px 40px}.adm .pp-forms{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;align-items:start}
+.adm .pp-f{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:var(--panel);display:grid;gap:8px}.adm .pp-f>summary{padding:0;cursor:pointer}.adm .pp-f>summary::before{content:none}
+@media (max-width:600px){.adm .pp-job{padding:4px 12px 14px}}
 /* Lesson page → Cancel or move this lesson (26 Nov) */
 .adm .cl-card{margin-top:16px;display:grid;gap:12px;scroll-margin-top:70px}.adm .cl-card h3{margin:0 0 4px;font-size:17px}
 .adm .cl-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}

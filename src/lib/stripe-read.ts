@@ -131,6 +131,7 @@ export async function syncStripe(): Promise<{ added: number; error?: string }> {
       await linkByCardOrName(q);
     });
     c.sync = { at: new Date().toISOString(), added, v: 2 }; await kvPut(c);
+    await import("./past-papers").then((m) => m.afterStripeSync()).catch(() => 0);   // 26 Nov: past paper marking paid by Stripe
     return { added };
   } catch (e) { c.sync = { at: new Date().toISOString(), error: (e as Error).message }; await kvPut(c); return { added, error: (e as Error).message }; }
 }
@@ -266,6 +267,7 @@ export async function stripeWebhook(raw: string, sigHeader: string | null): Prom
         [ch.instalment_ids, full ? "refunded" : "part_refunded", full]);
     }
   });
+  await import("./past-papers").then((m) => m.afterStripeSync()).catch(() => 0);   // 26 Nov: past paper marking paid by Stripe
   return { status: 200, body: "ok" };
 }
 

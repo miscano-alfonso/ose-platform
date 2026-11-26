@@ -29,7 +29,7 @@ export default async function Enquiries() {
             <td>{w.booked ? <span className="pill good">Booked</span> : w.emailed ? <span className="pill info">Invited {d(w.emailed)}</span> : <span className="muted">Waiting</span>}</td></tr>)}
         </tbody></table></div></section>; })}
     <section className="card"><h2>Taster lessons</h2><p className="cs">They have their own page.</p><Link className="abtn sm" href="/admin/tasters">Open Tasters</Link></section>
-    <section className="card"><h2>Enquiries</h2><p className="cs">Messages from the contact form, past paper marking requests and workshop bookings. Reply by email, then mark it replied.</p>
+    <section className="card"><h2>Enquiries</h2><p className="cs">Messages from the contact form, past paper marking requests and workshop bookings. Reply by email, then mark it replied. Past papers are handled in <a href="/admin/workshops?tab=papers">Workshops → Past paper marking</a>.</p>
       {enquiries.length === 0 ? <p className="empty">No enquiries.</p> : enquiries.map((e) => <div className="li" key={e.id} style={{ alignItems: "flex-start" }}>
         <span className={`pill ${e.handled_at ? "mute" : "info"}`}>{e.handled_at ? "Replied" : e.kind}</span>
         <div className="t"><b>{e.name}{e.levels.length ? ` · ${e.levels.join(", ")}` : ""} · <a href={`mailto:${e.email}`}>{e.email}</a></b>
