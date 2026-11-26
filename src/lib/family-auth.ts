@@ -83,13 +83,24 @@ export async function viewAsFamily(adminId: string, kind: "p" | "s", id: string)
 }
 
 export async function currentFamily(): Promise<Family | null> {
-  const token = (await cookies()).get(FAMILY_COOKIE)?.value;
+  // 26 Nov: Page styles' preview of the parent/student dashboard (?ose_preview=f:<token>): a 2-hour read-only "Viewing as"
+  // session the admin's styles page made. Only admin viewing sessions count this way, never a family's own sign-in.
+  const pv = (await headers()).get("x-ose-preview") ?? "";
+  const fromUrl = /^f:[A-Za-z0-9_-]{40,60}$/.test(pv) ? pv.slice(2) : "";
+  const token = fromUrl || (await cookies()).get(FAMILY_COOKIE)?.value;
   if (!token || token.length > 100) return null;
-  return (await withSchool((q) => q<Family>(`with s as (update family_sessions set last_seen_at = now() where token_hash = $1 and expires_at > now() returning parent_id, student_id, viewer_user_id)
+  return (await withSchool((q) => q<Family>(`with s as (update family_sessions set last_seen_at = now() where token_hash = $1 and expires_at > now() and ($2 = false or viewer_user_id is not null) returning parent_id, student_id, viewer_user_id)
     select case when s.parent_id is not null then 'parent' else 'student' end as kind, coalesce(s.parent_id, s.student_id) as id, coalesce(p.id, st.parent_id) as "parentId",
       coalesce(p.first_name, st.first_name) as first, coalesce(p.last_name, st.last_name) as last, coalesce(p.email, st.email)::text as email,
       s.viewer_user_id as viewer, u.name as "viewerName"
-    from s left join parents p on p.id = s.parent_id left join students st on st.id = s.student_id left join users u on u.id = s.viewer_user_id`, [sha256(token)])))[0] ?? null;
+    from s left join parents p on p.id = s.parent_id left join students st on st.id = s.student_id left join users u on u.id = s.viewer_user_id`, [sha256(token), !!fromUrl])))[0] ?? null;
+}
+/** 26 Nov: a read-only session for Page styles' preview of a parent's or student's dashboard (2 hours, no cookie). */
+export async function previewFamilyToken(adminId: string, kind: "p" | "s", id: string): Promise<string> {
+  const token = randomBytes(32).toString("base64url");
+  await withSchool((q) => q(`insert into family_sessions (school_id, parent_id, student_id, viewer_user_id, token_hash, expires_at) values (current_school(), $1, $2, $3, $4, now() + interval '2 hours')`,
+    [kind === "p" ? id : null, kind === "s" ? id : null, adminId, sha256(token)]));
+  return token;
 }
 export async function requireParent(): Promise<Family> {
   const f = await currentFamily();

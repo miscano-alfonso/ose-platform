@@ -283,7 +283,8 @@ export type Viewer = Staff & { viewing?: boolean; realName?: string; realEmail?:
 export async function requireViewer(): Promise<Viewer> {
   const me = await requireSignedIn();
   if (me.role !== "school_admin") return me;
-  const v = (await cookies()).get(VIEWAS_COOKIE)?.value ?? "";
+  const pv = (await headers()).get("x-ose-preview") ?? "";   // 26 Nov: Page styles' preview of the teacher dashboard
+  const v = pv.startsWith("t:") ? pv : (await cookies()).get(VIEWAS_COOKIE)?.value ?? "";
   const id = v.startsWith("t:") ? v.slice(2) : "";
   if (!/^[0-9a-f-]{36}$/.test(id)) return me;
   const t = (await withSchool((q) => q<Staff>(`select u.id, u.name, u.email::text, 'teacher' as role from users u join teachers t on t.user_id = u.id

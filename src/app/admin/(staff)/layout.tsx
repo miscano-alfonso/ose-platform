@@ -1,6 +1,6 @@
 import { NotifyCenter } from "../../NotifyCenter";
 import type { Metadata } from "next";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { requireViewer } from "@/lib/auth";
 import { withSchool } from "@/lib/db";
 import { signOutAction, stopViewingAction } from "../actions";
@@ -56,7 +56,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     + (select count(*)::int from marking_jobs j join teachers t on t.id = j.teacher_id where t.user_id = $1 and j.paid_at is not null and j.returned_at is null) as marking`, [me.id]));
 
   return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles who="teacher" />
-    {me.viewing && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
+    {me.viewing && !(await headers()).get("x-ose-preview") && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
       <button className="abtn sm" type="submit">Back to the admin</button></form>}
     <LessonWindow /><NotifyCenter api="/admin/notify-api" role="teacher" /><div className="app">
       <aside className="side">

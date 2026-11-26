@@ -16,7 +16,7 @@ const WHO_PAGES: Record<string, [string, string][]> = {
 };
 const HEAD_IDS = /^(hero_h1|page_h1|sec_h2|card_h3|d_h1|d_h2|d_tile)$/;
 
-export function StyleBuilder({ saved, kind = "site", who = "admin", own = false }: { saved: SiteStyles; kind?: StyleKind; who?: string; own?: boolean }) {
+export function StyleBuilder({ saved, kind = "site", who = "admin", own = false, previewAs = "" }: { saved: SiteStyles; kind?: StyleKind; who?: string; own?: boolean; previewAs?: string }) {
   const { tokens: TOKENS, scopes: SCOPES } = scheme(kind);
   const PAGES = kind === "dash" ? WHO_PAGES[who] ?? DASH_PAGES : SITE_PAGES;
   const PROBES = useMemo(() => TOKENS.map(({ id, sel, prop }) => ({ id, sel, prop })), [TOKENS]);
@@ -123,7 +123,7 @@ export function StyleBuilder({ saved, kind = "site", who = "admin", own = false 
     </div>
     <div className="sb-view" ref={wrap}>
       <div className="sb-frame" style={{ width: w * scale, height: box.h - 30 }}>
-        <iframe ref={frame} title="Website preview" src={page} onLoad={send}
+        <iframe ref={frame} title="Website preview" src={previewAs ? `${page}${page.includes("?") ? "&" : "?"}ose_preview=${encodeURIComponent(previewAs)}` : page} onLoad={send}
           style={{ width: w, height: (box.h - 30) / scale, transform: `scale(${scale})`, transformOrigin: "0 0" }} />
       </div>
       <p className="muted sb-cap">{device === "desktop" ? `Desktop, ${w}px wide${scale < 1 ? ` (shown at ${Math.round(scale * 100)}%)` : ""}` : `Phone, ${w}px wide`}. Links inside the preview work, so you can click through the site.</p>

@@ -43,6 +43,11 @@ export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
   const hdrs = new Headers(req.headers); hdrs.delete("x-ose-site");
   hdrs.set("x-ose-path", path);   // for the admin layout ("not in your plan")
+  // 26 Nov: Page styles previews a teacher/parent/student dashboard as a real person (?ose_preview=t:<id>|p:<id>|s:<id>);
+  // only honoured for a signed-in admin (auth.ts / family-auth.ts), and never taken from the browser's own headers
+  hdrs.delete("x-ose-preview");
+  const pv = req.nextUrl.searchParams.get("ose_preview");
+  if (pv && ((/^t:[0-9a-f-]{36}$/.test(pv) && /^\/admin\/teacher(\/|$)/.test(path)) || (/^f:[A-Za-z0-9_-]{40,60}$/.test(pv) && /^\/(parent|student)(\/|$)/.test(path)))) hdrs.set("x-ose-preview", pv);
   const next = () => NextResponse.next({ request: { headers: hdrs } });
   const key = demoKey(), pass = process.env.SITE_PASSWORD;
   const demo = key ? await demoCookieOk(req.cookies.get("ose_demo")?.value, key) : false;
