@@ -39,7 +39,12 @@ export async function createEntries(actorId: string, cycleId: string): Promise<n
     const r = await q(`insert into report_entries (school_id, cycle_id, student_id, group_id, teacher_id)
       select current_school(), c.id, e.student_id, g.id, g.teacher_id from report_cycles c
       join course_groups g on g.academic_year_id = c.academic_year_id join enrolments e on e.group_id = g.id
-      where c.id = $1 and e.status = 'active' and not e.is_taster on conflict (cycle_id, student_id, group_id) do nothing returning id`, [cycleId]);
+      left join terms t on t.id = c.term_id left join price_plans pp on pp.id = g.price_plan_id left join levels l on l.id = g.level_id
+      where c.id = $1 and e.status = 'active' and not e.is_taster
+        -- 26 Nov (Alfonso): no Terms 5–6 report for a GCSE's exam year (it only has 5 terms)
+        and not (coalesce(t.number, 0) >= 5 and (pp.term_count < t.number
+          or (l.name ilike '%GCSE%' and l.name not ilike 'Pre-%' and pp.year_of_course >= pp.course_years)))
+      on conflict (cycle_id, student_id, group_id) do nothing returning id`, [cycleId]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'entries', 'report_cycle', $2, $3)`,
       [actorId, cycleId, JSON.stringify({ added: r.length })]);
     return r.length;
