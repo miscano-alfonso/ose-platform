@@ -13,6 +13,9 @@ const keep = { path: "/", sameSite: "lax" as const, httpOnly: false, secure: pro
 /** Adds a class to the basket (from a course card or course page); returns how many courses are in it now. */
 export async function addToCart(code: string): Promise<number> {
   if (!/^[\w/-]{1,40}$/.test(code)) return (await cartCodes()).length;
+  // 26 Nov: a trial class can't be booked yet (only a free taster)
+  const { withSchool } = await import("@/lib/db");
+  if ((await withSchool((q) => q<{ trial: boolean }>(`select trial from course_groups where code = $1`, [code])).catch(() => []))[0]?.trial) return (await cartCodes()).length;
   const codes = [...(await cartCodes()).filter((c) => c !== code), code];
   (await cookies()).set(CART_COOKIE, cartValue(codes), keep);
   revalidatePath("/", "layout");

@@ -106,7 +106,7 @@ export async function updateGroupAction(f: FormData) {
   await withSchool(async (q) => {
     if (meet !== undefined) await q(`update course_groups set meet_url = $2 where id = $1`, [id, meet]);
     // 26 Nov: a trial / taster class (everyone in its Classroom is trying it)
-    if (f.has("trial_on_form")) await q(`update course_groups set trial = $2 where id = $1`, [id, f.get("trial") === "1"]);
+    if (f.has("trial_on_form")) await q(`update course_groups set trial = $2, trial_ended_at = case when trial and not $2 then now() when $2 then null else trial_ended_at end where id = $1`, [id, f.get("trial") === "1"]);
     // 26 Nov: the class's Google Classroom: a classroom.google.com link (its /c/<id> part is the course id in base64) or the number
     if (f.has("classroom")) {
       const raw = str(f, "classroom", 300).trim();

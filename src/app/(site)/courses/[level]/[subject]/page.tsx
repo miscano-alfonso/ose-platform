@@ -36,13 +36,13 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
   return (<>
     <section className="s-phead"><div className="wrap cd-head">
       <div><div className="cd-title"><h1>{p.subject}</h1>{st && <span className={`sticky ${st.cls} cd-hlabel`}>{st.text}</span>}</div>
-        <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`}>← Back to courses</Link>{taster && <Link href={taster}>Book a taster</Link>}
-          {g && (g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
+        <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`}>← Back to courses</Link>{taster && !g?.trial && <Link href={taster}>Book a taster</Link>}
+          {g && (g.trial ? <Link className="cd-cart" href={tasterHref(p.level, p.subject)}>Book a free taster</Link> : g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
     </div></section>
     {/* once the title panel scrolls up, a slim band with the title stays under the menu, the roundel sticking on its edge */}
     <div className="cd-sticky"><div className="cd-stitle"><b>{p.subject}</b>{st && <span className={`sticky ${st.cls}`}>{st.text}</span>}</div>
-      <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`} tabIndex={-1}>← Back to courses</Link>{taster && <Link href={taster} tabIndex={-1}>Book a taster</Link>}
-        {g && (g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
+      <div className="cd-hbtns"><Link href={`/courses?level=${encodeURIComponent(p.level)}`} tabIndex={-1}>← Back to courses</Link>{taster && !g?.trial && <Link href={taster} tabIndex={-1}>Book a taster</Link>}
+        {g && (g.trial ? <Link className="cd-cart" href={tasterHref(p.level, p.subject)}>Book a free taster</Link> : g.shows_waitlist || !g.bookable ? <span aria-disabled="true" title="Booking opens in the next update">{g.shows_waitlist ? "Join waiting list" : "Full"}</span> : <AddToCart code={g.code} label={`${p.level} ${p.subject}`} className="cd-cart" />)}</div></div>
     <div className="cd-badge"><div className="wrap">
       {st && <span className={`sticky ${st.cls} cd-rlabel`} aria-hidden="true">{st.text}</span>}
       {site.demo ? <div className="roundel cd-roundel" style={{ ["--c" as string]: p.colour }} aria-hidden="true">

@@ -5,8 +5,8 @@ import { money, DAYS, monthYear } from "@/lib/format";
 
 const LABEL_CLASS: Record<string, string> = { "Few spaces left": "few", "Almost full": "almost", "New Group!": "new", "New Group Launching Soon!": "soon" };
 /** The sticker on a course: "No spaces left" (orange) for a full group (20 Nov), else its label ("Few spaces left"…). */
-export const stickerOf = (g: { is_full?: boolean; label?: string | null; label_text?: string | null } | null | undefined): { text: string; cls: string } | null =>
-  !g ? null : g.is_full ? { text: "No spaces left", cls: "sl-full" } : g.label ? { text: g.label_text ?? g.label, cls: `sl-${LABEL_CLASS[g.label] || "few"}` } : null;
+export const stickerOf = (g: { is_full?: boolean; label?: string | null; label_text?: string | null; trial?: boolean } | null | undefined): { text: string; cls: string } | null =>
+  !g ? null : g.trial ? { text: "Try it free", cls: "sl-new" } : g.is_full ? { text: "No spaces left", cls: "sl-full" } : g.label ? { text: g.label_text ?? g.label, cls: `sl-${LABEL_CLASS[g.label] || "few"}` } : null;
 
 // The subject roundels (files in public/roundels, from the OSE "Roundels" Drive folder; 500px versions from 20 Nov, plus Computing).
 const ROUNDEL: [RegExp, string][] = [
@@ -66,7 +66,8 @@ export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }
       <div className="cbtns">
         {stickerOf(c) && <span className={`sticky ${stickerOf(c)!.cls}`}>{stickerOf(c)!.text}</span>}
         <Link className="btn sm btn-line cread" href={`/courses/${c.page_slug}`}>Read more</Link>
-        {c.shows_waitlist || !c.bookable || mark !== "OH–SO" ? <span className="btn sm btn-line" aria-disabled="true" title="Booking opens in the next update">
+        {c.trial ? <Link className="btn sm btn-brand" href={`/taster?level=${encodeURIComponent(c.level)}&subject=${encodeURIComponent(c.subject)}`}>Book a free taster</Link>
+          : c.shows_waitlist || !c.bookable || mark !== "OH–SO" ? <span className="btn sm btn-line" aria-disabled="true" title="Booking opens in the next update">
           {c.shows_waitlist ? "Join waiting list" : c.is_full ? "Full" : "Add to cart"}
         </span> : <AddToCart code={c.code} label={`${c.level} ${c.subject}`} />}
       </div>

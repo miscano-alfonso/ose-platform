@@ -30,6 +30,10 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "child", "class", "book_link", "school"],
     subject: "How did {{child}}’s taster go?",
     body: "Dear {{parent}},\n\nThank you for bringing {{child}} to the {{class}} taster lesson. We hope they enjoyed it.\n\nIf you’d like {{child}} to join the class, you can book a place here: {{book_link}}\n\nPlaces are limited, so do get in touch if you have any questions.\n\n{{school}}" },
+  { key: "trial_opened", name: "Trial course opens: tell the taster families", when: "When a trial class is opened for booking (Classes → untick Trial), to each family whose child had a taster in it and isn’t booked on it.", timing: null, to_parent: true, to_student: false,
+    fields: ["parent", "child", "class", "book_link", "school"],
+    subject: "{{class}} is now open for booking",
+    body: "Dear {{parent}},\n\nThank you for {{child}} trying {{class}} with us. We’re pleased to say the course is now open, and you can book {{child}}’s place here: {{book_link}}\n\nPlaces are limited, so do get in touch if you have any questions.\n\n{{school}}" },
   { key: "taster_missed", name: "Taster missed: book another date", when: "After a taster lesson the child didn’t join (from Google Meet attendance).", timing: { label: "hours after the lesson ends", unit: "hours", default: 3 }, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "date", "time", "taster_link", "school"],
     subject: "We missed {{child}} at the taster lesson",
@@ -183,6 +187,20 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
       c = cfg("taster_follow_up");
       if (c && t.status === "attended") { const at = Date.parse(t.ends) + (c.minutes ?? 2) * 3600e3;
         if (at < now + horizon) { await deliver(q, "taster_follow_up", c, { ref: t.id, to: who(c), vars, at: at > now + 60e3 ? new Date(at) : undefined }, budget); await q(`update taster_bookings set followed_up_at = coalesce(followed_up_at, now()) where id = $1`, [t.id]); } }
+    }
+
+    // 26 Nov: a trial class opened for booking (in the last 14 days): each taster family whose child isn't booked on it yet
+    c = cfg("trial_opened");
+    if (c) {
+      const rows = await q<{ id: string; class: string; child: string; cemail: string; parent: string; pemail: string }>(`select distinct on (r.id) r.id, l.name || ' ' || sj.name as class,
+          r.child_name as child, r.child_email::text as cemail, r.parent_first_name as parent, r.parent_email::text as pemail
+        from course_groups g join lesson_events e on e.group_id = g.id join taster_bookings b on b.lesson_event_id = e.id join taster_requests r on r.id = b.request_id
+          join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+        where g.trial_ended_at > now() - interval '14 days' and not g.trial and b.status <> 'cancelled'
+          and not exists (select 1 from enrolments x where x.group_id = g.id and x.status in ('pending', 'active') and not x.is_taster
+            and (x.student_id = r.student_id or x.student_id in (select s.id from students s where lower(s.email::text) = lower(r.child_email::text))))`);
+      for (const r of rows) await deliver(q, "trial_opened", c, { ref: r.id, to: [...(c.to_parent ? [{ name: r.parent, email: r.pemail }] : []), ...(c.to_student ? [{ name: r.child.split(" ")[0], email: r.cemail }] : [])],
+        vars: { parent: r.parent, child: r.child.split(" ")[0], class: r.class, book_link: book, school } }, budget);
     }
 
     // waiting list: places open for the families on the list
