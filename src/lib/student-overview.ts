@@ -18,7 +18,7 @@ export type StudentRow = {
 };
 export type Overview = { term: { id: string; name: string; starts_on: string; ends_on: string } | null; since: string; rows: StudentRow[];
   totals: { students: number; due: number; handed: number; missing: number; late: number; withMissing: number; lowAtt: number; points: number };
-  classroom: { at: string | null; error: string | null; linked: number; granted: boolean | null; missing: string[] | null; by: string | null; classes?: number; work?: number; submissions?: number; problems?: string[]; unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number }[] } };
+  classroom: { at: string | null; error: string | null; linked: number; granted: boolean | null; missing: string[] | null; by: string | null; classes?: number; work?: number; submissions?: number; problems?: string[]; unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number; link?: string | null }[] } };
 
 /** opts.teacherUserId: only that teacher's classes (their own dashboard). */
 export async function studentOverview(opts: { teacherUserId?: string; termOnly?: boolean } = {}): Promise<Overview> {

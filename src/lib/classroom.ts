@@ -6,7 +6,7 @@ import { googleAccess, googleKv, googleKvSet, classroomGranted, MeetError } from
 // who has accepted their class invitation, the work set in each class, and each student's hand-ins and marks.
 // Parents see this under Assignments; report percentages come from the marks on returned work.
 const API = () => process.env.CLASSROOM_API_URL || "https://classroom.googleapis.com/v1";
-export type ClassroomInfo = { unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number }[]; at?: string; classes?: number; work?: number; submissions?: number; joined?: number; problems?: string[]; error?: string; by?: string };
+export type ClassroomInfo = { unmatched?: { userId: string; name: string; email: string | null; gid: string; code: string; handed?: string[]; set?: number; link?: string | null }[]; at?: string; classes?: number; work?: number; submissions?: number; joined?: number; problems?: string[]; error?: string; by?: string };
 
 type Page<T> = Record<string, T[] | string | undefined> & { nextPageToken?: string };
 async function all<T>(token: string, path: string, key: string): Promise<{ ok: true; items: T[] } | { ok: false; status: number }> {
@@ -89,7 +89,10 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
         const title = new Map(work.items.map((w) => [w.id, (w.title ?? "Untitled").slice(0, 120)]));
         for (const s of still) {
           const handed = subs.items.filter((x) => x.userId === s.userId && (x.state === "TURNED_IN" || x.state === "RETURNED") && title.has(x.courseWorkId)).map((x) => title.get(x.courseWorkId)!);
-          info.unmatched!.push({ userId: s.userId, name: s.profile?.name?.fullName ?? "(no name)", email: s.profile?.emailAddress ?? null, gid: g.id, code: g.code, handed: handed.slice(0, 30), set: work.items.length });
+          // 26 Nov: a link to one of their submissions in Classroom: Classroom shows the student's name there, even when Google
+          // hides it from us
+          const link = subs.items.find((x) => x.userId === s.userId && x.alternateLink)?.alternateLink ?? null;
+          info.unmatched!.push({ userId: s.userId, name: s.profile?.name?.fullName ?? "(no name)", email: s.profile?.emailAddress ?? null, gid: g.id, code: g.code, handed: handed.slice(0, 30), set: work.items.length, link });
         }
       }
       for (const u of uid.keys()) matchedSomewhere.add(u);

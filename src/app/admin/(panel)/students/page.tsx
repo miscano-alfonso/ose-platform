@@ -34,9 +34,9 @@ export default async function Students({ searchParams }: { searchParams: Promise
   const th = (label: string, k: string, cls?: string) => { const on = sort === k; return <th className={cls} aria-sort={on ? (dir === 1 ? "ascending" : "descending") : undefined}>
     <Link scroll={false} className="thsort" href={href({ sort: k, dir: on && dir === 1 ? "desc" : undefined })}>{label}{on ? (dir === 1 ? " ↓" : " ↑") : ""}</Link></th>; };
   // Classroom accounts nobody matched, once each (the same person can be in several classes)
-  type Un = { userId: string; name: string; email: string | null; gids: string[]; codes: string[]; handed: { gid: string; titles: string[]; set: number | null }[] };
+  type Un = { userId: string; name: string; email: string | null; gids: string[]; codes: string[]; handed: { gid: string; titles: string[]; set: number | null; link: string | null }[] };
   const unmatched = [...(o.classroom.unmatched ?? []).reduce((m, u) => { const x = m.get(u.userId) ?? { userId: u.userId, name: u.name, email: u.email, gids: [], codes: [], handed: [] };
-    x.gids.push(u.gid); x.codes.push(u.code); x.handed.push({ gid: u.gid, titles: u.handed ?? [], set: u.set ?? null }); return m.set(u.userId, x); }, new Map<string, Un>()).values()];
+    x.gids.push(u.gid); x.codes.push(u.code); x.handed.push({ gid: u.gid, titles: u.handed ?? [], set: u.set ?? null, link: u.link ?? null }); return m.set(u.userId, x); }, new Map<string, Un>()).values()];
   // parents' emails, for a child using their parent's Google account (this page is admin-only; teachers never see these)
   const parentEmail = unmatched.some((u) => u.email) ? new Map((await withSchool((q) => q<{ id: string; email: string }>(`select s.id, lower(p.email::text) as email from students s join parents p on p.id = s.parent_id where s.id = any($1::uuid[])`,
     [o.rows.map((r) => r.id)])).catch(() => [])).map((x) => [x.id, x.email])) : new Map<string, string>();
@@ -87,7 +87,8 @@ export default async function Students({ searchParams }: { searchParams: Promise
       {unmatched.map((u) => { const guesses = guess(u); const top = guesses[0] && guesses[0].sure ? guesses[0] : null;
         return <form key={u.userId} action={linkClassroomAction} className="st-unm-row"><input type="hidden" name="user" value={u.userId} /><input type="hidden" name="name" value={u.name} /><input type="hidden" name="email" value={u.email ?? ""} />
           <div className="t"><b>{u.name}</b><span className="muted">{u.email ?? "no email shared"} · in {u.gids.map((g, i) => <span key={g} title={u.codes[i]}>{i ? ", " : ""}{className.get(g) ?? u.codes[i]}</span>)}</span>
-            {u.handed.map((h) => <span key={h.gid} className="st-handed"><b>{className.get(h.gid) ?? u.codes[u.gids.indexOf(h.gid)]}</b>: {h.titles.length ? <>handed in {h.titles.length}{h.set ? ` of ${h.set}` : ""} · {h.titles.slice(0, 8).join(" · ")}{h.titles.length > 8 ? " …" : ""}</> : "nothing handed in yet"}</span>)}
+            {u.handed.map((h) => <span key={h.gid} className="st-handed"><b>{className.get(h.gid) ?? u.codes[u.gids.indexOf(h.gid)]}</b>: {h.titles.length ? <>handed in {h.titles.length}{h.set ? ` of ${h.set}` : ""} · {h.titles.slice(0, 8).join(" · ")}{h.titles.length > 8 ? " …" : ""}</> : "nothing handed in yet"}
+              {h.link && <> · <a href={h.link} target="_blank" rel="noreferrer" title="Opens this account’s work in Google Classroom, which shows the student’s name">See who it is in Classroom ↗</a></>}</span>)}
             {guesses[0] && <span className="st-guess">{top ? "Best guess" : "Possible"}: <b>{guesses[0].r.name}</b> · {guesses[0].why}</span>}</div>
           <select name="student" required defaultValue={top?.r.id ?? ""} className="mini" aria-label={`Who is ${u.name}?`}><option value="" disabled>Who is it?</option>
             {guesses.length > 0 && <optgroup label="Best guesses (same classes)">{guesses.map((g) => <option key={g.r.id} value={g.r.id}>{g.r.name} · {g.short}</option>)}</optgroup>}
