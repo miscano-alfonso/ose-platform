@@ -13,6 +13,11 @@ const go = (path: string, ok?: string | null, err?: string | null): never => red
 const VIEWING = "You’re viewing as this family, so nothing can be changed or sent.";
 async function parent(back: string) { try { return await actingParent(); } catch { return go(back, null, VIEWING); } }
 async function student(back: string) { try { return await actingStudent(); } catch { return go(back, null, VIEWING); } }
+/** Beta (26 Nov): pause this action while Beta is on, with a note on the page it came from. */
+async function beta(back: string, why: keyof typeof import("@/lib/test-mode").BETA) {
+  const t = await import("@/lib/test-mode");
+  if (await t.betaOn()) go(back, null, t.BETA[why]);
+}
 
 /** Where a parent was heading when they went to sign in or register (only the taster page so far), kept for an hour. */
 const NEXT_COOKIE = "ose_next";
@@ -53,11 +58,13 @@ export async function cancelAbsenceAction(f: FormData): Promise<void> {
 }
 export async function bookWorkshopAction(f: FormData): Promise<void> {
   const p = await parent("/parent/workshops");
+  await beta("/parent/workshops", "booking");
   const err = await F.bookFreeWorkshop(p.id, str(f, "workshop", 40), str(f, "student", 40));
   go("/parent/workshops", "Booked. The Google Meet invitation goes to your child’s Google account.", err);
 }
 export async function parentReplyAction(f: FormData): Promise<void> {
   const id = str(f, "id", 40), p = await parent(`/parent/messages?t=${id}`);
+  await beta(`/parent/messages?t=${id}`, "teacherMsg");
   const body = str(f, "body", 5000);
   const err = body ? await F.parentReply(p.id, id, body) : "Write a message first.";
   go(`/parent/messages?t=${id}`, "Sent.", err);
@@ -73,6 +80,7 @@ export async function parentStartAction(f: FormData): Promise<void> {
     if (r.error) go("/parent/messages?new=1", null, r.error);
     go(`/parent/messages?o=${r.id}`, "Sent to the office. They’ll reply here.");
   }
+  await beta("/parent/messages?new=1", "teacherMsg");
   const { familyMsgsOn } = await import("@/lib/teacher-area");
   if (!(await familyMsgsOn())) go("/parent/messages?new=1", null, "Messages to teachers are switched off for now. Choose “The office” and they’ll pass it on.");
   if (!subject || !body || !student || !group) go("/parent/messages?new=1", null, "Choose a teacher and write a subject and message.");
@@ -87,12 +95,14 @@ export async function acceptsContactAction(f: FormData): Promise<void> {
 }
 export async function requestContactAction(f: FormData): Promise<void> {
   const p = await parent("/parent/connect");
+  await beta("/parent/connect", "contact");
   const [to_parent, to_student, from_student, group] = str(f, "who", 200).split("|");
   const err = await F.requestContact(p.id, { to_parent, to_student, from_student, group, message: str(f, "message", 300) || null });
   go("/parent/connect", "Request sent. You’ll see their details here if they accept.", err);
 }
 export async function respondContactAction(f: FormData): Promise<void> {
   const p = await parent("/parent/connect");
+  await beta("/parent/connect", "contact");
   const a = str(f, "answer", 10);
   await F.respondContact(p.id, str(f, "id", 40), a === "accept", a === "block");
   go("/parent/connect", a === "accept" ? "Accepted: you can now see each other’s name and email." : "Declined.");
@@ -129,12 +139,14 @@ export async function privacyRequestAction(f: FormData): Promise<void> {
 // ---------- student ----------
 export async function studentPostAction(f: FormData): Promise<void> {
   const chat = str(f, "chat", 40), s = await student(`/student/chat?c=${chat}`);
+  await beta(`/student/chat?c=${chat}`, "chat");
   const body = str(f, "body", 1000), th = threadFields(f);
   const err = body ? await F.studentPost(s.id, chat, body, th) : "Write a message first.";
   redirect(`/student/chat?c=${chat}${th.parent ? `&t=${th.parent}` : ""}${err ? `&err=${encodeURIComponent(err)}` : ""}`);
 }
 export async function startDirectAction(f: FormData): Promise<void> {
   const s = await student("/student/chat");
+  await beta("/student/chat", "chat");
   const r = await F.startDirect(s.id, str(f, "with", 40));
   redirect(r.id ? `/student/chat?c=${r.id}` : `/student/chat?err=${encodeURIComponent(r.error ?? "Couldn’t start that chat.")}`);
 }
@@ -146,17 +158,20 @@ export async function reportMessageAction(f: FormData): Promise<void> {
 }
 export async function requestOneAction(f: FormData): Promise<void> {
   const p = await parent("/parent/book");
+  await beta("/parent/book", "booking");
   const [teacher, at] = str(f, "slot", 80).split("|");
   const err = await F.requestOne(p.id, str(f, "student", 40), str(f, "subject", 40), teacher, at, str(f, "focus", 300) || null);
   go("/parent/book", "Request sent. We’ll confirm the time by email and take payment then.", err);
 }
 export async function parentCancelAction(f: FormData): Promise<void> {
   const p = await parent("/parent/payments");
+  await beta("/parent/payments", "change");
   const err = await F.parentCancel(p.id, str(f, "id", 40));
   go("/parent/payments", "Cancelled with notice. Lessons and payments continue to the end of the notice period. We’ve recorded it with today’s date.", err);
 }
 export async function parentSwapAction(f: FormData): Promise<void> {
   const p = await parent("/parent/payments");
+  await beta("/parent/payments", "change");
   const start = str(f, "start", 8) === "next" ? "next" : "current";
   const err = await F.parentSwap(p.id, str(f, "id", 40), str(f, "to", 40), start);
   go("/parent/payments", start === "next" ? "Swap booked: the new class starts next term." : "Swapped: your child moves now. The new course is charged for its lessons from the start of this term, less what you’d already paid for this term.", err);
@@ -174,6 +189,7 @@ export async function familyOfficeReplyAction(f: FormData): Promise<void> {
 // ---------- 11 Nov: how the family pays each term (Direct Debit, or card when the office allows it) ----------
 export async function startPayMethodAction(f: FormData): Promise<void> {
   const p = await parent("/parent/payments");
+  await beta("/parent/payments", "change");
   const { payAccess, startSetup } = await import("@/lib/stripe-pay");
   if (!(await payAccess(p.email))) go("/parent/payments", null, "Online payments aren’t open yet.");
   const h = await headers();

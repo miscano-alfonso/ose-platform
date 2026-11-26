@@ -105,3 +105,19 @@ export async function setBeta(by: string, beta: boolean): Promise<void> {
       on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [KEY, JSON.stringify({ ...c, beta, betaAt: new Date().toISOString(), betaBy: by } satisfies TestCfg)]);
   });
 }
+
+// ---------- Beta limits (26 Nov): while Beta is on, anything that reaches people outside the beta is paused ----------
+/** True while test mode and Beta are both on. */
+export async function betaOn(): Promise<boolean> {
+  try { const c = await withSchool((q) => cfgQ(q)); return c.on && c.beta === true; } catch { return false; }
+}
+export const BETA = {
+  chat: "Chats are paused during the beta, so nobody outside it gets messages. You can still read them.",
+  teacherMsg: "Messages to teachers are paused during the beta. Please write to the office instead.",
+  familyMsg: "Messages to families are paused during the beta.",
+  contact: "Contacting other families is paused during the beta.",
+  booking: "Booking is paused during the beta. Please email the office and they’ll book it for you.",
+  change: "Course and payment changes are paused during the beta. Please email the office.",
+  strip: "Beta: chats, messages to teachers, bookings and course or payment changes are paused for now. Everything else works, and you can always write to the office.",
+  stripTeacher: "Beta: class chats and messages to families are paused for now. Everything else works.",
+} as const;

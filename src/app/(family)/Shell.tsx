@@ -18,6 +18,7 @@ export async function Shell({ f, groups, counts = {}, root, children }: { f: Fam
   const tv = (await cookies()).get("ose_theme")?.value, theme = tv === "light" || tv === "dark" ? tv : undefined;
   const sch = (await withSchool((q) => q<{ brand: { primary?: string; accent?: string }; name: string; is_demo: boolean }>(`select brand, name, is_demo from schools where id = current_school()`)))[0];
   const brand = sch?.brand ?? {};
+  const { betaOn, BETA } = await import("@/lib/test-mode"), beta = await betaOn();
   const hex = (v: unknown, d: string) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
   return <div className="adm" data-theme={theme} data-palette={sch?.is_demo ? "demo" : undefined} style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b") }}><DashStyles />
     {f.viewer && <form action={familySignOutAction} className="viewbar"><span>Viewing as <b>{f.first} {f.last}</b> ({f.kind}). You see exactly what they see; nothing can be changed or sent from here.</span>
@@ -31,6 +32,6 @@ export async function Shell({ f, groups, counts = {}, root, children }: { f: Fam
         <SideFoot theme={theme} signOut={f.viewer ? undefined : familySignOutAction} preview={!!f.viewer} inline site={[{ href: "/", label: "View the website" }]} />
 
       </aside>
-      <main className="main">{children}</main>
+      <main className="main">{beta && <p className="note beta-strip" role="note">{BETA.strip}</p>}{children}</main>
     </div></div>;
 }

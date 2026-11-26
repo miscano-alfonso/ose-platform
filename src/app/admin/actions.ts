@@ -716,7 +716,8 @@ export async function sendTestEmailAction(f: FormData): Promise<void> {
 export async function replyThreadAction(f: FormData): Promise<void> {
   const me = await requireSignedIn();
   const id = str(f, "id", 40), body = String(f.get("body") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
-  const err = body ? await replyThread(me, id, body, false) : "Write a message first.";
+  const T = await import("@/lib/test-mode"), paused = me.role === "teacher" && await T.betaOn();   // Beta (26 Nov): teachers' messages to families
+  const err = paused ? T.BETA.familyMsg : body ? await replyThread(me, id, body, false) : "Write a message first.";
   revalidatePath("/admin/messages");
   redirect(`/admin/messages/${id}${err ? "?err=" + encodeURIComponent(err) : ""}`);
 }
@@ -730,6 +731,7 @@ export async function startThreadAction(f: FormData): Promise<void> {
   const me = await requireSignedIn();
   const subject = str(f, "subject", 120), body = String(f.get("body") ?? "").replace(/\r\n/g, "\n").trim().slice(0, 5000);
   if (!subject || !body) redirect(`/admin/messages/new?err=${encodeURIComponent("Add a subject and a message.")}`);
+  { const T = await import("@/lib/test-mode"); if (me.role === "teacher" && await T.betaOn()) redirect(`/admin/messages/new?err=${encodeURIComponent(T.BETA.familyMsg)}`); }   // Beta (26 Nov)
   const r = await startThread(me.id, str(f, "student", 40), subject, body);
   redirect(r.id ? `/admin/messages/${r.id}` : `/admin/messages/new?err=${encodeURIComponent(r.error!)}`);
 }
@@ -1153,7 +1155,8 @@ export async function removeMyHoursAction(f: FormData): Promise<void> {
 export async function teacherPostAction(f: FormData): Promise<void> {
   const me = await requireViewer();
   const chat = str(f, "chat", 40), body = str(f, "body", 1000), th = threadFields(f);
-  const err = me.viewing ? "While viewing as a teacher you can read their chats but not post as them." : body ? await teacherPost(me.id, chat, body, th) : "Write a message first.";
+  const T = await import("@/lib/test-mode"), paused = await T.betaOn();   // Beta (26 Nov)
+  const err = me.viewing ? "While viewing as a teacher you can read their chats but not post as them." : paused ? T.BETA.chat : body ? await teacherPost(me.id, chat, body, th) : "Write a message first.";
   redirect(`/admin/teacher/chats?c=${chat}${th.parent ? `&t=${th.parent}` : ""}${err ? `&err=${encodeURIComponent(err)}` : ""}`);
 }
 export async function undoPointsAction(f: FormData): Promise<void> {

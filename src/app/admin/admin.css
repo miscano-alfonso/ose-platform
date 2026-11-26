@@ -1423,3 +1423,5 @@
 .adm .vs-tile b{font-size:30px;font-weight:600}.adm .vs-tile b small{font-size:15px;font-weight:400;color:var(--muted)}.adm .vs-tile>span:not(.k){font-size:14px;color:var(--muted)}
 .adm .vs-bar{display:flex;flex-wrap:wrap;gap:10px;justify-content:space-between;margin-bottom:12px}
 .adm .vs-table td{vertical-align:top}.adm .vs-table td>*{display:block}.adm .vs-table td .pill{display:inline-flex;margin:2px 0}.adm .vs-table td .muted{font-size:13.5px}
+/* Beta (26 Nov): one line at the top of the family and teacher dashboards while Beta is on */
+.adm .beta-strip{margin:0 0 16px;padding:10px 14px;border-radius:10px;background:var(--soft);border:1px solid var(--line);border-left:4px solid var(--brand-accent,#e3cd4b);color:var(--ink);font-size:15px;line-height:1.45}

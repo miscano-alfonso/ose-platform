@@ -59,7 +59,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports, "/admin/teacher/marking": c.marking }} groups={await teacherMenu()} />
         <SideFoot theme={theme} signOut={signOutAction} inline toggle />
       </aside>
-      <main className="main"><TopBar />{children}</main>
+      <main className="main"><TopBar />{await import("@/lib/test-mode").then(async (t) => await t.betaOn() ? <p className="note beta-strip" role="note">{t.BETA.stripTeacher}</p> : null)}{children}</main>
     </div></div>;
 }
 

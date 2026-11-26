@@ -15,6 +15,7 @@ export async function bookTasterAction(form: FormData) {
   const fam = await currentFamily();
   if (fam?.kind !== "parent" || fam.viewer) redirect("/account?next=taster");
   const fail = (m: string) => redirect(`/taster?error=${encodeURIComponent(m)}`);
+  { const t = await import("@/lib/test-mode"); if (await t.betaOn()) fail(t.BETA.booking); }   // Beta (26 Nov)
   const kid = (await parentKids(fam.id)).find((k) => k.id === v("child"));
   if (!kid) fail("Choose which of your children the taster is for.");
   if (!kid!.email || !EMAIL.test(kid!.email)) fail(`Add ${kid!.first}’s Google account email first (in your account, My details): the Classroom invitation goes there.`);
