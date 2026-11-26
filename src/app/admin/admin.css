@@ -1510,3 +1510,8 @@
 .adm .mk-subs .mk-grp.to_mark,.adm .mk-subs .mk-st.to_mark .mk-who b{color:var(--mk-blue)}
 .adm .mk-subs .mk-grp.marked,.adm .mk-subs .mk-st.marked .mk-who b{color:var(--mk-green)}
 .adm .mk-subs .mk-grp.not_in,.adm .mk-subs .mk-st.not_in .mk-who b{color:var(--mk-red)}
+/* 26 Nov: Reports to write: the whole row is the link, tinted on hover */
+.adm a.li.rw-row{color:inherit;text-decoration:none;margin:0 -12px;padding:12px;border-radius:12px;transition:background .12s}
+.adm a.li.rw-row:hover{background:color-mix(in srgb,var(--brand) 8%,var(--hover))}
+.adm a.li.rw-row:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.adm a.li.rw-row .t span{color:var(--muted)}
