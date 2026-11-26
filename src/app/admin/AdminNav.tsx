@@ -12,5 +12,5 @@ export function AdminTabs({ counts, groups }: { counts: Record<string, number>; 
   return <SectionTabs groups={groups} counts={counts} root="/admin" alias={ALIAS} />;
 }
 export function TeacherNav({ counts, groups }: { counts: Record<string, number>; groups: ResolvedGroup[] }) {
-  return <MenuNav id="t-nav" label="Teacher" root="/admin/teacher" groups={groups} counts={counts} />;
+  return <MenuNav id="t-nav" label="Teacher" root="/admin/teacher" groups={groups} counts={counts} stacked />;   // 26 Nov: all sections shown, with headings
 }

@@ -53,8 +53,9 @@ export function SectionTabs({ groups, counts = {}, root, alias = {} }: { groups:
   </div>;
 }
 
-export function MenuNav({ id, label, groups, counts = {}, root, alias = {}, tabbed = false }: {
+export function MenuNav({ id, label, groups, counts = {}, root, alias = {}, tabbed = false, stacked = false }: {
   id: string; label: string; groups: ResolvedGroup[]; counts?: Record<string, number>; root: string; alias?: Record<string, string>; tabbed?: boolean;
+  /** 26 Nov: every section open, one under the other, each after the first with a small heading (the teacher's menu) */ stacked?: boolean;
 }) {
   const path0 = usePathname(), path = alias[path0] ?? path0;
   const [open, setOpen] = useState(false);
@@ -66,7 +67,8 @@ export function MenuNav({ id, label, groups, counts = {}, root, alias = {}, tabb
   return <>
     <button className="abtn side-btn menu-toggle" aria-expanded={open} aria-controls={id} onClick={() => setOpen(!open)}>{open ? "Close menu" : "Menu"}</button>
     <nav id={id} className={`nav${open ? " open" : ""}${tabbed && groups.length > 1 ? " tabbed" : ""}`} aria-label={label}>
-      {groups.length === 1 ? list(groups[0]) : groups.map((g, i) => <div key={i} className="ngrp">
+      {groups.length === 1 ? list(groups[0]) : stacked ? groups.map((g, i) => <div key={i} className="ngrp-st">{i > 0 && <p className="ngrp-t">{g.title}</p>}{list(g)}</div>)
+      : groups.map((g, i) => <div key={i} className="ngrp">
         <button type="button" className="ngrp-h" aria-expanded={section === g.title} onClick={() => setSection(section === g.title ? start?.title ?? "" : g.title)}>{g.title}</button>
         {section === g.title && list(g)}</div>)}
     </nav>

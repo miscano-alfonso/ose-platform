@@ -1521,3 +1521,21 @@
 .adm .ib-batch{list-style:none;margin:0;padding:0;display:grid;gap:6px}
 .adm .ib-batch a{display:grid;gap:2px;padding:10px 12px;border-radius:12px;background:var(--soft);color:inherit;text-decoration:none}
 .adm .ib-batch a:hover{background:var(--hover)}
+.adm .dx-mk .t{display:grid;gap:1px}
+.adm .dx-mk-r{flex:none;margin-left:auto;display:grid;justify-items:end;gap:4px}
+.adm .dx-mk-r .dx-cd{margin-left:0}
+.adm .dx-mk-n{font-size:13px;color:var(--muted);white-space:nowrap}
+/* 26 Nov: the teacher menu's Settings section, under the rest */
+.adm .ngrp-st{display:grid;gap:2px}
+.adm .ngrp-t{margin:12px 0 4px;padding:12px 12px 0;border-top:1px solid var(--line);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+/* 26 Nov: with the menu hidden, a tab slides out from the left edge when the pointer comes close */
+.adm .side-edge{position:fixed;left:0;top:50%;z-index:60;visibility:visible;display:flex;flex-direction:column;align-items:center;gap:6px;width:46px;padding:14px 0;
+  border:0;border-radius:0 14px 14px 0;background:var(--brand);color:#fff;font:600 12px/1 "Space Grotesk","Jost",sans-serif;letter-spacing:.06em;cursor:pointer;
+  box-shadow:0 6px 18px rgba(10,14,40,.28);transform:translate(-100%,-50%);transition:transform .22s cubic-bezier(.2,.8,.2,1)}
+.adm .side-edge span{writing-mode:vertical-rl;transform:rotate(180deg)}
+.adm .side-edge.out,.adm .side-edge:focus-visible{transform:translate(0,-50%)}
+.adm .side-edge:hover{background:var(--brand-accent,#e9f56a);color:var(--brand-accent-ink,#0f1747)}
+.adm .side-edge:focus-visible{outline:2px solid var(--brand-accent,#e9f56a);outline-offset:2px}
+@media (hover:none){.adm .side-edge{transform:translate(-55%,-50%)}.adm .side-edge.out{transform:translate(0,-50%)}}
+@media (prefers-reduced-motion:reduce){.adm .side-edge{transition:none}}
+@media (max-width:820px){.adm .side-edge{display:none}}

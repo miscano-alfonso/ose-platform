@@ -45,7 +45,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
     studentOverview({ teacherUserId: me.id }).catch(() => null),   // 5 Nov: students behind on their Classroom work
     markingQueue(me.id).catch(() => []),   // 6 Nov: handed-in work to mark and return within 7 days
     import("@/lib/teacher-area").then((t) => t.familyMsgsOn()).catch(() => false)]);
-  const ones = await onesP;
+  const [ones, mCounts] = await Promise.all([onesP, import("@/lib/marking").then((m) => m.markingCounts(marking.map((x) => x.cw))).catch(() => new Map<string, { handed: number; total: number }>())]);
   const found = await findSlides(d.week.map((l) => ({ id: l.id, course: l.course_id ?? null, n: l.lesson_no ?? null, termStart: l.term_start ?? null, folder: l.slides_folder ?? null, term: l.term_no ?? null }))).catch(() => new Map());
   const unreadN = inbox.filter((i) => i.unread > 0).length;
   const inboxSorted = [...inbox].sort((a, b) => Number(b.unread > 0) - Number(a.unread > 0));   // unread on top, then newest
@@ -125,9 +125,10 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
       {!so ? <p className="empty">Couldn’t load the Classroom work.</p> : so.classroom.granted !== true ? <p className="empty">Google Classroom isn’t connected to the school site yet, so work can’t be shown.</p>
         : marking.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>All marked</b><span>Nothing handed in is waiting to be returned.</span></div>
         : <><p className="cs" style={{ margin: "0 0 10px" }}>{marking.reduce((a, m) => a + m.toMark, 0)} hand-in{marking.reduce((a, m) => a + m.toMark, 0) === 1 ? "" : "s"} to mark and return in Classroom, each within {TURNAROUND_DAYS} days of its due date.</p>
-          <MoreList className="dx-list" limit={5}>{marking.map((m) => <a key={m.cw} className={`dx-item dx-wk dx-mk ${tone(m.daysLeft) === "ok" ? "info" : tone(m.daysLeft)}`} href={m.link ?? `/admin/teacher/classes/${m.gid}#assignments`} target={m.link ? "_blank" : undefined} rel="noopener">
-            <span className="t"><b>{m.title}</b><span>{m.cls} · {m.toMark} to mark{m.toMark <= 3 ? `: ${m.names.join(", ")}` : ""}</span></span>
-            <span className={`dx-cd ${tone(m.daysLeft)}`}>{countdown(m.daysLeft)}</span></a>)}</MoreList></>}
+          <div className="dx-list dx-scroll">{marking.map((m) => { const c = mCounts.get(m.cw); return <a key={m.cw} className={`dx-item dx-wk dx-mk ${tone(m.daysLeft) === "ok" ? "info" : tone(m.daysLeft)}`} href={m.link ?? `/admin/teacher/classes/${m.gid}#assignments`} target={m.link ? "_blank" : undefined} rel="noopener">
+            {/* 26 Nov: no names; the class, then "3/6 handed in"; the countdown with "2 to mark" under it */}
+            <span className="t"><b>{m.title}</b><span>{m.cls}</span>{c && c.total > 0 && <span>{c.handed}/{c.total} handed in</span>}</span>
+            <span className="dx-mk-r"><span className={`dx-cd ${tone(m.daysLeft)}`}>{countdown(m.daysLeft)}</span><span className="dx-mk-n">{m.toMark} to mark</span></span></a>; })}</div></>}
     </section> },
     { id: "messages", title: "Messages", size: "l", node: <section className="dx-card dx-tall"><header><h2>Messages</h2>{unreadN > 0 && <span className="dx-count">{unreadN}</span>}<NavCountSync href="/admin/teacher/messages" count={unreadN} /><Link className="abtn sm" style={{ marginLeft: "auto" }} href="/admin/teacher/messages?new=1">New message</Link><Link className="dx-more" style={{ marginLeft: 0, whiteSpace: "nowrap" }} href="/admin/teacher/messages" title="All messages">All →</Link></header>
       {inbox.length === 0 ? <div className="dx-clear"><Ico d={IC.check} /><b>No messages yet</b><span>Messages from the office and families show here.</span></div>

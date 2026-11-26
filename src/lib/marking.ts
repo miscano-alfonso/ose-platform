@@ -70,3 +70,14 @@ export async function markingRoster(cwIds: string[]): Promise<RosterRow[]> {
     where c.id = any($1::uuid[])
     order by c.id, case when s.state = 'turned_in' then 0 when s.state = 'returned' then 1 else 2 end, st.first_name, st.last_name`, [cwIds])).catch(() => []);
 }
+
+/** 26 Nov: for My day: how many on the class have handed each piece in (handed in or returned), out of everyone booked. */
+export async function markingCounts(cwIds: string[]): Promise<Map<string, { handed: number; total: number }>> {
+  if (!cwIds.length) return new Map();
+  const rows = await withSchool((q) => q<{ cw: string; handed: number; total: number }>(`select c.id as cw,
+      count(*) filter (where s.state in ('turned_in', 'returned'))::int as handed, count(*)::int as total
+    from classroom_coursework c join enrolments e on e.group_id = c.group_id and e.status in ('active', 'pending') and not e.is_taster
+      left join classroom_submissions s on s.coursework_id = c.id and s.student_id = e.student_id
+    where c.id = any($1::uuid[]) group by c.id`, [cwIds])).catch(() => []);
+  return new Map(rows.map((r) => [r.cw, { handed: r.handed, total: r.total }]));
+}

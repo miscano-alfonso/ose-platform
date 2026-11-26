@@ -73,5 +73,11 @@ export default async function StaffLayout({ children }: { children: React.ReactN
 /** The teacher menu, with Class chats greyed when messaging families is switched off. */
 async function teacherMenu() {
   const [groups, on] = await Promise.all([menuFor("teacher"), import("@/lib/teacher-area").then((t) => t.familyMsgsOn())]);
-  return on ? groups : groups.map((g) => ({ ...g, items: g.items.map((i) => i.href === "/admin/teacher/chats" ? { ...i, off: true } : i) }));
+  const marked = on ? groups : groups.map((g) => ({ ...g, items: g.items.map((i) => i.href === "/admin/teacher/chats" ? { ...i, off: true } : i) }));
+  // 26 Nov (Alfonso): Calendar sync, Google Drive and Notifications sit in a Settings section at the bottom of the menu
+  // (also when the school's saved teacher menu is a single list)
+  if (marked.length !== 1) return marked;
+  const SET = ["/admin/teacher/calendar", "/admin/teacher/drive", "/admin/teacher/notifications"];
+  const settings = marked[0].items.filter((i) => SET.includes(i.href));
+  return settings.length ? [{ ...marked[0], items: marked[0].items.filter((i) => !SET.includes(i.href)) }, { ...marked[0], title: "Settings", items: settings }] : marked;
 }

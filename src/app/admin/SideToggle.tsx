@@ -1,15 +1,34 @@
 "use client";
 import { useEffect, useState } from "react";
 
-// Hide the side menu to give the page more room; remembered on this device. A small button brings it back.
+/** Hides and shows the side menu (remembered in this browser). 26 Nov (Alfonso): with the menu hidden there's no Menu
+ *  button any more; moving the pointer close to the left edge of the window slides a tab out, which opens the menu
+ *  again. On touch screens (no pointer to move) the tab stays half out. */
 export function SideToggle() {
   const [closed, setClosed] = useState(false);
+  const [near, setNear] = useState(false);
   useEffect(() => { try { setClosed(localStorage.getItem("ose-side") === "closed"); } catch { /* private browsing */ } }, []);
   useEffect(() => {
     document.querySelector(".adm .app")?.classList.toggle("side-closed", closed);
     try { localStorage.setItem("ose-side", closed ? "closed" : "open"); } catch { /* */ }
   }, [closed]);
-  return <button type="button" className="side-toggle" onClick={() => setClosed(!closed)} aria-expanded={!closed} aria-label={closed ? "Show the menu" : "Hide the menu"} title={closed ? "Show the menu" : "Hide the menu"}>
-    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
-      {closed ? <path d="M3 5h14M3 10h14M3 15h14" /> : <path d="M12.5 4.5L7 10l5.5 5.5" />}</svg>{closed && <span>Menu</span>}</button>;
+  useEffect(() => {
+    if (!closed) { setNear(false); return; }
+    let t: ReturnType<typeof setTimeout> | undefined;
+    const move = (e: MouseEvent) => {
+      if (e.clientX <= 28) { if (t) clearTimeout(t); setNear(true); }
+      else if (e.clientX > 90) { if (t) clearTimeout(t); t = setTimeout(() => setNear(false), 350); }
+    };
+    const leave = () => { t = setTimeout(() => setNear(false), 350); };
+    window.addEventListener("mousemove", move, { passive: true }); document.addEventListener("mouseleave", leave);
+    return () => { window.removeEventListener("mousemove", move); document.removeEventListener("mouseleave", leave); if (t) clearTimeout(t); };
+  }, [closed]);
+  return <>
+    {!closed && <button type="button" className="side-toggle" onClick={() => setClosed(true)} aria-expanded="true" aria-label="Hide the menu" title="Hide the menu">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M12.5 4.5L7 10l5.5 5.5" /></svg></button>}
+    {closed && <button type="button" className={`side-edge${near ? " out" : ""}`} onClick={() => { setClosed(false); setNear(false); }} onFocus={() => setNear(true)} onBlur={() => setNear(false)}
+      aria-expanded="false" aria-label="Show the menu" title="Show the menu">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" /></svg>
+      <span>Menu</span></button>}
+  </>;
 }
