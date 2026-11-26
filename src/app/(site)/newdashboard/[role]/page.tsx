@@ -15,12 +15,12 @@ export async function generateMetadata({ params }: { params: Promise<{ role: str
   return { title: p?.title ?? "New dashboards", robots: { index: false, follow: false } };
 }
 
-function Shot({ role, name, alt, phone }: { role: Role; name: string; alt: string; phone?: boolean }) {
+function Shot({ role, name, alt }: { role: Role; name: string; alt: string }) {
   const src = (t: string) => `/newdashboard/${role}-${name}-${t}.webp`;
-  const [w, h] = phone ? [780, 1328] : [1600, 1000];
+  const [w, h] = [1600, 1000];
   /* eslint-disable @next/next/no-img-element */
-  return <figure className={phone ? "nd-phone" : "nd-shot"} tabIndex={0} role="button" aria-label={`See larger: ${alt}`}>
-    {!phone && <span className="nd-bar" aria-hidden="true"><i /><i /><i /></span>}
+  return <figure className="nd-shot" tabIndex={0} role="button" aria-label={`See larger: ${alt}`}>
+    <span className="nd-bar" aria-hidden="true"><i /><i /><i /></span>
     <img className="nd-l" src={src("light")} alt={alt} width={w} height={h} loading="lazy" decoding="async" />
     <img className="nd-d" src={src("dark")} alt={alt} width={w} height={h} loading="lazy" decoding="async" />
   </figure>;
@@ -52,7 +52,6 @@ export default async function NewDashboard({ params }: { params: Promise<{ role:
           <h1>{p.title}</h1>
           <p>{p.lead}</p>
         </div>
-        <Shot role={p.role} name="phone" alt={`The ${who} dashboard on a phone`} phone />
       </div>
     </div></section>
     <div className="s-sec nd-body"><div className="wrap">
