@@ -1559,3 +1559,4 @@
 .adm .sf-icon:hover{background:var(--hover)}
 .adm .set-tabs{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:0 0 18px}
 .adm .set-tabs .set-title{margin:0;font-size:28px}
+.adm .st-unm-btns{display:flex;gap:6px;flex-wrap:wrap}

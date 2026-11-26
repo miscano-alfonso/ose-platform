@@ -2,7 +2,7 @@ import { sendLabels, NEEDS } from "@/lib/send";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { familyDetail, cancelPreview, swapOptions, type Cell } from "@/lib/families";
-import { cancelCourseAction, swapCourseAction, familyTermAction, familyCheckAction, viewAsFamilyAction, saveStudentSendAction } from "../../../actions";
+import { cancelCourseAction, waiveNoticeAction, swapCourseAction, familyTermAction, familyCheckAction, viewAsFamilyAction, saveStudentSendAction } from "../../../actions";
 import { money } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -58,7 +58,9 @@ export default async function Family({ params, searchParams }: { params: Promise
         {st.courses.length === 0 ? <tr><td colSpan={f.terms.length + 3} className="muted">No courses this year.</td></tr> : st.courses.map((c) => { const x = P[c.id]; return <tr key={c.id}>
           <td><span className="dot" style={{ background: c.colour }} /> <b>{c.subject}</b> <span className="muted">{c.level} · {c.code}</span>
             {c.status !== "active" && <> <span className="pill mute">{c.status === "cancelled" ? "Cancelled" : c.status === "swapped" ? "Swapped" : c.status}</span></>}
-            {c.notice_given_on && c.status === "active" && <> <span className="pill warn">Notice given {day(c.notice_given_on)}</span></>}
+            {c.notice_given_on && c.status === "active" && <> <span className="pill warn">Notice given {day(c.notice_given_on)}</span>
+              <form action={waiveNoticeAction} style={{ display: "inline" }}><input type="hidden" name="id" value={c.id} /><input type="hidden" name="family" value={f.id} />
+                <button className="abtn sm" type="submit" title="Leaves the class today; the payments still to come aren’t charged">End now, waive the rest of the notice</button></form></>}
             {c.needs_check && <> <span className="pill warn">Needs a check</span></>}
             <br /><span className="muted" style={{ fontSize: 14 }}>joined {day(c.enrolled_on)} · {c.notice_terms ?? 1} term{(c.notice_terms ?? 1) > 1 ? "s’" : "’s"} notice{c.discount ? ` · was ${money(c.list)}` : ""}{c.end_reason ? ` · ${c.end_reason}` : ""}{c.note ? ` · ${c.note}` : ""}</span>
             {x && <details className="edit" style={{ marginTop: 6 }}><summary className="abtn sm">Cancel or swap</summary>

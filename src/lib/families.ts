@@ -133,6 +133,20 @@ export async function cancelCourse(actorId: string, enrolmentId: string, waive: 
   } catch (e) { const m = (e as Error).message; return m.includes("already") ? "Notice was already given for this course." : m.includes("only an active") ? "Only an active course can be cancelled." : "Couldn’t cancel the course."; }
 }
 
+/** 26 Nov: a course already cancelled with notice can be ended now after all (the rest of the notice waived): its
+ *  payments still to come aren't charged and the child leaves the class today, as "Cancel now, waive the notice" does. */
+export async function waiveNotice(actorId: string, enrolmentId: string): Promise<string | null> {
+  try {
+    return await withSchool(async (q) => {
+      const r = await q(`update enrolments set status = 'cancelled', ended_at = now(), last_billed_term_id = null where id = $1 and status = 'active' and notice_given_on is not null returning id`, [enrolmentId]);
+      if (!r.length) return "Only a course with notice given can be ended this way.";
+      await q(`update instalments set status = 'cancelled' where enrolment_id = $1 and status = 'scheduled'`, [enrolmentId]);
+      await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'waive_notice', 'enrolment', $2, '{}'::jsonb)`, [actorId, enrolmentId]);
+      return null;
+    });
+  } catch { return "Couldn’t end the course."; }
+}
+
 export async function swapOptions(enrolmentId: string) {
   return withSchool((q) => q<{ id: string; name: string; slots: string | null; places: number | null }>(`select g.id, l.name || ' ' || sj.name || ' (' || g.code || ')' as name,
       (select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday) from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as slots,

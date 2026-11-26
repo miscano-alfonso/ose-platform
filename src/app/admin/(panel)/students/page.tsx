@@ -1,7 +1,7 @@
 import Link from "next/link";
 import LiveSearch from "../../LiveSearch";
 import { studentOverview, type StudentRow } from "@/lib/student-overview";
-import { readClassroomAction, linkClassroomAction } from "../../actions";
+import { readClassroomAction, linkClassroomAction, removeClassroomAccountAction } from "../../actions";
 import { BusyButton } from "../../BusyButton";
 import { StudentsTabs } from "../../StudentsTabs";
 import { RowLink } from "../../RowLink";
@@ -93,8 +93,10 @@ export default async function Students({ searchParams }: { searchParams: Promise
           <select name="student" required defaultValue={top?.r.id ?? ""} className="mini" aria-label={`Who is ${u.name}?`}><option value="" disabled>Who is it?</option>
             {guesses.length > 0 && <optgroup label="Best guesses (same classes)">{guesses.map((g) => <option key={g.r.id} value={g.r.id}>{g.r.name} · {g.short}</option>)}</optgroup>}
             <optgroup label="Everyone">{o.rows.filter((r) => !guesses.some((g) => g.r.id === r.id)).map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</optgroup></select>
-          <BusyButton busy="Matching… reading Classroom">Match</BusyButton></form>; })}
-      <p className="note" style={{ margin: "10px 0 0" }}>To confirm who an account is: open that class in Google Classroom → Classwork → a piece of work they handed in → <b>Student work</b>. Classroom shows the student’s name there, so the one who handed in the same pieces is this account. Matching remembers that Classroom account for every class, then reads Classroom again. Teachers or other adults in the class can be left.</p></details>}
+          <span className="st-unm-btns"><BusyButton busy="Matching… reading Classroom">Match</BusyButton>
+            <button className="abtn sm" type="submit" formAction={removeClassroomAccountAction} formNoValidate title="Not a student here (e.g. a sibling, a parent or someone who has left): take it off this list">Remove</button></span></form>; })}
+      <p className="note" style={{ margin: "10px 0 0" }}>To confirm who an account is: open that class in Google Classroom → Classwork → a piece of work they handed in → <b>Student work</b>. Classroom shows the student’s name there, so the one who handed in the same pieces is this account. Matching remembers that Classroom account for every class, then reads Classroom again. Teachers or other adults in the class can be left. <b>Remove</b> takes an account off this list (someone who isn’t a student here); it stays in Google Classroom.</p>
+      {!!o.classroom.removedAccounts && <form action={removeClassroomAccountAction} className="muted" style={{ margin: "8px 0 0", fontSize: 14 }}><input type="hidden" name="all" value="1" />{o.classroom.removedAccounts} removed from this list · <button className="lnk" type="submit">Bring them back</button></form>}</details>}
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", margin: "14px 0" }}>
       <LiveSearch placeholder="Search student, parent or class" label="Search students" />
       <div className="segl" role="group" aria-label="Show">{[["all", "All"], ["missing", `Missing work (${t.withMissing})`], ["attendance", `Low attendance (${t.lowAtt})`], ["send", "SEND"], ["points", "Points"]].map(([k, l]) =>

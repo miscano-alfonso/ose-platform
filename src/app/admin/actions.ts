@@ -1252,6 +1252,13 @@ export async function matchJoinAction(f: FormData): Promise<void> {
 }
 
 // ---------- families (the prototype's family drawer, as a page) ----------
+export async function waiveNoticeAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { waiveNotice } = await import("@/lib/families");
+  const err = await waiveNotice(me.id, str(f, "id", 40));
+  revalidatePath("/admin/payments");
+  famBack(str(f, "family", 40), "Ended now and the rest of the notice waived: no more payments.", err);
+}
 const famBack = (id: string, ok?: string | null, err?: string | null) => redirect(`/admin/families/${id}` + (err ? `?err=${encodeURIComponent(err)}` : ok ? `?ok=${encodeURIComponent(ok)}` : ""));
 export async function cancelCourseAction(f: FormData): Promise<void> {
   const me = await requireStaff();
@@ -1470,6 +1477,21 @@ export async function readClassroomAction(f: FormData): Promise<void> {
   const r = await syncClassroom(me.name);
   revalidatePath(back);
   redirect(`${back}?${r.error ? "err=" + encodeURIComponent(`Classroom couldn’t be read: ${r.error}`) : "ok=" + encodeURIComponent(`Classroom read: ${r.work ?? 0} pieces of work, ${r.submissions ?? 0} hand-ins.`)}`);
+}
+/** Students → "Classroom accounts to match" (26 Nov): take an account off the list (someone not at the school, e.g. a sibling
+ *  or a pupil who has left); "Bring them back" (all=1) clears the list of removed accounts. */
+export async function removeClassroomAccountAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const user = str(f, "user", 60), all = f.get("all") === "1";
+  if (!all && !/^[\w-]{1,80}$/.test(user)) redirect("/admin/students");
+  await withSchool(async (q) => {
+    const cur = ((await q<{ value: { ids?: string[] } }>(`select value from meet_kv where key = 'classroom_removed'`))[0]?.value?.ids ?? []);
+    const ids = all ? [] : [...new Set([...cur, user])].slice(-500);
+    await q(`insert into meet_kv (school_id, key, value) values (current_school(), 'classroom_removed', $1) on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [JSON.stringify({ ids })]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'classroom_account_removed', 'classroom', $2)`, [me.id, JSON.stringify({ user: all ? null : user, all, name: str(f, "name", 200) || null })]);
+  });
+  revalidatePath("/admin/students");
+  redirect(`/admin/students?ok=${encodeURIComponent(all ? "Removed accounts are back on the list." : "Removed from the list. Their work isn’t counted for anyone.")}`);
 }
 /** Students → "Classroom accounts to match" (5 Nov): this Classroom account is this student; then Classroom is read again. */
 export async function linkClassroomAction(f: FormData): Promise<void> {
