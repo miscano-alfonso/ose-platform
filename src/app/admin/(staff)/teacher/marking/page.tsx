@@ -27,21 +27,25 @@ function Piece({ m, subs, showClass }: { m: MarkItem; subs: MarkSub[]; showClass
 export default async function Marking({ searchParams }: { searchParams: Promise<{ by?: string; ok?: string; err?: string }> }) {
   const [me, sp] = await Promise.all([requireViewer(), searchParams]);
   const [queue, subs, papers] = await Promise.all([markingQueue(me.id), markingSubmissions(me.id), P.teacherPapers(me.id).catch(() => [] as P.PaperJob[])]);
-  const byClass = sp.by === "class", total = subs.length;
+  const byClass = sp.by === "class", onPapers = sp.by === "papers", total = subs.length;
+  const openPapers = papers.filter((p) => !p.returned_at).length;
   const classes = [...new Map(queue.map((m) => [m.gid, m.cls])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const subsOf = (cw: string) => subs.filter((s) => s.cw === cw);
   return <>
     <div className="top"><div><h1>Marking</h1>
       <div className="sub">{papers.some((p) => !p.returned_at) && `${papers.filter((p) => !p.returned_at).length} past paper${papers.filter((p) => !p.returned_at).length === 1 ? "" : "s"} · `}{total ? `${total} hand-in${total === 1 ? "" : "s"} to mark in ${queue.length} piece${queue.length === 1 ? "" : "s"} of work` : "Nothing waiting"} · mark and return work in Google Classroom within {TURNAROUND_DAYS} days of its due date</div></div>
-      <div className="segl"><Link href="/admin/teacher/marking" aria-current={!byClass ? "true" : undefined}>Each piece of work</Link><Link href="/admin/teacher/marking?by=class" aria-current={byClass ? "true" : undefined}>By class</Link></div></div>
-    {sp.ok && <p className="notice ok" role="status">{sp.ok}</p>}{sp.err && <p className="notice err" role="alert">{sp.err}</p>}
-    {papers.length > 0 && <Papers papers={papers} />}
+      <div className="segl"><Link href="/admin/teacher/marking" aria-current={!byClass && !onPapers ? "true" : undefined}>Each piece of work</Link><Link href="/admin/teacher/marking?by=class" aria-current={byClass ? "true" : undefined}>By class</Link>
+        <Link href="/admin/teacher/marking?by=papers#papers" aria-current={onPapers ? "true" : undefined}>Past papers{openPapers ? ` (${openPapers})` : ""}</Link></div></div>
+    {sp.ok && <p className="note msg" role="status">{sp.ok}</p>}{sp.err && <p className="note msg bad" role="alert">{sp.err}</p>}
+    {/* 26 Nov: past papers bought on the website have their own tab (always there, even when none are waiting) */}
+    {onPapers ? <Papers papers={papers} /> : <>
+    {openPapers > 0 && <p className="note msg" role="status"><b>{openPapers} past paper{openPapers === 1 ? "" : "s"} to mark.</b> <Link href="/admin/teacher/marking?by=papers#papers">Open Past papers →</Link></p>}
     {queue.length === 0 ? <section className="card"><p className="empty">All marked. Nothing handed in is waiting to be returned. Work shows here once students hand it in to Google Classroom (read every 2 hours).</p></section>
     : byClass ? classes.map(([gid, cls]) => { const items = queue.filter((m) => m.gid === gid);
         return <section className="card mk-card" key={gid}><h2>{cls} <span className="muted">· {items.reduce((a, m) => a + m.toMark, 0)} to mark</span></h2>
           {items.map((m) => <Piece key={m.cw} m={m} subs={subsOf(m.cw)} showClass={false} />)}</section>; })
     : <section className="card mk-card">{queue.map((m) => <Piece key={m.cw} m={m} subs={subsOf(m.cw)} showClass />)}</section>}
-    <p className="note">Marked work counts as done once you return it to the student in Classroom. The list updates each time Classroom is read.</p>
+    <p className="note">Marked work counts as done once you return it to the student in Classroom. The list updates each time Classroom is read.</p></>}
   </>;
 }
 
@@ -51,8 +55,9 @@ function Papers({ papers }: { papers: P.PaperJob[] }) {
   const open = papers.filter((p) => !p.returned_at);
   const minDelay = new Date(Date.now() + 60 * 60e3), maxDelay = new Date(Date.now() + 14 * 864e5);
   const local = (d: Date) => new Date(d.toLocaleString("en-US", { timeZone: "Europe/London" })).toLocaleString("sv-SE").slice(0, 16).replace(" ", "T");
-  return <section className="card mk-card" id="papers"><h2>Past papers <span className="muted">· {open.length ? `${open.length} to mark` : "all sent back"}</span></h2>
+  return <section className="card mk-card" id="papers"><h2>Past papers <span className="muted">· {open.length ? `${open.length} to mark` : papers.length ? "all sent back" : "none yet"}</span></h2>
     <p className="cs">Papers parents have paid for on the website. Send each back marked, with feedback in line with the mark scheme and targets for improvement, within {P.TURNAROUND_HOURS} hours of payment. If it’ll take longer, warn of a delay: the parent is emailed the new time.</p>
+    {papers.length === 0 && <p className="empty">No past papers yet. When a parent buys past paper marking on the website for a subject you mark, it shows here with the paper to download, and you’re emailed. You send it back marked from here.</p>}
     {papers.map((p) => { const due = P.backBy(p)!, h = P.hoursLeft(due); const tone = p.returned_at ? "good" : h < 0 ? "bad" : h < 12 || p.delay_until ? "warn" : "info";
       return <details className="mk-piece" key={p.id} id={`p-${p.id}`} open={!p.returned_at && open.length <= 3}>
         <summary><div className="t"><b>{p.subject ?? "Past paper"}{p.child ? ` · ${p.child}` : ""}</b>

@@ -19,26 +19,37 @@ const wd = (d: string) => DAY[((new Date(d + "T12:00:00Z").getUTCDay() + 6) % 7)
 const dm = (d: string) => new Date(d + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" });
 /** A Postgres or ISO timestamp as "26 Nov" (London). */
 const onDay = (s: string) => { const t = Date.parse(s.replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00")); return isNaN(t) ? "" : new Date(t).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" }); };
+/** "Tue 1 Dec · 16:00" (London) from a Postgres or ISO timestamp. */
+const whenOne = (s: string) => { const t = Date.parse(s.replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00")); if (isNaN(t)) return "";
+  const d = new Date(t), o = { timeZone: "Europe/London" } as const;
+  return `${d.toLocaleDateString("en-GB", { ...o, weekday: "short", day: "numeric", month: "short" })} · ${d.toLocaleTimeString("en-GB", { ...o, hour: "2-digit", minute: "2-digit" })}`; };
 const gbp = (p: number) => "£" + (p / 100).toLocaleString("en-GB", { minimumFractionDigits: p % 100 ? 2 : 0, maximumFractionDigits: 2 });
 
 /** My day's modules: the teacher's next lesson with Join up top, reports, then the week (also used by the Solo dashboard). */
 export async function teacherModules(me: { id: string; name: string }): Promise<BoardModule[]> {
-  // 26 Nov: messages the office started with this teacher show in The school too (they were only on the Messages page)
-  const fromOffice = await import("@/lib/office-messages").then((o) => o.myOfficeThreads("teacher", me.id)).catch(() => []);
-  // 26 Nov: the Messages module shows the same one inbox as the Messages page (the office, the school, families), unread first
-  const inbox = await import("@/lib/teacher-inbox").then(async (m) => {
+  // 26 Nov: everything My day needs is looked up at the same time (it used to be eight steps one after another), then the
+  // slides for this week's lessons, which need the week. Google Classroom is re-read in the background (classroom-stream /
+  // lesson-slides), so a teacher never waits for Google.
+  const inboxP = import("@/lib/teacher-inbox").then(async (m) => {   // the same one inbox as the Messages page (the office, the school, families)
     const ta = await import("@/lib/teacher-area");
     const [contacts, office] = await Promise.all([ta.teacherContacts().catch(() => []), ta.officeInfo().catch(() => ({ label: "the office" }))]);
     return (await m.teacherInbox(me.id, office.label, contacts)).items;
   }).catch(() => []);
+  const onesP = import("@/lib/teacher-area").then((t) => t.upcomingOnes(me.id)).catch(() => []);   // started alongside the rest
+  const [fromOffice, inbox, d, mail, chats, given, pclasses, stream, so, marking, familyOn] = await Promise.all([
+    import("@/lib/office-messages").then((o) => o.myOfficeThreads("teacher", me.id)).catch(() => []),   // messages the office started, for The school
+    inboxP, myDay(me.id), teacherEmails(me.id, 8),
+    myChats(me.id).catch(() => []), pointsGiven(me.id).catch(() => []), classesForPoints(me.id, false).catch(() => []),
+    teacherStream(me.id).catch(() => ({ connected: false, linked: 0, items: [] })),
+    studentOverview({ teacherUserId: me.id }).catch(() => null),   // 5 Nov: students behind on their Classroom work
+    markingQueue(me.id).catch(() => []),   // 6 Nov: handed-in work to mark and return within 7 days
+    import("@/lib/teacher-area").then((t) => t.familyMsgsOn()).catch(() => false)]);
+  const ones = await onesP;
+  const found = await findSlides(d.week.map((l) => ({ id: l.id, course: l.course_id ?? null, n: l.lesson_no ?? null, termStart: l.term_start ?? null, folder: l.slides_folder ?? null, term: l.term_no ?? null }))).catch(() => new Map());
   const unreadN = inbox.filter((i) => i.unread > 0).length;
   const inboxSorted = [...inbox].sort((a, b) => Number(b.unread > 0) - Number(a.unread > 0));   // unread on top, then newest
-  const [d, mail, chats, given, pclasses] = await Promise.all([myDay(me.id), teacherEmails(me.id, 8),
-    myChats(me.id).catch(() => []), pointsGiven(me.id).catch(() => []), classesForPoints(me.id, false).catch(() => [])]);
-  const [stream, found] = await Promise.all([teacherStream(me.id).catch(() => ({ connected: false, linked: 0, items: [] })),
-    findSlides(d.week.map((l) => ({ id: l.id, course: l.course_id ?? null, n: l.lesson_no ?? null, termStart: l.term_start ?? null, folder: l.slides_folder ?? null, term: l.term_no ?? null }))).catch(() => new Map())]);
   const top = [...new Map(pclasses.flatMap((c) => c.students.map((st) => [st.id, { name: st.name, pts: st.term_points }] as const))).values()].filter((x) => x.pts > 0).sort((a, b) => b.pts - a.pts).slice(0, 3);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });   // London's date (26 Nov: was UTC's)
   const next = d.week[0];   // 2 Nov: My day only holds lessons that haven’t ended yet, so the first is the next one
   const done = d.reportBars.reduce((a, r) => a + r.done, 0), total = d.reportBars.reduce((a, r) => a + r.total, 0);
   const rpct = total ? Math.round(done / total * 100) : null;
@@ -46,11 +57,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
   // 26 Nov: "Term 2 · Week 4 · Thursday 26 Nov · 13:00" (the day's name, with the live dot, for a lesson today): the term and week of the term the next lesson falls in (weeks count Monday to Sunday)
   const monday = (x: string) => { const t = new Date(x + "T12:00:00Z"); t.setUTCDate(t.getUTCDate() - ((t.getUTCDay() + 6) % 7)); return t.getTime(); };
   const termWeek = next?.term_no && next.term_start ? `Term ${next.term_no} · Week ${Math.floor((monday(next.d) - monday(next.term_start)) / 6048e5) + 1}` : next && d.term?.name ? d.term.name : "";
-  // 5 Nov: students behind on their Classroom work in this teacher's classes (this term)
-  const so = await studentOverview({ teacherUserId: me.id }).catch(() => null);
   const behind = so ? so.rows.filter((r) => r.missing > 0).sort((a, b) => b.missing - a.missing || a.name.localeCompare(b.name)) : [];
-  // 6 Nov: handed-in work to mark and return within 7 days, with a countdown for each piece
-  const marking = await markingQueue(me.id).catch(() => []);
   const urgent = marking.filter((m) => m.daysLeft <= REMIND_DAYS).length;
   const dueDay = (s: string) => new Date(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
   const modules: BoardModule[] = [
@@ -76,13 +83,22 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
         <span>{d.reportsLeft ? `comment${d.reportsLeft === 1 ? "" : "s"} to write${d.reportsDue ? ` · due ${dm(d.reportsDue)}` : ""} →` : "Nothing to write right now →"}</span></Link> },
     { id: "k-attendance", title: "Attendance in my classes", node: <div className="dx-kpi ring c3"><div><span className="k">Attendance in my classes</span><span className="v">{d.attendance == null ? "–" : `${d.attendance}%`}</span><span className="h">this term</span></div><Ring pct={d.attendance} tone={d.attendance == null ? "brand" : d.attendance < 50 ? "bad" : d.attendance < 80 ? "warn" : "good"} /></div> },
     { id: "k-reports", title: "Reports written", node: <div className="dx-kpi ring c3"><div><span className="k">Reports written</span><span className="v">{rpct == null ? "–" : `${rpct}%`}</span><span className="h">{total ? `${done} of ${total}` : "none open"}</span></div><Ring pct={rpct} /></div> },
-    { id: "k-ones", title: "1:1s this week", node: <Link href="/admin/teacher/ones" className="dx-kpi c3"><Ico d={IC.users} /><span className="k">1:1s this week</span><span className="v">{d.onesThisWeek}</span><span className="h">See 1:1s →</span></Link> },
+    // 26 Nov: the coming 1:1s and workshops listed (was a count of this week's 1:1s); same id so saved layouts keep it
+    { id: "k-ones", title: "1:1s & workshops", node: <section className="dx-card dx-tall"><header><h2>1:1s &amp; workshops</h2>{d.onesThisWeek > 0 && <span className="dx-count" title="1:1s this week">{d.onesThisWeek}</span>}<Link className="dx-more" href="/admin/teacher/ones">All →</Link></header>
+      {ones.length === 0 ? <div className="dx-clear"><Ico d={IC.users} /><b>Nothing booked</b><span>Your coming 1:1s and workshops show here.</span></div>
+        : <div className="dx-list dx-scroll">{ones.map((o) => <Link key={o.kind + o.id} className={`dx-item ${o.kind === "workshop" ? "good" : "info"}`} href="/admin/teacher/ones">
+          <span className="t"><span className={`pill ${o.kind === "workshop" ? "good" : "info"}`}>{o.kind === "workshop" ? "Workshop" : "1:1"}</span><b>{o.kind === "one" ? o.title.replace(/^1:1 · /, "") : o.title}</b>
+            <span>{whenOne(o.at)} · {o.minutes} min{o.detail ? ` · ${o.detail}` : ""}{o.kind === "workshop" ? ` · ${o.booked ?? 0}${o.capacity ? `/${o.capacity}` : ""} booked` : ""}</span></span>
+          <span className="go" aria-hidden="true">→</span></Link>)}</div>}
+    </section> },
     { id: "k-pay", title: "My pay this term", node: <Link href="/admin/teacher/pay" className="dx-kpi c3"><Ico d={IC.pound} /><span className="k">My pay this term</span><span className="v">{gbp(d.payThisTerm)}</span><span className="h">{d.term ? `paid ${dm(d.term.pay_date)}` : ""}</span></Link> },
-    { id: "week", title: "This week", node: <section className="dx-card c7 dx-tall"><header><h2>This week</h2><Link className="dx-more" href="/admin/teacher/timetable">Timetable →</Link></header>
-        {d.week.length === 0 ? <p className="empty">No lessons coming up.</p> : <div className="dx-scroll">{d.week.map((l) => <div className="fx-row" key={l.id}>
-          <span className="fx-when">{wd(l.d)} {dm(l.d)}</span>
-          {l.kind === "one" || l.kind === "workshop" ? <div className="t"><b>{l.time} · {l.name}</b><span>{l.kind === "workshop" ? `${l.students} booked · ` : ""}{l.detail}</span></div>
-          : <div className="t"><b>{l.time} · {l.name}</b><span>{l.students} student{l.students === 1 ? "" : "s"}
+    // 26 Nov: today's lessons only (was the whole week); with none left today, when the next one is
+    { id: "week", title: "Today", node: <section className="dx-card c7 dx-tall"><header><h2>Today</h2><span className="dx-sub">{wd(today)} {dm(today)}</span><Link className="dx-more" href="/admin/teacher/timetable">Timetable →</Link></header>
+        {!d.week.some((l) => l.d === today) ? <div className="dx-clear"><Ico d={IC.check} /><b>No more lessons today</b><span>{next ? <>Next: {wd(next.d)} {dm(next.d)} · {next.time.slice(0, 5)} · {next.name}</> : "No lessons coming up."}</span></div>
+        : <div className="dx-scroll">{d.week.filter((l) => l.d === today).map((l) => <div className="fx-row" key={l.id}>
+          <span className="fx-when">{l.time.slice(0, 5)}</span>
+          {l.kind === "one" || l.kind === "workshop" ? <div className="t"><b>{l.name}</b><span>{l.kind === "workshop" ? `${l.students} booked · ` : ""}{l.detail}</span></div>
+          : <div className="t"><b>{l.name}</b><span>{l.students} student{l.students === 1 ? "" : "s"}
             {l.not_in_classroom ? ` · ${l.not_in_classroom} not in Classroom yet` : ""}
             {l.tasters.length ? ` · ${l.tasters.length} taster${l.tasters.length > 1 ? "s" : ""}: ${l.tasters.join(", ")}` : ""}
             {l.absent.length ? ` · away: ${l.absent.join(", ")}` : ""}</span></div>}
@@ -155,8 +171,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
     </section> },
   ];
   // class chats switched off for the school: that module is shown greyed out (26 Nov: Messages stays on; writing to families is off on the Messages page)
-  const { familyMsgsOn } = await import("@/lib/teacher-area");
-  if (await familyMsgsOn()) return modules;
+  if (familyOn) return modules;
   return modules.map((m) => m.id === "chats" ? { ...m, node: <div className="is-off" title="Switched off for now">{m.node}<p className="off-note">Switched off for now</p></div> } : m);
 }
 

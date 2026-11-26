@@ -68,3 +68,26 @@ export async function familyThread(userId: string, id: string, markRead: boolean
   if (markRead) await withSchool((q) => q(`update messages set read_by_teacher_at = now() where thread_id = $1 and sender = 'parent' and read_by_teacher_at is null`, [id])).catch(() => {});
   return t;
 }
+
+/** 26 Nov: "Mark as unread": the conversation's latest message from the other side counts as unread again. */
+export async function markUnread(userId: string, kind: InboxKind, id: string): Promise<boolean> {
+  return withSchool(async (q) => {
+    if (kind === "office") {
+      if (!/^[0-9a-f-]{36}$/.test(id)) return false;
+      return (await q(`update office_messages set read_at = null where id = (select m.id from office_messages m join office_threads th on th.id = m.thread_id join teachers t on t.id = th.teacher_id
+        where m.thread_id = $1 and t.user_id = $2 and th.to_kind = 'teacher' and m.sender = 'office' order by m.created_at desc limit 1) returning id`, [id, userId])).length > 0;
+    }
+    if (kind === "family") {
+      if (!/^[0-9a-f-]{36}$/.test(id)) return false;
+      return (await q(`update messages set read_by_teacher_at = null where id = (select m.id from messages m join message_threads th on th.id = m.thread_id join teachers t on t.id = th.teacher_id
+        where m.thread_id = $1 and t.user_id = $2 and m.sender = 'parent' order by m.created_at desc limit 1) returning id`, [id, userId])).length > 0;
+    }
+    // the school's replies to this teacher's emails: seen up to just before the latest reply
+    const [r] = await q<{ at: string | null }>(`select max(im.replied_at)::text as at from inbox_messages im
+      where im.kind = 'staff' and im.thread_id = $1 and lower(im.from_email::text) = (select lower(email::text) from users where id = $2)`, [id, userId]);
+    if (!r?.at) return false;
+    await q(`insert into teacher_seen (school_id, user_id, key, seen_at) values (current_school(), $1, $2, $3::timestamptz - interval '1 second')
+      on conflict (user_id, key) do update set seen_at = excluded.seen_at`, [userId, "school:" + id, r.at]);
+    return true;
+  }).catch(() => false);
+}

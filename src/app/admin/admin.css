@@ -1480,3 +1480,19 @@
   .adm .ib{grid-template-columns:1fr;height:auto}.adm .ib-list{border-right:0}.adm .ib-conv{min-height:70vh}
   .adm .ib.has-sel .ib-list{display:none}.adm .ib:not(.has-sel) .ib-conv{display:none}.adm .ib-back{display:inline-flex}
   .adm .ib-b{max-width:88%}}
+/* 26 Nov: loading screen while a dashboard page is put together (loading.tsx) */
+.adm .ld{display:grid;gap:14px;padding-top:6px;animation:ld-in .2s .15s both}
+.adm .ld-h,.adm .ld-s,.adm .ld-c{border-radius:14px;background:linear-gradient(90deg,var(--soft) 0%,var(--line) 50%,var(--soft) 100%);background-size:200% 100%;animation:ld-sh 1.2s linear infinite}
+.adm .ld-h{height:34px;width:min(320px,60%)}.adm .ld-s{height:16px;width:min(520px,80%);border-radius:8px}
+.adm .ld-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px;margin-top:8px}
+.adm .ld-c{height:180px;border-radius:22px}.adm .ld-c.big{grid-column:1/-1;height:260px}
+@keyframes ld-sh{from{background-position:200% 0}to{background-position:-200% 0}}
+@keyframes ld-in{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.adm .ld-h,.adm .ld-s,.adm .ld-c{animation:none}}
+/* 26 Nov: Mark as unread (on the open conversation, and on a read row when hovered) */
+.adm .ib-row{position:relative}
+.adm .ib-mu{position:absolute;right:12px;bottom:10px;opacity:0;transition:opacity .15s}
+.adm .ib-row:hover .ib-mu,.adm .ib-mu:focus-within{opacity:1}
+@media (hover:none){.adm .ib-mu{display:none}}
+.adm .ib-mu .abtn,.adm .ib-mu-h .abtn{display:inline-flex;align-items:center;gap:6px}
+.adm .ib-dot{width:8px;height:8px;border-radius:50%;background:var(--pop,#e9f56a);box-shadow:0 0 0 1px rgba(0,0,0,.25)}

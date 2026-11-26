@@ -55,21 +55,27 @@ export async function teacherStream(userId: string): Promise<{ connected: boolea
   if (!courses.length) return { connected: true, linked: 0, items: [] };
   const keys = courses.map((c) => `stream2:${c.course.replace(/[^a-z0-9_-]/gi, "").toLowerCase()}`);
   const cached = new Map((await withSchool((q) => q<{ key: string; value: { at: number; items: Omit<StreamItem, "course" | "colour">[] } }>(`select key, value from meet_kv where key = any($1::text[])`, [keys])).catch(() => [])).map((r) => [r.key, r.value]));
-  let token: string | null = null, connected = true;
-  const items: StreamItem[] = [];
-  for (const [i, c] of courses.entries()) {
-    let got = cached.get(keys[i]);
-    if (!got || Date.now() - got.at > FRESH) {
-      if (token === null && connected) { try { token = await googleAccess("rec"); } catch { connected = false; } }
-      if (token) {
-        const fresh = await fetchCourse(token, c.course);
-        got = { at: Date.now(), items: fresh };
-        await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2)
-          on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [keys[i], JSON.stringify(got)])).catch(() => null);
-      }
-    }
-    for (const it of got?.items ?? []) items.push({ ...it, course: c.name, colour: c.colour });
+  // 26 Nov: courses never read are read now (all at once); courses read more than 10 minutes ago show what was read and
+  // are re-read in the background after the page is sent, so My day never waits for Google.
+  let connected = true;
+  const refresh = async (token: string, idx: number[]) => Promise.all(idx.map(async (i) => {
+    const got = { at: Date.now(), items: await fetchCourse(token, courses[i].course) };
+    await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2)
+      on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [keys[i], JSON.stringify(got)])).catch(() => null);
+    cached.set(keys[i], got);
+  }));
+  const missing = courses.map((_, i) => i).filter((i) => !cached.get(keys[i]));
+  const stale = courses.map((_, i) => i).filter((i) => { const g = cached.get(keys[i]); return !!g && Date.now() - g.at > FRESH; });
+  if (missing.length) {
+    const token = await googleAccess("rec").catch(() => null);
+    if (token) await refresh(token, missing); else connected = false;
   }
+  if (stale.length) {
+    const { inBackground } = await import("./background");
+    await inBackground(`stream:${stale.map((i) => keys[i]).join(",")}`, async () => { const t = await googleAccess("rec").catch(() => null); if (t) await refresh(t, stale); });
+  }
+  const items: StreamItem[] = [];
+  for (const [i, c] of courses.entries()) for (const it of cached.get(keys[i])?.items ?? []) items.push({ ...it, course: c.name, colour: c.colour });
   items.sort((a, b) => (a.at < b.at ? 1 : -1));
   return { connected: connected || items.length > 0, linked: courses.length, items: items.slice(0, 20) };
 }

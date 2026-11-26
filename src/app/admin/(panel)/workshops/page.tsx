@@ -24,7 +24,7 @@ export default async function Workshops({ searchParams }: { searchParams: Promis
   if (papers) return <>
     <div className="top"><div><h1>Workshops</h1><div className="sub">Past papers sent from the website’s Workshops page: paid papers go to the subject’s teacher, who has {P.TURNAROUND_HOURS} hours to send them back marked.</div></div></div>
     {tabs}
-    {sp.ok && <p className="notice ok" role="status">{sp.ok}</p>}{sp.err && <p className="notice err" role="alert">{sp.err}</p>}
+    {sp.ok && <p className="note msg" role="status">{sp.ok}</p>}{sp.err && <p className="note msg bad" role="alert">{sp.err}</p>}
     <PaperList jobs={jobs} />
     <PaperSettings />
   </>;

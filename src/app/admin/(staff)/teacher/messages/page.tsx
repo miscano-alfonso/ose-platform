@@ -5,6 +5,7 @@ import { teacherEmailAction } from "../email/actions";
 import { teacherOfficeReplyAction, replyThreadAction } from "../../../actions";
 import { myOfficeThread } from "@/lib/office-messages";
 import { teacherInbox, markSchoolSeen, familyThread, type InboxItem } from "@/lib/teacher-inbox";
+import { markUnreadAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 const when = (s: string) => new Date(s).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
@@ -44,9 +45,13 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
   const familyOff = !canMsg ? FAMILY_MSGS_OFF : paused ? "Messages to families are paused during the beta." : null;
   const back = <Link className="abtn sm ib-back" href={`/admin/teacher/messages${f !== "all" ? `?f=${f}` : ""}`}>← All messages</Link>;
 
-  const head = (it: { initials: string; kind: string }, title: string, sub: string, tag: string) => <div className="ib-ch">
+  // 26 Nov: "Mark as unread" (a small form, so it works without scripts)
+  const unreadBtn = (kind: InboxItem["kind"], id: string, cls: string, label: string) => me.viewing ? null : <form action={markUnreadAction} className={cls}>
+    <input type="hidden" name="kind" value={kind} /><input type="hidden" name="id" value={id} /><input type="hidden" name="f" value={f} />
+    <button type="submit" className="abtn sm" title="Mark as unread"><span aria-hidden="true" className="ib-dot" />{label}</button></form>;
+  const head = (it: { initials: string; kind: string }, title: string, sub: string, tag: string, mu?: [InboxItem["kind"], string]) => <div className="ib-ch">
     <span className={`ib-av ${it.kind === "family" ? "fam" : "sch"}`} aria-hidden="true">{it.initials}</span>
-    <div className="t"><h2>{title}</h2><span className="muted">{sub}</span></div><span className={`ib-tag ${it.kind === "family" ? "fam" : "sch"}`}>{tag}</span></div>;
+    <div className="t"><h2>{title}</h2><span className="muted">{sub}</span></div>{mu && unreadBtn(mu[0], mu[1], "ib-mu-h", "Mark as unread")}<span className={`ib-tag ${it.kind === "family" ? "fam" : "sch"}`}>{tag}</span></div>;
   const bubble = (key: string, mine: boolean, who: string, at: string, body: React.ReactNode, extra?: React.ReactNode, id?: string) =>
     <div key={key} id={id} className={`ib-b ${mine ? "me" : "them"}`}><div className="ib-body">{body}</div>{extra}<small>{who} · {when(at)}</small></div>;
   const itemFor = (kind: InboxItem["kind"], id: string) => items.find((i) => i.kind === kind && i.id === id);
@@ -55,19 +60,19 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
   let pane: React.ReactNode = <div className="ib-empty"><b>{items.length ? "Choose a conversation" : "No messages yet"}</b><span>{items.length ? "Pick one on the left to read it and reply." : "Messages from the school and from families show here."}</span>
     <Link className="abtn pri" href="/admin/teacher/messages?new=1">New message</Link></div>;
   if (ot) { const it = itemFor("office", ot.th.id); pane = <>
-    {head({ initials: it?.initials ?? "O", kind: "office" }, ot.th.subject, `${it?.who ?? office.label} · the office${ot.th.status === "closed" ? " · closed" : ""}`, "School")}
+    {head({ initials: it?.initials ?? "O", kind: "office" }, ot.th.subject, `${it?.who ?? office.label} · the office${ot.th.status === "closed" ? " · closed" : ""}`, "School", ["office", ot.th.id])}
     <div className="ib-msgs">{ot.msgs.map((m) => bubble(m.id, m.sender !== "office", m.who, m.at, m.body))}</div>
     {ot.th.status === "open" ? <form action={teacherOfficeReplyAction} className="ib-reply"><input type="hidden" name="id" value={ot.th.id} />
       <textarea name="body" required rows={3} maxLength={5000} placeholder="Write a reply…" aria-label="Reply" /><button className="abtn pri" type="submit" disabled={!!me.viewing}>Send</button></form>
       : <p className="note">This conversation is closed.</p>}{off}</>; }
   else if (ft) { const it = itemFor("family", ft.th.id); pane = <>
-    {head({ initials: it?.initials ?? "P", kind: "family" }, ft.th.subject, `${ft.th.parent} · about ${ft.th.student}${ft.th.status === "closed" ? " · closed" : ""}`, "Family")}
+    {head({ initials: it?.initials ?? "P", kind: "family" }, ft.th.subject, `${ft.th.parent} · about ${ft.th.student}${ft.th.status === "closed" ? " · closed" : ""}`, "Family", ["family", ft.th.id])}
     <div className="ib-msgs">{ft.msgs.map((m) => bubble(m.id, m.sender === "teacher", m.sender === "teacher" ? "You" : m.who, m.created_at, m.body))}</div>
     {familyOff ? <p className="note">{familyOff}</p> : ft.th.status === "closed" ? <p className="note">This conversation is closed.</p>
       : <form action={replyThreadAction} className="ib-reply"><input type="hidden" name="id" value={ft.th.id} /><input type="hidden" name="back" value="teacher" />
         <textarea name="body" required rows={3} maxLength={5000} placeholder="Write a reply…" aria-label="Reply" /><button className="abtn pri" type="submit" disabled={!!me.viewing}>Send</button></form>}{off}</>; }
   else if (school.length) { const last = school[school.length - 1], it = itemFor("school", sp.school!); pane = <>
-    {head({ initials: it?.initials ?? "S", kind: "school" }, last.subject || "(no subject)", `${it?.who ?? office.label} · the school`, "School")}
+    {head({ initials: it?.initials ?? "S", kind: "school" }, last.subject || "(no subject)", `${it?.who ?? office.label} · the school`, "School", school.some((e) => e.replied_at) ? ["school", sp.school!] : undefined)}
     <div className="ib-msgs">{school.map((e) => <div key={e.id} id={`e-${e.id}`} className="ib-pair">
       {bubble(e.id + "a", true, `You${e.local ? "" : " · from your email"}`, e.at, e.body, (e.files.length > 0 || (e.links?.length ?? 0) > 0) && <div className="tm-att">
         {e.files.map((x) => <a key={x.id} className="abtn sm" href={`/admin/email-file/${x.id}`}>{x.name} · {kb(x.size)}</a>)}
@@ -112,13 +117,14 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
           {l}{k === "unread" && unreadN > 0 && <b className="ib-n">{unreadN}</b>}</Link>)}</div>
         {list.length === 0 ? <p className="empty">{f === "unread" ? "Nothing unread." : "No conversations yet."}</p>
           : <nav className="ib-items" aria-label="Conversations">{list.map((it) => { const k = `${it.kind}:${it.id}`;
-            return <Link key={k} href={href(it, f)} className={`ib-it${it.unread ? " unread" : " read"}${sel === k ? " sel" : ""}`} aria-current={sel === k ? "true" : undefined}>
+            return <div key={k} className="ib-row"><Link href={href(it, f)} className={`ib-it${it.unread ? " unread" : " read"}${sel === k ? " sel" : ""}`} aria-current={sel === k ? "true" : undefined}>
               <span className={`ib-av ${it.kind === "family" ? "fam" : "sch"}`} aria-hidden="true">{it.initials}</span>
               <span className="t"><span className="n"><b>{it.who}</b><span className="d">{stamp(it.at)}</span></span>
                 <span className="s">{it.subject}</span><span className="p">{it.preview}</span>
                 <span className="m"><span className={`ib-tag ${it.kind === "family" ? "fam" : "sch"}`}>{it.kind === "family" ? "Family" : "School"}</span>{it.sub && it.kind === "family" && <span className="muted">{it.sub}</span>}
                   {it.waiting && <span className="pill warn">Waiting for your reply</span>}{it.closed && <span className="pill mute">Closed</span>}</span></span>
-              {it.unread > 0 && <span className="ib-n" aria-label={`${it.unread} unread`}>{it.unread}</span>}</Link>; })}</nav>}
+              {it.unread > 0 && <span className="ib-n" aria-label={`${it.unread} unread`}>{it.unread}</span>}</Link>
+              {!it.unread && !(it.kind === "school" && it.mine && it.preview.startsWith("You:")) && unreadBtn(it.kind, it.id, "ib-mu", "Mark unread")}</div>; })}</nav>}
       </div>
       <section className="ib-conv" aria-label="Conversation">{chosen && back}{pane}</section>
     </div>

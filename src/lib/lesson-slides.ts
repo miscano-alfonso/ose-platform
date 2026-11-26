@@ -79,11 +79,17 @@ async function folderCached(token: () => Promise<string | null>, folder: string)
   const key = `slidesdir:${folder.toLowerCase().replace(/[^a-z0-9_-]/g, "")}`.slice(0, 80);
   const c = (await withSchool((q) => q<{ value: Dir }>(`select value from meet_kv where key = $1`, [key])).catch(() => []))[0]?.value;
   if (c && Date.now() - c.at < FRESH) return c.files;
-  const t = await token(); if (!t) return c?.files ?? [];
-  const files = await folderSlides(t, folder);
-  await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2)
-    on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [key, JSON.stringify({ at: Date.now(), files } satisfies Dir)])).catch(() => null);
-  return files;
+  const read = async (t: string) => { const files = await folderSlides(t, folder);
+    await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2)
+      on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [key, JSON.stringify({ at: Date.now(), files } satisfies Dir)])).catch(() => null);
+    return files; };
+  if (c) {   // 26 Nov: an older copy is shown now and the folder re-read in the background
+    const { inBackground } = await import("./background");
+    await inBackground(key, async () => { const t = await googleAccess("rec").catch(() => null); if (t) await read(t); });
+    return c.files;
+  }
+  const t = await token(); if (!t) return [];
+  return read(t);
 }
 
 /** For each lesson (id, Classroom course, lesson number in its term, term start), the slides found, if any. */
@@ -93,9 +99,11 @@ export async function findSlides(lessons: { id: string; course: string | null; n
   let tok: string | null | undefined;
   const token = async () => (tok === undefined ? (tok = await googleAccess("rec").catch(() => null)) : tok);
   // 1. the class's own slides folder
+  const folders = opts.classroomOnly ? new Map<string, Dir["files"]>() : new Map(await Promise.all([...new Set(lessons.filter((l) => l.folder && l.n).map((l) => l.folder!))]
+    .map(async (fo) => [fo, await folderCached(token, fo).catch(() => [])] as const)));   // 26 Nov: each folder once, all at once
   if (!opts.classroomOnly) for (const l of lessons) {
     if (!l.folder || !l.n) continue;
-    const files = await folderCached(token, l.folder).catch(() => []);
+    const files = folders.get(l.folder) ?? [];
     const re = new RegExp(`lesson\\s*0*${l.n}\\b`, "i"), tre = l.term ? new RegExp(`\\b(t|term)\\s*0*${l.term}\\b`, "i") : null;
     const hits = files.filter((f) => re.test(f.title));
     const pick = (tre && hits.find((f) => tre.test(f.title) || tre.test(f.path))) || hits[0];
@@ -107,18 +115,15 @@ export async function findSlides(lessons: { id: string; course: string | null; n
   const key = (c: string) => `slidesrc:${c.replace(/[^a-z0-9_-]/gi, "").toLowerCase()}`;
   const cached = new Map((await withSchool((q) => q<{ key: string; value: Src }>(`select key, value from meet_kv where key = any($1::text[])`, [courses.map(key)])).catch(() => [])).map((r) => [r.key, r.value]));
   const src = new Map<string, Src>();
-  for (const c of courses) {
-    let s = cached.get(key(c));
-    if (!s || Date.now() - s.at > FRESH) {
-      const t = await token();
-      if (t) {
-        s = await readCourse(t, c);
-        const v = s;
-        await withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2)
-          on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [key(c), JSON.stringify(v)])).catch(() => null);
-      }
-    }
-    if (s) src.set(c, s);
+  // 26 Nov: courses never read are read now (all at once); older copies are used and re-read in the background
+  const save = async (c: string, v: Src) => withSchool((q) => q(`insert into meet_kv (school_id, key, value) values (current_school(), $1, $2)
+    on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [key(c), JSON.stringify(v)])).catch(() => null);
+  const missing = courses.filter((c) => !cached.get(key(c))), stale = courses.filter((c) => { const s = cached.get(key(c)); return !!s && Date.now() - s.at > FRESH; });
+  for (const c of courses) { const s = cached.get(key(c)); if (s) src.set(c, s); }
+  if (missing.length) { const t = await token(); if (t) await Promise.all(missing.map(async (c) => { const s = await readCourse(t, c); src.set(c, s); await save(c, s); })); }
+  if (stale.length) {
+    const { inBackground } = await import("./background");
+    await inBackground(`slidesrc:${stale.join(",")}`, async () => { const t = await googleAccess("rec").catch(() => null); if (t) await Promise.all(stale.map(async (c) => save(c, await readCourse(t, c)))); });
   }
   for (const l of todo) {
     const s = src.get(l.course!); if (!s) continue;

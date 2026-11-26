@@ -503,3 +503,19 @@ export async function setFamilyMsgs(on: boolean) {
     on conflict (school_id, key) do update set value = excluded.value, updated_at = now()`, [JSON.stringify(on)]));
 }
 export const FAMILY_MSGS_OFF = "Messaging families and class chats are switched off for now. You can still message the school.";
+
+/** 26 Nov: the teacher's coming 1:1s and workshops (next 60 days), soonest first, for My day's "1:1s & workshops" box. */
+export type UpcomingOne = { id: string; kind: "one" | "workshop"; at: string; minutes: number; title: string; detail: string | null; booked: number | null; capacity: number | null };
+export async function upcomingOnes(userId: string, limit = 12): Promise<UpcomingOne[]> {
+  return withSchool((q) => q<UpcomingOne>(`
+    select * from (
+      select b.id, 'one' as kind, b.starts_at::text as at, b.minutes, '1:1 · ' || b.student_name as title,
+        concat_ws(' · ', nullif(trim(coalesce(l.name, '') || ' ' || coalesce(sj.name, '')), ''), nullif(b.focus, '')) as detail, null::int as booked, null::int as capacity
+      from tutoring_bookings b left join levels l on l.id = b.level_id left join subjects sj on sj.id = b.subject_id
+      where b.teacher_id = ${ME} and b.status = 'booked' and b.starts_at + make_interval(mins => b.minutes) > now() and b.starts_at < now() + interval '60 days'
+      union all
+      select w.id, 'workshop', w.starts_at::text, w.minutes, w.title, null,
+        (select count(*)::int from workshop_bookings wb where wb.workshop_id = w.id and wb.status <> 'cancelled'), w.capacity
+      from workshops w where w.teacher_id = ${ME} and w.status = 'published' and w.starts_at + make_interval(mins => w.minutes) > now() and w.starts_at < now() + interval '60 days'
+    ) x order by at limit $2`, [userId, limit])).catch(() => []);
+}
