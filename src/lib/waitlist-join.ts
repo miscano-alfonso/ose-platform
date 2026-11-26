@@ -4,7 +4,7 @@ import { withSchool } from "./db";
 // 26 Nov: the "join the waiting list" link in the email after a taster in a trial class. The token is the taster
 // booking's join_token, so the family doesn't need to sign in or fill in a form.
 
-export type JoinInfo = { child: string; parent: string; cls: string; slug: string; status: string; trial: boolean; needed: number; count: number; joined: boolean; place: number | null };
+export type JoinInfo = { entry: string | null; child: string; parent: string; cls: string; slug: string; status: string; trial: boolean; needed: number; count: number; joined: boolean; place: number | null };
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export async function joinInfo(token: string): Promise<JoinInfo | null> {
@@ -13,7 +13,7 @@ export async function joinInfo(token: string): Promise<JoinInfo | null> {
       lower(regexp_replace(l.name, '[^A-Za-z0-9]+', '-', 'g')) || '/' || lower(regexp_replace(sj.name, '[^A-Za-z0-9]+', '-', 'g')) as slug,
       g.status::text, g.trial, g.waitlist_threshold::int as needed,
       (select count(*)::int from waitlist_entries w where w.group_id = g.id and w.enrolled_at is null) as count,
-      w.id is not null as joined,
+      w.id is not null as joined, w.id::text as entry,
       (select count(*)::int from waitlist_entries x where x.group_id = g.id and x.created_at <= w.created_at) as place
     from taster_bookings b join taster_requests r on r.id = b.request_id join lesson_events e on e.id = b.lesson_event_id
       join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
@@ -34,4 +34,30 @@ export async function joinWaitlist(token: string): Promise<boolean> {
         or (lower(w.email::text) = lower(r.parent_email::text) and lower(w.child_name) = lower(r.child_name))))
     on conflict do nothing returning id`, [token]));
   return n.length > 0;
+}
+
+// 27 Nov: the head start is enforced. While a class is in its head start (status priority), only families on its waiting
+// list who were told it's opening can add it to the basket or check out: recognised by the link in their email (which
+// sets cookie ose_wl with their waiting-list entry) or by their account's email being the one on the list.
+export const WL_COOKIE = "ose_wl";
+export function wlIds(raw: string | undefined): string[] {
+  return (raw ?? "").split(".").filter((x) => UUID.test(x)).slice(0, 20);
+}
+
+/** Classes among these codes that are in their head start and that this visitor isn't on the waiting list for. */
+export async function headStartBlocked(codes: string[], ids: string[], email: string | null): Promise<{ code: string; name: string; until: string }[]> {
+  if (!codes.length) return [];
+  return withSchool((q) => q<{ code: string; name: string; until: string }>(`select g.code, l.name || ' ' || sj.name as name, g.priority_until::text as until
+    from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+    where g.code = any($1) and g.status = 'priority' and g.priority_until > now()
+      and not exists (select 1 from waitlist_entries w where w.group_id = g.id and w.emailed_at is not null
+        and (w.id = any($2::uuid[]) or ($3::text is not null and lower(w.email::text) = lower($3))))`, [codes, ids, email]));
+}
+
+/** The "book your place" link in the waiting-list email: which course page to open (null if the entry is unknown). */
+export async function entryCourse(id: string): Promise<string | null> {
+  if (!UUID.test(id)) return null;
+  const r = await withSchool((q) => q<{ slug: string }>(`select lower(regexp_replace(l.name, '[^A-Za-z0-9]+', '-', 'g')) || '/' || lower(regexp_replace(sj.name, '[^A-Za-z0-9]+', '-', 'g')) as slug
+    from waitlist_entries w join course_groups g on g.id = w.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id where w.id = $1::uuid`, [id]));
+  return r[0]?.slug ?? null;
 }

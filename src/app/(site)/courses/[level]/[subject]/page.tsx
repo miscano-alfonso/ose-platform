@@ -4,7 +4,7 @@ import Link from "@/app/(site)/HoverLink";
 import { notFound } from "next/navigation";
 import { getCoursePage } from "@/lib/data";
 import { money, DAYS, monthYear } from "@/lib/format";
-import { roundelSrc, Roundel, stickerOf } from "../../../CourseCard";
+import { roundelSrc, Roundel, stickerOf, fmtHeadStart } from "../../../CourseCard";
 import { siteInfo } from "@/lib/db";
 import { tasterOptions } from "@/lib/tasters-public";
 import { tasterHref } from "@/lib/taster-link";
@@ -56,6 +56,7 @@ export default async function CoursePage({ params }: { params: Promise<{ level: 
         {p.groups.length === 0 ? <p>This course isn’t running at the moment. <Link href="/contact">Get in touch</Link> to hear when it opens.</p> : p.groups.map((c, gi) => <div key={c.code} className="cd-card">
           {p.groups.length > 1 && <h3>{c.year_label.replace("/", "–")}{c.is_next ? ` · starts ${monthYear(c.year_start)}` : ""}</h3>}
           <table className="cd-table"><tbody>
+            {c.head_start && <tr><th>Booking</th><td>Families on the waiting list are booking first. Open to everyone from {fmtHeadStart(c.head_start)}. On the list? Use the link in our email.</td></tr>}
             {c.trial && <tr><th>Starting</th><td>A new course: it starts once {c.needed ?? 5} families sign up. Book a free taster lesson first, then join the waiting list and we’ll email you when it’s going ahead.</td></tr>}
             {c.status === "waitlist" ? <tr><th>Day &amp; time</th><td>Announced when the course opens</td></tr>
               : (c.slots ?? []).map((s, i) => <tr key={i}><th>Day &amp; time{(c.slots?.length ?? 0) > 1 ? ` ${i + 1}` : ""}</th><td>{DAYS[s.d]} – {s.t}</td></tr>)}

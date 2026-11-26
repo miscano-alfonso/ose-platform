@@ -20,7 +20,7 @@ export default async function JoinWaitlist({ searchParams }: { searchParams: Pro
   if (i.joined) return box(<><h1 style={{ marginTop: 0 }}>{i.child} is on the waiting list</h1>
     {i.status === "priority"
       ? <><p>Good news: enough families have signed up, so {course} is going ahead. As you’re on the waiting list, you can book {i.child}’s place before it opens to everyone. We’ve emailed you the details.</p>
-          <p><Link className="btn btn-brand" href={`/courses/${i.slug}`}>Book {i.child}’s place</Link></p></>
+          <p><Link className="btn btn-brand" href={i.entry ? `/waitlist/book?w=${i.entry}` : `/courses/${i.slug}`}>Book {i.child}’s place</Link></p></>
       : <><p>Thank you, {i.parent}. Please note that {i.cls} only goes ahead once <b>{i.needed} families</b> have signed up.</p>
           <p>So far <b>{i.count} of {i.needed}</b> families have signed up{left ? `, so we need ${left} more` : ""}.</p>
           <p>We’ll email you as soon as the course is going ahead, and you’ll be able to book {i.child}’s place before anyone else. There’s nothing to pay until then. If you know anyone who might be interested, do tell them.</p></>}</>);

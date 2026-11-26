@@ -235,7 +235,7 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
       const rows = await q<{ id: string; parent: string; child: string; email: string; class: string; hours: number }>(`select w.id, w.parent_name as parent, w.child_name as child, w.email::text,
           l.name || ' ' || sj.name as class, g.priority_hours as hours from waitlist_entries w join course_groups g on g.id = w.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         where w.emailed_at > now() - interval '7 days' and w.enrolled_at is null and g.status = 'priority'`);
-      for (const r of rows) await deliver(q, "waitlist_open", c, { ref: r.id, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent.split(" ")[0], child: r.child.split(" ")[0], class: r.class, hours: String(r.hours), book_link: book, school } }, budget);
+      for (const r of rows) await deliver(q, "waitlist_open", c, { ref: r.id, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent.split(" ")[0], child: r.child.split(" ")[0], class: r.class, hours: String(r.hours), book_link: base ? `${base}/waitlist/book?w=${r.id}` : book, school } }, budget);
     }
 
     // payments: a reminder before each charge, and a note when one fails

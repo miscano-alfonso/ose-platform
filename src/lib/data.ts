@@ -5,7 +5,7 @@ import { withLabelText } from "./course-labels";
 
 export type Course = {
   code: string; status: string; capacity: number | null; places_left: number | null;
-  is_full: boolean; bookable: boolean; trial?: boolean; needed?: number; shows_times: boolean; shows_waitlist: boolean; label: string | null; label_text?: string | null;
+  is_full: boolean; bookable: boolean; trial?: boolean; needed?: number; head_start?: string | null; shows_times: boolean; shows_waitlist: boolean; label: string | null; label_text?: string | null;
   level: string; level_order: number; subject: string; colour: string; total_pence: number;
   lessons_per_week: number; course_years: number; course_total_pence: number; teacher: string | null;
   year_label: string; year_start: string; is_next: boolean; slots: { d: number; t: string }[] | null;
@@ -22,7 +22,7 @@ const TEACHER_SQL = `select u.name, t.slug, t.designation, t.bio, t.qualificatio
 export type Bundle = { min_courses: number; percent_off: string };
 
 const COURSE_SQL = `
-  select g.code, a.status::text, a.capacity, a.places_left, a.is_full, (a.bookable and not g.trial) as bookable, g.trial, g.waitlist_threshold as needed, a.shows_times, a.shows_waitlist, a.label,
+  select g.code, a.status::text, a.capacity, a.places_left, a.is_full, (a.bookable and not g.trial) as bookable, g.trial, g.waitlist_threshold as needed, case when g.status = 'priority' and g.priority_until > now() then g.priority_until::text end as head_start, a.shows_times, a.shows_waitlist, a.label,
          l.name as level, l.sort_order as level_order, sj.name as subject, coalesce(sj.colour, '#8494c2') as colour,
          pp.total_pence, pp.lessons_per_week, pp.course_years, u.name as teacher, t.slug as teacher_slug,
          case when t.photo is not null then '/teacher-photo/' || t.slug else t.photo_asset end as teacher_photo,

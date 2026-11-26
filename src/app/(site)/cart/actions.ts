@@ -8,14 +8,27 @@ import { CART_COOKIE, COUPON_COOKIE, START_COOKIE, cartCodes, cartValue, cartQuo
 import { currentFamily } from "@/lib/family-auth";
 import { familyChildren } from "@/lib/registration";
 
+/** 27 Nov: classes in their waiting-list head start that this visitor can't book yet. */
+async function headStartFor(codes: string[]) {
+  const { headStartBlocked, WL_COOKIE, wlIds } = await import("@/lib/waitlist-join");
+  const fam = await currentFamily().catch(() => null);
+  return headStartBlocked(codes, wlIds((await cookies()).get(WL_COOKIE)?.value), fam && fam.kind === "parent" ? fam.email : null).catch(() => []);
+}
+function headStartNote(h: { name: string; until: string }) {
+  const when = new Date(h.until).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+  return `${h.name}: families on the waiting list are booking first. It opens to everyone on ${when}. If you’re on the list, use the link in our email.`;
+}
+
 const keep = { path: "/", sameSite: "lax" as const, httpOnly: false, secure: process.env.VERCEL === "1", maxAge: 60 * 60 * 24 * 30 };
 
-/** Adds a class to the basket (from a course card or course page); returns how many courses are in it now. */
-export async function addToCart(code: string): Promise<number> {
+/** Adds a class to the basket (from a course card or course page); returns how many courses are in it now,
+ *  or a message when the class is in its waiting-list head start and this visitor isn't on the list. */
+export async function addToCart(code: string): Promise<number | string> {
   if (!/^[\w/-]{1,40}$/.test(code)) return (await cartCodes()).length;
   // 26 Nov: a trial class can't be booked yet (only a free taster)
   const { withSchool } = await import("@/lib/db");
   if ((await withSchool((q) => q<{ trial: boolean }>(`select trial from course_groups where code = $1`, [code])).catch(() => []))[0]?.trial) return (await cartCodes()).length;
+  { const held = await headStartFor([code]); if (held.length) return headStartNote(held[0]); }   // 27 Nov
   const codes = [...(await cartCodes()).filter((c) => c !== code), code];
   (await cookies()).set(CART_COOKIE, cartValue(codes), keep);
   revalidatePath("/", "layout");
@@ -61,6 +74,7 @@ export async function checkout(form: FormData) {
   if (!q.lines.length) return back("Your basket is empty.");
   const closed = q.lines.filter((l) => !l.start);
   if (closed.length) return back(`${closed.map((l) => `${l.level} ${l.subject}`).join(", ")} can’t be joined at this point in the year. Remove it from your basket, or contact us about next year.`);
+  { const held = await headStartFor(q.lines.map((l) => l.code)); if (held.length) return back(held.map(headStartNote).join(" ") + " Remove it from your basket for now."); }
   if (v("terms") !== "1") return back("Please agree to the Terms & Conditions.");
   const kids = new Map((await familyChildren(fam.id)).map((k) => [k.id, k.name]));
   const who = q.lines.map((l) => kids.get(v(`who:${l.code}`, 40)));

@@ -5,6 +5,8 @@ import { money, DAYS, monthYear } from "@/lib/format";
 
 const LABEL_CLASS: Record<string, string> = { "Few spaces left": "few", "Almost full": "almost", "New Group!": "new", "New Group Launching Soon!": "soon" };
 /** The sticker on a course: "No spaces left" (orange) for a full group (20 Nov), else its label ("Few spaces left"…). */
+/** 27 Nov: when a class's waiting-list head start ends (London time). */
+export const fmtHeadStart = (iso: string) => new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 export const stickerOf = (g: { is_full?: boolean; label?: string | null; label_text?: string | null; trial?: boolean } | null | undefined): { text: string; cls: string } | null =>
   !g ? null : g.trial ? { text: "Try it free", cls: "sl-new" } : g.is_full ? { text: "No spaces left", cls: "sl-full" } : g.label ? { text: g.label_text ?? g.label, cls: `sl-${LABEL_CLASS[g.label] || "few"}` } : null;
 
@@ -59,6 +61,7 @@ export function CourseCard({ c, mark = "OH–SO" }: { c: Course; mark?: string }
       </ul>
       {c.is_full
         ? <p className="when wl">This group is full. Join the waiting list and we’ll email you if a place comes up or a new group opens.</p>
+        : c.head_start ? <p className="when wl">Families on the waiting list are booking first. Open to everyone from {fmtHeadStart(c.head_start)}.</p>
         : c.trial ? <p className="when wl">A new course: it starts once {c.needed ?? 5} families sign up. Try a lesson free first.</p>
         : c.status === "waitlist" ? <p className="when wl">Days and times announced when the course opens</p>
         : c.slots?.length ? <ul className="slots">{c.slots.map((s, i) => <li key={i}>{DAYS[s.d]} – {s.t}</li>)}</ul> : null}
