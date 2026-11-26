@@ -1566,3 +1566,48 @@
 .adm .joined-edit{display:inline}.adm .joined-edit>summary{display:inline;list-style:none;cursor:pointer}.adm .joined-edit>summary::-webkit-details-marker{display:none}
 .adm .joined-form{display:inline-flex;gap:6px;align-items:center;margin:4px 0}
 .adm .st-taster{display:block;color:var(--brand);font-weight:600;font-size:14px;margin-top:4px}
+/* 27 Nov: search box at the top of the side menu (MenuSearch.tsx) and the full results page */
+.adm .msr{position:relative;flex:none}
+.adm .msr input{width:100%;box-sizing:border-box;height:38px;border-radius:10px;border:1px solid color-mix(in srgb,currentColor 28%,transparent);background:color-mix(in srgb,currentColor 6%,transparent);color:inherit;font:inherit;font-size:15px;padding:0 44px 0 34px;outline:none}
+.adm .msr input::placeholder{color:currentColor;opacity:.6}
+.adm .msr input:focus{border-color:var(--brand-accent,#e3cd4b);background:color-mix(in srgb,currentColor 9%,transparent);box-shadow:0 0 0 3px color-mix(in srgb,var(--brand-accent,#e3cd4b) 30%,transparent)}
+.adm .msr-i{position:absolute;left:10px;top:50%;width:17px;height:17px;transform:translateY(-50%);color:currentColor;opacity:.7;pointer-events:none}
+.adm .msr-k{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:11.5px;color:currentColor;opacity:.65;border:1px solid color-mix(in srgb,currentColor 30%,transparent);border-radius:6px;padding:1px 6px;pointer-events:none}
+.adm .msr-pop{position:fixed;z-index:200;max-height:min(70vh,560px);overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:14px;box-shadow:0 18px 48px rgba(5,15,45,.28);padding:6px}
+.adm .msr-g+.msr-g{border-top:1px solid var(--line);margin-top:4px;padding-top:4px}
+.adm .msr-h{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 10px 4px}
+.adm .msr-o,.adm .msr-all{display:block;padding:8px 10px;border-radius:9px;text-decoration:none;color:inherit}
+.adm .msr-o b{display:block;font-weight:500;font-size:15px}
+.adm .msr-o span{display:block;font-size:13px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adm .msr-o.on,.adm .msr-all.on{background:var(--hover)}
+.adm .msr-all{font-size:14px;font-weight:500;color:var(--ink);border-top:1px solid var(--line);margin-top:4px;border-radius:0 0 9px 9px}
+.adm .msr-none{margin:0;padding:12px 10px;color:var(--muted)}
+.adm .srch-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:16px;align-items:start}
+.adm .srch-list{list-style:none;margin:0;padding:0}
+.adm .srch-list a{display:block;padding:9px 8px;border-radius:9px;text-decoration:none;color:inherit;border-bottom:1px solid var(--line)}
+.adm .srch-list li:last-child a{border-bottom:0}
+.adm .srch-list a:hover{background:var(--hover)}
+.adm .srch-list b{display:block;font-weight:500}.adm .srch-list span{display:block;font-size:13.5px;color:var(--muted)}
+.adm tbody.cls-row:target>tr:first-child>td{background:color-mix(in srgb,var(--brand-accent,#e3cd4b) 22%,transparent)}
+/* 27 Nov: Automations → Review & approve */
+.adm .ar-card{display:grid;grid-template-columns:minmax(260px,340px) minmax(0,1fr);gap:22px;align-items:start;scroll-margin-top:16px}
+.adm .ar-card.ar-approved{box-shadow:inset 4px 0 0 #2f9e6b}.adm .ar-card.ar-changes{box-shadow:inset 4px 0 0 #d24b4b}.adm .ar-card.ar-changed{box-shadow:inset 4px 0 0 #f2a541}
+.adm .ar-dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0 0 10px;font-size:14.5px}
+.adm .ar-dl dt{color:var(--muted)}.adm .ar-dl dd{margin:0}
+.adm .ar-who{font-size:14px;color:var(--muted);margin:0 0 10px}.adm .ar-who q{color:var(--ink)}
+.adm .ar-acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.adm .ar-ask{margin-top:12px}.adm .ar-ask summary{cursor:pointer;font-size:14.5px}.adm .ar-ask form{display:grid;gap:8px;margin-top:8px;justify-items:start}
+@media (max-width:1000px){.adm .ar-card{grid-template-columns:1fr}}
+/* 27 Nov: + Insert for automation emails (FieldInserter.tsx) */
+.adm .fins{position:relative;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.adm .fins-add{font-weight:600}
+.adm .fins-tip{font-size:13.5px}
+.adm .fins-pop{position:absolute;z-index:60;top:calc(100% + 6px);left:0;width:300px;max-height:420px;overflow:auto;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;box-shadow:0 16px 40px rgba(5,15,45,.25);padding:6px}
+.adm .fins-pop>button{display:block;width:100%;text-align:left;background:none;border:0;color:inherit;font:inherit;font-size:14.5px;padding:7px 10px;border-radius:8px;cursor:pointer}
+.adm .fins-pop>button:hover,.adm .fins-pop>button:focus-visible{background:var(--hover)}
+.adm .fins-h{font-size:11.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:8px 10px 3px}
+.adm .fins-link{color:#1a56c4;text-decoration:underline;font-weight:600}
+@media (prefers-color-scheme:dark){.adm:not([data-theme=light]) .fins-link{color:#8fb4ff}}.adm[data-theme=dark] .fins-link{color:#8fb4ff}
+.adm .fins-custom{display:grid;gap:8px;padding:6px}
+.adm .fins-custom input{width:100%;box-sizing:border-box}
+.adm .ro-box{display:grid;gap:10px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:var(--soft);font-size:14.5px}

@@ -3,6 +3,7 @@ import { holdBooked } from "./test-mode";
 import { withSchool } from "./db";
 import { sendOne, cancelScheduled, emailReady, type Recipient } from "./email";
 import { joinPath, videoSettings } from "./checkins";
+import { linkWords } from "./email-layout";
 
 // Admin → Automations. Each automation is a trigger with an email; the school can switch it off and change the wording and
 // timing. A runner (after admin pages load, and from the daily job) finds what's due and sends it once, or schedules it with
@@ -21,19 +22,19 @@ export const DEFS: AutoDef[] = [
   { key: "taster_link", name: "Taster: joining link before the lesson", when: "Before the taster lesson starts.", timing: { label: "minutes before the lesson", unit: "minutes", default: 30 }, to_parent: true, to_student: true,
     fields: ["parent", "child", "class", "date", "time", "meet_link", "school"],
     subject: "{{child}}’s taster lesson starts at {{time}}",
-    body: "Hello,\n\n{{child}}’s taster lesson, {{class}}, starts today at {{time}}.\n\nJoin here: {{meet_link}}\n\nPlease join a couple of minutes early, signed in with the Google account we have for {{child}}.\n\n{{school}}" },
+    body: "Hello,\n\n{{child}}’s taster lesson, {{class}}, starts today at {{time}}.\n\n👉 [Join Google Meet]({{meet_link}})\n\nPlease join a couple of minutes early, signed in with the Google account we have for {{child}}.\n\n{{school}}" },
   { key: "lesson_reminder", name: "Lesson reminder with the Meet link", when: "Before every timetabled lesson, to each student in the class.", timing: { label: "minutes before each lesson", unit: "minutes", default: 15 }, to_parent: false, to_student: true,
     fields: ["child", "class", "time", "teacher", "meet_link", "school"],
     subject: "{{class}} starts at {{time}}",
-    body: "Hi {{child}},\n\nYour {{class}} lesson with {{teacher}} starts at {{time}}.\n\nJoin the lesson: {{meet_link}}\n\nSee you there!\n{{school}}" },
+    body: "Hi {{child}},\n\nJust a quick reminder that your **{{class}}** lesson with {{teacher}} starts at **{{time}}**.\n\nPlease join a few minutes early so you’re settled in and ready:\n\n👉 [Join Google Meet]({{meet_link}})\n\nSee you there!\n{{school}}" },
   { key: "taster_follow_up", name: "After a taster: invite to book", when: "After a taster lesson the child came to.", timing: { label: "hours after the lesson ends", unit: "hours", default: 2 }, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "book_link", "school"],
     subject: "How did {{child}}’s taster go?",
-    body: "Dear {{parent}},\n\nThank you for bringing {{child}} to the {{class}} taster lesson. We hope they enjoyed it.\n\nIf you’d like {{child}} to join the class, you can book a place here: {{book_link}}\n\nPlaces are limited, so do get in touch if you have any questions.\n\n{{school}}" },
+    body: "Dear {{parent}},\n\nThank you for bringing {{child}} to the {{class}} taster lesson. We hope they enjoyed it.\n\nIf you’d like {{child}} to join the class, you can book a place here: [Book a place]({{book_link}})\n\nPlaces are limited, so do get in touch if you have any questions.\n\n{{school}}" },
   { key: "trial_waitlist_invite", name: "After a trial taster: join the waiting list", when: "After a taster lesson in a trial class (a new course that isn’t running yet), instead of “After a taster: invite to book”. The link adds the child to the class’s waiting list in one click.", timing: { label: "hours after the lesson ends", unit: "hours", default: 2 }, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "needed", "join_link", "school"],
     subject: "Would {{child}} like to join {{class}}?",
-    body: "Dear {{parent}},\n\nThank you for bringing {{child}} to the {{class}} taster lesson. We hope they enjoyed it.\n\n{{class}} is a new course, and it will only start once {{needed}} families have signed up for it. If you’d like {{child}} to take part, please add them to the waiting list here: {{join_link}}\n\nJoining the list is free and doesn’t commit you to anything. As soon as enough families have joined, we’ll email you and you can book {{child}}’s place before anyone else.\n\n{{school}}" },
+    body: "Dear {{parent}},\n\nThank you for bringing {{child}} to the {{class}} taster lesson. We hope they enjoyed it.\n\n{{class}} is a new course, and it will only start once {{needed}} families have signed up for it. If you’d like {{child}} to take part, please add them to the waiting list here:\n\n👉 [Join the waiting list]({{join_link}})\n\nJoining the list is free and doesn’t commit you to anything. As soon as enough families have joined, we’ll email you and you can book {{child}}’s place before anyone else.\n\n{{school}}" },
   { key: "waitlist_joined", name: "Waiting list: you’re on the list", when: "When a family joins a class’s waiting list and the class hasn’t reached its target yet.", timing: null, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "count", "needed", "school"],
     subject: "{{child}} is on the waiting list for {{class}}",
@@ -41,23 +42,23 @@ export const DEFS: AutoDef[] = [
   { key: "trial_opened", name: "Trial course opens: tell the taster families", when: "When a trial class opens to everyone (it reached its waiting-list target, or you unticked Trial), to each family whose child had a taster in it, isn’t booked on it and isn’t on its waiting list (they’ve already been told).", timing: null, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "book_link", "school"],
     subject: "{{class}} is now open for booking",
-    body: "Dear {{parent}},\n\nThank you for {{child}} trying {{class}} with us. We’re pleased to say the course is now open, and you can book {{child}}’s place here: {{book_link}}\n\nPlaces are limited, so do get in touch if you have any questions.\n\n{{school}}" },
+    body: "Dear {{parent}},\n\nThank you for {{child}} trying {{class}} with us. We’re pleased to say the course is now open, and you can book {{child}}’s place here: [Book {{child}}’s place]({{book_link}})\n\nPlaces are limited, so do get in touch if you have any questions.\n\n{{school}}" },
   { key: "taster_missed", name: "Taster missed: book another date", when: "After a taster lesson the child didn’t join (from Google Meet attendance).", timing: { label: "hours after the lesson ends", unit: "hours", default: 3 }, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "date", "time", "taster_link", "school"],
     subject: "We missed {{child}} at the taster lesson",
-    body: "Dear {{parent}},\n\nWe didn’t see {{child}} at the {{class}} taster lesson on {{date}}. We hope everything is all right.\n\nIf {{child}} would still like to try a lesson, you can book another date here: {{taster_link}}\n\nIf something went wrong joining, just reply to this email and we’ll help.\n\nKind regards,\n{{school}}" },
+    body: "Dear {{parent}},\n\nWe didn’t see {{child}} at the {{class}} taster lesson on {{date}}. We hope everything is all right.\n\nIf {{child}} would still like to try a lesson, you can book another date here: [Book another taster lesson]({{taster_link}})\n\nIf something went wrong joining, just reply to this email and we’ll help.\n\nKind regards,\n{{school}}" },
   { key: "waitlist_open", name: "Waiting list: places are open", when: "When a course reaches its waiting-list target and the families on the list can book first.", timing: null, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "book_link", "hours", "school"],
     subject: "{{class}} is opening: book {{child}}’s place first",
-    body: "Dear {{parent}},\n\nGood news: enough families have joined the waiting list, so {{class}} is going ahead.\n\nAs you were on the list, you can book {{child}}’s place before anyone else for the next {{hours}} hours: {{book_link}}\n\n{{school}}" },
+    body: "Dear {{parent}},\n\nGood news: enough families have joined the waiting list, so {{class}} is going ahead.\n\nAs you were on the list, you can book {{child}}’s place before anyone else for the next {{hours}} hours:\n\n👉 [Book {{child}}’s place]({{book_link}})\n\n{{school}}" },
   { key: "payment_reminder", name: "Payment reminder", when: "Before each term’s payment is taken (by Direct Debit or card).", timing: { label: "days before the payment", unit: "days", default: 3 }, to_parent: true, to_student: false,
     fields: ["parent", "amount", "date", "how", "payments_link", "school"],
     subject: "Your next payment of {{amount}} on {{date}}",
-    body: "Dear {{parent}},\n\nA reminder that your next termly payment of {{amount}} will be {{how}} on {{date}}.\n\nIf your bank account or card has changed, please update it before then: {{payments_link}}\n\n{{school}}" },
+    body: "Dear {{parent}},\n\nA reminder that your next termly payment of {{amount}} will be {{how}} on {{date}}.\n\nIf your bank account or card has changed, please update it before then: [Update how you pay]({{payments_link}})\n\n{{school}}" },
   { key: "payment_failed", name: "Payment failed", when: "When a termly payment can’t be taken.", timing: null, to_parent: true, to_student: false,
     fields: ["parent", "amount", "child", "class", "payments_link", "school"],
     subject: "We couldn’t take your payment of {{amount}}",
-    body: "Dear {{parent}},\n\nWe tried to take this term’s payment of {{amount}} for {{child}}’s {{class}} course, but it didn’t go through. We’ll try once more in a few days.\n\nPlease check your bank account or card, or update how you pay: {{payments_link}}\n\nOr reply to this email if you’d like to talk about it.\n\n{{school}}" },
+    body: "Dear {{parent}},\n\nWe tried to take this term’s payment of {{amount}} for {{child}}’s {{class}} course, but it didn’t go through. We’ll try once more in a few days.\n\nPlease check your bank account or card, or [update how you pay]({{payments_link}})\n\nOr reply to this email if you’d like to talk about it.\n\n{{school}}" },
   { key: "report_published", name: "Report ready", when: "When a progress report is published.", timing: null, to_parent: true, to_student: false,
     fields: ["parent", "child", "report", "school"],
     subject: "{{child}}’s {{report}} is ready",
@@ -115,7 +116,7 @@ async function deliver(q: Q, key: string, cfg: Cfg, job: Job, budget: { n: numbe
     if (!claim.length) continue;
     budget.n--;
     const vars = { ...job.vars, child: job.vars.child ?? "", parent: job.vars.parent ?? r.name };
-    const res = await sendOne([r], fill(cfg.subject, vars), fill(cfg.body, vars), { tag: `auto-${key}`, scheduledAt: job.at?.toISOString() });
+    const res = await sendOne([r], fill(cfg.subject, vars), fill(linkWords(cfg.body), vars), { tag: `auto-${key}`, scheduledAt: job.at?.toISOString() });
     // held by test mode: remembered as 'held' (booked again when the school goes live, if the time is still to come)
     await q(`update automation_sends set status = $2, message_id = $3, error = $4 where id = $1`, [claim[0].id, res.held ? "held" : res.ok ? (job.at ? "scheduled" : "sent") : "failed", res.ids[0] ?? null, res.held ? "Test mode" : res.error ?? null]);
   }
@@ -135,6 +136,7 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
 
     // lesson reminders: every student in the class, the set number of minutes before each lesson
     let c = cfg("lesson_reminder");
+    const ro = await reminderOpts(q);
     if (c) {
       const m = c.minutes ?? 15;
       const vid = await videoSettings(q);
@@ -145,9 +147,11 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
         from lesson_events e join lesson_slots s on s.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         join schools sc on sc.id = e.school_id left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id
         join enrolments x on x.group_id = g.id and x.status = 'active' and not x.is_taster join students st on st.id = x.student_id join parents p on p.id = st.parent_id
-        where e.status = 'scheduled' and e.lesson_date between current_date and current_date + 3
+        where e.lesson_date between current_date and current_date + 3
+          and (e.status = 'scheduled' or (not $1::boolean and e.status = 'cancelled' and not exists (select 1 from lesson_events mv where mv.moved_from = e.id)))   -- a moved lesson's old time never gets one
+          and not ($2::boolean and e.moved_from is not null)   -- rescheduled: the lesson at its new time
           and not exists (select 1 from absence_notices a where a.lesson_event_id = e.id and a.student_id = st.id and a.cancelled_at is null)
-        order by e.lesson_date, s.starts_at`);
+        order by e.lesson_date, s.starts_at`, [ro.skip_cancelled, ro.skip_moved]);
       for (const r of rows) {
         const at = Date.parse(r.starts) - m * 60e3; if (at < now + 60e3 || at > now + horizon) continue;
         const to = [...(c.to_student && r.semail ? [{ name: r.child, email: r.semail }] : []), ...(c.to_parent ? [{ name: r.parent, email: r.pemail }] : [])];
@@ -270,13 +274,33 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
     // take back booked reminders that no longer apply: lesson cancelled, absence reported, left the class, taster cancelled
     const stale = await q<{ id: number; message_id: string | null }>(`select a.id, a.message_id from automation_sends a
       where a.status = 'scheduled' and a.scheduled_for > now() and (
-        (a.key = 'lesson_reminder' and exists (select 1 from lesson_events e where e.id::text = split_part(a.ref, ':', 1) and (e.status = 'cancelled'
+        (a.key = 'lesson_reminder' and exists (select 1 from lesson_events e where e.id::text = split_part(a.ref, ':', 1) and ((e.status = 'cancelled' and ($1::boolean or exists (select 1 from lesson_events mv where mv.moved_from = e.id)))
+          or ($2::boolean and e.moved_from is not null)
           or exists (select 1 from absence_notices n where n.lesson_event_id = e.id and n.student_id::text = split_part(a.ref, ':', 2) and n.cancelled_at is null)
           or not exists (select 1 from enrolments x where x.group_id = e.group_id and x.student_id::text = split_part(a.ref, ':', 2) and x.status = 'active'))))
-        or (a.key in ('taster_link', 'taster_follow_up', 'trial_waitlist_invite') and exists (select 1 from taster_bookings b where b.id::text = a.ref and b.status in ('cancelled', 'booked_course'))))`);
+        or (a.key in ('taster_link', 'taster_follow_up', 'trial_waitlist_invite') and exists (select 1 from taster_bookings b where b.id::text = a.ref and b.status in ('cancelled', 'booked_course'))))`, [ro.skip_cancelled, ro.skip_moved]);
     for (const r of stale) { if (r.message_id) await cancelScheduled(r.message_id); await q(`update automation_sends set status = 'cancelled' where id = $1`, [r.id]); }
   });
   return { sent: limit - budget.n };
+}
+
+// 27 Nov: lesson reminder options (Automations → Lesson reminder): leave out cancelled lessons, and lessons moved to a
+// new time (rescheduled). Both on unless switched off. meet_kv "lesson_reminder_opts".
+export type ReminderOpts = { skip_cancelled: boolean; skip_moved: boolean };
+export async function reminderOpts(q?: Q): Promise<ReminderOpts> {
+  const run = async (qq: Q) => (await qq<{ value: Partial<ReminderOpts> }>(`select value from meet_kv where key = 'lesson_reminder_opts'`))[0]?.value ?? {};
+  const v = q ? await run(q) : await withSchool((qq) => run(qq));
+  return { skip_cancelled: v.skip_cancelled !== false, skip_moved: v.skip_moved !== false };
+}
+export async function saveReminderOpts(actorId: string, o: ReminderOpts): Promise<void> {
+  await withSchool(async (q) => {
+    await q(`insert into meet_kv (school_id, key, value) values (current_school(), 'lesson_reminder_opts', $1::jsonb) on conflict (school_id, key) do update set value = excluded.value`, [JSON.stringify(o)]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'save', 'automation', null, $2)`, [actorId, JSON.stringify({ key: "lesson_reminder", ...o })]);
+  });
+  if (o.skip_moved) {   // take back reminders already booked for rescheduled lessons
+    const ids = await withSchool((q) => q<{ id: string }>(`select id from lesson_events where moved_from is not null and lesson_date >= current_date`));
+    for (const r of ids) await cancelLessonReminders(r.id);
+  }
 }
 
 /** A cancelled lesson: take back the reminders already booked with Brevo. */
@@ -294,7 +318,7 @@ export async function testAutomation(key: string, to: Recipient, d: { subject: s
   const vars = { parent: to.name.split(" ")[0], child: "Sam", class: "KS3 Maths", date: fmtDate(new Date(Date.now() + 864e5).toISOString().slice(0, 10)), time: "16:00", teacher: "Becky",
     meet_link: "https://meet.google.com/abc-defg-hij", book_link: (process.env.SITE_URL || "") + "/courses", amount: "£150.00", hours: "48", report: "Term 1 Progress Report", school,
     how: "collected by Direct Debit", payments_link: (process.env.SITE_URL || "") + "/parent/payments", count: "2 pieces of work", list: "• Essay plan (iGCSE English Language) · 3 to mark · 2 days left\n• Poetry comparison (iGCSE English Language) · 1 to mark · 1 day overdue", dashboard_link: (process.env.SITE_URL || "") + "/admin/teacher" };
-  return sendOne([to], `[Test] ${fill(d.subject, vars)}`, fill(d.body, vars), { tag: `auto-test-${key}` });
+  return sendOne([to], `[Test] ${fill(d.subject, vars)}`, fill(linkWords(d.body), vars), { tag: `auto-test-${key}` });
 }
 
 let last = 0;

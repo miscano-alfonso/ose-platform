@@ -1,21 +1,27 @@
 import Link from "next/link";
-import { automations, DEFS } from "@/lib/automations";
+import { automations, DEFS, reminderOpts } from "@/lib/automations";
 import { saveAutomationAction, runAutomationsAction, sendAllTestsAction } from "../../actions";
 import { emailDesign, senderName } from "@/lib/email";
 import { EmailPreview } from "../../EmailPreview";
+import { approvals, approvalState, sampleVars, wordingHash } from "@/lib/automation-review";
+import { AutoTabs } from "./AutoTabs";
+import { FieldInserter } from "../../FieldInserter";
 
 export const dynamic = "force-dynamic";
 const NAME = Object.fromEntries(DEFS.map((d) => [d.key, d.name]));
 
 export default async function Automations({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; open?: string }> }) {
   const sp = await searchParams;
-  const [{ rows, ready, recent }, design, from] = await Promise.all([automations(), emailDesign(), senderName()]);
-  const vars = { parent: "Laura", child: "Sam", class: "KS3 Maths", date: "Tuesday 3 November", time: "16:00", teacher: "Becky", meet_link: "https://meet.google.com/abc-defg-hij",
-    book_link: "ohsoed.co.uk/courses", amount: "£150.00", hours: "48", report: "Term 1 Progress Report", school: design.school };
+  const [{ rows, ready, recent }, design, from, ok, ro] = await Promise.all([automations(), emailDesign(), senderName(), approvals(), reminderOpts()]);
+  const base = (process.env.SITE_URL || "https://dev.ohsoed.co.uk").replace(/\/$/, "");
+  const st = Object.fromEntries(rows.map((r) => [r.key, approvalState(ok[r.key], wordingHash(r))]));
+  const toApprove = rows.filter((r) => st[r.key] !== "approved").length;
+  const AP = { approved: ["good", "Approved"], changed: ["warn", "Changed since approved"], changes: ["bad", "Changes asked for"], none: ["mute", "Not approved"] } as const;
   const on = rows.filter((r) => r.enabled).length;
   return <>
     <div className="top"><div><h1>Automations</h1><div className="sub">Emails that send themselves when something happens. Switch each one on, change the wording and timing, and send yourself a test first.</div></div>
       <span className="grow" /><form action={runAutomationsAction}><button className="abtn sm" type="submit">Check now</button></form></div>
+    <AutoTabs here="edit" toApprove={toApprove} />
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {!ready && <p className="note msg">Email isn’t connected yet, so nothing can send. Connect Brevo under <Link href="/admin/newsletter">Newsletter → Sending with Brevo</Link>.</p>}
     <div className="tiles">
@@ -27,7 +33,7 @@ export default async function Automations({ searchParams }: { searchParams: Prom
     {rows.map((r) => <section className="card" key={r.key} id={r.key}>
       <details open={sp.open === r.key}>
         <summary style={{ cursor: "pointer", listStyle: "none", display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
-          <span className={`pill ${r.enabled ? "good" : "mute"}`}>{r.enabled ? "On" : "Off"}</span>
+          <span className={`pill ${r.enabled ? "good" : "mute"}`}>{r.enabled ? "On" : "Off"}</span><Link href={`/admin/automations/review#${r.key}`} className={`pill ${AP[st[r.key]][0]}`} title="Review & approve">{AP[st[r.key]][1]}</Link>
           <div style={{ flex: 1, minWidth: 220 }}><b style={{ fontSize: 17 }}>{r.name}</b><div className="muted" style={{ fontSize: 14.5 }}>{r.when}{r.timing && r.minutes != null ? ` ${r.minutes} ${r.timing.label}.` : ""} To: {r.to_teacher ? "the teacher" : [r.to_parent && "parent", r.to_student && "student"].filter(Boolean).join(" and ")}.</div></div>
           <span className="muted" style={{ fontSize: 14 }}>{r.sent7} sent this week{r.scheduled ? ` · ${r.scheduled} booked` : ""}{r.failed7 ? ` · ${r.failed7} failed` : ""}</span>
           <span className="abtn sm">Edit</span>
@@ -41,11 +47,16 @@ export default async function Automations({ searchParams }: { searchParams: Prom
             <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="to_parent" defaultChecked={r.to_parent} /> Parent</label>
             <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="to_student" defaultChecked={r.to_student} /> Student (their Google account)</label></>}
           </div>
+          {r.key === "lesson_reminder" && <div className="ro-box"><input type="hidden" name="opts_on_form" value="1" />
+            <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}><input type="checkbox" name="skip_cancelled" defaultChecked={ro.skip_cancelled} /> <span><b>Don’t send for cancelled lessons</b><br /><span className="muted">A reminder already booked is taken back as soon as the lesson is cancelled.</span></span></label>
+            <label style={{ display: "flex", gap: 8, alignItems: "flex-start" }}><input type="checkbox" name="skip_moved" defaultChecked={ro.skip_moved} /> <span><b>Don’t send for rescheduled lessons</b><br /><span className="muted">No reminder for the old time or the new time. Untick to send one before the lesson at its new time.</span></span></label>
+          </div>}
           <label className="fld">Subject<input name="subject" defaultValue={r.subject} maxLength={200} required className="mini" style={{ width: "100%" }} /></label>
+          <FieldInserter fields={r.fields} />
           <label className="fld">Message<textarea name="body" defaultValue={r.body} rows={8} maxLength={5000} required className="mini" style={{ width: "100%" }} /></label>
-          <p className="note" style={{ margin: 0 }}>You can use: {r.fields.map((f) => `{{${f}}}`).join(" ")}</p>
+          <p className="note" style={{ margin: 0 }}>Links show as words in the email (e.g. “Join Google Meet”). Words between ** ** are bold.</p>
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}><button className="abtn pri" type="submit">Save</button><button className="abtn" type="submit" name="test" value="1">Send me a test</button></div>
-        </div><EmailPreview design={design} from={from} vars={vars} /></form>
+        </div><EmailPreview design={design} from={from} vars={sampleVars(r.key, design.school, base)} /></form>
       </details>
     </section>)}
     <section className="card" id="tests"><h2>Send every email as a test</h2>

@@ -70,7 +70,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
         <thead><tr><th>Class</th><th>Teacher</th><th>Lessons</th><th>Places</th><th>Status</th><th>Website label</th><th>Homepage</th><th>Google Classroom</th></tr></thead>
         {groups.filter((g) => g.year_label === y).map((g) => {
           const pct = g.capacity ? Math.min(100, Math.round((g.taken / g.capacity) * 100)) : 0;
-          return <tbody key={g.id}>
+          return <tbody key={g.id} id={`g-${g.id}`} className="cls-row">
             <tr>
               <td><span className="dot" style={{ background: g.colour }} /><b>{g.level} {g.subject}</b>{g.trial && <> <span className="pill info" title="Opens for booking by itself once this many families join its waiting list">Trial · {g.waiting} of {g.waitlist_threshold} signed up</span></>}<div className="muted" style={{ fontSize: 15.5, marginLeft: 18 }}>{g.code}</div></td>
               <td>{g.teacher ?? <span className="muted">Not set</span>}</td>

@@ -1,4 +1,5 @@
 import { NotifyCenter } from "../../NotifyCenter";
+import { MenuSearch } from "../MenuSearch";
 import type { Metadata } from "next";
 import { cookies, headers } from "next/headers";
 import { requireViewer } from "@/lib/auth";
@@ -63,6 +64,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {sch?.is_demo ? <a className="logo" href="/admin/teacher" title="My day" style={{ font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
         : <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>}
+        <MenuSearch area="teacher" page="/admin/teacher/search" />
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports, "/admin/teacher/marking": c.marking }} groups={await teacherMenu()} />
         <SideFoot theme={theme} signOut={signOutAction} inline toggle settings="/admin/teacher/notifications" />
       </aside>

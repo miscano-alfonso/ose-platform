@@ -1453,8 +1453,24 @@ export async function saveAutomationAction(f: FormData): Promise<void> {
     redirect(`/admin/automations?open=${key}&${r.ok ? "ok=" + encodeURIComponent(`Test sent to ${me.email}.`) : "err=" + encodeURIComponent(r.error ?? "Couldn’t send the test.")}#${key}`);
   }
   const err = await A.saveAutomation(me.id, key, d);
+  if (!err && key === "lesson_reminder" && f.has("opts_on_form")) await A.saveReminderOpts(me.id, { skip_cancelled: f.get("skip_cancelled") === "on", skip_moved: f.get("skip_moved") === "on" });
   if (!err && d.enabled) await A.runAutomations(60).catch(() => null);
   redirect(`/admin/automations?${err ? `open=${key}&err=` + encodeURIComponent(err) : "ok=" + encodeURIComponent(d.enabled ? "Saved and switched on." : "Saved. It’s switched off.")}#${key}`);
+}
+/** 27 Nov: Automations → Review & approve: approve an email as it reads now, ask for changes (with a note), or undo. */
+export async function approveAutomationAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const key = String(f.get("key") ?? ""), what = String(f.get("what") ?? ""), note = String(f.get("note") ?? "").trim().slice(0, 1000);
+  const A = await import("@/lib/automations"), R = await import("@/lib/automation-review");
+  const row = (await A.automations()).rows.find((r) => r.key === key);
+  const back = (m: string) => redirect(`/admin/automations/review?show=${encodeURIComponent(String(f.get("show") ?? "all"))}&ok=${encodeURIComponent(m)}#${key}`);
+  if (!row) return back("That email wasn’t found.");
+  const hash = R.wordingHash(row);
+  if (what === "approve") await R.setApproval(key, { status: "approved", hash, by: me.name, at: new Date().toISOString() }, me.id);
+  else if (what === "changes") { if (!note) return back("Write what needs changing, then press Ask for changes."); await R.setApproval(key, { status: "changes", hash, by: me.name, at: new Date().toISOString(), note }, me.id); }
+  else await R.setApproval(key, null, me.id);
+  revalidatePath("/admin/automations");
+  back(what === "approve" ? `Approved: ${row.name}.` : what === "changes" ? `Changes asked for: ${row.name}.` : `Approval removed: ${row.name}.`);
 }
 export async function runAutomationsAction(): Promise<void> {
   await requireStaff();

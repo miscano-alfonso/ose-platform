@@ -98,7 +98,7 @@ export async function cancelOne(actorId: string, eventId: string, reason: string
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'cancel', 'lesson_event', $2, $3)`,
       [actorId, eventId, JSON.stringify({ note: reason })]);
   });
-  await import("./automations").then((a) => a.cancelLessonReminders(eventId)).catch(() => null);
+  await import("./automations").then(async (a) => { if ((await a.reminderOpts()).skip_cancelled) await a.cancelLessonReminders(eventId); }).catch(() => null);
   return null;
 }
 

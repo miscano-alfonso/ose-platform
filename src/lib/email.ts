@@ -1,7 +1,7 @@
 import "server-only";
 import { gate } from "./test-mode";
 import { isDemoSchool, isPlatformSchool, withSchool } from "./db";
-import { emailHtml, defaultFooter, type EmailDesign } from "./email-layout";
+import { emailHtml, defaultFooter, plainText, type EmailDesign } from "./email-layout";
 import { siteBase } from "./social";
 
 // Sending email through Brevo (transactional API). The account is either set in the environment (BREVO_API_KEY and
@@ -134,7 +134,7 @@ export async function sendBatch(subject: string, body: string, to: Recipient[], 
     const chunk = to.slice(i, i + 500);
     const res = await fetch(SMTP_URL(), {
       method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, marketing), textContent: body,
+      body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, marketing), textContent: plainText(body),
         messageVersions: chunk.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [marketing ? "marketing" : "admin-message"] }),
     }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
     if (res.ok) sent += chunk.length; else { failed += chunk.length; error = `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}`; }
@@ -186,7 +186,7 @@ export async function sendOne(to: Recipient[], subject: string, body: string, op
   if (!to.length) return { ok: true, ids: [], held: g.held.length };
   const res = await fetch(SMTP_URL(), {
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, false), textContent: body,
+    body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, false), textContent: plainText(body),
       messageVersions: to.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [opts.tag], ...(opts.scheduledAt ? { scheduledAt: opts.scheduledAt } : {}),
       ...(opts.attachments?.length ? { attachment: opts.attachments } : {}) }),   // 26 Nov: e.g. a report PDF
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e), json: async () => ({}) }) as Response);

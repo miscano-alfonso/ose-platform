@@ -51,7 +51,7 @@ export async function sendAllTests(to: Recipient): Promise<{ sent: string[]; fai
 
   // 12: Google Classroom invitation reminder
   log("Classroom invitation reminder", await sendHtml(T("Sam: please accept the KS3 Maths Google Classroom invitation"), `<p>Hello Sam (and ${esc(first)}),</p>
-    <p>Sam has been invited to the <b>KS3 Maths</b> Google Classroom at sam.example@gmail.com. Please open <a href="https://classroom.google.com/">classroom.google.com</a> signed in with that Google account and press <b>Join</b>. Until then Sam can’t join the lesson’s Google Meet.</p>
+    <p>Sam has been invited to the <b>KS3 Maths</b> Google Classroom at sam.example@gmail.com. Please open <a href="https://classroom.google.com/"><b>Google Classroom</b></a> signed in with that Google account and press <b>Join</b>. Until then Sam can’t join the lesson’s Google Meet.</p>
     <p>Best wishes,<br>${esc(school)}</p>`, [to.email], "email-test"));
 
   // 13: newsletter sign-up confirmation (website footer)

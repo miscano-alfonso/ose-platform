@@ -12,6 +12,7 @@ import { recordingsBackground } from "@/lib/recordings";
 import { checkinsBackground } from "@/lib/checkins";
 import { zoomBackground } from "@/lib/zoom";
 import { requireStaff, isDemoVisitor } from "@/lib/auth";
+import { MenuSearch } from "../MenuSearch";
 import { withSchool } from "@/lib/db";
 import { signOutAction } from "../actions";
 import { AdminNav, AdminTabs } from "../AdminNav";
@@ -85,6 +86,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       {/* eslint-disable-next-line @next/next/no-img-element */}
       {demo || (pl.plan && !custom.logo) ? <a className="logo" href="/admin" title="Dashboard" style={{ color: "#fff", font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>{demo ? "Demo school" : `${PLAN_NAME[pl.plan!]} plan`}</span></a>
       : <a className="logo" href="/admin" title="Back to the dashboard" style={{ ["--logo" as string]: `url("${logo}")` }}><span className="logo-i"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></span></a>}
+      <MenuSearch area="admin" page="/admin/search" />
       <AdminNav counts={navCounts} groups={menu} />
       <SideFoot theme={theme} signOut={signOutAction} toggle note={!demo && !pl.plan && testOn ? <a className="tm-pill" href="/admin/test-mode" title="Test mode is on: real data is read as normal, but nothing goes to families, students or teachers. Click to see what’s held.">Test mode on</a> : null} switchers={<div className="sw-side">{switchers("s")}</div>} 
         site={pl.plan ? [{ href: "/osedtech", label: "OH-SO EdTech" }] : isDemoVisitor(me.email) ? [{ href: "/osedtech/demo/site", label: "View the school’s website" }, { href: "/osedtech", label: "Back to OH-SO EdTech" }] : [{ href: "/", label: "View the website" }]} />

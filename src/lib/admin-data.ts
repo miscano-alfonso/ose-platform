@@ -256,7 +256,7 @@ export async function remindInvite(actorId: string, id: string): Promise<string 
   if (!r) return "That invitation wasn’t found.";
   const esc = (x: string) => x.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
   const sent = await sendHtml(`${r.first}: please accept the ${r.class} Google Classroom invitation`, `<p>Hello ${esc(r.first)} (and ${esc(r.parent)}),</p>
-    <p>${esc(r.first)} has been invited to the <b>${esc(r.class)}</b> Google Classroom${r.email ? ` at ${esc(r.email)}` : ""}. Please open <a href="https://classroom.google.com/">classroom.google.com</a> signed in with that Google account and press <b>Join</b>. Until then ${esc(r.first)} can’t join the lesson’s Google Meet.</p>
+    <p>${esc(r.first)} has been invited to the <b>${esc(r.class)}</b> Google Classroom${r.email ? ` at ${esc(r.email)}` : ""}. Please open <a href="https://classroom.google.com/"><b>Google Classroom</b></a> signed in with that Google account and press <b>Join</b>. Until then ${esc(r.first)} can’t join the lesson’s Google Meet.</p>
     <p>Best wishes,<br>${esc(r.school)}</p>`, [r.email, r.pemail].filter(Boolean) as string[], "classroom-reminder");
   if (!sent.ok) return sent.error ?? "Couldn’t send the reminder.";
   await withSchool(async (q) => {

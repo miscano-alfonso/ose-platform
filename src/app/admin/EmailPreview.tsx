@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { emailHtml, type EmailDesign } from "@/lib/email-layout";
+import { emailHtml, linkWords, type EmailDesign } from "@/lib/email-layout";
 
 const fill = (s: string, vars: Record<string, string>) => s.replace(/\{\{\s*(\w+)\s*\}\}/g, (m, k) => vars[k] ?? m);
 /** A live preview of the email being written in the surrounding form, as it will look on a desktop or a phone.
@@ -21,7 +21,7 @@ export function EmailPreview({ design, from, vars = {}, sample, marketing = fals
     return () => { form.removeEventListener("input", read); form.removeEventListener("change", read); };
   }, [design, sample?.subject, sample?.body]);
   useEffect(() => { const el = box.current; if (!el) return; const ro = new ResizeObserver(() => setW(el.clientWidth)); ro.observe(el); return () => ro.disconnect(); }, []);
-  const doc = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}</style></head><body>${emailHtml(fill(v.body, vars), marketing, v.d)}</body></html>`;
+  const doc = `<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{margin:0}</style></head><body>${emailHtml(fill(linkWords(v.body), vars), marketing, v.d)}</body></html>`;
   const DESK = 720, scale = Math.min(1, (w - 2) / DESK);
   return <div className="epv" ref={box}>
     <div className="epv-bar"><b>Preview</b><div className="segl" role="group" aria-label="Preview size">
