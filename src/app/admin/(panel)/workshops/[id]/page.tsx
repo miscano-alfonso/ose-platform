@@ -2,13 +2,14 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getWorkshopEdit } from "@/lib/workshops-admin";
 import { saveWorkshopAction } from "../../../actions";
+import { drawingPictures } from "@/lib/studio";
 
 const p2 = (n: number | null | undefined) => (n == null ? "" : (n / 100).toFixed(2));
 
 export default async function EditWorkshop({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; err?: string }> }) {
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const isNew = id === "new";
-  const { w, levels, subjects, teachers } = await getWorkshopEdit(isNew ? null : id);
+  const [{ w, levels, subjects, teachers }, drawings] = await Promise.all([getWorkshopEdit(isNew ? null : id), drawingPictures().then((d) => d.slice(0, 24))]);
   if (!isNew && !w) notFound();
   return <>
     <p className="backlink"><Link className="abtn sm" href="/admin/workshops">← Workshops</Link></p>
@@ -44,6 +45,17 @@ export default async function EditWorkshop({ params, searchParams }: { params: P
         <label className="fld">Picture (JPG, PNG or WebP, under 3 MB; wide pictures work best)<input type="file" name="image" accept="image/jpeg,image/png,image/webp" /></label>
         {w?.image && <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="remove_image" /> Remove the picture</label>}
       </div>
+      {/* 26 Nov: use a Sketch Studio drawing as the picture (its saved picture, up to 1600px) */}
+      {drawings.length > 0 && <details className="ws-studio">
+        <summary>Or use a Sketch Studio drawing</summary>
+        <p className="muted" style={{ margin: "6px 0 10px", fontSize: 14 }}>Pick one, then press {isNew ? "Create workshop" : "Save changes"}. Newest first; a file chosen above takes priority.</p>
+        <div className="ws-studio-grid">
+          {drawings.map((d) => <label key={d.id} title={d.title}><input type="radio" name="studio" value={d.id} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={`/admin/social-api?action=studiopic&id=${d.id}&small=1`} alt="" loading="lazy" />
+            <span>{d.title}</span></label>)}
+        </div>
+      </details>}
       <label className="fld">Short description (shown on the website)<textarea name="summary" rows={4} maxLength={1000} defaultValue={w?.summary ?? ""} className="mini" style={{ width: "100%" }} /></label>
       {isNew && <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="checkbox" name="publish" /> Publish on the website straight away</label>}
       <div><button className="abtn pri" type="submit">{isNew ? "Create workshop" : "Save changes"}</button></div>

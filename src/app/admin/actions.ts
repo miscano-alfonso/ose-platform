@@ -695,6 +695,14 @@ export async function saveWorkshopAction(f: FormData): Promise<void> {
     if (file.size > 3 * 1024 * 1024) return back("The picture must be under 3 MB.");
     image = { data: Buffer.from(await file.arrayBuffer()), type: file.type };
   }
+  // 26 Nov: or a Sketch Studio drawing's picture
+  const studio = str(f, "studio", 40);
+  if (!image && /^[0-9a-f-]{36}$/.test(studio)) {
+    const { drawingPicture } = await import("@/lib/studio");
+    const pic = await drawingPicture(studio);
+    if (!pic) return back("That Sketch Studio drawing has no picture yet. Open it in the Studio once, then try again.");
+    image = { data: Buffer.from(pic), type: "image/jpeg" };
+  }
   const r = await saveWorkshop(me.id, id, { title: str(f, "title", 120), levelId: str(f, "level", 40) || null, subjectId: str(f, "subject", 40) || null,
     teacherId: str(f, "teacher", 40) || null, date, time, minutes: Math.max(15, Math.min(240, parseInt(str(f, "minutes", 3), 10) || 45)),
     capacity: cap > 0 ? Math.min(cap, 500) : null, price, enrolledPrice, teacherPay: pay, summary: str(f, "summary", 1000) || null, publish: f.get("publish") === "on",
