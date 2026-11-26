@@ -53,6 +53,7 @@ export const STYLE_TOKENS: StyleToken[] = [
   { id: "page_h1", group: "Headings", label: "Page headings (top banner)", hint: "Courses, Prices, Term dates and the other pages", sel: ".s-phead h1", prop: "font-size", min: 24, max: 96, step: 1, unit: "px" },
   { id: "sec_h2", group: "Headings", label: "Section headings", hint: "e.g. Space Available, KS3 bundles", sel: ".sec-head h2, .space-h, .cd-h, .tyh", prop: "font-size", min: 18, max: 90, step: 1, unit: "px" },
   { id: "card_h3", group: "Headings", label: "Card titles", hint: "Course, bundle, teacher and service cards", sel: ".course h3, .bundle h3, .svc h3, .tcard h2, .cd-card h3, .cd-topic h3, .space-lvl, .calc-sum h2", prop: "font-size", min: 14, max: 44, step: 1, unit: "px" },
+  { id: "cd_sticky", group: "Headings", label: "Course title when scrolled", hint: "The slim bar that stays at the top of a course page as you scroll", sel: ".cd-sticky b", prop: "font-size", min: 18, max: 56, step: 1, unit: "px", important: true },
   { id: "eyebrow", group: "Headings", label: "Small headings above titles", hint: "The yellow capitals", sel: ".eyebrow", prop: "font-size", min: 9, max: 22, step: 0.5, unit: "px" },
 
   { id: "body", group: "Text", label: "Body text", sel: "body, .tp-body p, .cd-topic p, .cd-topic li, .faq .ans", prop: "font-size", min: 12, max: 24, step: 0.5, unit: "px" },
