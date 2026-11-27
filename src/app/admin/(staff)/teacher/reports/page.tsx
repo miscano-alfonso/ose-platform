@@ -12,10 +12,12 @@ export default async function ReportsToWrite() {
   const rows = await teacherReportClasses(me.id);
   const cycles = [...new Map(rows.map((r) => [r.cycle_id, r])).values()];
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
+  const line = (c: (typeof cycles)[number]) => today < c.opens_on ? <>Comments due {dm(c.comments_due)} · write and save drafts now; <b>Submit</b> opens {dm(c.opens_on)} (the last week of term)</> : <>Comments due {dm(c.comments_due)}</>;
   return <>
-    <div className="top"><div><h1>Reports to write</h1><div className="sub">{cycles[0] ? `${cycles[0].cycle} · due ${dm(cycles[0].comments_due)} · write them once the assessment is marked in Classroom` : "Termly progress reports for your classes"}</div></div><span className="grow" /><GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How reports work" /></div>
+    {/* 27 Nov (Alfonso): the round itself is the page heading, with its dates under it */}
+    <div className="top"><div><h1>{cycles[0]?.cycle ?? "Reports"}</h1><div className="sub">{cycles[0] ? line(cycles[0]) : "Termly progress reports for your classes"}</div></div><span className="grow" /><GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How reports work" /></div>
     {rows.length === 0 && <p className="empty">No reports to write right now. The office opens each report round.</p>}
-    {cycles.map((c) => <section className="card" key={c.cycle_id}><h2>{c.cycle}</h2><p className="cs">{today < c.opens_on ? <>Comments due {dm(c.comments_due)} · write and save drafts now; <b>Submit</b> opens {dm(c.opens_on)} (the last week of term)</> : <>Comments due {dm(c.comments_due)}</>}</p>
+    {cycles.map((c, ci) => <section className="card" key={c.cycle_id}>{ci > 0 && <><h2>{c.cycle}</h2><p className="cs">{line(c)}</p></>}
       {/* 26 Nov: the whole row opens the class's reports, with a tinted hover */}
       {rows.filter((r) => r.cycle_id === c.cycle_id).map((r) => <Link className="li rw-row" key={r.group_id} href={`/admin/write/${r.cycle_id}/${r.group_id}`}>
         <div className="t"><b>{r.name} <span className="muted" style={{ fontWeight: 400 }}>{r.code}</span></b><span>{r.done}/{r.total} submitted</span></div>
