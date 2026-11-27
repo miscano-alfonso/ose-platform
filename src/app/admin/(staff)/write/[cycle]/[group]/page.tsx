@@ -29,11 +29,12 @@ export default async function Write({ params, searchParams }: { params: Promise<
   return <>
     {/* 31 Oct: the page heading stays at the top while scrolling, with Submit all */}
     <div className="wr-head">
-    {/* 27 Nov (Alfonso): How it works on the Back row, at the right (under the My day button) */}
-    <p className="backlink wr-backrow"><a className="abtn sm" href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a><span className="grow" style={{ flex: 1 }} /><GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How it works" /></p>
+    {/* 27 Nov (Alfonso): How it works sits with the page's buttons, below the My day button (not under it) */}
+    <p className="backlink wr-backrow"><a className="abtn sm" href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a></p>
       <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · <b>Submit</b> between {wday(h.opens_on)} and {wday(h.comments_due)} (the last week of term)</div></div>
-        <span className="grow" />{!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
-          <button id="wr-saveall" className="abtn sm" type="submit" form="wr-form" name="saveall" value="1" title="Save every report you’ve changed, as drafts">Save all drafts</button><AiDraftAll /><SubmitAll off={wait} /></div>}</div>
+        <span className="grow" />{(locked || !rows.some((r) => r.status !== "approved")) && <GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How it works" />}
+        {!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
+          <GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How it works" /><button id="wr-saveall" className="abtn sm" type="submit" form="wr-form" name="saveall" value="1" title="Save every report you’ve changed, as drafts">Save all drafts</button><AiDraftAll /><SubmitAll off={wait} /></div>}</div>
       {!sp.r && sp.ok && <p className="note msg">{sp.ok}</p>}{!sp.r && sp.err && <p className="note msg bad">{sp.err}</p>}
       {/* 27 Nov (Alfonso): one point per line; the submit dates are only in the line under the title */}
       <ul className="note wr-tips">
@@ -53,7 +54,8 @@ export default async function Write({ params, searchParams }: { params: Promise<
         {/* 27 Nov (Alfonso): the name, with where the report is up to on the right */}
         <div className="wr-name"><h2 style={{ margin: 0 }}>{r.student}</h2><span className={`pill ${PILL[r.status][1]}`}>{PILL[r.status][0]}</span></div>
         {r.status === "returned" && r.review_note && <p className="note msg bad">Sent back: {r.review_note}</p>}
-        {here && (sp.ok || sp.err) && <p className={`note msg${sp.err ? " bad" : ""}`} role="status">{sp.err ?? sp.ok}</p>}
+        {/* 27 Nov (Alfonso): "Draft saved" shows on the button (Saved ✓); only problems are spelled out here */}
+        {here && sp.err && <p className="note msg bad" role="status">{sp.err}</p>}
         {/* 1 Nov: the scores stacked on the left (2 × 2), the comment on the right with Save draft / Submit above it */}
         <div className="wr-body">
           <div className="wr-scores">
