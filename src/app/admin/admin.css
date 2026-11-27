@@ -1618,3 +1618,10 @@
 .adm .sl-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.adm .sl-out{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.adm .sl-out input{width:260px}
 .adm .bad-t{color:var(--bad,#c0392b)}
 .adm .sl-st{display:block;font-size:13.5px}
+/* 27 Nov: guide video button and pop-up (GuideVideo.tsx) */
+.adm .gv-btn{display:inline-flex;align-items:center;gap:6px}
+.gv-dlg{border:0;padding:0;border-radius:16px;width:min(1100px,94vw);background:#0f1747;color:#fff;box-shadow:0 24px 70px rgba(0,0,0,.45)}
+.gv-dlg::backdrop{background:rgba(5,15,45,.6)}
+.gv-dlg .gv-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;font:500 16px Jost,system-ui,sans-serif}
+.gv-dlg .gv-head .abtn{background:transparent;color:#fff;border-color:rgba(255,255,255,.3)}
+.gv-dlg video{display:block;width:100%;aspect-ratio:16/10;background:#000}
