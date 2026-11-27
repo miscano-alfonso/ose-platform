@@ -4,12 +4,15 @@ import { roundelSrc } from "@/app/(site)/CourseCard";
 import { siteInfo } from "@/lib/db";
 import { Head } from "./fmt";
 import { getHub, grouped } from "@/lib/hub";
+import { familyLocation, groupFits, COUNTRIES, ENGLAND_REGIONS } from "@/lib/family-location";
+import { LocationPicker } from "./LocationPicker";
+import { setFamilyLocationAction } from "./actions";
 import { importantDates, examPartner, whenOf, DATE_KINDS } from "@/lib/important-dates";
 
 // Resources on the parent and student dashboards (21 Nov): the website's Resources (Admin → Website → Resources),
 // opening on the subjects of the courses the family is booked on, with an "Other subjects" tab for the rest.
 // 27 Nov: teachers see the same page (their own subjects first), with their suggestion form and suggestions in `children`.
-export async function ResourcesView({ base, tab, courses, forParent, teacher, tools, children }: { base: string; tab?: string; courses: CourseRef[]; forParent: boolean; teacher?: boolean; tools?: React.ReactNode; children?: React.ReactNode }) {
+export async function ResourcesView({ base, tab, courses, forParent, teacher, tools, children, familyId, viewer }: { familyId?: string; viewer?: boolean; base: string; tab?: string; courses: CourseRef[]; forParent: boolean; teacher?: boolean; tools?: React.ReactNode; children?: React.ReactNode }) {
   const [list, site] = await Promise.all([getResources(), siteInfo()]);
   const { mine, others } = resourcesForCourses(list, courses);
   const showOthers = tab === "others";
@@ -26,7 +29,7 @@ export async function ResourcesView({ base, tab, courses, forParent, teacher, to
         <Link href={`${base}?tab=dates`} aria-current={on("dates") ? "page" : undefined} className={`abtn sm${on("dates") ? " pri" : ""}`}>Important dates</Link></>}
     </nav>
     {children}
-    {extra === "info" && await InfoTab()}
+    {extra === "info" && await InfoTab({ base, familyId, viewer })}
     {extra === "dates" && await DatesTab({ forParent })}
     {!showOthers && !extra && courses.length === 0 && <p className="empty">{teacher ? "Once you have classes this year, the resources for your subjects show here." : forParent ? "Once your children are booked on a course, the resources for their subjects show here." : "Once you’re booked on a course, the resources for your subjects show here."}{others.length > 0 && <> Meanwhile, have a look at <Link href={`${base}?tab=others`}>other subjects</Link>.</>}</p>}
     {!showOthers && !extra && courses.length > 0 && groups.length === 0 && <p className="empty">{teacher ? "There are no resources for your subjects yet: suggest some above." : <>The teachers haven’t added resources for {forParent ? "your children’s" : "your"} subjects yet.</>}</p>}
@@ -47,10 +50,13 @@ export async function ResourcesView({ base, tab, courses, forParent, teacher, to
 }
 
 /** 27 Nov: Information: the website's "New to Home Ed?" hub (Admin → Home Ed hub), without its dates (see Important dates). */
-async function InfoTab() {
-  const hub = (await getHub()).map((sec) => ({ ...sec, links: sec.links.filter((l) => l.kind !== "date") })).filter((sec) => sec.links.length || sec.intro);
-  if (!hub.length) return <p className="empty">Information for home-educating families is coming soon.</p>;
-  return <>{hub.map((sec) => <section key={sec.id} className="card rs-dsec" id={sec.slug}>
+async function InfoTab({ base, familyId, viewer }: { base: string; familyId?: string; viewer?: boolean }) {
+  const place = familyId ? await familyLocation(familyId) : null;
+  // 27 Nov (Alfonso): only the links for where the family lives (groups named after another country or region are left out)
+  const hub = (await getHub()).map((sec) => ({ ...sec, links: sec.links.filter((l) => l.kind !== "date" && groupFits(l.grp, place)) })).filter((sec) => sec.links.length || sec.intro);
+  const picker = familyId ? <LocationPicker action={setFamilyLocationAction} back={base} place={place} countries={COUNTRIES} regions={ENGLAND_REGIONS} readOnly={viewer} /> : null;
+  if (!hub.length) return <>{picker}<p className="empty">Information for home-educating families is coming soon.</p></>;
+  return <>{picker}{hub.map((sec) => <section key={sec.id} className="card rs-dsec" id={sec.slug}>
     <h2 style={{ margin: "0 0 6px" }}>{sec.title}</h2>{sec.intro && <p className="cs" style={{ marginTop: 0 }}>{sec.intro}</p>}
     {grouped(sec.links).map(([grp, links]) => <div key={grp} className="rs-igrp">{grp && <h3>{grp}</h3>}
       <div className="rs-dgrid">{links.map((l) => <a key={l.id} className="rs-ditem" href={l.url} target="_blank" rel="noopener">

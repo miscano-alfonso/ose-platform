@@ -8,5 +8,5 @@ export default async function ParentResources({ searchParams }: { searchParams: 
   const children = await kids(f.id);
   const several = children.filter((k) => k.classes.length).length > 1;
   const courses = children.flatMap((k) => k.classes.map((c) => ({ subject: c.subject, level: c.level, who: several ? k.first : undefined })));
-  return <ResourcesView base="/parent/resources" tab={sp.tab} courses={courses} forParent />;
+  return <ResourcesView base="/parent/resources" tab={sp.tab} courses={courses} forParent familyId={f.parentId || f.id} viewer={!!f.viewer} />;
 }

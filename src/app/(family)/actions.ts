@@ -219,3 +219,10 @@ export async function parentMarkUnreadAction(f: FormData): Promise<void> {
   }
   redirect(back);
 }
+/** 27 Nov: Resources → Information: where the family lives, so only the links for there show. */
+export async function setFamilyLocationAction(f: FormData): Promise<void> {
+  const fam = await currentFamily();
+  const back = str(f, "back", 80) === "/student/resources" ? "/student/resources" : "/parent/resources";
+  if (fam && !fam.viewer) { const { setFamilyLocation } = await import("@/lib/family-location"); await setFamilyLocation(fam.parentId, str(f, "place", 40)); }
+  redirect(`${back}?tab=info`);
+}

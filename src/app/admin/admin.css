@@ -1974,3 +1974,10 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 .adm .rs-dates p{margin:6px 0 4px;color:var(--muted);font-size:14.5px}
 .adm .rs-dates .pill{font-size:12px;margin-left:4px;vertical-align:2px}
 @media (max-width:700px){.adm .rs-dates li{grid-template-columns:1fr;gap:4px}}
+.adm .tt-grid{grid-template-columns:repeat(var(--tt-cols,7),minmax(0,1fr))}
+@media (max-width:820px){.adm .tt-grid{grid-template-columns:1fr}}
+/* 27 Nov: Resources → Information: where the family lives */
+.adm .rs-loc{display:flex;justify-content:flex-end;margin:-4px 0 12px}
+.adm .rs-loc label{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
+.adm .rs-loc select{width:auto;min-width:220px}
+.adm .rs-loc select{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-weight:500}

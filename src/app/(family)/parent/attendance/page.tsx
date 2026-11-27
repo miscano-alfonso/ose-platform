@@ -31,7 +31,14 @@ export default async function ParentTimetable({ searchParams }: { searchParams: 
   const end = new Date(last); end.setUTCDate(last.getUTCDate() + (6 - ((last.getUTCDay() + 6) % 7)));
   const lessons = kid ? await parentMonth(f.id, kid.id, iso(start), iso(end)) : [];
   const byDay = new Map<string, MonthLesson[]>(); for (const l of lessons) byDay.set(l.date, [...(byDay.get(l.date) ?? []), l]);
-  const days: Date[] = []; for (const d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) days.push(new Date(d));
+  const all: Date[] = []; for (const d = new Date(start); d <= end; d.setUTCDate(d.getUTCDate() + 1)) all.push(new Date(d));
+  // 27 Nov (Alfonso): weekdays only; Saturday and Sunday show only in a month that has a lesson on them
+  const weekend = lessons.some((l) => { const g = new Date(l.date + "T12:00:00Z").getUTCDay(); return g === 0 || g === 6; });
+  const shown = weekend ? all : all.filter((d) => d.getUTCDay() !== 0 && d.getUTCDay() !== 6), cols = weekend ? 7 : 5;
+  // a week with none of its shown days in this month (e.g. 26–30 Oct when 1 Nov is a Sunday) is left off
+  const weekOf = (d: Date) => Math.floor((d.getTime() - start.getTime()) / (7 * 864e5));
+  const inMonth = new Set(shown.filter((d) => d.getUTCMonth() === mo - 1).map(weekOf));
+  const days = shown.filter((d) => inMonth.has(weekOf(d)));
   const monthHref = (d: number) => { const t = new Date(Date.UTC(y, mo - 1 + d, 1)); return `/parent/attendance?${kid ? `kid=${kid.id}&` : ""}m=${iso(t).slice(0, 7)}`; };
   const monthName = (d: number) => MONTHS[new Date(Date.UTC(y, mo - 1 + d, 1)).getUTCMonth()];
   const taught = lessons.filter((l) => l.mark), count = (m: string) => taught.filter((l) => l.mark === m).length;
@@ -57,8 +64,8 @@ export default async function ParentTimetable({ searchParams }: { searchParams: 
       </div>
       {taught.length > 0 && <p className="tt-sum">{monthName(0)}: <b>{count("present")}</b> present · <b>{count("late")}</b> late · <b>{count("absent")}</b> absent · <b>{count("approved_absence")}</b> approved absence{count("approved_absence") === 1 ? "" : "s"}</p>}
       <form action={reportAbsenceAction} className="tt-form"><input type="hidden" name="student" value={kid.id} /><input type="hidden" name="kid" value={kid.id} /><input type="hidden" name="m" value={ym} />
-        <div className="tt-grid">
-          {WD.map((w) => <div key={w} className="tt-wh">{w}</div>)}
+        <div className="tt-grid" style={{ ["--tt-cols" as string]: cols }}>
+          {WD.slice(0, cols).map((w) => <div key={w} className="tt-wh">{w}</div>)}
           {days.map((d) => { const k = iso(d), ls = byDay.get(k) ?? [], other = d.getUTCMonth() !== mo - 1;
             return <div key={k} className={`tt-day${other ? " other" : ""}${k === today ? " today" : ""}${ls.length ? " has" : ""}${k > today ? " future" : ""}`}>
               <div className="tt-dn"><span className="tt-wd">{WD[(d.getUTCDay() + 6) % 7]} </span>{d.getUTCDate()}<span className="tt-wd"> {MONTHS[d.getUTCMonth()].slice(0, 3)}</span>{k === today ? " · Today" : ""}</div>
