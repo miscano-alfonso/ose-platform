@@ -483,7 +483,7 @@ export async function classWork(groupId: string, limit = 25): Promise<ClassWork[
         where e.group_id = $1 and e.status in ('pending','active') and not e.is_taster)
       select c.id, c.title, c.due_at::text, c.max_points::float as max_points, c.link,
         coalesce((select json_agg(json_build_object('id', k.id, 'name', k.name,
-            'status', case when s.state = 'returned' then 'marked' when s.state = 'turned_in' then 'done'
+            'status', case when s.state = 'returned' and (s.points is not null or c.max_points is null) then 'marked' when s.state = 'turned_in' then 'done'
                            when c.due_at is not null and c.due_at < now() then 'missing' else 'todo' end,
             'late', coalesce(s.late, false), 'points', s.points::float, 'at', s.turned_in_at::text, 'link', s.link) order by k.name)
           from kids k left join classroom_submissions s on s.coursework_id = c.id and s.student_id = k.id), '[]') as subs

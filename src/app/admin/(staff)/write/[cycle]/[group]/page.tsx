@@ -13,7 +13,7 @@ const wday = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB"
 const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" });
 const PILL: Record<string, [string, string]> = { todo: ["To write", "mute"], draft: ["Draft", "warn"], submitted: ["Submitted", "info"], returned: ["Sent back", "bad"], approved: ["Approved", "good"] };
 const scale = (n: number) => Array.from({ length: n }, (_, i) => i + 1);
-const AS: Record<string, [string, string]> = { marked: ["good", "Marked"], handed_in: ["info", "Handed in · waiting for your mark"], set: ["warn", "Not handed in yet"],
+const AS: Record<string, [string, string]> = { sent_back: ["warn", "Sent back to redo · not handed in again"], marked: ["good", "Marked"], handed_in: ["info", "Handed in · waiting for your mark"], set: ["warn", "Not handed in yet"],
   not_set: ["warn", "Not set in Classroom yet"], unknown: ["mute", "Assessment status comes from Google Classroom once it’s connected"] };
 
 export default async function Write({ params, searchParams }: { params: Promise<{ cycle: string; group: string }>; searchParams: Promise<{ ok?: string; err?: string; r?: string }> }) {

@@ -83,8 +83,8 @@ export async function cancelAbsence(parentId: string, id: string) {
 // ---------- assignments (from Google Classroom) ----------
 export async function assignments(studentIds: string[]) {
   return withSchool((q) => q<{ student_id: string; title: string; due_at: string | null; link: string | null; class: string; colour: string; status: string; points: number | null; max: number | null; late: boolean;
-    description: string | null; materials: { kind: string; title: string; url: string | null }[]; posted_at: string | null; teacher: string | null }>(`
-    select a.student_id, a.title, a.due_at::text, a.link, a.description, a.materials, a.posted_at::text,
+    description: string | null; materials: { kind: string; title: string; url: string | null }[]; posted_at: string | null; teacher: string | null; sent_back: boolean }>(`
+    select a.student_id, a.title, a.due_at::text, a.link, a.description, a.materials, a.posted_at::text, coalesce(a.sent_back, false) as sent_back,
       (select u.name from teachers t join users u on u.id = t.user_id where t.id = coalesce(g.teacher_id, oc.teacher_id)) as teacher, coalesce(l.name || ' ' || coalesce(sj.short_name, sj.name), '1:1 ' || coalesce(osj.name, oc.name, '')) as class,
       coalesce(sj.colour, osj.colour, '#8494c2') as colour, a.parent_status as status, a.points::float as points, a.max_points::float as max, a.late
     from student_assignments a left join course_groups g on g.id = a.group_id left join levels l on l.id = g.level_id left join subjects sj on sj.id = g.subject_id

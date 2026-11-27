@@ -1735,3 +1735,4 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 /* 27 Nov: Save draft reads "Saved ✓" until the report changes */
 .adm .wr-acts .abtn.wr-saved:disabled{opacity:1;filter:none;color:var(--good);border-color:transparent;background:var(--good-bg);cursor:default}
 .adm .wr-backrow{display:flex;align-items:center;gap:8px}
+.adm .mk-subs .mk-grp.sent_back,.adm .mk-subs .mk-st.sent_back .mk-who b{color:var(--warn)}

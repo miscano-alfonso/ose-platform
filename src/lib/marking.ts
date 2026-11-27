@@ -61,25 +61,26 @@ export async function markingSubmissions(teacherUserId: string): Promise<MarkSub
 
 /** 26 Nov: everyone booked on the class for each piece of work, with where they are: handed in (to mark), marked
  *  (returned), or not handed in. For the Marking page's "2/6 handed in" and its full list of students. */
-export type RosterRow = { cw: string; studentId: string; student: string; state: "to_mark" | "marked" | "not_in"; late: boolean; turnedIn: string | null; link: string | null; pct: number | null };
+export type RosterRow = { cw: string; studentId: string; student: string; state: "to_mark" | "marked" | "sent_back" | "not_in"; late: boolean; turnedIn: string | null; link: string | null; pct: number | null };
 export async function markingRoster(cwIds: string[]): Promise<RosterRow[]> {
   if (!cwIds.length) return [];
   return withSchool((q) => q<RosterRow>(`select c.id as cw, st.id as "studentId", st.first_name || ' ' || st.last_name as student,
-      case when s.state = 'turned_in' then 'to_mark' when s.state = 'returned' then 'marked' else 'not_in' end as state,
+      case when s.state = 'turned_in' then 'to_mark' when s.state = 'returned' and s.points is null and c.max_points is not null then 'sent_back'
+        when s.state = 'returned' then 'marked' else 'not_in' end as state,
       coalesce(s.late, false) as late, s.turned_in_at::text as "turnedIn", s.link,
       case when s.points is not null and c.max_points > 0 then round(s.points / c.max_points * 100)::int end as pct
     from classroom_coursework c join enrolments e on e.group_id = c.group_id and e.status in ('active', 'pending') and not e.is_taster
       join students st on st.id = e.student_id
       left join classroom_submissions s on s.coursework_id = c.id and s.student_id = st.id
     where c.id = any($1::uuid[])
-    order by c.id, case when s.state = 'turned_in' then 0 when s.state = 'returned' then 1 else 2 end, st.first_name, st.last_name`, [cwIds])).catch(() => []);
+    order by c.id, case when s.state = 'turned_in' then 0 when s.state = 'returned' and s.points is null and c.max_points is not null then 2 when s.state = 'returned' then 1 else 3 end, st.first_name, st.last_name`, [cwIds])).catch(() => []);
 }
 
 /** 26 Nov: for My day: how many on the class have handed each piece in (handed in or returned), out of everyone booked. */
 export async function markingCounts(cwIds: string[]): Promise<Map<string, { handed: number; total: number }>> {
   if (!cwIds.length) return new Map();
   const rows = await withSchool((q) => q<{ cw: string; handed: number; total: number }>(`select c.id as cw,
-      count(*) filter (where s.state in ('turned_in', 'returned'))::int as handed, count(*)::int as total
+      count(*) filter (where s.state = 'turned_in' or (s.state = 'returned' and (s.points is not null or c.max_points is null)))::int as handed, count(*)::int as total
     from classroom_coursework c join enrolments e on e.group_id = c.group_id and e.status in ('active', 'pending') and not e.is_taster
       left join classroom_submissions s on s.coursework_id = c.id and s.student_id = e.student_id
     where c.id = any($1::uuid[]) group by c.id`, [cwIds])).catch(() => []);

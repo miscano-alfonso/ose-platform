@@ -19,18 +19,18 @@ const Pill = ({ m }: { m: MarkItem }) => <span className={`pill ${PILL[tone(m.da
 // 26 Nov: each piece shows "2/6 handed in", and opens to every student on the class: to mark (handed in, with Open in
 // Classroom), marked (returned, with the mark) and not handed in yet.
 function Piece({ m, subs, roster, showClass }: { m: MarkItem; subs: MarkSub[]; roster: RosterRow[]; showClass: boolean }) {
-  const handed = roster.filter((r) => r.state !== "not_in").length, total = roster.length;
+  const handed = roster.filter((r) => r.state === "to_mark" || r.state === "marked").length, total = roster.length;
   const group = (state: RosterRow["state"], label: string) => { const rows = roster.filter((r) => r.state === state); if (!rows.length) return null;
     return <><li className={`mk-grp ${state}`}>{label} · {rows.length}</li>{rows.map((r) => { const link = r.link;
       return <li key={r.studentId} className={`mk-st ${state}${state === "not_in" ? " mk-not" : ""}`}>
-        <span className="mk-who"><b>{r.student}</b><span>{state === "not_in" ? "Not handed in" : r.turnedIn ? `Handed in ${dm(r.turnedIn)}` : "Handed in"}</span>
+        <span className="mk-who"><b>{r.student}</b><span>{state === "not_in" ? "Not handed in" : state === "sent_back" ? "Returned without a mark, to redo" : r.turnedIn ? `Handed in ${dm(r.turnedIn)}` : "Handed in"}</span>
           {r.late && <span className="pill warn">Late</span>}{state === "marked" && r.pct != null && <span className="pill good">{r.pct}%</span>}</span>
         {state !== "not_in" && (link ? <a className="abtn sm" href={link} target="_blank" rel="noopener">Open in Classroom</a> : m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>)}
       </li>; })}</>; };
   return <details className="mk-piece">
     <summary><div className="t"><b>{m.title}</b><span>{showClass ? `${m.cls} · ` : ""}{m.toMark} to mark{m.late ? <> (<b className="mk-late">{m.late} late</b>)</> : ""} · return by {dm(m.deadline)}</span></div>
       {total > 0 && <span className="mk-count" title="Students who have handed it in, out of everyone on the class">{handed}/{total} handed in</span>}<Pill m={m} /></summary>
-    <ul className="mk-subs">{total ? <>{group("to_mark", "To mark")}{group("marked", "Marked")}{group("not_in", "Not handed in yet")}</>
+    <ul className="mk-subs">{total ? <>{group("to_mark", "To mark")}{group("marked", "Marked")}{group("sent_back", "Sent back to redo")}{group("not_in", "Not handed in yet")}</>
       : subs.map((x) => <li key={x.sid}><span className="mk-who"><b>{x.student}</b><span>{x.turnedIn ? `Handed in ${dm(x.turnedIn)}` : "Handed in"}</span></span></li>)}</ul>
     {m.link && <p className="mk-all"><a href={m.link} target="_blank" rel="noopener">All hand-ins for this work in Classroom ↗</a></p>}
     {/* 27 Nov (Alfonso): not marking this one? Resolve it: it leaves the list (and the reminders), and can be put back */}
