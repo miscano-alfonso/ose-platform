@@ -586,6 +586,13 @@ export async function saveWriteSheetAction(f: FormData): Promise<void> {
   const submit = one ? oneSubmit === "1" : str(f, "submit", 1) === "1";
   // 27 Nov (Alfonso): saving one report also keeps the other reports' unsaved changes (as drafts), so nothing is lost
   const dirty = new Set(str(f, "dirty", 8000).split(",").filter((x) => /^[0-9a-f-]{36}$/.test(x) && x !== oneId));
+  // 27 Nov: Save all drafts: every report with unsaved changes, as drafts
+  if (f.get("saveall") === "1") {
+    const pick = rows.filter((r) => dirty.has(r.id));
+    const e2 = pick.length ? await saveWriteSheet(me, cycle, group, pick, false) : null;
+    revalidatePath(`/admin/reports/${cycle}`);
+    redirect(`/admin/write/${cycle}/${group}?${e2 ? "err=" + encodeURIComponent(e2) : "ok=" + encodeURIComponent(pick.length ? `${pick.length} draft${pick.length === 1 ? "" : "s"} saved.` : "Nothing new to save.")}`);
+  }
   if (one && dirty.size) await saveWriteSheet(me, cycle, group, rows.filter((r) => dirty.has(r.id)), false);
   const err = await saveWriteSheet(me, cycle, group, one ?? rows, submit);
   revalidatePath(`/admin/reports/${cycle}`);

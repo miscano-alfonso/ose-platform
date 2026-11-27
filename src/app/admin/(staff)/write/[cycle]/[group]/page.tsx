@@ -29,10 +29,11 @@ export default async function Write({ params, searchParams }: { params: Promise<
   return <>
     {/* 31 Oct: the page heading stays at the top while scrolling, with Submit all */}
     <div className="wr-head">
-    <p className="backlink"><a className="abtn sm" href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a></p>
+    {/* 27 Nov (Alfonso): How it works on the Back row, at the right (under the My day button) */}
+    <p className="backlink wr-backrow"><a className="abtn sm" href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a><span className="grow" style={{ flex: 1 }} /><GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How it works" /></p>
       <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · <b>Submit</b> between {wday(h.opens_on)} and {wday(h.comments_due)} (the last week of term)</div></div>
-        <span className="grow" /><GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How it works" />{!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
-          <AiDraftAll /><SubmitAll off={wait} /></div>}</div>
+        <span className="grow" />{!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
+          <button id="wr-saveall" className="abtn sm" type="submit" form="wr-form" name="saveall" value="1" title="Save every report you’ve changed, as drafts">Save all drafts</button><AiDraftAll /><SubmitAll off={wait} /></div>}</div>
       {!sp.r && sp.ok && <p className="note msg">{sp.ok}</p>}{!sp.r && sp.err && <p className="note msg bad">{sp.err}</p>}
       {/* 27 Nov (Alfonso): one point per line; the submit dates are only in the line under the title */}
       <ul className="note wr-tips">

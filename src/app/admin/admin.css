@@ -1734,3 +1734,4 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm a.wr-aslink{text-decoration:none}.adm a.wr-aslink:hover{filter:brightness(.95);text-decoration:underline}
 /* 27 Nov: Save draft reads "Saved ✓" until the report changes */
 .adm .wr-acts .abtn.wr-saved:disabled{opacity:1;filter:none;color:var(--good);border-color:transparent;background:var(--good-bg);cursor:default}
+.adm .wr-backrow{display:flex;align-items:center;gap:8px}

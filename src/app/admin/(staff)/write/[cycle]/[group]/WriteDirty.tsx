@@ -25,9 +25,10 @@ export function WriteDirty() {
         c.el.classList.toggle("wr-dirty", d);
       }
     };
-    paint();
-    const t = setInterval(paint, 700);   // also picks up text put in by Draft with AI
-    form.addEventListener("input", paint); form.addEventListener("change", paint);
+    const paintAll = () => { paint(); const all = document.getElementById("wr-saveall") as HTMLButtonElement | null; if (all) { const n = dirtyIds().length; all.disabled = !n; all.textContent = n ? `Save all drafts (${n})` : "All saved ✓"; } };
+    paintAll();
+    const t = setInterval(paintAll, 700);   // also picks up text put in by Draft with AI
+    form.addEventListener("input", paintAll); form.addEventListener("change", paintAll);
     const onSubmit = () => {
       sending = true;
       form.querySelector('input[name="dirty"]')?.remove();
@@ -36,7 +37,7 @@ export function WriteDirty() {
     form.addEventListener("submit", onSubmit, true);
     const leave = (e: BeforeUnloadEvent) => { if (!sending && dirtyIds().length) { e.preventDefault(); e.returnValue = ""; } };
     window.addEventListener("beforeunload", leave);
-    return () => { clearInterval(t); form.removeEventListener("input", paint); form.removeEventListener("change", paint); form.removeEventListener("submit", onSubmit, true); window.removeEventListener("beforeunload", leave); };
+    return () => { clearInterval(t); form.removeEventListener("input", paintAll); form.removeEventListener("change", paintAll); form.removeEventListener("submit", onSubmit, true); window.removeEventListener("beforeunload", leave); };
   }, []);
   return null;
 }
