@@ -6,19 +6,21 @@ import { Head } from "./fmt";
 
 // Resources on the parent and student dashboards (21 Nov): the website's Resources (Admin → Website → Resources),
 // opening on the subjects of the courses the family is booked on, with an "Other subjects" tab for the rest.
-export async function ResourcesView({ base, tab, courses, forParent }: { base: string; tab?: string; courses: CourseRef[]; forParent: boolean }) {
+// 27 Nov: teachers see the same page (their own subjects first), with their suggestion form and suggestions in `children`.
+export async function ResourcesView({ base, tab, courses, forParent, teacher, children }: { base: string; tab?: string; courses: CourseRef[]; forParent: boolean; teacher?: boolean; children?: React.ReactNode }) {
   const [list, site] = await Promise.all([getResources(), siteInfo()]);
   const { mine, others } = resourcesForCourses(list, courses);
   const showOthers = tab === "others";
   const groups = showOthers ? others : mine;
   return <>
-    <Head title="Resources" sub={forParent ? "Ideas from the teachers for learning at home alongside lessons: things to watch, read and explore." : "Ideas from your teachers for learning alongside your lessons: things to watch, read and explore."} />
+    <Head title="Resources" sub={teacher ? "The ideas for learning at home that parents and students see on their dashboards and the website. Suggest your favourites for your subjects and the office will add them." : forParent ? "Ideas from the teachers for learning at home alongside lessons: things to watch, read and explore." : "Ideas from your teachers for learning alongside your lessons: things to watch, read and explore."} />
     <nav className="tabs rs-tabs" aria-label="Which subjects">
-      <Link href={base} aria-current={!showOthers ? "page" : undefined} className={`abtn sm${!showOthers ? " pri" : ""}`}>{forParent ? "Your children’s subjects" : "Your subjects"}</Link>
+      <Link href={base} aria-current={!showOthers ? "page" : undefined} className={`abtn sm${!showOthers ? " pri" : ""}`}>{teacher ? "Your subjects" : forParent ? "Your children’s subjects" : "Your subjects"}</Link>
       {others.length > 0 && <Link href={`${base}?tab=others`} aria-current={showOthers ? "page" : undefined} className={`abtn sm${showOthers ? " pri" : ""}`}>Other subjects</Link>}
     </nav>
-    {!showOthers && courses.length === 0 && <p className="empty">{forParent ? "Once your children are booked on a course, the resources for their subjects show here." : "Once you’re booked on a course, the resources for your subjects show here."}{others.length > 0 && <> Meanwhile, have a look at <Link href={`${base}?tab=others`}>other subjects</Link>.</>}</p>}
-    {!showOthers && courses.length > 0 && groups.length === 0 && <p className="empty">The teachers haven’t added resources for {forParent ? "your children’s" : "your"} subjects yet.</p>}
+    {children}
+    {!showOthers && courses.length === 0 && <p className="empty">{teacher ? "Once you have classes this year, the resources for your subjects show here." : forParent ? "Once your children are booked on a course, the resources for their subjects show here." : "Once you’re booked on a course, the resources for your subjects show here."}{others.length > 0 && <> Meanwhile, have a look at <Link href={`${base}?tab=others`}>other subjects</Link>.</>}</p>}
+    {!showOthers && courses.length > 0 && groups.length === 0 && <p className="empty">{teacher ? "There are no resources for your subjects yet: suggest some above." : <>The teachers haven’t added resources for {forParent ? "your children’s" : "your"} subjects yet.</>}</p>}
     {groups.map((g) => <section key={g.subject} id={subjectAnchor(g.subject)} className="card rs-dsec">
       <div className="rs-dhead">
         {/* eslint-disable-next-line @next/next/no-img-element */}

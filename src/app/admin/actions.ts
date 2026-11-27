@@ -2105,3 +2105,27 @@ export async function hideVisitorAction(f: FormData): Promise<void> {
   revalidatePath("/admin/visitors");
   redirect(`/admin/visitors?${str(f, "q", 200).replace(/^\?/, "")}#log`);
 }
+
+// ---------- 27 Nov (Alfonso): teachers suggest resources for their subjects; the office adds them on Resources ----------
+export async function suggestResourceAction(f: FormData): Promise<void> {
+  const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
+  const { suggestResource } = await import("@/lib/resources");
+  const err = await suggestResource(me.id, { subject: str(f, "subject", 60), title: str(f, "title", 120), description: str(f, "description", 400), url: str(f, "url", 600), kind: str(f, "kind", 10) }, real.id);
+  tback("/admin/teacher/resources", "Thank you! Your suggestion has gone to the office. You’ll see below when it’s added.", err);
+}
+export async function withdrawSuggestionAction(f: FormData): Promise<void> {
+  const me = await requireViewer();
+  const { withdrawSuggestion } = await import("@/lib/resources");
+  await withdrawSuggestion(me.id, str(f, "id", 40));
+  tback("/admin/teacher/resources", "Suggestion withdrawn.");
+}
+export async function addSuggestionAction(f: FormData): Promise<void> { return decideSuggestionAction(f, true); }
+export async function notNowSuggestionAction(f: FormData): Promise<void> { return decideSuggestionAction(f, false); }
+async function decideSuggestionAction(f: FormData, add: boolean): Promise<void> {
+  const me = await requireStaff();
+  const { decideSuggestion } = await import("@/lib/resources");
+  const err = await decideSuggestion(me.id, str(f, "id", 40), add, { subject: str(f, "subject", 60), title: str(f, "title", 120), description: str(f, "description", 400),
+    url: str(f, "url", 600), kind: str(f, "kind", 10), sortOrder: Number(str(f, "sort", 3)) || 0, hidden: false }, str(f, "note", 500));
+  revalidatePath("/admin/resources");
+  redirect(`/admin/resources?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(add ? "Added to the Resources page. The teacher can see it’s been added." : "Saved. The teacher sees “Not for now” with your note.")}#suggested`);
+}
