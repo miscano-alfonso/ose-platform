@@ -164,13 +164,14 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
       }
       for (const s of best.values()) {
         const sid = uid.get(s.userId)!, cw = wid.get(s.courseWorkId)!;
-        const st = STATE[s.state ?? ""] ?? "assigned";
+        // 27 Nov (Alfonso): handed in with nothing attached counts as not handed in (missing), not as work to mark
+        const content = contentOf(s, workById.get(s.courseWorkId)), st0 = STATE[s.state ?? ""] ?? "assigned", st = st0 === "turned_in" && content === "none" ? "assigned" : st0;
         const turned = [...(s.submissionHistory ?? [])].reverse().find((h) => h.stateHistory?.state === "TURNED_IN")?.stateHistory?.stateTimestamp ?? null;
         const pts = st === "returned" && typeof s.assignedGrade === "number" ? s.assignedGrade : null;
         await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link, content) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8, $9)
           on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points, link = excluded.link, content = excluded.content,
             graded_at = case when excluded.points is null then null else coalesce(classroom_submissions.graded_at, excluded.graded_at) end`,
-          [cw, sid, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null, contentOf(s, workById.get(s.courseWorkId))]);
+          [cw, sid, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null, content]);
         info.submissions!++;
       }
     });
@@ -206,13 +207,13 @@ async function syncOneCourses(token: string, info: ClassroomInfo) {
       await q(`delete from classroom_coursework where one_course_id = $1 and not (coursework_id = any($2::text[]))`, [o.id, work.items.map((w) => w.id)]);
       for (const s of subs.items) {
         const cw = wid.get(s.courseWorkId); if (!cw || !uids.has(s.userId)) continue;
-        const st = STATE[s.state ?? ""] ?? "assigned";
+        const content = contentOf(s, work.items.find((w) => w.id === s.courseWorkId)), st0 = STATE[s.state ?? ""] ?? "assigned", st = st0 === "turned_in" && content === "none" ? "assigned" : st0;
         const turned = [...(s.submissionHistory ?? [])].reverse().find((h) => h.stateHistory?.state === "TURNED_IN")?.stateHistory?.stateTimestamp ?? null;
         const pts = st === "returned" && typeof s.assignedGrade === "number" ? s.assignedGrade : null;
         await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link, content) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8, $9)
           on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points, link = excluded.link, content = excluded.content,
             graded_at = case when excluded.points is null then null else coalesce(classroom_submissions.graded_at, excluded.graded_at) end`,
-          [cw, o.student_id, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null, contentOf(s, work.items.find((w) => w.id === s.courseWorkId))]);
+          [cw, o.student_id, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null, content]);
         info.submissions!++;
       }
     });

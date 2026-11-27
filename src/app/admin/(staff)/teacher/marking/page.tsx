@@ -23,10 +23,10 @@ function Piece({ m, subs, roster, showClass }: { m: MarkItem; subs: MarkSub[]; r
   const group = (state: RosterRow["state"], label: string) => { const rows = roster.filter((r) => r.state === state); if (!rows.length) return null;
     return <><li className={`mk-grp ${state}`}>{label} · {rows.length}</li>{rows.map((r) => { const link = r.link;
       return <li key={r.studentId} className={`mk-st ${state}${state === "not_in" ? " mk-not" : ""}`}>
-        <span className="mk-who"><b>{r.student}</b><span>{state === "not_in" ? "Not handed in" : state === "sent_back" ? "Returned without a mark, to redo" : r.turnedIn ? `Handed in ${dm(r.turnedIn)}` : "Handed in"}</span>
-          {r.late && <span className="pill warn">Late</span>}{state === "marked" && r.pct != null && <span className="pill good">{r.pct}%</span>}
+        <span className="mk-who"><b>{r.student}</b><span>{state === "not_in" ? (r.content === "none" ? `Handed in${r.turnedIn ? ` ${dm(r.turnedIn)}` : ""} with nothing attached` : "Not handed in") : state === "sent_back" ? "Returned without a mark, to redo" : r.turnedIn ? `Handed in ${dm(r.turnedIn)}` : "Handed in"}</span>
+          {r.late && state !== "not_in" && <span className="pill warn">Late</span>}{state === "marked" && r.pct != null && <span className="pill good">{r.pct}%</span>}
           {/* 27 Nov (Alfonso): handed in with nothing in it */}
-          {state !== "not_in" && r.content === "none" && <span className="pill bad" title="Handed in in Classroom with no file, link or answer attached. Check it in Classroom: if there’s no work, return it so they can hand it in again.">Nothing attached</span>}
+          {r.content === "none" && <span className="pill bad" title="They pressed Hand in in Classroom with no file, link or answer attached, so it counts as missing. Return it in Classroom so they can hand it in again.">Counts as missing</span>}
           {state !== "not_in" && r.content === "template_only" && <span className="pill mute" title="Only the copy of your file that Classroom made for them is attached. Open it to check they’ve written in it.">Only your template copy</span>}</span>
         {state !== "not_in" && (link ? <a className="abtn sm" href={link} target="_blank" rel="noopener">Open in Classroom</a> : m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>)}
       </li>; })}</>; };
