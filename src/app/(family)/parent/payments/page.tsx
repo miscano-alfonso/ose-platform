@@ -6,7 +6,6 @@ import { Head, Flash, gbp, dm } from "../../fmt";
 import { paymentHistory, latePayments } from "@/lib/family";
 import { PrintButton } from "../../PrintButton";
 
-const PAID = new Set(["paid", "refunded", "part_refunded"]);
 const CELL: Record<string, [string, string]> = { paid: ["good", "Paid"], scheduled: ["mute", "Due"], processing: ["info", "Processing"], failed: ["bad", "Failed"], refunded: ["info", "Refunded"],
   part_refunded: ["info", "Part refund"], cancelled: ["mute", "Not charged"], waived: ["mute", "Waived"] };
 export default async function Payments({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
@@ -51,7 +50,9 @@ export default async function Payments({ searchParams }: { searchParams: Promise
     <div className="tiles"><div className="tile"><span className="k">Paid this year</span><span className="v" style={{ fontSize: 26 }}>{gbp(d.paid)}</span></div>
       <div className="tile"><span className="k">Still to pay</span><span className="v" style={{ fontSize: 26 }}>{gbp(d.toPay)}</span></div>
       {d.failed > 0 && late.length === 0 && <div className="tile alert"><span className="k">Didn’t go through</span><span className="v" style={{ fontSize: 26 }}>{gbp(d.failed)}</span><span className="h">we’ll try again in 3 days</span></div>}</div>
-    {d.children.map((st) => <section key={st.id} style={{ marginBottom: 16 }}><h3 style={{ margin: "0 0 8px", font: "600 18px Jost, sans-serif" }}>{st.first}</h3>
+    {d.children.map((st, si) => <section key={st.id} style={{ marginBottom: 16 }}><div className="pay-kid"><h3 style={{ margin: 0, font: "600 18px Jost, sans-serif" }}>{st.first}</h3>
+      {/* 27 Nov (Alfonso): a key instead of a word in every cell; each payment's date sits in a colour-coded tab */}
+      {si === 0 && <div className="pc-key" aria-label="Key"><span className="pc-tab paid">Paid</span><span className="pc-tab due">Due</span><span className="pc-tab late">Late</span></div>}</div>
       <div className="tw" style={{ marginBottom: 0 }}><table><thead><tr><th>Course</th><th className="n">Year</th>{d.terms.map((t) => <th key={t.id} className="n">T{t.number}</th>)}</tr></thead><tbody>
         {st.courses.length === 0 ? <tr><td colSpan={d.terms.length + 2} className="muted">No courses this year.</td></tr> : st.courses.map((c) => { const x = X[c.id]; return <tr key={c.id}>
           <td><span className="dot" style={{ background: c.colour }} /> <b>{c.subject}</b> <span className="muted">{c.level}</span>
@@ -70,11 +71,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
                   <div><button className="abtn sm danger" type="submit">{x.pre.cooling ? "Cancel and refund" : "Cancel with notice"}</button></div></form>}
               </div></details>}</td>
           <td className="n">{gbp(c.net)}</td>
-          {c.cells.map((cell, i) => <td key={i} className="n">{cell ? <div style={{ display: "grid", gap: 2, justifyItems: "end" }}><span>{gbp(cell.amount)}</span>{/* 27 Nov (Alfonso): the date under each payment; a paid one opens the payment history */}
-            {lateCell(cell) ? <a href="#late" className="pill bad" style={{ fontSize: 12.5, textDecoration: "none" }}>{cell.status === "failed" ? "Declined" : "Overdue"} ›</a>
-              : PAID.has(cell.status) ? <a href="#history" className={`pill ${CELL[cell.status]?.[0] ?? "mute"}`} style={{ fontSize: 12.5, textDecoration: "none" }} title="See it in your payment history">{CELL[cell.status]?.[1] ?? cell.status} ›</a>
-              : <span className={`pill ${CELL[cell.status]?.[0] ?? "mute"}`} style={{ fontSize: 12.5 }}>{CELL[cell.status]?.[1] ?? cell.status}</span>}
-            {cell.status !== "cancelled" && cell.status !== "waived" && <span className="muted" style={{ fontSize: 12.5, whiteSpace: "nowrap" }}>{PAID.has(cell.status) && cell.paid_on ? dm(cell.paid_on) : dm(cell.due_on)}</span>}</div> : <span className="muted">—</span>}</td>)}</tr>; })}
+          {c.cells.map((cell, i) => <td key={i} className="n">{cell ? <PayCell cell={cell} late={lateCell(cell)} /> : <span className="muted">—</span>}</td>)}</tr>; })}
       </tbody>
       {/* 27 Nov (Alfonso): what each term comes to, for this child */}
       {st.courses.length > 1 && <tfoot><tr className="pay-tot"><td><b>Term totals</b></td><td className="n"><b>{gbp(st.courses.reduce((a, c) => a + c.net, 0))}</b></td>
@@ -92,4 +89,17 @@ export default async function Payments({ searchParams }: { searchParams: Promise
       <p className="cs" style={{ marginTop: 8 }}>Receipts open on Stripe, who handle our payments. No receipt link? Message us and we’ll send one.</p></section>
     <p className="note">Each course costs its lessons × its price per lesson, paid in equal termly payments. Swapping charges the new course for its lessons from the start of the term you move in, less what you’ve already paid for that term. Cancelling needs one full term’s notice for KS3 and Pre-GCSE courses and two full terms’ notice for GCSE courses, as agreed when you booked. Within 14 days of the first lesson, before the Classroom is used, you can cancel for a full refund.{online ? null : " To update your card, message us for now: card payments online are coming."}</p>
   </>;
+}
+
+// 27 Nov (Alfonso): one payment in the table: the amount, and its date in a colour-coded tab (key above the table).
+// Paid (green, opens the payment history), due (grey), late: declined or overdue (red, opens Overdue).
+function PayCell({ cell, late }: { cell: { status: string; amount: number; due_on: string; paid_on?: string | null }; late: boolean }) {
+  const date = dm(cell.status === "paid" && cell.paid_on ? cell.paid_on : cell.due_on);
+  const tab = late ? <a href="#late" className="pc-tab late" title={cell.status === "failed" ? "Declined: see Overdue at the top" : "Overdue: see the top of the page"}>{date}</a>
+    : cell.status === "paid" ? <a href="#history" className="pc-tab paid" title={`Paid ${date}: see your payment history`}>{date}</a>
+    : cell.status === "scheduled" ? <span className="pc-tab due" title={`Due ${date}`}>{date}</span>
+    : cell.status === "processing" ? <span className="pc-tab info" title="Being collected">{date}</span>
+    : cell.status === "refunded" || cell.status === "part_refunded" ? <a href="#history" className="pc-tab info">{cell.status === "refunded" ? "Refunded" : "Part refund"}</a>
+    : <span className="pc-tab none">{cell.status === "waived" ? "Waived" : "Not charged"}</span>;
+  return <div className="pc"><span>{gbp(cell.amount)}</span>{tab}</div>;
 }
