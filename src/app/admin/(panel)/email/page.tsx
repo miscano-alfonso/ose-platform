@@ -26,7 +26,7 @@ function shortWhen(s: string) {
 const fullWhen = (s: string) => new Date(s).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: LDN }).replace(" at ", ", ");
 const when = (s: string) => new Date(s).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
 
-export default async function Email({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; audience?: string; subject?: string; body?: string; tab?: string; show?: string; m?: string }> }) {
+export default async function Email({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; audience?: string; subject?: string; body?: string; tab?: string; show?: string; m?: string; sort?: string }> }) {
   const sp = await searchParams;
   const tab = ["auto", "compose", "inbox", "sent", "design"].includes(sp.tab ?? "") ? sp.tab! : sp.audience || sp.ok || sp.err ? "compose" : "inbox";
   const ready = await emailReady();
@@ -73,9 +73,10 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
       <a className="abtn pri" href="/admin/meet-api?action=login&what=gmail">Connect the school inbox</a>
       <p className="note" style={{ marginTop: 10 }}>Google Meet has to be connected first (Attendance → Google Meet), because the inbox uses the same Google app.</p></section></>;
     const show = sp.show === "all" ? "all" : "new";
+    const unreadFirst = show === "all" && sp.sort === "unread";   // 27 Nov (Alfonso): All, with unread emails at the top
     const [{ rows: allRows }, me] = await Promise.all([inboxList("all"), requireStaff()]);
     // "New" keeps the email that's open, so it doesn't vanish from the list once opened (and so marked read)
-    const rows = show === "all" ? allRows : allRows.filter((m) => !m.read || m.id === sp.m);
+    const rows = show === "all" ? (unreadFirst ? [...allRows.filter((m) => !m.read), ...allRows.filter((m) => m.read)] : allRows) : allRows.filter((m) => !m.read || m.id === sp.m);
     const { signatureFor } = await import("@/lib/inbox");
     const sig = await signatureFor(me);
     const gm = (t: string, mb?: string | null) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(mb || box.mailbox)}#all/${t}`;
@@ -91,6 +92,7 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
       {box.mailboxes.some((b) => !b.syncRead) && <p className="note msg" style={{ marginTop: 0 }}>Reading emails here doesn’t mark them read in Mail yet. <Link href="/admin/email-settings">Reconnect the inboxes in Settings → Email</Link> (allow the site to manage your email); changes made before then are copied over once you do.</p>}
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
         <div className="segl" role="group" aria-label="Show"><Link href="/admin/email?tab=inbox" aria-current={show === "new" ? "true" : undefined}>New{unread ? ` (${unread})` : ""}</Link><Link href="/admin/email?tab=inbox&show=all" aria-current={show === "all" ? "true" : undefined}>All</Link></div>
+        {show === "all" && <div className="segl" role="group" aria-label="Order"><Link href="/admin/email?tab=inbox&show=all" aria-current={!unreadFirst ? "true" : undefined}>Newest first</Link><Link href="/admin/email?tab=inbox&show=all&sort=unread" aria-current={unreadFirst ? "true" : undefined}>Unread first</Link></div>}
         <span className="grow" />
         {unread > 1 && <form action={markInboxAction}><input type="hidden" name="all" value="1" /><button className="abtn sm" type="submit">Mark all read</button></form>}
         <form action={syncInboxAction}><button className="abtn sm ibx-ico" type="submit" title={`Check for new emails now${box.info.at ? ` (last checked ${when(box.info.at)})` : ""}`} aria-label="Check for new emails now">
@@ -99,12 +101,12 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></Link></div>
       {rows.length === 0 ? <section className="card"><p className="empty">{show === "new" ? "Nothing new from families." : "No emails from families yet."}</p></section> :
       // 27 Nov: the list and the open email are one client view (picking an email doesn't reload the page)
-      <InboxView key={show} items={rows.map((m): InboxItem => ({ id: m.id, who: who(m), subject: m.subject, snippet: m.snippet, when: shortWhen(m.received_at), at: m.received_at, read: m.read,
+      <InboxView key={`${show}${unreadFirst ? "u" : ""}`} items={rows.map((m): InboxItem => ({ id: m.id, who: who(m), subject: m.subject, snippet: m.snippet, when: shortWhen(m.received_at), at: m.received_at, read: m.read,
           kind: KIND[m.kind] ?? null, to: m.to_name ? (m.to_name.includes(" & ") ? m.to_name : m.to_name.split(" ")[0]) : null, replied: !!m.replied_at, mailbox: many ? m.mailbox : null,
           panel: { id: m.id, name: who(m), email: m.from_email, familyHref: m.parent_id ? `/admin/families/${m.parent_id}` : null, subject: m.subject, when: fullWhen(m.received_at), kind: KIND[m.kind] ?? null,
             mailbox: many ? m.mailbox : null, gmail: m.thread_id.startsWith("local:") ? null : gm(m.thread_id, m.mailbox), read: m.read, replied: !!m.replied_at,
             first: (who(m).includes("@") ? "" : who(m).split(" ")[0]) || "there" } }))}
-        initial={sel?.id ?? null} picked={!!sp.m} base={`/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}`} sig={sig} from={box.replyFrom} />}
+        initial={sel?.id ?? null} picked={!!sp.m} base={`/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}${unreadFirst ? "&sort=unread" : ""}`} sig={sig} from={box.replyFrom} />}
       <p className="muted" style={{ fontSize: 14, marginTop: 12 }}>Your signature, the connected inboxes and who teachers can email are in <Link href="/admin/email-settings">Settings → Email</Link>.</p></>;
   }
   const past = await history("message");

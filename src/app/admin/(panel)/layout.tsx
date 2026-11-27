@@ -58,6 +58,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     withSchool((q) => q<{ enq: number; jobs: number; failed: number; tasters: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq, (select count(*)::int from job_applications where status = 'new') as jobs,
       (select count(*)::int from instalments where status = 'failed') as failed, 0 as tasters`)));
   const inboxUnread = await unreadInbox();
+  if (!isDemoVisitor(me.email)) await import("@/lib/visitors").then((v) => v.noteStaffBrowser(me.id)).catch(() => null);   // 27 Nov: Visitors can hide the office's own visits
   const mkOverdue = await import("@/lib/marking").then((m) => m.overdueMarkingCount()).catch(() => 0);
   const newIdeas = await import("@/lib/workshop-ideas").then((m) => m.newIdeasCount()).catch(() => 0);   // 27 Nov: teachers' workshop ideas to look at   // 27 Nov: pieces past the marking turnaround
   const lessonReqs = await import("@/lib/lesson-changes").then((m) => m.pendingRequestCount()).catch(() => 0);   // teachers asking to cancel or move a lesson

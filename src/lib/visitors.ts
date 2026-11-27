@@ -48,6 +48,19 @@ export async function logDashboard(kind: Kind, personId: string): Promise<void> 
   if (okVid(vid)) await link(vid!, kind, personId);
 }
 
+/** 27 Nov: a staff member using the admin on this browser (once a day is plenty): their introduction-page visits from
+ *  it can be hidden on Visitors. */
+export async function noteStaffBrowser(userId: string): Promise<void> {
+  const vid = (await cookies()).get(VID_COOKIE)?.value;
+  if (!okVid(vid) || !/^[0-9a-f-]{36}$/.test(userId)) return;
+  await withSchool((q) => q(`insert into nd_staff_browsers (school_id, vid, user_id) values (current_school(), $1, $2)
+    on conflict (school_id, vid, user_id) do update set seen_at = now() where nd_staff_browsers.seen_at < now() - interval '1 day'`, [vid, userId])).catch(() => null);
+}
+/** A visit counts as the office's when it was made signed in to the admin, from a browser staff use for the admin, or by a
+ *  browser tied to an admin's own account. Alias v = nd_page_views. */
+const OFFICE_SQL = `(v.staff or exists (select 1 from nd_staff_browsers sb where sb.vid = v.vid)
+  or exists (select 1 from nd_visitor_people np join users u on u.id = np.person_id where np.vid = v.vid and u.role = 'school_admin'))`;
+
 export type PersonRow = { id: string; name: string; detail: string; pages: string[] | null; seen_first: string | null; seen_last: string | null;
   dash_first: string | null; dash_last: string | null; days: number; invited?: boolean; has_pw?: boolean };
 export type VisitorStats = { teachers: PersonRow[]; parents: PersonRow[]; students: PersonRow[];
@@ -63,7 +76,7 @@ const PRES = (kind: Kind, id: string) => `(select array_agg(distinct nv.page ord
   (select count(*)::int from dashboard_days dd where dd.kind = '${kind}' and dd.person_id = ${id}) as days`;
 const CURRENT = `e.status in ('active', 'pending') and not e.is_taster and exists (select 1 from course_groups g join academic_years y on y.id = g.academic_year_id where g.id = e.group_id and y.ends_on >= current_date)`;
 
-export async function visitorStats(): Promise<VisitorStats> {
+export async function visitorStats(hideOffice = false): Promise<VisitorStats> {
   return withSchool(async (q) => {
     const teachers = await q<PersonRow>(`select u.id, u.name, coalesce((select string_agg(distinct l.name || ' ' || sj.name, ', ') from course_groups g join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
           join academic_years y on y.id = g.academic_year_id where g.teacher_id = t.id and y.ends_on >= current_date and g.status <> 'hidden'), 'No classes') as detail,
@@ -82,16 +95,16 @@ export async function visitorStats(): Promise<VisitorStats> {
       order by s.last_name, s.first_name`);
     const views = await q<{ page: Kind; views: number; browsers: number; unknown: number }>(`select page, count(*)::int as views, count(distinct vid)::int as browsers,
         count(distinct vid) filter (where not exists (select 1 from nd_visitor_people p where p.vid = v.vid))::int as unknown
-      from nd_page_views v group by page`);
-    const [w] = await q<{ n: number }>(`select count(*)::int as n from nd_page_views where at > now() - interval '7 days'`);
+      from nd_page_views v ${hideOffice ? `where not ${OFFICE_SQL}` : ""} group by page`);
+    const [w] = await q<{ n: number }>(`select count(*)::int as n from nd_page_views v where at > now() - interval '7 days' ${hideOffice ? `and not ${OFFICE_SQL}` : ""}`);
     const log = await q<VisitRow>(`with b as (select vid, row_number() over (order by min(at))::int as n, count(*)::int as visits from nd_page_views group by vid)
-      select v.at::text, v.page, b.n as browser, v.device, v.staff, b.visits,
+      select v.at::text, v.page, b.n as browser, v.device, ${OFFICE_SQL} as staff, b.visits,
         (select coalesce((select u.name from teachers t join users u on u.id = t.user_id where np.kind = 'teacher' and t.user_id = np.person_id),
             (select p.first_name || ' ' || p.last_name from parents p where np.kind = 'parent' and p.id = np.person_id),
             (select s.first_name || ' ' || s.last_name from students s where np.kind = 'student' and s.id = np.person_id))
           from nd_visitor_people np where np.vid = v.vid order by np.kind limit 1) as who,
         (select np.kind from nd_visitor_people np where np.vid = v.vid order by np.kind limit 1) as "whoKind"
-      from nd_page_views v join b on b.vid = v.vid order by v.at desc limit 300`).catch(() => [] as VisitRow[]);
+      from nd_page_views v join b on b.vid = v.vid ${hideOffice ? `where not ${OFFICE_SQL}` : ""} order by v.at desc limit 300`).catch(() => [] as VisitRow[]);
     return { teachers, parents, students, views, views7: w?.n ?? 0, log };
   });
 }

@@ -14,14 +14,16 @@ const when = (iso: string | null) => iso ? new Date(iso).toLocaleDateString("en-
   new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : "";
 const PAGE = { teacher: "Teacher", parent: "Parent", student: "Student" } as const;
 
-export default async function Visitors({ searchParams }: { searchParams: Promise<{ role?: string; show?: string }> }) {
+export default async function Visitors({ searchParams }: { searchParams: Promise<{ role?: string; show?: string; office?: string }> }) {
   await requireStaff();
-  const [sp, st] = await Promise.all([searchParams, visitorStats()]);
+  const sp = await searchParams;
+  const hide = sp.office !== "show";   // 27 Nov (Alfonso): the office's own visits (his and Leanne's) are left out unless asked for
+  const st = await visitorStats(hide);
   const role = ROLES.find((r) => r.k === sp.role) ?? ROLES[0];
   const show = SHOW.find(([k]) => k === sp.show)?.[0] ?? "all";
   const all = st[role.plural];
   const rows = all.filter((r) => show === "used" ? r.days > 0 : show === "not" ? r.days === 0 : show === "seen" ? !!r.pages?.length : show === "unseen" ? !r.pages?.length : true);
-  const q = (o: { role?: string; show?: string }) => `/admin/visitors?role=${o.role ?? role.k}&show=${o.show ?? show}`;
+  const q = (o: { role?: string; show?: string; office?: string }) => `/admin/visitors?role=${o.role ?? role.k}&show=${o.show ?? show}${(o.office ?? (hide ? "" : "show")) ? `&office=${o.office ?? "show"}` : ""}`;
   const tile = (r: (typeof ROLES)[number]) => { const list = st[r.plural], used = list.filter((x) => x.days > 0).length, seen = list.filter((x) => x.pages?.length).length;
     return <Link key={r.k} href={q({ role: r.k, show: "all" })} className={`vs-tile${r.k === role.k ? " on" : ""}`}>
       <span className="k">{r.label}</span><b>{used}<small> of {list.length}</small></b><span>signed in to the dashboard</span><span>{seen} seen the introduction</span></Link>; };
@@ -46,8 +48,9 @@ export default async function Visitors({ searchParams }: { searchParams: Promise
       <p className="note">{st.views.reduce((a, v) => a + v.unknown, 0)} browser{st.views.reduce((a, v) => a + v.unknown, 0) === 1 ? "" : "s"} looked at an introduction page but haven’t signed in on that browser yet, so we don’t know who they are. Teachers are matched the next time they open their dashboard on the same browser; parents and students as soon as they’re signed in. Admins “Viewing as” someone aren’t counted.</p>
     </section>
     {/* 27 Nov (Alfonso): every visit to the introduction pages, including people who haven't signed in */}
-    <section className="card" id="log"><h2>Every visit</h2>
-      <p className="cs">Each time someone opens an introduction page, newest first. A browser keeps its number (Browser 1, 2…) on later visits; the name appears once that person signs in to their dashboard on the same browser. Visits from people signed in to the admin are marked Office.</p>
+    <section className="card" id="log"><div className="vs-bar"><h2 style={{ margin: 0 }}>Every visit</h2>
+        <div className="segl" role="group" aria-label="The office’s visits"><Link href={`${q({ office: "" })}#log`} aria-current={hide ? "true" : undefined}>Hide the office’s visits</Link><Link href={`${q({ office: "show" })}#log`} aria-current={!hide ? "true" : undefined}>Show them</Link></div></div>
+      <p className="cs">Each time someone opens an introduction page, newest first. A browser keeps its number (Browser 1, 2…) on later visits; the name appears once that person signs in to their dashboard on the same browser. {hide ? "Visits by the office (anyone using this admin, on any browser they’ve used it on) are left out here and in the views counts at the top." : "Visits by the office are marked Office."}</p>
       {st.log.length === 0 ? <p className="empty">No visits yet.</p> : <div className="tw"><table className="vs-table"><thead><tr><th>When</th><th>Page</th><th>Browser</th><th>Device</th><th>Who</th></tr></thead><tbody>
         {st.log.map((v, i) => <tr key={i}><td>{when(v.at)}</td><td>{PAGE[v.page] ?? v.page}</td>
           <td>Browser {v.browser}{v.visits > 1 && <span className="muted">{v.visits} visits</span>}</td><td>{v.device ?? <span className="muted">Not recorded</span>}</td>

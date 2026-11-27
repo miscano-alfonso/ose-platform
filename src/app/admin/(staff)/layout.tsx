@@ -43,6 +43,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     </div><main className="main staffmain">{children}</main></div>;
 
   // Admin → Visitors: a teacher using their dashboard (not an admin, not "Viewing as")
+  if (me.role === "school_admin") await import("@/lib/visitors").then((v) => v.noteStaffBrowser(me.id)).catch(() => null);   // 27 Nov: e.g. Leanne in Teacher mode
   if (!me.viewing && me.role === "teacher") await import("@/lib/visitors").then((v) => v.logDashboard("teacher", me.id)).catch(() => null);
   const [c] = await withSchool((q) => q<{ msgs: number; reports: number; marking: number }>(`select
     -- 26 Nov: unread conversations in the Messages inbox (families, messages from the office, replies from the school)
