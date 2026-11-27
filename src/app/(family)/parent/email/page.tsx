@@ -2,6 +2,9 @@ import Link from "next/link";
 import { requireParent } from "@/lib/family-auth";
 import { withSchool } from "@/lib/db";
 import { Head } from "../../fmt";
+import { parentEmailReadAction } from "../../actions";
+import { GuideSlides } from "../../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../../admin/guides";
 
 export const dynamic = "force-dynamic";
 
@@ -17,20 +20,66 @@ const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&l
 const rich = (body: string) => body.trim().split(/\n{2,}/).map((p) => `<p>${esc(p)
   .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (_m, t: string, u: string) => `<a href="${u}" target="_blank" rel="noopener">${t}</a>`)
   .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>").replace(/(^|\s)(https?:\/\/[^\s<]+)/g, '$1<a href="$2" target="_blank" rel="noopener">$2</a>').replace(/\n/g, "<br>")}</p>`).join("");
-const when = (s: string) => new Date(s).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
+const LDN = "Europe/London";
+const dayKey = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: LDN });
+/** As in the admin's inbox: the time today, "Yesterday", the weekday this week, else the date. */
+function shortWhen(s: string) {
+  const d = new Date(Date.parse(s.replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00"))), now = new Date(), days = Math.round((Date.parse(dayKey(now)) - Date.parse(dayKey(d))) / 864e5);
+  if (days <= 0) return d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: LDN });
+  if (days === 1) return "Yesterday";
+  if (days < 7) return d.toLocaleDateString("en-GB", { weekday: "short", timeZone: LDN });
+  return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", ...(d.getFullYear() !== now.getFullYear() ? { year: "numeric" } : {}), timeZone: LDN });
+}
+const fullWhen = (s: string) => new Date(Date.parse(s.replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00"))).toLocaleString("en-GB", { weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit", timeZone: LDN }).replace(" at ", ", ");
+/** The first words of the email, for the list. */
+const snip = (b: string) => b.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1").replace(/\*\*/g, "").replace(/\s+/g, " ").trim().slice(0, 160);
 
-export default async function ParentEmail() {
-  const f = await requireParent();
-  const rows = await withSchool((q) => q<{ id: string; subject: string; body: string; tag: string | null; at: string }>(`select id::text, subject, body, tag, coalesce(scheduled_for, sent_at)::text as at
-    from email_log where to_email = $1 and coalesce(scheduled_for, sent_at) <= now() order by coalesce(scheduled_for, sent_at) desc limit 150`, [f.email.toLowerCase()])).catch(() => []);
+// 27 Nov (Alfonso: "make the email and message features you've made for admin, the EXACT same for the teachers and
+// parents"): the same layout as Admin → Email → Inbox: New / All (Newest first / Unread first), the list on the left with
+// unread emails in bold with a blue bar, the open email on the right with Reply (writes to the office in Messages) and
+// Mark unread. Opening an email marks it read (email_log.read_at, db/129).
+export default async function ParentEmail({ searchParams }: { searchParams: Promise<{ show?: string; sort?: string; m?: string }> }) {
+  const [sp, f] = await Promise.all([searchParams, requireParent()]);
+  const me = f.email.toLowerCase();
+  if (sp.m && /^\d+$/.test(sp.m) && !f.viewer) await withSchool((q) => q(`update email_log set read_at = now() where id = $1 and to_email = $2 and read_at is null`, [sp.m, me])).catch(() => null);
+  const [rows, school] = await Promise.all([withSchool((q) => q<{ id: string; subject: string; body: string; tag: string | null; at: string; read: boolean }>(`select id::text, subject, body, tag, coalesce(scheduled_for, sent_at)::text as at, read_at is not null as read
+    from email_log where to_email = $1 and coalesce(scheduled_for, sent_at) <= now() order by coalesce(scheduled_for, sent_at) desc limit 150`, [me])).catch(() => []),
+    withSchool((q) => q<{ name: string }>(`select name from schools where id = current_school()`)).then((r) => r[0]?.name ?? "The school").catch(() => "The school")]);
+  const unread = rows.filter((r) => !r.read).length;
+  const show = sp.show === "all" ? "all" : sp.show === "new" ? "new" : unread || sp.m ? "new" : "all";   // nothing new: open on All
+  const unreadFirst = show === "all" && sp.sort === "unread";
+  const list = show === "all" ? (unreadFirst ? [...rows.filter((r) => !r.read), ...rows.filter((r) => r.read)] : rows) : rows.filter((r) => !r.read || r.id === sp.m);
+  const qs = `show=${show}${unreadFirst ? "&sort=unread" : ""}`;
+  const sel = sp.m ? rows.find((r) => r.id === sp.m) ?? null : null;
   return <>
-    <Head title="Email" sub={`Emails the school has sent you at ${f.email}, newest first`}><Link className="abtn" href="/parent/messages">Messages</Link></Head>
-    <section className="card">{rows.length === 0 ? <p className="empty">No emails here yet. Emails from the school show here from 27 November 2026.</p>
-      : rows.map((r, i) => <details key={r.id} className="li as-item pe-item" open={i === 0 && rows.length === 1}>
-        <summary><span className="pe-ico" aria-hidden="true"><svg viewBox="0 0 20 20" width="16" height="16"><path d="M3 5h14v10H3z M3 5.5l7 5.5 7-5.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /></svg></span>
-          <div className="t"><b>{r.subject}</b><span>{label(r.tag)} · {when(r.at)}</span></div>
-          <svg className="as-chev" viewBox="0 0 20 20" width="16" height="16" aria-hidden="true"><path d="M6 8l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></summary>
-        <div className="pe-body" dangerouslySetInnerHTML={{ __html: rich(r.body) }} /></details>)}</section>
-    <p className="note">To answer one, reply to it in your own email, or write to us in <Link href="/parent/messages">Messages</Link>.</p>
+    <Head title="Email" sub={`Emails the school has sent you at ${f.email}. To answer one, press Reply, or reply in your own email.`}><GuideSlides slides={[...FAMILY_GUIDES["p-messages"].slides]} title={FAMILY_GUIDES["p-messages"].title} /></Head>
+    <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 12 }}>
+      <div className="segl" role="group" aria-label="Show"><Link href="/parent/email?show=new" aria-current={show === "new" ? "true" : undefined}>New{unread ? ` (${unread})` : ""}</Link><Link href="/parent/email?show=all" aria-current={show === "all" ? "true" : undefined}>All</Link></div>
+      {show === "all" && <div className="segl" role="group" aria-label="Order"><Link href="/parent/email?show=all" aria-current={!unreadFirst ? "true" : undefined}>Newest first</Link><Link href="/parent/email?show=all&sort=unread" aria-current={unreadFirst ? "true" : undefined}>Unread first</Link></div>}
+      <span className="grow" />
+      {unread > 1 && !f.viewer && <form action={parentEmailReadAction}><input type="hidden" name="all" value="1" /><input type="hidden" name="show" value={show} /><button className="abtn sm" type="submit">Mark all read</button></form>}
+    </div>
+    {rows.length === 0 ? <section className="card"><p className="empty">No emails here yet. Emails from the school show here from 27 November 2026.</p></section>
+      : list.length === 0 ? <section className="card"><p className="empty">Nothing new. <Link href="/parent/email?show=all">See all your emails</Link>.</p></section>
+      : <div className={`ibx${sel ? " picked" : ""}`}>
+        <nav className="ibx-list" aria-label="Emails">{list.map((r) => <div key={r.id} className={`ibx-row${r.read ? "" : " unread"}`} aria-current={r.id === sel?.id ? "true" : undefined}>
+          <Link className="ibx-hit" href={`/parent/email?${qs}&m=${r.id}`} aria-label={`${r.read ? "" : "Unread: "}${r.subject}`} />
+          <span className="ibx-top"><b>{school}</b><time dateTime={r.at}>{shortWhen(r.at)}</time></span>
+          <span className="ibx-subj">{r.subject}</span>
+          <span className="ibx-snip">{snip(r.body)}</span>
+          <span className="ibx-tags"><span className="pill info">{label(r.tag)}</span></span>
+        </div>)}</nav>
+        {sel ? <div className="ibp" aria-label={`Email: ${sel.subject}`}>
+          <div className="ibp-head">
+            <div className="ibp-who"><b>{school}</b><span className="muted">to {f.email}</span></div>
+            <span className="ibp-when"><Link className="abtn sm pri" href={`/parent/messages?new=1&subject=${encodeURIComponent(/^re:/i.test(sel.subject) ? sel.subject : `Re: ${sel.subject}`)}`}>Reply</Link>{fullWhen(sel.at)}</span>
+          </div>
+          <h3 className="ibp-subj">{sel.subject} <span className="pill info" style={{ fontSize: 12, verticalAlign: 2 }}>{label(sel.tag)}</span></h3>
+          <div className="ibp-acts"><Link className="abtn sm ibp-back" href={`/parent/email?${qs}`}>← All emails</Link>
+            {!f.viewer && <form action={parentEmailReadAction}><input type="hidden" name="id" value={sel.id} /><input type="hidden" name="show" value={show} /><button className="abtn sm" type="submit">Mark unread</button></form>}</div>
+          <p className="ibp-orig first">{school} wrote · {fullWhen(sel.at)}</p>
+          <div className="irp-mail pe-mail" dangerouslySetInnerHTML={{ __html: rich(sel.body) }} />
+        </div> : <div className="ibp tml-empty"><b>Choose an email</b><span className="muted">Pick one on the left to read it.</span></div>}
+      </div>}
   </>;
 }

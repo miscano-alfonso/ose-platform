@@ -92,11 +92,75 @@ export async function markUnread(userId: string, kind: InboxKind, id: string): P
         where m.thread_id = $1 and t.user_id = $2 and m.sender = 'parent' order by m.created_at desc limit 1) returning id`, [id, userId])).length > 0;
     }
     // the school's replies to this teacher's emails: seen up to just before the latest reply
-    const [r] = await q<{ at: string | null }>(`select max(im.replied_at)::text as at from inbox_messages im
-      where im.kind = 'staff' and im.thread_id = $1 and lower(im.from_email::text) = (select lower(email::text) from users where id = $2)`, [id, userId]);
+    const [r] = await q<{ at: string | null }>(`select greatest((select max(im.replied_at) from inbox_messages im
+      where im.kind = 'staff' and im.thread_id = $1 and lower(im.from_email::text) = (select lower(email::text) from users where id = $2)),
+      (select max(s.sent_at) from inbox_sent s where s.thread_id = $1 and (select lower(email::text) from users where id = $2) = any(s.to_addrs)))::text as at`, [id, userId]);   // 27 Nov: and the school's emails sent from Gmail
     if (!r?.at) return false;
     await q(`insert into teacher_seen (school_id, user_id, key, seen_at) values (current_school(), $1, $2, $3::timestamptz - interval '1 second')
       on conflict (user_id, key) do update set seen_at = excluded.seen_at`, [userId, "school:" + id, r.at]);
     return true;
   }).catch(() => false);
+}
+
+// ---------- 27 Nov (Alfonso: "why are the teacher email feature not working like the admin's one?") ----------
+// A teacher's Email as a mail reader: each conversation with the school and every email in it, both sides: the teacher's
+// emails (written here, or sent from their own email to the school's), the office's replies from the admin's Reply, and
+// emails the school sent them from Gmail itself (inbox_sent, db/129).
+export type MailMsg = { key: string; mine: boolean; who: string; email: string | null; at: string; body: string; partial: string | null;
+  files: { id: string; name: string; size: number }[]; links: string[] };
+export type MailThread = { id: string; subject: string; who: string; at: string; officeAt: string | null; msgs: MailMsg[]; preview: string; mine: boolean };
+export async function teacherMail(userId: string, officeLabel: string): Promise<MailThread[]> {
+  const rows = await withSchool(async (q) => {
+    const me = (await q<{ email: string; name: string }>(`select lower(email::text) as email, name from users where id = $1`, [userId]))[0];
+    if (!me) return null;
+    const own = await q<{ id: string; thread_id: string; subject: string; body: string | null; body_text: string | null; snippet: string | null; local: boolean; at: string;
+      replied_at: string | null; reply_body: string | null; reply_from: string | null; replier: string | null; to_name: string | null; links: string[] | null; files: { id: string; name: string; size: number }[] }>(`
+      select m.id, m.thread_id, m.subject, m.body, m.body_text, m.snippet, m.gmail_id like 'local:%' as local, m.received_at::text as at, m.replied_at::text, m.reply_body, m.reply_from::text,
+        ru.name as replier, coalesce((select string_agg(x.name, ' & ' order by array_position(m.to_users, x.id)) from users x where x.id = any(m.to_users)), tu.name) as to_name, m.links,
+        coalesce((select json_agg(json_build_object('id', f.id, 'name', f.name, 'size', f.size) order by f.created_at) from inbox_attachments f where f.message_id = m.id), '[]'::json) as files
+      from inbox_messages m left join users tu on tu.id = m.to_user left join users ru on ru.id = m.replied_by
+      where m.kind = 'staff' and lower(m.from_email::text) = $1 order by m.received_at desc limit 300`, [me.email]);
+    const sent = await q<{ id: string; thread_id: string; subject: string; body: string | null; at: string; from_name: string | null; from_email: string | null; sender: string | null }>(`
+      select s.id, s.thread_id, s.subject, s.body, s.sent_at::text as at, s.from_name, s.from_email::text, (select u.name from users u where lower(u.email::text) = lower(s.from_email::text) limit 1) as sender
+      from inbox_sent s where $1 = any(s.to_addrs) order by s.sent_at desc limit 300`, [me.email]);   // only emails sent to this teacher (never one the office forwarded to someone else)
+    return { me, own, sent };
+  }).catch(() => null);
+  if (!rows) return [];
+  const { stripQuoted } = await import("./inbox");
+  const threads = new Map<string, MailThread>();
+  const th = (id: string, subject: string) => { let t = threads.get(id); if (!t) { t = { id, subject, who: cap(officeLabel), at: "", officeAt: null, msgs: [], preview: "", mine: false }; threads.set(id, t); } return t; };
+  for (const r of rows.own) {
+    const t = th(r.thread_id, r.subject);
+    if (r.to_name) t.who = r.to_name;
+    const full = r.body ?? r.body_text;
+    t.msgs.push({ key: "m" + r.id, mine: true, who: "You", email: null, at: r.at, body: stripQuoted(full ?? r.snippet ?? ""), partial: full == null && !r.local ? r.id : null, files: r.files ?? [], links: r.links ?? [] });
+    if (r.replied_at) t.msgs.push({ key: "r" + r.id, mine: false, who: r.replier ?? r.to_name ?? cap(officeLabel), email: r.reply_from, at: r.replied_at, body: stripQuoted(r.reply_body ?? ""), partial: null, files: [], links: [] });
+  }
+  for (const s of rows.sent) {
+    const t = th(s.thread_id, s.subject);
+    const who = s.sender ?? cap(officeLabel);   // the school's own inbox (e.g. ose@) shows as the office's name
+    if (!rows.own.some((r) => r.thread_id === s.thread_id)) t.who = who;
+    t.msgs.push({ key: "s" + s.id, mine: false, who, email: s.from_email, at: s.at, body: s.body ?? "", partial: null, files: [], links: [] });
+  }
+  for (const t of threads.values()) {
+    t.msgs.sort((a, b) => ms(b.at) - ms(a.at));   // newest first, as in the admin's inbox
+    const last = t.msgs[0];
+    t.at = last.at; t.mine = last.mine; t.subject = t.msgs.length ? (t.subject || "(no subject)") : t.subject;
+    t.officeAt = t.msgs.find((m) => !m.mine)?.at ?? null;
+    t.preview = (last.mine ? "You: " : "") + cut(last.body);
+  }
+  return [...threads.values()].sort((a, b) => ms(b.at) - ms(a.at));
+}
+/** The whole text of the teacher's own emails sent from their email app (only a preview is kept until one is opened). */
+export async function fillMailBodies(thread: MailThread): Promise<void> {
+  const need = thread.msgs.filter((m) => m.partial);
+  if (!need.length) return;
+  const { inboxMessage, stripQuoted } = await import("./inbox");
+  await Promise.all(need.map(async (m) => { const r = await inboxMessage(m.partial!).catch(() => null); if (r && !("error" in r)) { m.body = stripQuoted(r.body); m.partial = null; } }));
+}
+/** Unread conversations with the school: the office's latest email came after the teacher last opened it. */
+export const mailUnread = (t: MailThread, seen: Map<string, string>) => !!t.officeAt && ms(t.officeAt) > ms(seen.get("school:" + t.id) ?? SEEN_FROM);
+export async function seenMap(userId: string): Promise<Map<string, string>> {
+  const r = await withSchool((q) => q<{ key: string; seen_at: string }>(`select key, seen_at::text from teacher_seen where user_id = $1 and key like 'school:%'`, [userId])).catch(() => []);
+  return new Map(r.map((x) => [x.key, x.seen_at]));
 }

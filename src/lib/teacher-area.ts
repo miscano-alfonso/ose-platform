@@ -343,6 +343,8 @@ export async function sendTeacherEmail(user: { id: string; name: string; email: 
     if (thread && /^[\w:-]{1,120}$/.test(thread)) {
       const own = await q(`select 1 from inbox_messages where thread_id = $1 and kind = 'staff' and lower(from_email::text) = lower($2) limit 1`, [thread, user.email]);
       if (own.length) th = thread;
+      // 27 Nov: or an email the school sent this teacher from Gmail (db/129): the reply stays in that conversation
+      else if ((await q(`select 1 from inbox_sent where thread_id = $1 and lower($2) = any(to_addrs) limit 1`, [thread, user.email])).length) th = thread;
     }
     const box = (await q<{ m: string | null }>(`select value->>'mailbox' as m from meet_kv where key = 'gmail'`))[0]?.m ?? null;
     // to one person (must be on the school's list), or the office
@@ -360,6 +362,8 @@ export async function sendTeacherEmail(user: { id: string; name: string; email: 
     } else {
       const first = (await q<{ t: string | null; ts: string[] | null }>(`select to_user as t, to_users as ts from inbox_messages where thread_id = $1 order by received_at limit 1`, [thread]))[0];
       toUser = first?.t ?? null; toUsers = first?.ts ?? null;
+      if (!toUser && !toUsers) toUser = (await q<{ id: string }>(`select u.id from inbox_sent s join users u on lower(u.email::text) = lower(s.from_email::text)
+        where s.thread_id = $1 and lower($2) = any(s.to_addrs) order by s.sent_at desc limit 1`, [thread, user.email]))[0]?.id ?? null;
     }
     const [row0] = await q<{ id: string }>(`insert into inbox_messages (school_id, gmail_id, thread_id, from_name, from_email, subject, snippet, body, received_at, parent_id, kind, mailbox, sent_by, to_user, links, to_users)
       values (current_school(), $1, $2, $3, $4, $5, $6, $7, now(), null, 'staff', $8, $9, $10, $11, $12) returning id`,

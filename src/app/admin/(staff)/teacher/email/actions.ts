@@ -12,5 +12,16 @@ export async function teacherEmailAction(f: FormData): Promise<void> {
   // back to Messages (31 Oct: teachers message the school there): the conversation for a reply, the list for a new message
   const th = s("thread", 120), to = s("to", 40);
   const back = th ? `/admin/teacher/email?school=${encodeURIComponent(th)}` : `/admin/teacher/email${err && to ? `?to=${to}` : ""}`;
-  redirect(`${back}${back.includes("?") ? "&" : "?"}${err ? `err=${encodeURIComponent(err)}` : `ok=${encodeURIComponent("Sent. The reply shows here and comes by email too.")}`}`);
+  redirect(`${back}${back.includes("?") ? "&" : "?"}${err ? `err=${encodeURIComponent(err)}` : `ok=${encodeURIComponent("Sent. Their reply shows here and comes to your email too.")}`}`);
+}
+/** 27 Nov: Email → "Mark all read", as on the admin's inbox. */
+export async function markAllMailReadAction(f: FormData): Promise<void> {
+  const me = await requireViewer();
+  if (!me.viewing) {
+    const { teacherMail, markSchoolSeen } = await import("@/lib/teacher-inbox");
+    const { officeInfo } = await import("@/lib/teacher-area");
+    const threads = await teacherMail(me.id, (await officeInfo().catch(() => ({ label: "the office" }))).label);
+    for (const t of threads) if (t.officeAt) await markSchoolSeen(me.id, t.id);
+  }
+  redirect(`/admin/teacher/email${f.get("show") === "all" ? "?show=all" : ""}`);
 }

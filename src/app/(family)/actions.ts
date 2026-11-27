@@ -199,3 +199,30 @@ export async function startPayMethodAction(f: FormData): Promise<void> {
   if (r.error || !r.url) go("/parent/payments", null, r.error ?? "Couldn’t open Stripe.");
   redirect(r.url!);
 }
+
+// ---------- 27 Nov (Alfonso): Messages and Email work like the admin's ----------
+/** "Mark unread" on a conversation: the latest message from the teacher or the office counts as unread again. */
+export async function parentMarkUnreadAction(f: FormData): Promise<void> {
+  const p = await parent("/parent/messages");
+  const id = str(f, "id", 40), kind = str(f, "kind", 10), tab = str(f, "f", 10);
+  const back = `/parent/messages${/^(unread|office|teachers)$/.test(tab) ? `?f=${tab}` : ""}`;
+  if (!p.viewer && /^[0-9a-f-]{36}$/.test(id)) {
+    const { withSchool } = await import("@/lib/db");
+    if (kind === "office") await withSchool((q) => q(`update office_messages set read_at = null where id = (select m.id from office_messages m join office_threads th on th.id = m.thread_id
+      where th.id = $1 and th.to_kind = 'parent' and th.parent_id = $2 and m.sender = 'office' order by m.created_at desc limit 1)`, [id, p.id])).catch(() => null);
+    else await withSchool((q) => q(`update messages set read_by_parent_at = null where id = (select m.id from messages m join message_threads th on th.id = m.thread_id
+      where th.id = $1 and th.parent_id = $2 and m.sender <> 'parent' order by m.created_at desc limit 1)`, [id, p.id])).catch(() => null);
+  }
+  redirect(back);
+}
+/** Email: "Mark unread" / "Mark all read". */
+export async function parentEmailReadAction(f: FormData): Promise<void> {
+  const p = await parent("/parent/email");
+  const id = str(f, "id", 40), all = f.get("all") === "1", show = str(f, "show", 5);
+  if (!p.viewer) {
+    const { withSchool } = await import("@/lib/db");
+    if (all) await withSchool((q) => q(`update email_log set read_at = now() where to_email = $1 and read_at is null`, [p.email.toLowerCase()])).catch(() => null);
+    else if (/^\d+$/.test(id)) await withSchool((q) => q(`update email_log set read_at = null where id = $1 and to_email = $2`, [id, p.email.toLowerCase()])).catch(() => null);
+  }
+  redirect(`/parent/email${show === "all" ? "?show=all" : ""}`);
+}

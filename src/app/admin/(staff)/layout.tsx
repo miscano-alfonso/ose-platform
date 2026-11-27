@@ -51,9 +51,11 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         and exists (select 1 from messages m where m.thread_id = th.id and m.sender = 'parent' and m.read_by_teacher_at is null))
      + (select count(*)::int from office_threads th join teachers t on t.id = th.teacher_id where t.user_id = $1 and th.to_kind = 'teacher'
         and exists (select 1 from office_messages m where m.thread_id = th.id and m.sender = 'office' and m.read_at is null))) as msgs,
-    -- 27 Nov: replies from the school to the teacher's emails count on Email
-    ((select count(distinct im.thread_id)::int from inbox_messages im where im.kind = 'staff' and lower(im.from_email::text) = (select lower(email::text) from users where id = $1)
-        and im.replied_at > coalesce((select ts.seen_at from teacher_seen ts where ts.user_id = $1 and ts.key = 'school:' || im.thread_id), '2026-11-26T12:00:00Z'::timestamptz))) as email,
+    -- 27 Nov: emails from the school (replies to the teacher's emails, and emails sent from Gmail: db/129) count on Email
+    (select count(distinct x.t)::int from (
+        select im.thread_id as t, im.replied_at as at from inbox_messages im where im.kind = 'staff' and lower(im.from_email::text) = (select lower(email::text) from users where id = $1) and im.replied_at is not null
+        union all select s.thread_id, s.sent_at from inbox_sent s where (select lower(email::text) from users where id = $1) = any(s.to_addrs)) x
+      where x.at > coalesce((select ts.seen_at from teacher_seen ts where ts.user_id = $1 and ts.key = 'school:' || x.t), '2026-11-26T12:00:00Z'::timestamptz)) as email,
     (select count(*)::int from report_entries e join report_cycles cy on cy.id = e.cycle_id join course_groups g on g.id = e.group_id join teachers t on t.id = g.teacher_id
       where t.user_id = $1 and cy.status <> 'published' and e.status in ('todo','draft','returned')) as reports,
     (select count(*)::int from classroom_submissions s join classroom_coursework cw on cw.id = s.coursework_id join course_groups g on g.id = cw.group_id join teachers t on t.id = g.teacher_id

@@ -109,6 +109,7 @@ export async function syncInbox(): Promise<InboxInfo> {
   const seen = new Set((await googleKv<string[]>("inbox_seen")) ?? []);
   const days = prev.last ? Math.min(30, Math.max(2, Math.ceil((Date.now() - Date.parse(prev.last)) / 86400e3) + 1)) : 30;   // since the last good read
   let added = 0; const errors: string[] = [];
+  const sentDays = (await googleKv<string>("inbox_sent_from").catch(() => null)) ? days : 30;   // the first time: the last 30 days
   await pushPending().catch(() => null);   // site changes Gmail hasn't got yet go first, so Gmail doesn't undo them
   for (const [n, box] of list.entries()) {
     let token: string;
@@ -168,14 +169,65 @@ export async function syncInbox(): Promise<InboxInfo> {
         added += ins.length;
       }
     });
+    // 27 Nov: the school's own emails to teachers (typed in Gmail), so a teacher's Email shows both sides
+    await syncSentToTeachers(token, box.mailbox ?? null, sentDays, seen).catch((e) => errors.push(`${box.mailbox}: couldn’t read sent emails to teachers (${e instanceof Error ? e.message : "?"})`));
   }
+  await googleKvSet("inbox_sent_from", new Date().toISOString()).catch(() => null);
   // kept for a year; nothing kept for a family whose data was erased
   await withSchool((q) => q(`delete from inbox_messages where received_at < now() - interval '12 months' or parent_id in (select id from parents where email::text like 'erased-%')`));
-  await googleKvSet("inbox_seen", [...seen].slice(-1600));
+  await googleKvSet("inbox_seen", [...seen].slice(-3000));
   const ok = errors.length < list.length;
   const info: InboxInfo = { at: new Date().toISOString(), added, last: ok ? new Date().toISOString() : prev.last, ...(errors.length ? { error: errors.join("; ") } : {}) };
   await googleKvSet("inbox", info);
   return info;
+}
+/** 27 Nov: the school's sent emails that go to a teacher, or answer an email from a teacher (same Gmail thread). Skips the
+ *  replies sent from the admin's Reply (those are kept on the teacher's email already). */
+async function syncSentToTeachers(token: string, mailbox: string | null, days: number, seen: Set<string>) {
+  const ids: { id: string; threadId: string }[] = []; let pt = "";
+  for (let i = 0; i < 3; i++) {
+    const u = new URL(`${GMAIL_URL()}/users/me/messages`); u.searchParams.set("q", `in:sent newer_than:${days}d`); u.searchParams.set("maxResults", "100"); if (pt) u.searchParams.set("pageToken", pt);
+    const r = await fetch(u, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) }); if (!r.ok) throw new Error(`Gmail answered ${r.status}`);
+    const j = (await r.json()) as { messages?: { id: string; threadId: string }[]; nextPageToken?: string }; ids.push(...(j.messages ?? [])); if (!j.nextPageToken) break; pt = j.nextPageToken;
+  }
+  if (!ids.length) return;
+  await withSchool(async (q) => {
+    const have = new Set((await q<{ g: string }>(`select gmail_id as g from inbox_sent where gmail_id = any($1::text[])`, [ids.map((x) => x.id)])).map((x) => x.g));
+    const teachers = new Set((await q<{ e: string }>(`select lower(u.email::text) as e from users u join teachers t on t.user_id = u.id where u.disabled_at is null`)).map((x) => x.e));
+    const staffThreads = new Set((await q<{ t: string }>(`select distinct thread_id as t from inbox_messages where kind = 'staff' and thread_id = any($1::text[])`, [ids.map((x) => x.threadId)])).map((x) => x.t));
+    for (const { id, threadId } of ids) {
+      if (have.has(id) || seen.has("s:" + id)) continue;
+      seen.add("s:" + id);
+      const r = await fetch(`${GMAIL_URL()}/users/me/messages/${id}?format=full`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) });
+      if (!r.ok) continue;
+      const m = (await r.json()) as { internalDate?: string; payload?: Part & { headers?: { name: string; value: string }[] } };
+      const h = Object.fromEntries((m.payload?.headers ?? []).map((x) => [x.name.toLowerCase(), x.value]));
+      const to = [...new Set(`${h.to ?? ""},${h.cc ?? ""}`.toLowerCase().match(/[^\s<>,;"']+@[^\s<>,;"']+/g) ?? [])].slice(0, 30);
+      if (!staffThreads.has(threadId) && !to.some((a) => teachers.has(a))) continue;   // nothing to do with a teacher
+      const at = new Date(Number(m.internalDate ?? Date.now()));
+      // sent with the admin's Reply: already on the teacher's email as its reply
+      const dup = await q(`select 1 from inbox_messages where replied_at between $1::timestamptz - interval '5 minutes' and $1::timestamptz + interval '5 minutes'
+        and lower(from_email::text) = any($2::text[]) limit 1`, [at.toISOString(), to]);
+      if (dup.length) continue;
+      const from = fromOf(h.from ?? "");
+      const body = stripQuoted(textOf(m.payload).replace(/\r\n/g, "\n")).slice(0, 20000);
+      await q(`insert into inbox_sent (school_id, gmail_id, thread_id, mailbox, from_name, from_email, to_addrs, subject, body, sent_at) values (current_school(), $1, $2, $3, $4, $5, $6, $7, $8, $9)
+        on conflict (school_id, gmail_id) do nothing`, [id, threadId, mailbox, from.name?.slice(0, 120) ?? null, from.email, to, (h.subject ?? "").slice(0, 300), body, at.toISOString()]);
+    }
+  });
+}
+/** 27 Nov: an email's own words, without the earlier emails quoted under it ("On 24 Nov …, X wrote:", "> …", "From: … Sent: …"). */
+export function stripQuoted(t: string): string {
+  let s = t.replace(/\r\n/g, "\n");
+  const cuts = [
+    /\n[ \t]*On [^\n]{0,240}(?:\n[^\n]{0,240}){0,2}?wrote:[ \t]*\n/i,                 // Gmail, Apple Mail
+    /\n[ \t]*-{2,}[ \t]*(?:Original Message|Forwarded message)[ \t]*-{2,}/i,
+    /\n[ \t]*_{8,}[ \t]*\n[ \t]*From:/i,                                            // Outlook
+    /\n[ \t]*From:[^\n]+\n[ \t]*(?:Sent|Date):[^\n]+\n/i,
+    /\n(?:[ \t]*>[^\n]*\n?){2,}$/,
+  ];
+  for (const re of cuts) { const m = re.exec("\n" + s); if (m && m.index > 0) s = ("\n" + s).slice(0, m.index).slice(1); }
+  return s.replace(/\n{3,}/g, "\n\n").trim();
 }
 const decode = (s: string) => s.replace(/&#39;/g, "’").replace(/&quot;/g, "\"").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
 
