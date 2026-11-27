@@ -88,7 +88,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
       : <a className="logo" href="/admin" title="Back to the dashboard" style={{ ["--logo" as string]: `url("${logo}")` }}><span className="logo-i"><img src={logo} alt="OH-SO ED: go to the dashboard" width={773} height={224} /></span></a>}
       <MenuSearch area="admin" page="/admin/search" />
       <AdminNav counts={navCounts} groups={menu} />
-      <SideFoot theme={theme} signOut={signOutAction} toggle note={!demo && !pl.plan && testOn ? <a className="tm-pill" href="/admin/test-mode" title="Test mode is on: real data is read as normal, but nothing goes to families, students or teachers. Click to see what’s held.">Test mode on</a> : null} switchers={<div className="sw-side">{switchers("s")}</div>} 
+      <SideFoot theme={theme} signOut={signOutAction} toggle mode={await import("@/lib/staff-mode").then((m) => m.teachesSelf(me.id)).catch(() => false) ? "admin" : undefined} note={!demo && !pl.plan && testOn ? <a className="tm-pill" href="/admin/test-mode" title="Test mode is on: real data is read as normal, but nothing goes to families, students or teachers. Click to see what’s held.">Test mode on</a> : null} switchers={<div className="sw-side">{switchers("s")}</div>} 
         site={pl.plan ? [{ href: "/osedtech", label: "OH-SO EdTech" }] : isDemoVisitor(me.email) ? [{ href: "/osedtech/demo/site", label: "View the school’s website" }, { href: "/osedtech", label: "Back to OH-SO EdTech" }] : [{ href: "/", label: "View the website" }]} />
     </aside>
     <main className="main"><div className="topbar adm-tabs"><AdminTabs counts={navCounts} groups={menu} /><div className="sw-top">{switchers("t")}</div>

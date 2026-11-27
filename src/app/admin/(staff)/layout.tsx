@@ -32,7 +32,10 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   const hex = (v: unknown, d: string) => typeof v === "string" && /^#[0-9a-f]{6}$/i.test(v) ? v : d;
   const style = { ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b"), ["--brand-accent-ink" as string]: inkOn(hex(brand.accent, "#e3cd4b")) };
 
-  if (me.role === "school_admin") return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles who="teacher" />
+  // 27 Nov: an admin who also teaches, in Teacher mode (and not Viewing as someone), gets her own full teacher dashboard
+  const { staffMode, teachesSelf } = await import("@/lib/staff-mode");
+  const ownTeacher = me.role === "school_admin" && !me.viewing && !(await headers()).get("x-ose-preview") && await staffMode() === "teacher" && await teachesSelf(me.id);
+  if (me.role === "school_admin" && !ownTeacher) return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles who="teacher" />
     <LessonWindow /><NotifyCenter api="/admin/notify-api" role="admin" /><div className="staffbar">
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <a href="/admin"><img src={logo} alt="OH-SO ED" width={773} height={224} /></a>
@@ -66,7 +69,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         : <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>}
         <MenuSearch area="teacher" page="/admin/teacher/search" />
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports, "/admin/teacher/marking": c.marking }} groups={await teacherMenu()} />
-        <SideFoot theme={theme} signOut={signOutAction} inline toggle settings="/admin/teacher/notifications" />
+        <SideFoot theme={theme} signOut={signOutAction} inline toggle settings="/admin/teacher/notifications" mode={ownTeacher ? "teacher" : undefined} />
       </aside>
       <main className="main"><TopBar />{await import("@/lib/test-mode").then(async (t) => await t.betaOn() ? <p className="note beta-strip" role="note">{t.BETA.stripTeacher}</p> : null)}{children}</main>
     </div></div>;

@@ -63,7 +63,7 @@ export function MenuSearch({ area, page }: { area: "admin" | "teacher"; page: st
         else if (e.key === "Enter") { e.preventDefault(); if (sel >= 0 && sel < flat.length) go(flat[sel].href); else all(); }
         else if (e.key === "Escape") { if (open) setOpen(false); else { look(""); input.current?.blur(); } }
       }}
-      placeholder={area === "admin" ? "Search everything" : "Search my students, classes…"} aria-label="Search" autoComplete="off" spellCheck={false} data-lpignore="true"
+      placeholder={area === "admin" ? "Search everything" : "Search"} aria-label="Search" autoComplete="off" spellCheck={false} data-lpignore="true"
       role="combobox" aria-expanded={open} aria-controls="msr-list" aria-activedescendant={sel >= 0 ? `msr-${sel}` : undefined} />
     {busy ? <span className="msr-k" aria-hidden="true">…</span> : !q && <span className="msr-k" aria-hidden="true">⌘K</span>}
     {open && pos && <div className="msr-pop" id="msr-list" role="listbox" style={{ left: pos.left, top: pos.top, width: pos.width }}>

@@ -35,7 +35,8 @@ export async function signInAction(_: unknown, f: FormData): Promise<{ error?: s
   if (!EMAIL.test(email) || !password) return { error: "Enter your email and password.", email };
   const err = await signIn(email, password);
   if (err) return { error: err, email };
-  redirect(f.get("cms") === "1" ? "/admin/cms" : "/admin");   // from "Admin" on the OH-SO EdTech site: straight into its editor
+  const teacherMode = await import("@/lib/staff-mode").then((m) => m.staffMode()).catch(() => "admin") === "teacher";   // 27 Nov: back to the mode she last used
+  redirect(f.get("cms") === "1" ? "/admin/cms" : teacherMode ? "/admin/teacher" : "/admin");   // from "Admin" on the OH-SO EdTech site: straight into its editor
 }
 
 // Staff sign in (26 Nov): teachers ask for an emailed link; the link's page signs them in.

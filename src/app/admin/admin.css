@@ -1610,3 +1610,8 @@
 @media (prefers-color-scheme:dark){.adm:not([data-theme=light]) .fins-link{color:#8fb4ff}}.adm[data-theme=dark] .fins-link{color:#8fb4ff}
 .adm .fins-custom{display:grid;gap:8px;padding:6px}
 .adm .fins-custom input{width:100%;box-sizing:border-box}
+/* 27 Nov: Admin / Teacher mode switch for admins who also teach (SideFoot mode=) */
+.adm .mode-seg{display:grid;grid-template-columns:1fr 1fr;gap:2px;padding:3px;border-radius:10px;border:1px solid color-mix(in srgb,currentColor 25%,transparent)}
+.adm .mode-seg a{text-align:center;padding:6px 8px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none;color:inherit;opacity:.8}
+.adm .mode-seg a:hover{opacity:1;background:color-mix(in srgb,currentColor 8%,transparent)}
+.adm .mode-seg a[aria-current=true]{opacity:1;background:var(--brand-accent,#e3cd4b);color:var(--brand-accent-ink,#0f1747)}
