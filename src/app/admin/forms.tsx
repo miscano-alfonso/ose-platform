@@ -50,14 +50,14 @@ export function PasswordForm() {
   </form>;
 }
 
-export function InviteForm({ teachers }: { teachers: { id: string; name: string; email: string; has_account: boolean }[] }) {
+export function InviteForm({ teachers, adminOnly = false }: { teachers: { id: string; name: string; email: string; has_account: boolean }[]; adminOnly?: boolean }) {
   const [st, act, busy] = useActionState(inviteAction, {});
-  const [role, setRole] = useState("teacher");
+  const [role, setRole] = useState(adminOnly ? "school_admin" : "teacher");
   const [copied, setCopied] = useState(false);
   return <div style={{ display: "grid", gap: 12 }}>
     <form action={act} className="eform" onSubmit={() => setCopied(false)}>
-      <label className="fld">Access<select name="role" value={role} onChange={(e) => setRole(e.target.value)}>
-        <option value="teacher">Teacher</option><option value="school_admin">Admin (full access)</option></select></label>
+      {adminOnly ? <input type="hidden" name="role" value="school_admin" /> : <label className="fld">Access<select name="role" value={role} onChange={(e) => setRole(e.target.value)}>
+        <option value="teacher">Teacher</option><option value="school_admin">Admin (full access)</option></select></label>}
       {role === "teacher" && teachers.length > 0 && <label className="fld">Teacher record<select name="teacher_id" defaultValue="">
         <option value="">New teacher</option>{teachers.filter((t) => !t.has_account).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>}
       {role === "school_admin" && teachers.length > 0 && <label className="fld">Also teaches? <span className="muted" style={{ fontWeight: 400 }}>(their teacher profile becomes this admin account)</span><select name="teacher_id" defaultValue="">

@@ -1,4 +1,5 @@
-import { GuideVideo } from "../../../../GuideVideo";
+import { GuideSlides } from "../../../../GuideSlides";
+import { REPORT_SLIDES } from "../../../../guides";
 import { notFound } from "next/navigation";
 import { requireViewer } from "@/lib/auth";
 import { getWriteSheet } from "@/lib/reports";
@@ -27,7 +28,7 @@ export default async function Write({ params, searchParams }: { params: Promise<
     <div className="wr-head">
     <p className="backlink"><a className="abtn sm" href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a></p>
       <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · comments due {day(h.comments_due)}</div></div>
-        <span className="grow" /><GuideVideo src="/guides/teacher-reports.mp4" poster="/guides/teacher-reports-poster.jpg" title="Writing reports: how it works (1 minute)" label="How it works" />{!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
+        <span className="grow" /><GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How it works" />{!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
           {wait && <span className="muted wr-wait">{wait}</span>}<AiDraftAll /><SubmitAll off={wait} /></div>}</div>
       {notYet && <p className="note msg">You can write and save drafts now. <b>Submit</b> opens on <b>{new Date(h.opens_on + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</b>, the last week of term.</p>}
       {!sp.r && sp.ok && <p className="note msg">{sp.ok}</p>}{!sp.r && sp.err && <p className="note msg bad">{sp.err}</p>}

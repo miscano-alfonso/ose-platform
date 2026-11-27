@@ -40,6 +40,22 @@ export async function signInAction(_: unknown, f: FormData): Promise<{ error?: s
 }
 
 // Staff sign in (26 Nov): teachers ask for an emailed link; the link's page signs them in.
+/** 27 Nov: Staff & teachers → "Email sign-in link": sends the teacher the same one-time link as the sign-in page. */
+export async function emailStaffLinkAction(_: unknown, f: FormData): Promise<{ ok?: string; error?: string }> {
+  await requireStaff();
+  const { sendStaffLink } = await import("@/lib/auth");
+  const email = str(f, "email").toLowerCase();
+  if (!EMAIL.test(email) || /\.example$/.test(email)) return { error: "Add their real email address on their profile first." };
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "dev.ohsoed.co.uk";
+  const base = (process.env.SITE_URL && host === new URL(process.env.SITE_URL).host ? process.env.SITE_URL : `${h.get("x-forwarded-proto") || "https"}://${host}`).replace(/\/$/, "");
+  const err = await sendStaffLink(email, base);
+  if (err) return { error: err };
+  const [m] = await withSchool((q) => q<{ ok: boolean; held: boolean; error: string | null }>(`select coalesce((detail->>'ok')::boolean, false) as ok, coalesce((detail->>'held')::boolean, false) as held, detail->>'error' as error
+    from audit_log where action = 'staff_link_email' and lower(detail->>'email') = $1 order by created_at desc limit 1`, [email]));
+  revalidatePath("/admin/teachers");
+  return m?.held ? { error: "Held by test mode (switch on Beta in Test mode), so use Copy sign-in link instead." } : m && !m.ok ? { error: `It didn’t send: ${m.error ?? "unknown error"}. Use Copy sign-in link instead.` } : { ok: "Sign-in link emailed (works once, for 30 minutes)." };
+}
 /** 27 Nov: Staff & access → "Sign-in link": a link the office can send a teacher another way (24 hours, works once). */
 export async function staffSignInLinkAction(_: unknown, f: FormData): Promise<{ url?: string; error?: string }> {
   const me = await requireStaff();
@@ -180,7 +196,7 @@ export async function inviteAction(_: unknown, f: FormData): Promise<{ error?: s
   const h = await headers();
   const host = h.get("x-forwarded-host") || h.get("host") || "dev.ohsoed.co.uk";
   const proto = h.get("x-forwarded-proto") || (host.startsWith("localhost") ? "http" : "https");
-  revalidatePath("/admin/staff");
+  revalidatePath("/admin/staff"); revalidatePath("/admin/teachers");
   // in an OH-SO EdTech customer school the link first picks that school (and gets past the private-preview password)
   const slug = await activeSchool();
   if (slug !== siteSchool()) return { link: `${proto}://${host}/osedtech/join?s=${slug}&t=${r.token}`, name };
@@ -234,7 +250,7 @@ export async function revokeInviteAction(f: FormData) {
     await q(`update staff_invites set revoked_at = now() where id = $1 and accepted_at is null`, [id]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'invite_revoked', 'staff_invite', $2)`, [me.id, id]);
   });
-  revalidatePath("/admin/staff");
+  revalidatePath("/admin/staff"); revalidatePath("/admin/teachers");
 }
 
 /** Staff & access (5 Nov): make a teacher an admin (they keep their classes) or an admin a teacher. Never yourself. */
@@ -251,7 +267,7 @@ export async function setStaffRoleAction(f: FormData) {
     await q(`delete from staff_sessions where user_id = $1`, [id]);   // signs them in again with the new access
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'role_changed', 'user', $2, $3)`, [me.id, id, JSON.stringify({ role })]);
   });
-  revalidatePath("/admin/staff");
+  revalidatePath("/admin/staff"); revalidatePath("/admin/teachers");
 }
 export async function setStaffAccessAction(f: FormData) {
   const me = await requireStaff();
@@ -262,7 +278,7 @@ export async function setStaffAccessAction(f: FormData) {
     if (!on) await q(`delete from staff_sessions where user_id = $1`, [id]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, $2, 'user', $3)`, [me.id, on ? "access_restored" : "access_removed", id]);
   });
-  revalidatePath("/admin/staff");
+  revalidatePath("/admin/staff"); revalidatePath("/admin/teachers");
 }
 
 // ---------- import ----------

@@ -2,6 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // 27 Nov: Staff & access joined Teachers as one page, "Staff & teachers"
+  async redirects() { return [{ source: "/admin/staff", destination: "/admin/teachers", permanent: false }]; },
   experimental: { serverActions: { bodySizeLimit: "4mb" } },
   async headers() {
     return [{

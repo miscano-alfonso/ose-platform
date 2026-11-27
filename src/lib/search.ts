@@ -17,7 +17,7 @@ const WORDS: Record<string, string> = {
   "/admin/prices": "prices discounts bundles coupons fees", "/admin/term-dates": "terms holidays half term",
   "/admin/reports": "reports progress report comments", "/admin/page-styles": "page styles fonts sizes colours design",
   "/admin/students": "students attendance classroom work missing", "/admin/families": "families parents children",
-  "/admin/staff": "staff access admins invite", "/admin/teachers": "teachers profiles",
+  "/admin/teachers": "teachers profiles staff access admins invite sign-in link",
   "/admin/teacher/marking": "marking hand ins past papers", "/admin/teacher/reports": "reports write comments",
   "/admin/teacher/notifications": "settings notifications email", "/admin/teacher/calendar": "calendar sync settings",
 };
