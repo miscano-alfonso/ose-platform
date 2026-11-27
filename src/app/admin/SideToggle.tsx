@@ -1,10 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 /** Hides and shows the side menu (remembered in this browser). 26 Nov (Alfonso): with the menu hidden there's no Menu
  *  button any more; moving the pointer close to the left edge of the window slides a tab out, which opens the menu
  *  again. On touch screens (no pointer to move) the tab stays half out. */
-export function SideToggle() {
+export function SideToggle({ home }: { home?: { href: string; label: string } }) {
+  const path = usePathname();
   const [closed, setClosed] = useState(false);
   const [near, setNear] = useState(false);
   useEffect(() => { try { setClosed(localStorage.getItem("ose-side") === "closed"); } catch { /* private browsing */ } }, []);
@@ -30,5 +32,8 @@ export function SideToggle() {
       aria-expanded="false" aria-label="Show the menu" title="Show the menu">
       <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14" /></svg>
       <span>Menu</span></button>}
+    {/* 27 Nov (Alfonso): with the menu hidden, a button back to My day (or the dashboard), except on that page */}
+    {closed && home && path !== home.href && <a className="side-home" href={home.href} title={`Back to ${home.label}`}>
+      <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 9l7-6 7 6v8H3z M8 17v-5h4v5" /></svg>{home.label}</a>}
   </>;
 }

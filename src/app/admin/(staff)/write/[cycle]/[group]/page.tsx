@@ -1,3 +1,4 @@
+import { NoAssessPick } from "../../../../NoAssessPick";
 import { GuideSlides } from "../../../../GuideSlides";
 import { REPORT_SLIDES } from "../../../../guides";
 import { notFound } from "next/navigation";
@@ -46,7 +47,7 @@ export default async function Write({ params, searchParams }: { params: Promise<
           <span className="muted">{r.assess_title ?? "End-of-term assessment"}:</span>
           <span className={`pill ${AS[r.assess]?.[0] ?? "mute"}`}>{AS[r.assess]?.[1] ?? r.assess}{r.assess === "marked" && r.assess_pct != null ? ` · ${r.assess_pct}%` : ""}</span>
           {r.assess !== "marked" && r.assess !== "unknown" && <label className="fld" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>No assessment because
-            <input name={`noassess_${r.id}`} defaultValue={r.no_assessment ?? ""} placeholder="e.g. absent, joined late" maxLength={200} disabled={ro} className="mini" style={{ width: 220 }} /></label>}</div>
+            <NoAssessPick name={`noassess_${r.id}`} value={r.no_assessment ?? ""} disabled={ro} /></label>}</div>
         {r.status === "returned" && r.review_note && <p className="note msg bad">Sent back: {r.review_note}</p>}
         {here && (sp.ok || sp.err) && <p className={`note msg${sp.err ? " bad" : ""}`} role="status">{sp.err ?? sp.ok}</p>}
         {/* 1 Nov: the scores stacked on the left (2 × 2), the comment on the right with Save draft / Submit above it */}

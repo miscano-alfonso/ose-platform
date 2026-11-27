@@ -133,7 +133,7 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
       {m.day.lessons.length === 0 ? <p className="empty">No lessons coming up.</p> :
         <div className="dx-tl-scroll" tabIndex={0} role="region" aria-label="Lessons"><ol className="dx-tl">{m.day.lessons.map((l, i) => { const s = st(l); return <li key={i} data-lesson={`${l.name}, ${l.starts}`} className={`${s}${i === nextIdx ? " next" : ""}`} style={{ ["--c" as string]: l.colour }}>
           <span className="tm">{l.starts}<small>{l.ends}</small></span>
-          <span className="bd"><b>{l.name}</b><span>{l.teacher ?? "No teacher set"} · {l.students} student{l.students === 1 ? "" : "s"} · {l.code}</span></span>
+          <span className="bd"><b>{l.name}</b><span>{l.teacher ?? "No teacher set"}</span><span>{l.students} student{l.students === 1 ? "" : "s"} · {l.code}</span></span>
           <span className="ac">{s === "live" ? <span className="dx-live">Live now</span> : s === "done" ? <span className="pill mute">Done</span> : s === "cancelled" ? <span className="pill bad">Cancelled</span> : i === nextIdx ? <span className="pill info">Next</span> : null}
             {l.meet && (s === "live" || i === nextIdx) && <a className="abtn sm" href={l.meet} target="_blank" rel="noopener">Join</a>}</span>
         </li>; })}</ol></div>}
