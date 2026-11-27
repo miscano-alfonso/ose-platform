@@ -127,7 +127,7 @@ export async function redeemStaffLink(token: string): Promise<boolean> {
   const { ip, ua } = await clientInfo();
   const t = await withSchool(async (q) => {
     const l = (await q<{ user_id: string }>(`update staff_links k set used_at = now() from users u
-      where k.token_hash = $1 and k.used_at is null and k.expires_at > now() and u.id = k.user_id and u.role = 'teacher' and u.disabled_at is null
+      where k.token_hash = $1 and k.purpose = 'sign_in' and k.used_at is null and k.expires_at > now() and u.id = k.user_id and u.role = 'teacher' and u.disabled_at is null
       returning k.user_id`, [sha256(token)]))[0];
     if (!l) return null;
     const token2 = randomBytes(32).toString("base64url");
@@ -214,6 +214,62 @@ export async function resetAdminWithKey(key: string, email: string, password: st
     await q(`delete from staff_sessions where user_id = $1`, [u[0].id]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'password_reset_with_key', 'user', $1)`, [u[0].id]);
     return null;
+  });
+}
+
+// ---------- 27 Nov: forgotten password, by email (Alfonso: Leanne's "Forgotten your password?" showed the setup-key page) ----------
+const RESET_MINUTES = 60;
+/** "Forgotten your password?": an admin is emailed a link to set a new password (works once, for an hour); a teacher,
+ *  who has no password, gets their usual sign-in link. The page answers the same way whatever the email. */
+export async function sendPasswordReset(email: string, base: string): Promise<string | null> {
+  email = email.trim().toLowerCase();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) || email.length > 200) return "Enter your email address.";
+  const role = (await withSchool((q) => q<{ role: string }>(`select role::text from users where lower(email::text) = $1 and role in ('school_admin', 'teacher') and disabled_at is null limit 1`, [email])))[0]?.role;
+  if (role === "teacher") return sendStaffLink(email, base);
+  const { ip } = await clientInfo();
+  const r = await withSchool(async (q) => {
+    const [n] = await q<{ e: number; i: number }>(`select count(*) filter (where email = $1)::int as e, count(*) filter (where ip = $2)::int as i
+      from staff_link_requests where created_at > now() - interval '15 minutes'`, [email, ip]);
+    if (n.e >= 5 || n.i >= 20) return "busy" as const;
+    await q(`insert into staff_link_requests (school_id, email, ip) values (current_school(), $1, $2)`, [email, ip]);
+    const u = (await q<{ id: string; name: string }>(`select id, name from users where lower(email::text) = $1 and role = 'school_admin' and disabled_at is null limit 1`, [email]))[0];
+    if (!u) return null;
+    const token = randomBytes(32).toString("base64url");
+    await q(`insert into staff_links (school_id, user_id, token_hash, ip, expires_at, purpose) values (current_school(), $1, $2, $3, now() + make_interval(mins => $4), 'reset')`,
+      [u.id, sha256(token), ip, RESET_MINUTES]);
+    const school = (await q<{ name: string }>(`select name from schools where id = current_school()`))[0]?.name ?? "OH-SO ED";
+    return { name: u.name, school, token };
+  });
+  if (r === "busy") return "Too many tries. Please wait 15 minutes and try again.";
+  if (!r) return null;
+  const first = (r.name || "").split(" ")[0] || "there";
+  const { sendOne } = await import("./email");
+  const res = await sendOne([{ name: r.name, email }], `Set a new password for ${r.school}`,
+    `Hello ${first},\n\nSomeone asked to reset the password for your ${r.school} admin account. Use this link to choose a new one. It works once, for the next hour:\n\n${base}/admin/reset/new?t=${r.token}\n\nIf it wasn’t you, you can ignore this email: your password hasn’t changed.\n\n${r.school}`, { tag: "staff-password-reset" });
+  await withSchool((q) => q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), null, 'password_reset_email', 'user', null, $1)`,
+    [JSON.stringify({ email, ok: res.ok, held: !!(res as { held?: boolean }).held, error: res.error ?? null })])).catch(() => null);
+  return null;
+}
+/** Is this reset link still usable? (For the page, before the form is filled in.) */
+export async function resetLinkOk(token: string): Promise<boolean> {
+  if (!token || token.length > 100) return false;
+  return (await withSchool((q) => q<{ ok: boolean }>(`select exists (select 1 from staff_links k join users u on u.id = k.user_id where k.token_hash = $1 and k.purpose = 'reset'
+    and k.used_at is null and k.expires_at > now() and u.role = 'school_admin' and u.disabled_at is null) as ok`, [sha256(token)])).catch(() => [{ ok: false }]))[0]?.ok ?? false;
+}
+/** Set the new password from an emailed reset link. Uses the link up and signs out every device. Returns the account's email. */
+export async function resetWithLink(token: string, password: string): Promise<{ email?: string; error?: string }> {
+  if (password.length < MIN_PASSWORD) return { error: `Use a password of at least ${MIN_PASSWORD} characters.` };
+  if (!token || token.length > 100) return { error: "That link isn’t right. Ask for a new one." };
+  const hash = await hashPassword(password);
+  return withSchool(async (q) => {
+    const l = (await q<{ user_id: string; email: string }>(`update staff_links k set used_at = now() from users u
+      where k.token_hash = $1 and k.purpose = 'reset' and k.used_at is null and k.expires_at > now() and u.id = k.user_id and u.role = 'school_admin' and u.disabled_at is null
+      returning k.user_id, u.email::text as email`, [sha256(token)]))[0];
+    if (!l) return { error: "That link has expired or was already used. Ask for a new one." };
+    await q(`update users set password_hash = $2 where id = $1`, [l.user_id, hash]);
+    await q(`delete from staff_sessions where user_id = $1`, [l.user_id]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id) values (current_school(), $1, 'password_reset_by_email', 'user', $1)`, [l.user_id]);
+    return { email: l.email };
   });
 }
 

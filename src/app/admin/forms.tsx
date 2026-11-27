@@ -1,6 +1,6 @@
 "use client";
 import { useActionState, useState } from "react";
-import { signInAction, setupAction, changePasswordAction, inviteAction, acceptInviteAction, importAction, resetPasswordAction } from "./actions";
+import { signInAction, setupAction, changePasswordAction, inviteAction, acceptInviteAction, importAction, resetPasswordAction, resetWithLinkAction } from "./actions";
 
 export function LoginForm({ cms }: { cms?: boolean } = {}) {
   const [st, act, busy] = useActionState(signInAction, {});
@@ -33,6 +33,18 @@ export function ResetForm() {
     <label>Setup key (ADMIN_SETUP_KEY in Vercel)<input type="password" name="key" autoComplete="off" required /></label>
     <label>Your admin email<input type="email" name="email" autoComplete="username" required defaultValue={st.email} key={"e" + st.email} /></label>
     <label>New password (12+ characters)<input type="password" name="password" autoComplete="new-password" minLength={12} required /></label>
+    <label>Confirm password<input type="password" name="confirm" autoComplete="new-password" minLength={12} required /></label>
+    <button type="submit" disabled={busy}>{busy ? "Saving…" : "Set new password and sign in"}</button>
+  </form>;
+}
+
+/** 27 Nov: the page an emailed reset link opens: choose a new password. */
+export function NewPasswordForm({ t }: { t: string }) {
+  const [st, act, busy] = useActionState(resetWithLinkAction, {});
+  return <form action={act} style={{ display: "grid", gap: 14 }}>
+    {st.error && <p className="err" role="alert">{st.error}</p>}
+    <input type="hidden" name="t" value={t} />
+    <label>New password (12+ characters)<input type="password" name="password" autoComplete="new-password" minLength={12} required autoFocus /></label>
     <label>Confirm password<input type="password" name="confirm" autoComplete="new-password" minLength={12} required /></label>
     <button type="submit" disabled={busy}>{busy ? "Saving…" : "Set new password and sign in"}</button>
   </form>;

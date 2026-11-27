@@ -73,6 +73,25 @@ export async function staffLinkAction(f: FormData): Promise<void> {
   const err = await sendStaffLink(str(f, "email"), base);
   redirect(err ? `/admin/login?err=${encodeURIComponent(err)}` : "/admin/login?sent=1");
 }
+/** 27 Nov: "Forgotten your password?": email a reset link (admins) or a sign-in link (teachers). */
+export async function passwordResetRequestAction(f: FormData): Promise<void> {
+  const { sendPasswordReset } = await import("@/lib/auth");
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "dev.ohsoed.co.uk";
+  const base = (process.env.SITE_URL && host === new URL(process.env.SITE_URL).host ? process.env.SITE_URL : `${h.get("x-forwarded-proto") || "https"}://${host}`).replace(/\/$/, "");
+  const err = await sendPasswordReset(str(f, "email"), base);
+  redirect(err ? `/admin/reset?err=${encodeURIComponent(err)}` : "/admin/reset?sent=1");
+}
+export async function resetWithLinkAction(_: unknown, f: FormData): Promise<{ error?: string }> {
+  const password = String(f.get("password") ?? "").slice(0, 200), confirm = String(f.get("confirm") ?? "").slice(0, 200);
+  if (password !== confirm) return { error: "The two passwords don’t match." };
+  const { resetWithLink } = await import("@/lib/auth");
+  const r = await resetWithLink(String(f.get("t") ?? "").slice(0, 100), password);
+  if (r.error || !r.email) return { error: r.error ?? "Something went wrong. Ask for a new link." };
+  const signErr = await signIn(r.email, password);
+  if (signErr) return { error: signErr };
+  redirect("/admin");
+}
 export async function redeemStaffLinkAction(f: FormData): Promise<void> {
   const { redeemStaffLink } = await import("@/lib/auth");
   redirect(await redeemStaffLink(String(f.get("t") ?? "").slice(0, 100)) ? "/admin" : "/admin/login?expired=1");

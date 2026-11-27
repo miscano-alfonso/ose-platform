@@ -12,7 +12,7 @@ import { linkWords } from "./email-layout";
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 type Cfg = { enabled: boolean; subject: string; body: string; minutes: number | null; to_parent: boolean; to_student: boolean };
 export type Timing = { label: string; unit: "minutes" | "hours" | "days"; default: number } | null;
-export type AutoDef = { key: string; name: string; when: string; timing: Timing; to_parent: boolean; to_student: boolean; to_teacher?: boolean; subject: string; body: string; fields: string[]; default_on?: boolean };
+export type AutoDef = { key: string; name: string; when: string; timing: Timing; to_parent: boolean; to_student: boolean; to_teacher?: boolean; parent_only?: boolean; subject: string; body: string; fields: string[]; default_on?: boolean };
 
 export const DEFS: AutoDef[] = [
   { key: "taster_booked", name: "Taster booked: thank you", when: "As soon as a taster lesson is booked (on the website or by the office).", timing: null, to_parent: true, to_student: false,
@@ -78,6 +78,23 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "child", "report", "school"],
     subject: "{{child}}’s {{report}} is ready",
     body: "Dear {{parent}},\n\n{{child}}’s {{report}} is ready. Sign in to your account to read it.\n\n{{school}}" },
+  // 27 Nov (Alfonso): Classroom work, attendance and reward points, for families
+  { key: "assignment_due", name: "Classroom work due soon", when: "Once for each piece of Google Classroom work that isn’t handed in yet, a set number of days before it’s due (all of a student’s pieces in one email).", timing: { label: "days before it’s due", unit: "days", default: 1 }, to_parent: true, to_student: true,
+    fields: ["name", "child", "list", "count", "assignments_link", "school"],
+    subject: "Work due soon for {{child}}: {{count}}",
+    body: "Hi {{name}},\n\nA reminder that this Google Classroom work for {{child}} is due soon and hasn’t been handed in yet:\n\n{{list}}\n\nIt’s handed in through Google Classroom. [See the work]({{assignments_link}})\n\n{{school}}" },
+  { key: "assignment_overdue", name: "Classroom work overdue", when: "Once for each piece of Google Classroom work that’s past its due date and still not handed in (or was sent back to redo), a set number of days after the due date.", timing: { label: "days after the due date", unit: "days", default: 1 }, to_parent: true, to_student: true,
+    fields: ["name", "child", "list", "count", "assignments_link", "school"],
+    subject: "Overdue work for {{child}}: {{count}}",
+    body: "Hi {{name}},\n\nThis Google Classroom work for {{child}} is past its due date and hasn’t been handed in yet:\n\n{{list}}\n\nPlease hand it in through Google Classroom as soon as possible. If something’s getting in the way, reply to this email and we’ll let the teacher know.\n\n[See the work]({{assignments_link}})\n\n{{school}}" },
+  { key: "attendance_week", name: "Attendance this week", parent_only: true, when: "Every Friday from 5pm: each child’s lessons that week, and whether they were there (parents only).", timing: null, to_parent: true, to_student: false,
+    fields: ["parent", "week", "summary", "attendance_link", "school"],
+    subject: "Attendance this week: {{week}}",
+    body: "Dear {{parent}},\n\nHere’s how this week’s lessons went:\n\n{{summary}}\n\nIf a lesson is marked absent and you think that’s wrong, just reply to this email. [See all attendance]({{attendance_link}})\n\nHave a lovely weekend,\n{{school}}" },
+  { key: "reward_points", name: "Reward points given", when: "Soon after a teacher gives reward points (several at once go in one email).", timing: null, to_parent: true, to_student: true,
+    fields: ["name", "child", "list", "points", "total", "rewards_link", "school"],
+    subject: "{{child}} earned {{points}} reward points",
+    body: "Hi {{name}},\n\nWell done! {{child}} has been given reward points:\n\n{{list}}\n\nThat’s **{{total}} points this term**. The top 3 in the school at the end of term win a prize. [See the leaderboard]({{rewards_link}})\n\n{{school}}" },
   // 6 Nov: to the teacher, not families
   { key: "marking_reminder", name: "Marking reminder to the teacher", when: "Once a day (between 8am and 8pm) while any handed-in work in their classes is close to or past the 7-day marking turnaround, starting", timing: { label: "days before the marking deadline", unit: "days", default: 2 }, to_parent: false, to_student: false, to_teacher: true,
     fields: ["teacher", "count", "list", "dashboard_link", "school"],
@@ -94,7 +111,7 @@ export async function automations(): Promise<{ rows: AutoRow[]; ready: boolean; 
       count(*) filter (where status = 'scheduled' and scheduled_for > now())::int as scheduled, count(*) filter (where status = 'failed' and created_at > now() - interval '7 days')::int as failed7
       from automation_sends group by key`),
     recent: await q<SendRow>(`select key, to_email::text as to, to_char(coalesce(scheduled_for, created_at) at time zone 'Europe/London', 'DD Mon HH24:MI') as at, status, ref, error
-      from automation_sends order by created_at desc limit 40`),
+      from automation_sends where status <> 'included' order by created_at desc limit 40`),
   }));
   return { ready: await emailReady(), recent, rows: DEFS.map((d) => { const r = saved.find((x) => x.key === d.key), st = stats.find((x) => x.key === d.key);
     return { ...d, enabled: r?.enabled ?? d.default_on ?? false, subject: r?.subject ?? d.subject, body: r?.body ?? d.body, minutes: r ? r.minutes : d.timing?.default ?? null,
@@ -104,6 +121,7 @@ export async function automations(): Promise<{ rows: AutoRow[]; ready: boolean; 
 export async function saveAutomation(actorId: string, key: string, d: { enabled: boolean; subject: string; body: string; minutes: number | null; to_parent: boolean; to_student: boolean }): Promise<string | null> {
   const def = DEFS.find((x) => x.key === key); if (!def) return "Unknown automation.";
   if (!d.subject.trim() || !d.body.trim()) return "Write a subject and a message.";
+  if (def.parent_only) d = { ...d, to_student: false, to_parent: true };   // e.g. Attendance this week goes to parents only
   if (!def.to_teacher && !d.to_parent && !d.to_student) return "Choose who it goes to.";
   const minutes = def.timing ? Math.max(0, Math.min(def.timing.unit === "days" ? 14 : def.timing.unit === "hours" ? 72 : 1440, Math.round(d.minutes ?? def.timing.default))) : null;
   await withSchool(async (q) => {
@@ -137,14 +155,36 @@ async function deliver(q: Q, key: string, cfg: Cfg, job: Job, budget: { n: numbe
   }
 }
 
+/** 27 Nov: one email listing several things (pieces of work, reward points), each thing sent only once per person. Claims
+ *  each line's ref for this recipient; if any are new, sends one email with just those lines. The email's own row keeps
+ *  the status (sent, held, failed); the other lines are marked 'included'. */
+async function deliverDigest(q: Q, key: string, cfg: Cfg, to: Recipient, lines: { ref: string; line: string }[], vars: (got: { ref: string; line: string }[]) => Record<string, string>, budget: { n: number }): Promise<void> {
+  if (budget.n <= 0 || !to.email) return;
+  const got: { id: number; ref: string; line: string }[] = [];
+  for (const l of lines) {
+    const c = await q<{ id: number }>(`insert into automation_sends (school_id, key, ref, to_email, status) values (current_school(), $1, $2, $3, 'included')
+      on conflict (school_id, key, ref, to_email) do nothing returning id`, [key, l.ref, to.email]);
+    if (c.length) got.push({ id: c[0].id, ref: l.ref, line: l.line });
+  }
+  if (!got.length) return;
+  budget.n--;
+  const v = vars(got);
+  const res = await sendOne([to], fill(cfg.subject, v), fill(linkWords(cfg.body), v), { tag: `auto-${key}` });
+  await q(`update automation_sends set status = $2, message_id = $3, error = $4 where id = $1`, [got[0].id, res.held ? "held" : res.ok ? "sent" : "failed", res.ids[0] ?? null, res.held ? "Test mode" : res.error ?? null]);
+  // a failed send lets the lines go out again next time
+  if (!res.ok && !res.held) await q(`delete from automation_sends where id = any($1::bigint[])`, [got.slice(1).map((g) => g.id)]);
+}
+
 /** Find everything due and send it (or book it with Brevo for the right minute). Safe to run as often as you like. */
 export async function runAutomations(limit = 150): Promise<{ sent: number }> {
   if (!(await emailReady())) return { sent: 0 };
   await holdBooked().catch((e) => console.error("test mode", e));   // test mode: take back reminders booked for families before it was switched on
   const budget = { n: limit };
   await withSchool(async (q) => {
-    const saved = await q<Cfg & { key: string }>(`select key, enabled, subject, body, minutes, to_parent, to_student from automations where enabled`);
-    const cfg = (key: string) => saved.find((s) => s.key === key) ?? null;
+    const saved = await q<Cfg & { key: string }>(`select key, enabled, subject, body, minutes, to_parent, to_student from automations`);
+    // 27 Nov: an automation that's on by default (e.g. payment chase) runs with its standard wording until the school saves it
+    const cfg = (key: string): Cfg | null => { const r = saved.find((s) => s.key === key); if (r) return r.enabled ? r : null;
+      const d = DEFS.find((x) => x.key === key); return d?.default_on ? { enabled: true, subject: d.subject, body: d.body, minutes: d.timing?.default ?? null, to_parent: d.to_parent, to_student: d.to_student } : null; };
     const [sc] = await q<{ name: string; base: string | null }>(`select name, (select value #>> '{}' from social_kv where key = 'base') as base from schools where id = current_school()`).catch(() => [{ name: "OH-SO ED", base: null }]);
     const school = sc?.name ?? "OH-SO ED", base = (process.env.SITE_URL || sc?.base || "").replace(/\/$/, ""), book = base ? `${base}/courses` : "our website", tasterLink = base ? `${base}/taster` : "our website";
     const now = Date.now(), horizon = 48 * 3600e3;
@@ -290,6 +330,89 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
         const n = Math.min(3, Math.floor(r.days / every));   // 1st, 2nd, 3rd reminder
         if (n >= 1) await deliver(q, "payment_chase", c, { ref: `${r.parent_id}:${r.due}:${n}`, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent, amount: gbp(r.amount), term: r.term,
           courses: r.courses, days: String(r.days), payments_link: base ? `${base}/parent/payments` : "your account", school } }, budget);
+      }
+    }
+
+    // 27 Nov (Alfonso): Classroom work due soon / overdue, to the student and their parent (each piece once)
+    const kidsLink = (who: "parent" | "student", path: string) => base ? `${base}/${who}${path}` : "your account";
+    for (const key of ["assignment_due", "assignment_overdue"] as const) {
+      c = cfg(key);
+      if (!c) continue;
+      const days = Math.max(0, c.minutes ?? 1), due = key === "assignment_due";
+      const rows = await q<{ ref: string; sid: string; child: string; semail: string | null; parent: string | null; pemail: string | null; title: string; class: string; due: string; sent_back: boolean }>(`
+        select sa.id::text as ref, st.id as sid, coalesce(nullif(st.known_as, ''), st.first_name) as child, st.email::text as semail, p.first_name as parent, p.email::text as pemail,
+          sa.title, l.name || ' ' || coalesce(sj.short_name, sj.name) as class, sa.due_at::text as due, coalesce(sa.sent_back, false) as sent_back
+        from student_assignments sa join enrolments e on e.group_id = sa.group_id and e.student_id = sa.student_id and e.status = 'active' and not e.is_taster
+          join students st on st.id = sa.student_id left join parents p on p.id = st.parent_id
+          join course_groups g on g.id = sa.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+          join classroom_coursework cw on cw.id = (select s2.coursework_id from classroom_submissions s2 where s2.id = sa.id)
+        where not coursework_earlier_term(sa.title, sa.due_at) and cw.resolved_at is null and ${due
+          ? `sa.parent_status = 'due' and sa.due_at > now() and sa.due_at <= now() + make_interval(days => $1)`
+          : `sa.parent_status = 'overdue' and sa.due_at <= now() - make_interval(days => $1) and sa.due_at > now() - make_interval(days => $1 + 14)`}
+        order by st.id, sa.due_at`, [days]);
+      const byKid = new Map<string, typeof rows>();
+      for (const r of rows) byKid.set(r.sid, [...(byKid.get(r.sid) ?? []), r]);
+      for (const list of byKid.values()) {
+        const k = list[0];
+        const lines = list.map((r) => ({ ref: r.ref, line: `• ${r.title} (${r.class}) · ${due ? "due" : r.sent_back ? "sent back to redo, was due" : "was due"} ${fmtDate(r.due)} at ${fmtTime(r.due)}` }));
+        const vars = (who: "parent" | "student", name: string) => (got: { line: string }[]) => ({ name, child: k.child, list: got.map((g) => g.line).join("\n"), count: `${got.length} piece${got.length === 1 ? "" : "s"} of work`,
+          assignments_link: who === "parent" ? kidsLink("parent", "/assignments") : kidsLink("student", ""), school, parent: k.parent ?? name });
+        if (c.to_student && k.semail) await deliverDigest(q, key, c, { name: k.child, email: k.semail }, lines, vars("student", k.child), budget);
+        if (c.to_parent && k.pemail) await deliverDigest(q, key, c, { name: k.parent ?? "", email: k.pemail }, lines, vars("parent", k.parent ?? "there"), budget);
+      }
+    }
+
+    // 27 Nov (Alfonso): reward points, soon after a teacher gives them (each award once; several in one email)
+    c = cfg("reward_points");
+    if (c) {
+      const rows = await q<{ ref: string; sid: string; child: string; semail: string | null; parent: string | null; pemail: string | null; points: number; reason: string; class: string; teacher: string | null; total: number }>(`
+        select r.id::text as ref, st.id as sid, coalesce(nullif(st.known_as, ''), st.first_name) as child, st.email::text as semail, p.first_name as parent, p.email::text as pemail,
+          r.points::int, coalesce(r.reason, '') as reason, coalesce(l.name || ' ' || coalesce(sj.short_name, sj.name), '') as class, u.name as teacher,
+          (select coalesce(sum(x.points), 0)::int from reward_points x where x.student_id = st.id
+            and x.awarded_on >= coalesce((select t.starts_on from terms t where t.starts_on <= current_date order by t.starts_on desc limit 1), current_date - 90)) as total
+        from reward_points r join students st on st.id = r.student_id left join parents p on p.id = st.parent_id
+          left join course_groups g on g.id = r.group_id left join levels l on l.id = g.level_id left join subjects sj on sj.id = g.subject_id
+          left join teachers t on t.id = r.teacher_id left join users u on u.id = t.user_id
+        where r.created_at > now() - interval '2 days' and r.points > 0 and r.created_at < now() - interval '5 minutes'
+        order by st.id, r.created_at`);
+      const byKid = new Map<string, typeof rows>();
+      for (const r of rows) byKid.set(r.sid, [...(byKid.get(r.sid) ?? []), r]);
+      for (const list of byKid.values()) {
+        const k = list[0], pts = new Map(list.map((r) => [r.ref, r.points]));
+        const lines = list.map((r) => ({ ref: r.ref, line: `• +${r.points} for “${r.reason}”${r.class ? ` · ${r.class}` : ""}${r.teacher ? ` · ${r.teacher}` : ""}` }));
+        const vars = (who: "parent" | "student", name: string) => (got: { ref: string; line: string }[]) => ({ name, child: k.child, list: got.map((g) => g.line).join("\n"),
+          points: String(got.reduce((a, g) => a + (pts.get(g.ref) ?? 0), 0)),
+          total: String(k.total), rewards_link: who === "parent" ? kidsLink("parent", "") : kidsLink("student", "/rewards"), school, parent: k.parent ?? name });
+        if (c.to_student && k.semail) await deliverDigest(q, "reward_points", c, { name: k.child, email: k.semail }, lines, vars("student", k.child), budget);
+        if (c.to_parent && k.pemail) await deliverDigest(q, "reward_points", c, { name: k.parent ?? "", email: k.pemail }, lines, vars("parent", k.parent ?? "there"), budget);
+      }
+    }
+
+    // 27 Nov (Alfonso): attendance this week, to parents only, from Friday 5pm (London); Saturday and Sunday catch up if missed
+    c = cfg("attendance_week");
+    if (c) {
+      const [w] = await q<{ go: boolean; monday: string }>(`select (extract(isodow from (now() at time zone 'Europe/London')) = 5 and extract(hour from (now() at time zone 'Europe/London')) >= 17)
+          or extract(isodow from (now() at time zone 'Europe/London')) in (6, 7) as go, date_trunc('week', (now() at time zone 'Europe/London'))::date::text as monday`);
+      if (w?.go) {
+        const rows = await q<{ pid: string; parent: string; email: string; child: string; sid: string; day: string; time: string; class: string; mark: string | null; told: boolean }>(`
+          select p.id as pid, p.first_name as parent, p.email::text as email, coalesce(nullif(st.known_as, ''), st.first_name) as child, st.id as sid,
+            to_char(e.lesson_date, 'Dy DD Mon') as day, to_char(sl.starts_at, 'HH24:MI') as time, l.name || ' ' || coalesce(sj.short_name, sj.name) as class,
+            (select m.mark::text from attendance_marks m where m.lesson_event_id = e.id and m.student_id = st.id) as mark,
+            exists (select 1 from absence_notices n where n.lesson_event_id = e.id and n.student_id = st.id and n.cancelled_at is null) as told
+          from lesson_events e join lesson_slots sl on sl.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+            join enrolments x on x.group_id = g.id and x.status = 'active' and not x.is_taster join students st on st.id = x.student_id join parents p on p.id = st.parent_id
+          where e.status <> 'cancelled' and e.lesson_date between $1::date and least($1::date + 6, current_date)
+          order by p.id, st.first_name, st.id, e.lesson_date, sl.starts_at`, [w.monday]);
+        const byParent = new Map<string, typeof rows>();
+        for (const r of rows) byParent.set(r.pid, [...(byParent.get(r.pid) ?? []), r]);
+        const label = (r: (typeof rows)[number]) => r.mark === "present" ? "✓ Present" : r.mark === "late" ? "✓ Late" : r.mark === "approved_absence" ? "Absent (approved)" : r.mark === "absent" ? (r.told ? "Absent (you told us)" : "✗ Absent") : r.told ? "Absent (you told us)" : "Not marked yet";
+        for (const [pid, list] of byParent) {
+          const kids = [...new Map(list.map((r) => [r.sid, r.child])).entries()];
+          const summary = kids.map(([sid, child]) => { const ls = list.filter((r) => r.sid === sid), there = ls.filter((r) => r.mark === "present" || r.mark === "late").length;
+            return `**${child}**: ${there} of ${ls.length} lesson${ls.length === 1 ? "" : "s"} attended\n${ls.map((r) => `• ${r.day} ${r.time} · ${r.class} · ${label(r)}`).join("\n")}`; }).join("\n\n");
+          await deliver(q, "attendance_week", c, { ref: `${pid}:${w.monday}`, to: [{ name: list[0].parent, email: list[0].email }], vars: { parent: list[0].parent, week: `w/c ${fmtDate(w.monday)}`,
+            summary, attendance_link: kidsLink("parent", "/attendance"), school } }, budget);
+        }
       }
     }
 

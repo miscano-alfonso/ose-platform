@@ -45,7 +45,7 @@ export default async function Automations({ searchParams }: { searchParams: Prom
             {r.timing && <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="number" name="minutes" min={0} defaultValue={r.minutes ?? r.timing.default} className="mini" style={{ width: 80 }} /> {r.timing.label}</label>}
             {r.to_teacher ? <span className="muted">Goes to the class’s teacher</span> : <>
             <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="to_parent" defaultChecked={r.to_parent} /> Parent</label>
-            <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="to_student" defaultChecked={r.to_student} /> Student (their Google account)</label></>}
+            {r.parent_only ? <span className="muted">Parents only</span> : <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="to_student" defaultChecked={r.to_student} /> Student (their Google account)</label>}</>}
           </div>
           <label className="fld">Subject<input name="subject" defaultValue={r.subject} maxLength={200} required className="mini" style={{ width: "100%" }} /></label>
           <FieldInserter fields={r.fields} />

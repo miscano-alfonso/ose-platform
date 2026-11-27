@@ -11,7 +11,7 @@ type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>
 export type TestCfg = { on: boolean; allow: string[]; monitor?: string; at?: string; by?: string; beta?: boolean; betaAt?: string; betaBy?: string };
 /** Beta (26 Nov): while test mode is on, sign-in emails still go out, so trusted families, students and teachers can sign in
  *  and try the dashboards. Everything else stays held. */
-export const SIGN_IN_TAGS = new Set(["sign-in-link", "staff-sign-in-link", "register-verify"]);
+export const SIGN_IN_TAGS = new Set(["sign-in-link", "staff-sign-in-link", "staff-password-reset", "register-verify"]);
 /** At most this many monitoring copies a day (Brevo plans have daily limits); the rest are only listed. */
 export const MONITOR_DAY_CAP = 200;
 const KEY = "test_mode";
