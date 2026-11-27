@@ -3,34 +3,39 @@ import { notFound } from "next/navigation";
 import { getWorkshopEdit } from "@/lib/workshops-admin";
 import { saveWorkshopAction } from "../../../actions";
 import { drawingPictures } from "@/lib/studio";
-import { ideaForForm } from "@/lib/workshop-ideas";
+import { ideaForForm, dateClashes, clashText } from "@/lib/workshop-ideas";
 
 const p2 = (n: number | null | undefined) => (n == null ? "" : (n / 100).toFixed(2));
 
-export default async function EditWorkshop({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; err?: string; idea?: string }> }) {
+export default async function EditWorkshop({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ ok?: string; err?: string; idea?: string; d?: string; t?: string }> }) {
   const [{ id }, sp] = await Promise.all([params, searchParams]);
   const isNew = id === "new";
   const [{ w, levels, subjects, teachers }, drawings] = await Promise.all([getWorkshopEdit(isNew ? null : id), drawingPictures().then((d) => d.slice(0, 24))]);
   if (!isNew && !w) notFound();
   // 27 Nov: "Make it a workshop" on a teacher's idea opens this form filled in from it
   const idea = isNew && sp.idea ? await ideaForForm(sp.idea) : null;
-  const pre = idea ? { title: idea.title, subject_id: idea.subject_id, teacher_id: idea.teacher_id, summary: idea.summary } : null;
+  const pd = /^\d{4}-\d{2}-\d{2}$/.test(sp.d ?? "") ? sp.d! : undefined, pt = /^\d{2}:\d{2}$/.test(sp.t ?? "") ? sp.t! : undefined;
+  const pre = idea ? { title: idea.title, subject_id: idea.subject_id, teacher_id: idea.teacher_id, summary: idea.summary, level_id: idea.level_id, minutes: idea.minutes, date: pd, time: pt } : null;
+  // 27 Nov: the office can override clashes with other lessons; they're shown as a warning
+  const warn = idea && pd && pt ? await dateClashes(idea.teacher_id, idea.level_id, idea.minutes, { d: pd, t: pt }) : [];
   return <>
     <p className="backlink"><Link className="abtn sm" href="/admin/workshops">← Workshops</Link></p>
     <div className="top"><div><h1>{isNew ? "New workshop" : w!.title}</h1>{w && <div className="sub">{w.booked} booked · {w.status}</div>}</div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <form action={saveWorkshopAction} className="card" style={{ display: "grid", gap: 14 }} encType="multipart/form-data">
       <input type="hidden" name="id" value={isNew ? "" : id} />{idea && <input type="hidden" name="idea" value={idea.id} />}
-      {idea && <p className="note" style={{ margin: 0 }}>Filled in from {"a teacher’s"} idea.{idea.slides_url && <> Their slides: <a href={idea.slides_url} target="_blank" rel="noopener">open ↗</a></>} Add the date, time and price, then save.</p>}
+      {idea && <p className="note" style={{ margin: 0 }}>Filled in from {"a teacher’s"} idea.{idea.slides_url && <> Their slides: <a href={idea.slides_url} target="_blank" rel="noopener">open ↗</a></>} {pd ? " Check the price, then save." : " Add the date, time and price, then save."}</p>}
+      {warn.length > 0 && <div className="note msg bad" style={{ margin: 0 }}><b>Heads up: this time clashes with</b><ul className="wi-warn" style={{ margin: "6px 0 0" }}>{warn.map((c, j) => <li key={j}>{clashText(c, "The teacher’s")}</li>)}</ul>
+        <span style={{ fontSize: 14 }}>You can still save it. Students in those lessons won’t be able to come{warn.some((c) => c.own) ? ", and the teacher can’t teach two things at once, so that one will be refused" : ""}.</span></div>}
       <label className="fld">Title<input name="title" required maxLength={120} defaultValue={w?.title ?? pre?.title} style={{ maxWidth: 520 }} /></label>
       <div className="eform">
-        <label className="fld">Date<input type="date" name="date" required defaultValue={w?.date} /></label>
-        <label className="fld">Starts (UK time)<input type="time" name="time" required step={300} defaultValue={w?.time ?? "10:00"} /></label>
-        <label className="fld">Minutes<input type="number" name="minutes" min={15} max={240} step={5} defaultValue={w?.minutes ?? 45} style={{ width: 90 }} /></label>
+        <label className="fld">Date<input type="date" name="date" required defaultValue={w?.date ?? pre?.date} /></label>
+        <label className="fld">Starts (UK time)<input type="time" name="time" required step={300} defaultValue={w?.time ?? pre?.time ?? "10:00"} /></label>
+        <label className="fld">Minutes<input type="number" name="minutes" min={15} max={240} step={5} defaultValue={w?.minutes ?? pre?.minutes ?? 45} style={{ width: 90 }} /></label>
         <label className="fld">Teacher<select name="teacher" defaultValue={w?.teacher_id ?? pre?.teacher_id ?? ""}><option value="">Not set</option>{teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
       </div>
       <div className="eform">
-        <label className="fld">Level<select name="level" defaultValue={w?.level_id ?? ""}><option value="">Any level</option>{levels.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
+        <label className="fld">Level<select name="level" defaultValue={w?.level_id ?? pre?.level_id ?? ""}><option value="">Any level</option>{levels.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}</select></label>
         <label className="fld">Subject<select name="subject" defaultValue={w?.subject_id ?? pre?.subject_id ?? ""}><option value="">None</option>{subjects.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
         <label className="fld">Places<input type="number" name="capacity" min={1} max={500} defaultValue={w?.capacity ?? 12} style={{ width: 90 }} /></label>
       </div>

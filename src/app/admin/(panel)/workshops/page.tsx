@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { getWorkshopsAdmin } from "@/lib/admin-data";
 import { setWorkshopStatusAction, ideaStatusAction } from "../../actions";
-import { allIdeas, IDEA_STATUS, type Idea } from "@/lib/workshop-ideas";
+import { allIdeas, ideaClashes, clashText, IDEA_STATUS, type Idea, type Clash } from "@/lib/workshop-ideas";
 import { money } from "@/lib/format";
 import { siteText } from "@/lib/site-content";
 import { listTeachers } from "@/lib/teachers-admin";
@@ -19,6 +19,8 @@ export default async function Workshops({ searchParams }: { searchParams: Promis
   const papers = sp.tab === "papers";
   if (papers) await P.paperPaymentsBackground().catch(() => null);   // payments made since the last look
   const [ws, jobs, ideas] = await Promise.all([papers ? Promise.resolve([]) : getWorkshopsAdmin(), P.adminPapers().catch(() => [] as P.PaperJob[]), papers ? Promise.resolve([] as Idea[]) : allIdeas()]);
+  // 27 Nov: each suggested date, checked against lessons now (they may have changed since the teacher sent it)
+  const clashes = new Map<string, Clash[][]>(await Promise.all(ideas.filter((i) => i.status !== "scheduled" && i.dates?.length).map(async (i) => [i.id, await ideaClashes(i)] as [string, Clash[][]])));
   const todo = jobs.filter((j) => j.paid_at && !j.returned_at).length + jobs.filter((j) => !j.paid_at && !j.handled_at).length;
   const tabs = <div className="segl" style={{ marginBottom: 16 }}><Link href="/admin/workshops" aria-current={!papers ? "true" : undefined}>Workshops</Link>
     <Link href="/admin/workshops?tab=papers" aria-current={papers ? "true" : undefined}>Past paper marking{todo ? ` (${todo})` : ""}</Link></div>;
@@ -52,11 +54,18 @@ export default async function Workshops({ searchParams }: { searchParams: Promis
       <p className="cs">Teachers suggest workshops from their 1:1s &amp; workshops page, with slides when they have them. Let them know what you think: they see your answer and note there.</p>
       {sp.ok && <p className="note msg" role="status">{sp.ok}</p>}{sp.err && <p className="note msg bad" role="alert">{sp.err}</p>}
       {ideas.length === 0 ? <p className="empty">No ideas yet.</p> : <div className="wi-admin">{ideas.map((i) => <details key={i.id} className="wi-row" open={i.status === "new"}>
-        <summary><span className="t"><b>{i.title}</b><span>{i.teacher ?? "A teacher"} · {i.subject} · {new Date(i.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" })}{i.slides_url ? " · slides" : " · no slides yet"}</span></span>
+        <summary><span className="t"><b>{i.title}</b><span>{i.teacher ?? "A teacher"} · {i.subject}{i.level ? ` · ${i.level}` : " · any level"} · {i.minutes} min · {new Date(i.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" })}{i.slides_url ? " · slides" : " · no slides yet"}</span></span>
           <span className={`pill ${IDEA_STATUS[i.status][1]}`}>{IDEA_STATUS[i.status][0]}</span></summary>
         <div className="wi-body">
           <p className="wi-ov">{i.overview}</p>
           {i.slides_url && <p style={{ margin: 0 }}><a className="abtn sm" href={i.slides_url} target="_blank" rel="noopener">Open the slides ↗</a></p>}
+          {i.status !== "scheduled" && i.dates?.length > 0 && <div className="wi-sdates"><b>Suggested dates</b>{i.dates.map((d, k) => { const cs = clashes.get(i.id)?.[k] ?? [];
+            const nm = (i.teacher ?? "The teacher").split(" ")[0];
+            return <div key={k} className="wi-sdate"><span className="wi-when">{new Date(d.d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", year: "numeric" })} · {d.t}</span>
+              {cs.length ? <span className="pill warn">{cs.length} clash{cs.length === 1 ? "" : "es"}</span> : <span className="pill good">No clashes</span>}
+              <Link className="abtn sm" href={`/admin/workshops/new?idea=${i.id}&d=${d.d}&t=${d.t}`}>Use this date</Link>
+              {cs.length > 0 && <ul className="wi-warn">{cs.map((c, j) => <li key={j}>{clashText(c, `${nm}’s`)}</li>)}</ul>}</div>; })}
+            <p className="muted" style={{ fontSize: 13.5, margin: 0 }}>Clashes are a warning: you can still use a date. Lessons for students at this level{i.level ? ` (${i.level})` : " (any level: every lesson)"} at the same time mean those students couldn’t come.</p></div>}
           {i.status === "scheduled" && i.workshop_id ? <p style={{ margin: 0 }}><Link href={`/admin/workshops/${i.workshop_id}`}>Set up as a workshop →</Link></p> : <>
             <form action={ideaStatusAction} className="wi-acts"><input type="hidden" name="id" value={i.id} />
               <label className="fld">What do you think?<select name="status" defaultValue={i.status === "new" ? "liked" : i.status}><option value="new">New</option><option value="liked">We like it</option><option value="not_now">Not for now</option></select></label>

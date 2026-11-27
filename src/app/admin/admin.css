@@ -1824,4 +1824,12 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm .wi-row>summary .t{flex:1;min-width:220px;display:grid;gap:2px}.adm .wi-row>summary .t>span{font-size:14px;color:var(--muted)}
 .adm .wi-body{padding:0 14px 14px;display:grid;gap:10px}.adm .wi-ov{white-space:pre-wrap;margin:0;line-height:1.55}
 .adm .wi-acts{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end}.adm .wi-acts .fld input{min-width:280px}
-.adm .wi-form textarea{font:inherit;line-height:1.5}.adm .wi-form button{justify-self:start}
+.adm .wi-form textarea{font:inherit;font-weight:400;line-height:1.5}.adm .wi-form input{font-weight:400}.adm .wi-form button{justify-self:start}
+
+/* 27 Nov: suggested dates on workshop ideas, with clash warnings */
+.adm .wi-dates{display:grid;gap:8px}.adm .wi-dr{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center}.adm .wi-dr .fld{margin:0}
+.adm .wi-dr input,.adm .wi-dr select{width:auto}
+.adm .wi-dh{margin:4px 0 0;font-weight:600;font-size:15px}.adm .wi-dh .muted{font-weight:400;font-size:13.5px}
+.adm .wi-warn{margin:4px 0 0;padding-left:18px;font-size:13.5px;color:var(--warn)}.adm .wi-warn li{margin:2px 0}
+.adm .wi-sdates{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.adm .wi-sdate{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}.adm .wi-sdate .wi-warn{flex-basis:100%}.adm .wi-when{font-weight:600;min-width:190px}

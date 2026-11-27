@@ -1288,8 +1288,17 @@ export async function saveIdeaAction(f: FormData): Promise<void> {
   const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
   const id = str(f, "id", 40);
   const { saveIdea } = await import("@/lib/workshop-ideas");
-  const err = await saveIdea(me.id, /^[0-9a-f-]{36}$/.test(id) ? id : null, { title: str(f, "title", 120), subject: str(f, "subject", 80), overview: String(f.get("overview") ?? "").slice(0, 3000), slides: str(f, "slides", 500) }, real.id);
+  const dates = [1, 2, 3].map((n) => ({ d: str(f, `d${n}`, 10), t: str(f, `t${n}`, 5) })).filter((x) => x.d && x.t);
+  const err = await saveIdea(me.id, /^[0-9a-f-]{36}$/.test(id) ? id : null, { title: str(f, "title", 120), subject: str(f, "subject", 80), overview: String(f.get("overview") ?? "").slice(0, 3000), slides: str(f, "slides", 500),
+    level: str(f, "level", 40), minutes: Number(str(f, "minutes", 3)) || 60, dates }, real.id);
   tback("/admin/teacher/ones", id ? "Idea updated." : "Thank you! Your idea has gone to the office. You’ll see here what they think.", err);
+}
+/** 27 Nov: the teacher's idea form checks each suggested date as it's chosen. Returns a warning list per date. */
+export async function checkIdeaDatesAction(level: string, minutes: number, dates: { d: string; t: string }[]): Promise<string[][]> {
+  const me = await requireViewer();
+  const { teacherIdOf, dateClashes, clashText } = await import("@/lib/workshop-ideas");
+  const tid = await teacherIdOf(me.id);
+  return Promise.all(dates.slice(0, 3).map(async (d) => (await dateClashes(tid, level || null, minutes, d)).map((c) => clashText(c))));
 }
 export async function deleteIdeaAction(f: FormData): Promise<void> {
   const me = await requireViewer();

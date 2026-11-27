@@ -3,6 +3,7 @@ import { myOnes } from "@/lib/teacher-area";
 import { teacherOneWork, type OneWork } from "@/lib/one-courses";
 import { markOneTaughtAction, addMyHoursAction, removeMyHoursAction, saveIdeaAction, deleteIdeaAction } from "../../../actions";
 import { myIdeas, IDEA_STATUS, type Idea } from "@/lib/workshop-ideas";
+import { IdeaDates } from "./IdeaDates";
 import { DAYLONG, dlong, hm, gbp } from "../fmt";
 import { GuideSlides } from "../../../GuideSlides";
 import { TEACHER_GUIDES } from "../../../guides";
@@ -29,12 +30,12 @@ export default async function Ones({ searchParams }: { searchParams: Promise<{ o
           <div className="t on-lines"><b>{w.title}</b><span>{w.minutes} min</span><span>{w.booked} booked</span></div></div>)}
         {/* 27 Nov (Alfonso): teachers suggest workshop ideas; the office sees them on Workshops */}
         <details className="wi-new"><summary className="abtn sm pri">Suggest a workshop</summary>
-          <IdeaForm subjects={ideas.subjects} /></details>
+          <IdeaForm subjects={ideas.subjects} levels={ideas.levels} /></details>
         {ideas.ideas.length > 0 && <div className="wi-list"><h3>Your ideas</h3>{ideas.ideas.map((i) => <details key={i.id} className="wi-item">
-          <summary><span className="t"><b>{i.title}</b><span>{i.subject} · sent {dlong(i.created_at)}{i.slides_url ? " · slides added" : " · no slides yet"}</span></span>
+          <summary><span className="t"><b>{i.title}</b><span>{i.subject}{i.level ? ` · ${i.level}` : ""} · sent {dlong(i.created_at)}{i.dates?.length ? ` · ${i.dates.length} date${i.dates.length === 1 ? "" : "s"} suggested` : ""}{i.slides_url ? " · slides added" : " · no slides yet"}</span></span>
             <span className={`pill ${IDEA_STATUS[i.status][1]}`}>{IDEA_STATUS[i.status][0]}</span></summary>
           {i.office_note && <p className="wi-note"><b>The office:</b> {i.office_note}</p>}
-          {i.status === "scheduled" ? <p className="cs">It’s been set up as a workshop. Thank you!</p> : <IdeaForm subjects={ideas.subjects} idea={i} />}
+          {i.status === "scheduled" ? <p className="cs">It’s been set up as a workshop. Thank you!</p> : <IdeaForm subjects={ideas.subjects} levels={ideas.levels} idea={i} />}
           {(i.status === "new" || i.status === "not_now") && <form action={deleteIdeaAction} className="wi-del"><input type="hidden" name="id" value={i.id} /><button className="lnk" type="submit">Remove this idea</button></form>}
         </details>)}</div>}
       </section>
@@ -68,13 +69,14 @@ function WorkPill({ w }: { w: OneWork }) {
 }
 
 /** 27 Nov: suggest a workshop (or change one already sent): title, subject, overview, and slides (optional, can be added later). */
-function IdeaForm({ subjects, idea }: { subjects: string[]; idea?: Idea }) {
+function IdeaForm({ subjects, levels, idea }: { subjects: string[]; levels: { id: string; name: string }[]; idea?: Idea }) {
   const list = `wi-subjects-${idea?.id ?? "new"}`;
   return <form action={saveIdeaAction} className="wi-form">{idea && <input type="hidden" name="id" value={idea.id} />}
     <label className="fld">Title<input name="title" required minLength={3} maxLength={120} defaultValue={idea?.title} placeholder="e.g. A Christmas Carol: the ghosts up close" /></label>
     <label className="fld">Subject<input name="subject" required minLength={2} maxLength={80} list={list} defaultValue={idea?.subject} placeholder="Choose or type" />
       <datalist id={list}>{subjects.map((n) => <option key={n} value={n} />)}</datalist></label>
     <label className="fld">Overview<textarea name="overview" required minLength={20} maxLength={3000} rows={5} defaultValue={idea?.overview} placeholder="What it covers, who it’s for (level or age), roughly how long, and what students will take away." /></label>
+    <IdeaDates levels={levels} level={idea?.level_id ?? null} minutes={idea?.minutes ?? 60} dates={idea?.dates ?? []} />
     <label className="fld">Slides (optional)<input name="slides" type="url" maxLength={500} defaultValue={idea?.slides_url ?? ""} placeholder="Link to your Google Slides: you can add it later" /></label>
     <button className="abtn sm pri" type="submit">{idea ? "Save changes" : "Send to the office"}</button>
   </form>;

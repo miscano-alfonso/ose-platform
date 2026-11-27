@@ -1,4 +1,4 @@
-// /newdashboard/<role> (25 Nov 2026; brought up to date 27 Nov with updates 471–501): introducing the new dashboards to teachers, parents and students before the January switch.
+// /newdashboard/<role> (25 Nov 2026; brought up to date 27 Nov with updates 471–507): introducing the new dashboards to teachers, parents and students before the January switch.
 // Each section has a screenshot in public/newdashboard/<role>-<shot>-<light|dark>.webp: OH-SO ED's dashboards with made-up
 // students and families (Demo Academy's data shown in OH-SO ED's look), taken by scratch/qa/nd-shots.js.
 // The sticky button in the header (see (site)/layout.tsx) opens the real dashboard in a new tab; signed out, it asks them to sign in.
@@ -23,7 +23,7 @@ export const PAGES: Record<Role, Page> = {
     sections: [
       { id: "my-day", title: "My day", shot: "home", alt: "My day: the next lesson with a clock and countdown, this week’s lessons, Classroom stream, messages from the school, attendance, 1:1s and reports",
         text: "Your home page. It opens on your next lesson, with a countdown and the button to join its Google Meet.",
-        points: ["The lesson’s slides, found by name in the class’s slides folder, and SEND notes for the students in that class", "Today’s lessons, and the latest posts from your Google Classrooms", "Messages from the office (and from families, when that’s switched on)", "Work to mark, attendance in your classes, 1:1s, reports to write and reward points", "Rearrange the boxes the way you like them"] },
+        points: ["The lesson’s slides, found by name in the class’s slides folder", "Under the lesson: birthdays coming up, tasters joining, and SEND notes for the students in that class, so you can welcome and plan for them", "Tips (top right): a short slideshow of the small things that make every student feel noticed", "Today’s lessons, and the latest posts from your Google Classrooms", "Messages from the office (and from families, when that’s switched on)", "Work to mark, attendance in your classes, 1:1s, reports to write and reward points"] },
       { id: "classes", title: "My classes", nav: "Classes", shot: "classes", alt: "My classes: each class with its times, students, attendance, SEND and next lesson",
         text: "Every class you teach, with its lesson times, how many students, attendance this term, SEND and the next lesson.",
         points: ["Switch between a list and cards", "Jump straight to a class’s students, assignments or attendance"] },
@@ -42,9 +42,12 @@ export const PAGES: Record<Role, Page> = {
       { id: "reports", title: "Reports", shot: "reports", alt: "Reports to write: each class with how many comments are written, and a Write button",
         text: "The progress report comments, class by class, with how many you’ve written and when to submit them.",
         points: ["Progress comes from Classroom marks; choose Effort (and, for GCSE, working and predicted grades)", "Each comment is 100–200 words (a count shows under it); Draft with AI writes a first draft that length from the student’s marks, attendance and earlier reports, for you to edit", "Write and save drafts any time; submit in the last week of term, once the assessment is marked (or say why there isn’t one)", "The office approves and publishes them to families"] },
-      { id: "timetable", title: "My timetable, 1:1s and workshops", nav: "Timetable", shot: "timetable", alt: "My timetable: your lessons for the week by day and time",
-        text: "Your week at a glance, plus your booked 1:1s and the hours you offer for them.",
-        points: ["Coming up: your lessons for the next three weeks, each with Reschedule", "Set the hours parents can book you for 1:1s", "Each 1:1 has its own Meet link in your Google Calendar, and is logged as taught from Meet"] },
+      { id: "timetable", title: "My timetable", nav: "Timetable", shot: "timetable", alt: "My timetable: your lessons for the week by day and time",
+        text: "Your week at a glance, with every lesson coming up for the next three weeks.",
+        points: ["Coming up: your lessons for the next three weeks, each with Reschedule", "Lessons, 1:1s and workshops all go into your own calendar app too (Calendar sync)"] },
+      { id: "ones", title: "1:1s and workshops", nav: "1:1s", shot: "ones", alt: "1:1s and workshops: booked 1:1s, your workshops, the hours parents can book you, and a form to suggest a workshop with suggested dates checked for clashes",
+        text: "Your booked 1:1s and workshops, the hours parents can book you for 1:1s, and your ideas for new workshops.",
+        points: ["Set the hours parents can book you for 1:1s; each 1:1 has its own Meet link in your Google Calendar and is logged as taught from Meet", "Suggest a workshop: a title, the subject, who it’s for, an overview and your slides (you can add them later)", "Suggest up to 3 dates: each is checked as you pick it, and warns you if you’re teaching then or if students at that level have a lesson", "Workshops are mostly for new families, so holidays, weekends and after school work well", "See what the office thinks, and when your idea is set up as a workshop"] },
       { id: "change", title: "Reschedule a lesson", nav: "Reschedule", shot: "change", alt: "Reschedule a lesson: choose to move it or cancel it, pick a new date and time from the free times, give a reason and send it to the office",
         text: "If you can’t teach a lesson, press Reschedule (on My timetable or the lesson itself) to ask the office to move it or cancel it.",
         points: ["Choose a new date and time from a list of times that are free", "Free means no clash with your other lessons, 1:1s or workshops, any lesson in the same level group (KS3, Pre-GCSE or GCSE), or the students’ other lessons", "The office approves it, and the class’s families and students are emailed the change automatically", "The new lesson goes into everyone’s timetable and calendar, with its reminders, attendance and pay"] },
