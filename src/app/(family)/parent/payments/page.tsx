@@ -54,7 +54,10 @@ export default async function Payments({ searchParams }: { searchParams: Promise
       </div>)}
       <div className="pay-late-acts">{pm && <a className="abtn pri sm" href="#how">Update how you pay</a>}<a className="abtn sm" href="/parent/messages?new=1">Message us</a></div></section>}
     <div className="tiles"><div className="tile"><span className="k">Paid this year</span><span className="v" style={{ fontSize: 26 }}>{gbp(d.paid)}</span></div>
-      <div className="tile"><span className="k">Still to pay</span><span className="v" style={{ fontSize: 26 }}>{gbp(d.toPay)}</span></div>
+      {/* 27 Nov (Alfonso): "Remaining": everything still to pay for all the children's courses, the whole course (a 2-year course's
+          second year too), less what's been paid: this year's unpaid terms plus the later years */}
+      <div className="tile"><span className="k">Remaining</span><span className="v" style={{ fontSize: 26 }}>{gbp(d.toPay + d.failed + allCourses.reduce((a, c) => a + laterOf(c), 0))}</span>
+        {allCourses.some((c) => laterOf(c) > 0) && <span className="muted" style={{ fontSize: 13.5 }}>for the whole of each course, including next year</span>}</div>
       {d.failed > 0 && late.length === 0 && <div className="tile alert"><span className="k">Didn’t go through</span><span className="v" style={{ fontSize: 26 }}>{gbp(d.failed)}</span><span className="h">we’ll try again in 3 days</span></div>}</div>
     {d.children.map((st, si) => <section key={st.id} style={{ marginBottom: 16 }}><div className="pay-kid"><h3 style={{ margin: 0, font: "600 18px Jost, sans-serif" }}>{st.first}</h3>
       {/* 27 Nov (Alfonso): a key instead of a word in every cell; each payment's date sits in a colour-coded tab */}
