@@ -32,7 +32,7 @@ export async function Shell({ f, groups, counts = {}, root, children }: { f: Fam
         <SideFoot theme={theme} signOut={f.viewer ? undefined : familySignOutAction} preview={!!f.viewer} inline toggle home={{ href: root, label: "Home" }} settings={`${root}/notifications`} site={[{ href: "/", label: "View the website" }]} />
 
       </aside>
-      <main className="main">{(beta || view) && <div className="note beta-strip" role="note">{beta && <span>{BETA.strip}</span>}
+      <main className="main">{(beta || view) && <div className="note beta-strip" role="note">{beta && <span className="bs-text" title={BETA.strip}>{BETA.strip}</span>}
         {view && <form action={familySignOutAction} className="bs-view"><span>Viewing as <b>{f.first} {f.last}</b> ({f.kind})</span><button className="abtn sm" type="submit">Back to the admin</button></form>}</div>}{children}</main>
     </div></div>;
 }

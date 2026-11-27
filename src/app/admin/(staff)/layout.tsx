@@ -77,7 +77,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
       <main className="main"><TopBar />{await (async () => {
         // 27 Nov (Alfonso: "to save space"): "Viewing as …" sits on the yellow bar along the bottom, with the Beta note
         const t = await import("@/lib/test-mode"), beta = await t.betaOn(), view = me.viewing && !(await headers()).get("x-ose-preview");
-        return beta || view ? <div className="note beta-strip" role="note">{beta && <span>{t.BETA.stripTeacher}</span>}
+        return beta || view ? <div className="note beta-strip" role="note">{beta && <span className="bs-text" title={t.BETA.stripTeacher}>{t.BETA.stripTeacher}</span>}
           {view && <form action={stopViewingAction} className="bs-view"><span>Viewing as <b>{me.name}</b> (teacher)</span><button className="abtn sm" type="submit">Back to the admin</button></form>}</div> : null;
       })()}{children}</main>
     </div></div>;

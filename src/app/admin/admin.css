@@ -1893,3 +1893,17 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 .adm .beta-strip .bs-view .abtn{background:var(--pop-ink,#0f1747);color:var(--pop,#e9f56a);border-color:transparent}
 /* the menu ends above the bottom bar, so Sign out and the round buttons aren't hidden behind it */
 @media (min-width:821px){.adm:has(.main > .beta-strip) .side{height:calc(100dvh - 48px)}.adm .beta-strip{min-height:48px;box-sizing:border-box;padding-block:7px}}
+/* 27 Nov (Alfonso): the bottom bar on one line: smaller text that shrinks with the window; if it still doesn't fit, the
+   Beta note ends in "…" (the whole note shows on hover) and Viewing as stays whole */
+.adm .beta-strip{flex-wrap:nowrap;gap:16px;font-size:clamp(11px,.85vw,14.5px);padding-block:6px;min-height:44px}
+.adm .beta-strip .bs-text{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adm .beta-strip .bs-view{flex:none;gap:10px}
+.adm .beta-strip .bs-view .abtn{font-size:inherit;padding:5px 12px}
+@media (min-width:821px){.adm:has(.main > .beta-strip) .side{height:calc(100dvh - 44px)}}
+.adm .beta-strip{gap:12px;padding-inline:clamp(12px,1.6vw,24px)}
+/* 27 Nov (Alfonso: "on ALL dashboards, can this section hug the bottom of the window"): on a computer the menu's foot (Sign out,
+   the website link, the round buttons) sits at the bottom of the window on every dashboard (teacher, parent and student too),
+   staying there while a long menu scrolls above it */
+@media (min-width:821px){
+  .adm .side .side-foot,.adm .side .side-foot.inline{position:sticky;bottom:-18px;margin:auto -12px -18px;padding:14px 12px 16px;background:var(--rail,var(--brand));border-top:1px solid var(--line);z-index:2}
+}
