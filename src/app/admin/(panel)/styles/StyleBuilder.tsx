@@ -11,7 +11,7 @@ const DASH_PAGES: [string, string][] = [["Admin dashboard", "/admin"], ["Familie
 // 26 Nov: each dashboard has its own preview pages
 const WHO_PAGES: Record<string, [string, string][]> = {
   teacher: [["My day", "/admin/teacher"], ["My classes", "/admin/teacher/classes"], ["Marking", "/admin/teacher/marking"], ["Messages", "/admin/teacher/messages"], ["Reports", "/admin/teacher/reports"], ["My timetable", "/admin/teacher/timetable"]],
-  parent: [["Home", "/parent"], ["Messages", "/parent/messages"], ["Reports", "/parent/reports"], ["Payments", "/parent/payments"], ["Attendance", "/parent/attendance"], ["Workshops", "/parent/workshops"]],
+  parent: [["Home", "/parent"], ["Messages", "/parent/messages"], ["Reports", "/parent/reports"], ["Payments", "/parent/payments"], ["Timetable", "/parent/attendance"], ["Workshops", "/parent/workshops"]],
   student: [["Home", "/student"], ["Messages", "/student/messages"], ["Chat", "/student/chat"], ["Rewards", "/student/rewards"], ["Resources", "/student/resources"]],
 };
 const HEAD_IDS = /^(hero_h1|page_h1|sec_h2|card_h3|d_h1|d_h2|d_tile)$/;

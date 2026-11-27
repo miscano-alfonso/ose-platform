@@ -65,6 +65,29 @@ export async function parentAttendance(parentId: string) {
       where s.parent_id = $1 and n.cancelled_at is null order by e.lesson_date desc limit 50`, [parentId]),
   }));
 }
+/** 27 Nov (Alfonso: the parent's Timetable, option B): one child's lessons for the weeks shown in a month calendar
+ *  (Monday before the 1st to the Sunday after the last day): each with its mark once taught, a reported absence, or
+ *  cancelled; booked tasters too. `from`/`to` are dates (YYYY-MM-DD). */
+export type MonthLesson = { id: string; date: string; time: string; class: string; subject: string; status: string; past: boolean; mark: string | null; early: boolean; notice: string | null; taster: boolean };
+export async function parentMonth(parentId: string, studentId: string, from: string, to: string): Promise<MonthLesson[]> {
+  return withSchool((q) => q<MonthLesson>(`
+    with mine as (select s.id from students s where s.id = $2 and s.parent_id = $1),
+    ev as (
+      select e.id, e.lesson_date, e.status::text as status, e.slot_id, e.group_id, false as taster from lesson_events e
+        where e.lesson_date between $3::date and $4::date
+          and exists (select 1 from enrolments x join mine on mine.id = x.student_id where x.group_id = e.group_id and not x.is_taster
+            and (x.status in ('pending','active') or exists (select 1 from attendance_marks m where m.lesson_event_id = e.id and m.student_id = mine.id)))
+      union
+      select e.id, e.lesson_date, e.status::text, e.slot_id, e.group_id, true from taster_bookings tb join taster_requests r on r.id = tb.request_id join mine on mine.id = r.student_id
+        join lesson_events e on e.id = tb.lesson_event_id where tb.status <> 'cancelled' and e.lesson_date between $3::date and $4::date)
+    select ev.id, ev.lesson_date::text as date, to_char(sl.starts_at,'HH24:MI') as time, l.name || ' ' || coalesce(sj.short_name, sj.name) as class, coalesce(sj.short_name, sj.name) as subject,
+      ev.status, (ev.lesson_date + sl.ends_at) at time zone 'Europe/London' <= now() as past,
+      (select m.mark::text from attendance_marks m where m.lesson_event_id = ev.id and m.student_id = $2) as mark,
+      coalesce((select m.left_early from attendance_marks m where m.lesson_event_id = ev.id and m.student_id = $2), false) as early,
+      (select n.id::text from absence_notices n where n.lesson_event_id = ev.id and n.student_id = $2 and n.cancelled_at is null) as notice, ev.taster
+    from ev join lesson_slots sl on sl.id = ev.slot_id join course_groups g on g.id = ev.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+    order by ev.lesson_date, sl.starts_at`, [parentId, studentId, from, to])).catch(() => []);
+}
 export async function reportAbsences(parentId: string, studentId: string, lessons: string[], reason: string, note: string | null): Promise<string | null> {
   if (!REASONS.includes(reason)) return "Choose a reason.";
   if (!lessons.length) return "Choose the lessons your child will miss.";

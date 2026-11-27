@@ -1907,3 +1907,56 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 @media (min-width:821px){
   .adm .side .side-foot,.adm .side .side-foot.inline{position:sticky;bottom:-18px;margin:auto -12px -18px;padding:14px 12px 16px;background:var(--rail,var(--brand));border-top:1px solid var(--line);z-index:2}
 }
+/* 27 Nov: parent Lessons: Report an absence on the left, each child's attendance on the right */
+.adm .pl-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;align-items:start;margin-bottom:16px}
+.adm .pl-att{display:grid;gap:16px}
+@media (max-width:1050px){.adm .pl-grid{grid-template-columns:1fr}}
+/* 27 Nov (Alfonso chose option B): the parent's Timetable: a month calendar with each lesson's mark, tick boxes to report an absence */
+.adm .tt-top{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}
+.adm .tt-sum{margin:0 0 12px;color:var(--muted);font-size:14.5px}.adm .tt-sum b{color:var(--ink)}
+.adm .tt-form{counter-reset:tt}
+.adm .tt-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:6px}
+.adm .tt-wh{font:600 12px/1 "Space Grotesk",sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:4px 6px}
+.adm .tt-day{min-height:96px;border:1px solid var(--line);border-radius:12px;padding:6px 7px;background:var(--soft);display:flex;flex-direction:column;gap:5px;min-width:0}
+.adm .tt-day.future{background:var(--panel)}
+.adm .tt-day.other{opacity:.45}
+.adm .tt-day.today{border-color:var(--brand-accent,#e3cd4b);box-shadow:inset 0 0 0 1px var(--brand-accent,#e3cd4b)}
+.adm .tt-dn{font-weight:700;font-size:13px}.adm .tt-wd{display:none}
+.adm .tt-l{display:flex;align-items:center;gap:6px;border-radius:8px;padding:3px 7px;font-size:12.5px;line-height:1.3;min-width:0}
+.adm .tt-l b{font-weight:700;white-space:nowrap}
+.adm .tt-l i{font-style:normal;font-weight:700;margin-left:auto;flex:none}
+.adm .tt-ok{background:color-mix(in srgb,#2f9e63 18%,transparent);color:#1d7a49}
+.adm .tt-late{background:color-mix(in srgb,#e0a023 20%,transparent);color:#8a5a00}
+.adm .tt-abs{background:color-mix(in srgb,#d64545 16%,transparent);color:#b42f2f}
+.adm .tt-appr,.adm .tt-rep{background:var(--hover);color:var(--muted)}
+.adm .tt-none{background:transparent;border:1px dashed var(--line);color:var(--muted)}
+.adm .tt-cx{background:transparent;color:var(--muted);text-decoration:line-through}.adm .tt-cx i{text-decoration:none;font-weight:500}
+.adm .tt-rep{flex-wrap:wrap}.adm .tt-rep span{font-size:11.5px}.adm .tt-link{background:none;border:0;padding:0;color:inherit;text-decoration:underline;cursor:pointer;font:inherit}
+.adm .tt-fut{border:1px solid var(--line);background:var(--panel);cursor:pointer}
+.adm .tt-fut input{width:15px;height:15px;margin:0;flex:none;accent-color:var(--brand-accent,#e3cd4b)}
+.adm .tt-fut:has(input:checked){border-color:var(--brand-accent,#e3cd4b);box-shadow:inset 0 0 0 1px var(--brand-accent,#e3cd4b)}
+.adm .tt-fut input:checked{counter-increment:tt}
+.adm .tt-count::before{content:counter(tt)}
+@media (prefers-color-scheme:dark){.adm:not([data-theme=light]) .tt-ok{color:#7ee0a2}.adm:not([data-theme=light]) .tt-late{color:#f3c766}.adm:not([data-theme=light]) .tt-abs{color:#ff9a9a}}
+.adm[data-theme=dark] .tt-ok{color:#7ee0a2}.adm[data-theme=dark] .tt-late{color:#f3c766}.adm[data-theme=dark] .tt-abs{color:#ff9a9a}
+/* the bar: a hint until something is ticked, then the reason, note and button, kept in view along the bottom */
+.adm .tt-bar{margin-top:14px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--hover);border-radius:16px;padding:10px 14px}
+.adm .tt-bar .tt-n,.adm .tt-bar select,.adm .tt-bar input,.adm .tt-bar button{display:none}
+.adm .tt-bar input{flex:1;min-width:200px}
+.adm .tt-hint{color:var(--muted);font-size:14.5px}
+.adm .tt-form:has(.tt-fut input:checked) .tt-bar{position:sticky;bottom:12px;z-index:5;box-shadow:0 8px 28px rgba(5,15,45,.25);border:1px solid var(--brand-accent,#e3cd4b)}
+.adm .tt-form:has(.tt-fut input:checked) .tt-bar .tt-n,.adm .tt-form:has(.tt-fut input:checked) .tt-bar select,.adm .tt-form:has(.tt-fut input:checked) .tt-bar button{display:inline-flex}
+.adm .tt-form:has(.tt-fut input:checked) .tt-bar input{display:block}
+.adm .tt-form:has(.tt-fut input:checked) .tt-hint{display:none}
+.adm .main:has(> .beta-strip) .tt-form:has(.tt-fut input:checked) .tt-bar{bottom:56px}
+.adm .tt-key{display:flex;gap:8px 12px;flex-wrap:wrap;align-items:center;margin:14px 0 0;font-size:13px}.adm .tt-key .tt-l{padding:2px 8px}.adm .tt-key .tt-l i{margin-left:0}
+/* phones and narrow windows: a list of the days that have lessons */
+@media (max-width:820px){
+  .adm .tt-grid{grid-template-columns:1fr}.adm .tt-wh{display:none}.adm .tt-day{min-height:0}.adm .tt-day:not(.has){display:none}
+  .adm .tt-wd{display:inline}.adm .tt-l{font-size:14px;padding:6px 9px}
+}
+.adm .tt-l{overflow:hidden}.adm .tt-c{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm .tt-top .segl a{white-space:nowrap}
+.adm .tt-sum b{display:inline}
+.adm .tt-l b{flex:none}.adm .tt-fut{padding:3px 6px;gap:5px}
+.adm .tt-bar select{width:auto;max-width:240px}

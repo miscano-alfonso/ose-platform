@@ -46,15 +46,19 @@ export async function familySignOutAction(): Promise<void> {
 }
 
 // ---------- parent ----------
+/** 27 Nov: back to the same child and month on the Timetable */
+const ttBack = (f: FormData) => { const kid = str(f, "kid", 40), m = str(f, "m", 7);
+  const qs = [/^[0-9a-f-]{36}$/.test(kid) ? `kid=${kid}` : "", /^\d{4}-\d{2}$/.test(m) ? `m=${m}` : ""].filter(Boolean).join("&");
+  return `/parent/attendance${qs ? `?${qs}` : ""}`; };
 export async function reportAbsenceAction(f: FormData): Promise<void> {
   const p = await parent("/parent/attendance");
   const err = await F.reportAbsences(p.id, str(f, "student", 40), f.getAll("lesson").map(String).filter((x) => /^[0-9a-f-]{36}$/.test(x)), str(f, "reason", 60), str(f, "note", 500) || null);
-  go("/parent/attendance", "Absence reported. The teacher can see it, and it doesn’t count against attendance.", err);
+  go(ttBack(f), "Absence reported. The teacher can see it, and it doesn’t count against attendance.", err);
 }
 export async function cancelAbsenceAction(f: FormData): Promise<void> {
   const p = await parent("/parent/attendance");
   await F.cancelAbsence(p.id, str(f, "id", 40));
-  go("/parent/attendance", "Absence cancelled.");
+  go(ttBack(f), "Absence cancelled.");
 }
 export async function bookWorkshopAction(f: FormData): Promise<void> {
   const p = await parent("/parent/workshops");

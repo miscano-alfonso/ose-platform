@@ -48,7 +48,7 @@ export const CATALOGUE: Record<MenuArea, MenuItem[]> = {
     it("Reward points", "/admin/points", "star"), it("Reports", "/admin/teacher/reports", "rep"), it("My timetable", "/admin/teacher/timetable", "cal"), it("Calendar sync", "/admin/teacher/calendar", "cal"), it("Google Drive", "/admin/teacher/drive", "set"), it("Notifications", "/admin/teacher/notifications", "set"), it("My pay", "/admin/teacher/pay", "gbp"),
   ],
   parent: [
-    it("Home", "/parent", "home"), it("Attendance", "/parent/attendance", "att"), it("Assignments", "/parent/assignments", "rep"), it("Book a 1:1", "/parent/book", "fam"),
+    it("Home", "/parent", "home"), it("Timetable", "/parent/attendance", "cal"), it("Assignments", "/parent/assignments", "rep"), it("Book a 1:1", "/parent/book", "fam"),
     it("Workshops", "/parent/workshops", "cal"), it("Resources", "/parent/resources", "rep"), it("Messages", "/parent/messages", "chat"), it("Other parents", "/parent/connect", "fam"), it("My details", "/parent/details", "set"),
     it("Privacy", "/parent/privacy", "set"), it("Reports", "/parent/reports", "rep"), it("Payments", "/parent/payments", "pay"), it("Calendar sync", "/parent/calendar", "cal"), it("Notifications", "/parent/notifications", "set"),
   ],
