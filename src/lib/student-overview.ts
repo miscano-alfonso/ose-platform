@@ -91,7 +91,7 @@ export async function studentOverview(opts: { teacherUserId?: string; termOnly?:
 
 // ---------- one student's page (Admin → Students → a student, 5 Nov) ----------
 export type StudentProfile = {
-  s: { id: string; name: string; known_as: string | null; email: string | null; dob: string | null; year_group: number | null; parent_id: string; family: string; parent_email: string;
+  s: { id: string; name: string; known_as: string | null; gender: string | null; email: string | null; dob: string | null; year_group: number | null; parent_id: string; family: string; parent_email: string;
     has_send: string | null; needs: string[] | null; details: string | null; adjustments: string | null; share: boolean | null };
   classes: { id: string; name: string; code: string; teacher: string | null; status: string; taster: boolean; attended: number; held: number; in_classroom: boolean | null }[];
   marks: { date: string; class: string; mark: string; minutes: number | null; source: string; term: string | null; n: number }[];
@@ -102,7 +102,7 @@ export type StudentProfile = {
 export async function studentProfile(id: string): Promise<StudentProfile | null> {
   if (!/^[0-9a-f-]{36}$/.test(id)) return null;
   return withSchool(async (q) => {
-    const s = (await q<StudentProfile["s"]>(`select s.id, s.first_name || ' ' || s.last_name as name, nullif(s.known_as, '') as known_as, s.email::text, s.date_of_birth::text as dob, s.year_group,
+    const s = (await q<StudentProfile["s"]>(`select s.id, s.first_name || ' ' || s.last_name as name, nullif(s.known_as, '') as known_as, s.email::text, s.date_of_birth::text as dob, s.year_group, nullif(s.gender, '') as gender,
         s.parent_id, p.first_name || ' ' || p.last_name as family, p.email::text as parent_email, sup.has_send, sup.needs, sup.details, sup.adjustments, sup.share_with_teachers as share
       from students s join parents p on p.id = s.parent_id left join student_support sup on sup.student_id = s.id where s.id = $1`, [id]))[0];
     if (!s) return null;
@@ -133,4 +133,11 @@ export async function studentProfile(id: string): Promise<StudentProfile | null>
       where r.student_id = $1 order by r.created_at desc limit 30`, [id]);
     return { s, classes, marks, work, points, term: term ? { name: term.name } : null };
   });
+}
+
+/** 27 Nov: the office sets a student's gender (for he / she / they in report drafts); "" = not given. */
+export async function setStudentGender(id: string, g: string): Promise<void> {
+  const v = ["Male", "Female", "Non-binary", "Prefer not to answer"].includes(g) ? g : null;
+  if (!/^[0-9a-f-]{36}$/.test(id)) return;
+  await withSchool((q) => q(`update students set gender = $2 where id = $1`, [id, v]));
 }

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { requireStaff } from "@/lib/auth";
 import { studentProfile } from "@/lib/student-overview";
 import { sendLabels } from "@/lib/send";
+import { studentGenderAction } from "../../../actions";
 
 export const dynamic = "force-dynamic";
 const day = (d: string) => new Date(d.length > 10 ? d : d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "Europe/London" });
@@ -27,7 +28,11 @@ export default async function StudentPage({ params }: { params: Promise<{ id: st
   return <>
     <p className="backlink"><Link className="abtn sm" href="/admin/students">← Students</Link></p>
     <div className="top"><div><h1>{s.name}{s.known_as && s.known_as !== s.name.split(" ")[0] ? <span className="h1-code">“{s.known_as}”</span> : null}</h1>
-      <div className="sub">{s.dob ? `${age(s.dob)} years old · ` : ""}{s.year_group ? `Year ${s.year_group} · ` : ""}Family: <Link href={`/admin/families/${s.parent_id}`}>{s.family}</Link></div></div>
+      <div className="sub">{s.dob ? `${age(s.dob)} years old · ` : ""}{s.year_group ? `Year ${s.year_group} · ` : ""}Family: <Link href={`/admin/families/${s.parent_id}`}>{s.family}</Link></div>
+        {/* 27 Nov (Alfonso): gender, so report drafts say he, she or they (parents can set it in My details too) */}
+        <form action={studentGenderAction} className="st-gender"><input type="hidden" name="id" value={s.id} />
+          <label>Gender <span className="muted">(for he / she / they in reports)</span> <select name="gender" defaultValue={s.gender ?? ""}><option value="">Not given</option><option>Male</option><option>Female</option><option>Non-binary</option><option>Prefer not to answer</option></select></label>
+          <button className="abtn sm" type="submit">Save</button></form></div>
       <span className="grow" /><Link className="abtn" href={`/admin/messages/write?aud=student&target=${s.id}`}>Message {s.name.split(" ")[0]}</Link>
       <Link className="abtn" href={`/admin/messages/write?aud=parent&target=${s.parent_id}`}>Message the parent</Link></div>
     <div className="tiles">

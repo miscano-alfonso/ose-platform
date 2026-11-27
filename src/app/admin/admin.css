@@ -1729,3 +1729,8 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm .tips-row{display:flex;gap:12px;align-items:flex-start;cursor:pointer}.adm .tips-row input{margin-top:4px;accent-color:var(--brand);width:18px;height:18px}
 .adm .tips-row span{display:flex;flex-direction:column;gap:2px}.adm .tips-row small{color:var(--muted);font-size:14px;line-height:1.45}
 .adm .wr-as .pill{white-space:normal}
+.adm .st-gender{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;font-size:14.5px}
+.adm .st-gender select{padding:4px 10px;border-radius:9px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:14px}
+.adm a.wr-aslink{text-decoration:none}.adm a.wr-aslink:hover{filter:brightness(.95);text-decoration:underline}
+/* 27 Nov: Save draft reads "Saved ✓" until the report changes */
+.adm .wr-acts .abtn.wr-saved:disabled{opacity:1;filter:none;color:var(--good);border-color:transparent;background:var(--good-bg);cursor:default}

@@ -584,6 +584,9 @@ export async function saveWriteSheetAction(f: FormData): Promise<void> {
   const [oneId, oneSubmit] = str(f, "one", 60).split(":");
   const one = /^[0-9a-f-]{36}$/.test(oneId ?? "") ? rows.filter((r) => r.id === oneId) : null;
   const submit = one ? oneSubmit === "1" : str(f, "submit", 1) === "1";
+  // 27 Nov (Alfonso): saving one report also keeps the other reports' unsaved changes (as drafts), so nothing is lost
+  const dirty = new Set(str(f, "dirty", 8000).split(",").filter((x) => /^[0-9a-f-]{36}$/.test(x) && x !== oneId));
+  if (one && dirty.size) await saveWriteSheet(me, cycle, group, rows.filter((r) => dirty.has(r.id)), false);
   const err = await saveWriteSheet(me, cycle, group, one ?? rows, submit);
   revalidatePath(`/admin/reports/${cycle}`);
   const ok = one ? (submit ? "Report submitted for approval." : "Draft saved.") : submit ? "Submitted for approval." : "Drafts saved.";
@@ -2016,4 +2019,14 @@ export async function adminMarkUnreadAction(f: FormData): Promise<void> {
   const kind = str(f, "kind", 10), id = str(f, "id", 40), tab = str(f, "f", 12);
   if (kind === "office" || kind === "family") await adminMarkUnread(me.id, kind, id);
   redirect(`/admin/messages${/^(unread|office|families)$/.test(tab) ? `?f=${tab}` : ""}`);
+}
+
+/** 27 Nov: Admin → a student → Gender (for he / she / they in report drafts). */
+export async function studentGenderAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const id = str(f, "id", 40);
+  const { setStudentGender } = await import("@/lib/student-overview");
+  await setStudentGender(id, str(f, "gender", 30));
+  revalidatePath(`/admin/students/${id}`);
+  redirect(`/admin/students/${id}`);
 }

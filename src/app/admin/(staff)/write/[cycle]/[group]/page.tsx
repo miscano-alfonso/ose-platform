@@ -7,6 +7,7 @@ import { getWriteSheet } from "@/lib/reports";
 import { saveWriteSheetAction } from "../../../../actions";
 import { AiDraft, AiDraftAll } from "./AiDraft";
 import { suggestGrades } from "@/lib/grades";
+import { WriteDirty } from "./WriteDirty";
 
 const wday = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { day: "numeric", month: "long" });
@@ -44,7 +45,7 @@ export default async function Write({ params, searchParams }: { params: Promise<
     </div>
     {rows.length === 0 ? <p className="empty">No reports for this class yet.</p> :
     <form action={saveWriteSheetAction} id="wr-form">
-      <input type="hidden" name="cycle" value={cycle} /><input type="hidden" name="group" value={group} />
+      <WriteDirty /><input type="hidden" name="cycle" value={cycle} /><input type="hidden" name="group" value={group} />
       {rows.map((r) => { const ro = locked || r.status === "approved"; const tools = !ro; const here = sp.r === r.id; const sg = h.gcse ? suggestGrades(r.marks ?? []) : null;
         return <section className="card wr-card" key={r.id} id={`r-${r.id}`}>
         <input type="hidden" name="ids" value={r.id} />
@@ -65,9 +66,10 @@ export default async function Write({ params, searchParams }: { params: Promise<
           {/* 27 Nov (Alfonso): each assessment the round uses (previous term's and/or this term's, set by the office), named by its term */}
           {(r.assess_parts.length ? r.assess_parts : [{ label: "Assessment", state: r.assess, pct: r.assess_pct, title: r.assess_title, link: null as string | null }]).map((p, k) => <div key={k} className="wr-as" title={p.title ?? undefined}>
             <span className="muted">{p.label}:</span>
-            <span className={`pill ${AS[p.state]?.[0] ?? "mute"}`}>{AS[p.state]?.[1] ?? p.state}{p.state === "marked" && p.pct != null ? ` · ${p.pct}%` : ""}</span>
-            {/* 27 Nov (Alfonso): open it in Classroom (the student's hand-in when there is one) */}
-            {p.link && /^https:\/\/classroom\.google\.com\//.test(p.link) && <a className="abtn sm" href={p.link} target="_blank" rel="noopener" title={p.title ?? undefined}>Open in Classroom ↗</a>}</div>)}
+            {/* 27 Nov (Alfonso): the status itself opens it in Classroom (the student's hand-in when there is one), with a small ↗ */}
+            {p.link && /^https:\/\/classroom\.google\.com\//.test(p.link)
+              ? <a className={`pill wr-aslink ${AS[p.state]?.[0] ?? "mute"}`} href={p.link} target="_blank" rel="noopener" title={`Open ${p.title ?? "it"} in Classroom`}>{AS[p.state]?.[1] ?? p.state}{p.state === "marked" && p.pct != null ? ` · ${p.pct}%` : ""} <span aria-hidden="true">↗</span></a>
+              : <span className={`pill ${AS[p.state]?.[0] ?? "mute"}`}>{AS[p.state]?.[1] ?? p.state}{p.state === "marked" && p.pct != null ? ` · ${p.pct}%` : ""}</span>}</div>)}
           {r.assess !== "marked" && r.assess !== "unknown" && <label className="fld">No assessment because
             <NoAssessPick name={`noassess_${r.id}`} value={r.no_assessment ?? ""} disabled={ro} /></label>}
               {r.avg_pct && <p className="muted" style={{ margin: 0 }}>Marks average {r.avg_pct}% ({r.marked} pieces)</p>}
