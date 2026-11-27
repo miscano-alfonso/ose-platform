@@ -15,7 +15,7 @@ const HEIGHTS: [H | undefined, string][] = [[undefined, "Auto"], ["s", "S"], ["m
 const SIZES: [Size, string][] = [["s", "S"], ["q", "S+"], ["m", "M"], ["l", "L"], ["xl", "XL"], ["full", "Full"]];
 
 /** scope "standard": an admin viewing as a teacher, parent or student arranges the school's standard for all of them (audience, e.g. "teachers"). */
-export function BentoBoard({ page, modules, layout, defaults, saved, scope = "own", audience, locked }: { page: string; modules: BoardModule[]; layout: Item[]; defaults: Item[]; saved: boolean; scope?: "own" | "standard"; audience?: string; locked?: boolean }) {
+export function BentoBoard({ page, modules, layout, defaults, saved, scope = "own", audience, locked, tools }: { page: string; modules: BoardModule[]; layout: Item[]; defaults: Item[]; saved: boolean; scope?: "own" | "standard"; audience?: string; locked?: boolean; tools?: React.ReactNode }) {
   const [items, setItems] = useState<Item[]>(layout);
   const [editing, setEditing] = useState(false);
   const [drag, setDragS] = useState<string | null>(null);
@@ -59,8 +59,9 @@ export function BentoBoard({ page, modules, layout, defaults, saved, scope = "ow
     setMsg(next ? (std ? `Saved as the standard for all ${audience ?? "people"}.` : "Saved. This is now your dashboard.") : (std ? "Back to the built-in layout." : "Back to the standard layout."));
     if (!next) setItems(defaults); setEditing(false); });
   return <div className={`bb${editing ? " editing" : ""}`}>
-    {!locked && <div className="bb-bar">
-      {!editing ? <><button type="button" className="abtn sm" onClick={() => { setEditing(true); setMsg(""); }}>
+    {/* 27 Nov: tools (e.g. the teachers' Tips) sit in the bar even where the layout can't be changed */}
+    {(!locked || tools) && <div className="bb-bar">{tools}
+      {locked ? null : !editing ? <><button type="button" className="abtn sm" onClick={() => { setEditing(true); setMsg(""); }}>
         <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" /></svg>{std ? `Customise for all ${audience ?? ""}` : "Customise"}</button>
         {msg && <span className="bb-msg" role="status">{msg}</span>}</>
       : <><span className="bb-help">{std ? `Drag modules to move them, pick a width, or take them off. This becomes the dashboard for all ${audience ?? "people"}.` : "Drag modules to move them, pick a width, or take them off. Only you see this arrangement."}</span>

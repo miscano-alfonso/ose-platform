@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getWorkshopsAdmin } from "@/lib/admin-data";
-import { setWorkshopStatusAction } from "../../actions";
+import { setWorkshopStatusAction, ideaStatusAction } from "../../actions";
+import { allIdeas, IDEA_STATUS, type Idea } from "@/lib/workshop-ideas";
 import { money } from "@/lib/format";
 import { siteText } from "@/lib/site-content";
 import { listTeachers } from "@/lib/teachers-admin";
@@ -17,7 +18,7 @@ export default async function Workshops({ searchParams }: { searchParams: Promis
   const sp = await searchParams;
   const papers = sp.tab === "papers";
   if (papers) await P.paperPaymentsBackground().catch(() => null);   // payments made since the last look
-  const [ws, jobs] = await Promise.all([papers ? Promise.resolve([]) : getWorkshopsAdmin(), P.adminPapers().catch(() => [] as P.PaperJob[])]);
+  const [ws, jobs, ideas] = await Promise.all([papers ? Promise.resolve([]) : getWorkshopsAdmin(), P.adminPapers().catch(() => [] as P.PaperJob[]), papers ? Promise.resolve([] as Idea[]) : allIdeas()]);
   const todo = jobs.filter((j) => j.paid_at && !j.returned_at).length + jobs.filter((j) => !j.paid_at && !j.handled_at).length;
   const tabs = <div className="segl" style={{ marginBottom: 16 }}><Link href="/admin/workshops" aria-current={!papers ? "true" : undefined}>Workshops</Link>
     <Link href="/admin/workshops?tab=papers" aria-current={papers ? "true" : undefined}>Past paper marking{todo ? ` (${todo})` : ""}</Link></div>;
@@ -46,6 +47,24 @@ export default async function Workshops({ searchParams }: { searchParams: Promis
         </div></td></tr>)}</tbody>
     </table></div>
     <p className="note">Workshops can’t clash with the teacher’s lessons or 1:1s. Draft workshops stay off the website until you publish them.</p>
+    {/* 27 Nov (Alfonso): workshop ideas sent by teachers from their 1:1s & workshops page */}
+    <section className="card" id="ideas"><h2>Ideas from teachers{ideas.some((i) => i.status === "new") && <span className="pill info" style={{ marginLeft: 10, fontSize: 14 }}>{ideas.filter((i) => i.status === "new").length} new</span>}</h2>
+      <p className="cs">Teachers suggest workshops from their 1:1s &amp; workshops page, with slides when they have them. Let them know what you think: they see your answer and note there.</p>
+      {sp.ok && <p className="note msg" role="status">{sp.ok}</p>}{sp.err && <p className="note msg bad" role="alert">{sp.err}</p>}
+      {ideas.length === 0 ? <p className="empty">No ideas yet.</p> : <div className="wi-admin">{ideas.map((i) => <details key={i.id} className="wi-row" open={i.status === "new"}>
+        <summary><span className="t"><b>{i.title}</b><span>{i.teacher ?? "A teacher"} · {i.subject} · {new Date(i.created_at).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" })}{i.slides_url ? " · slides" : " · no slides yet"}</span></span>
+          <span className={`pill ${IDEA_STATUS[i.status][1]}`}>{IDEA_STATUS[i.status][0]}</span></summary>
+        <div className="wi-body">
+          <p className="wi-ov">{i.overview}</p>
+          {i.slides_url && <p style={{ margin: 0 }}><a className="abtn sm" href={i.slides_url} target="_blank" rel="noopener">Open the slides ↗</a></p>}
+          {i.status === "scheduled" && i.workshop_id ? <p style={{ margin: 0 }}><Link href={`/admin/workshops/${i.workshop_id}`}>Set up as a workshop →</Link></p> : <>
+            <form action={ideaStatusAction} className="wi-acts"><input type="hidden" name="id" value={i.id} />
+              <label className="fld">What do you think?<select name="status" defaultValue={i.status === "new" ? "liked" : i.status}><option value="new">New</option><option value="liked">We like it</option><option value="not_now">Not for now</option></select></label>
+              <label className="fld">Note for the teacher (optional)<input name="note" maxLength={500} defaultValue={i.office_note ?? ""} placeholder="e.g. Great idea: could it run in the February half term?" /></label>
+              <button className="abtn sm" type="submit">Save</button></form>
+            <p style={{ margin: 0 }}><Link className="abtn sm pri" href={`/admin/workshops/new?idea=${i.id}`}>Make it a workshop</Link> <span className="muted" style={{ fontSize: 14 }}>opens the new workshop form filled in from this idea</span></p></>}
+        </div></details>)}</div>}
+    </section>
   </>;
 }
 

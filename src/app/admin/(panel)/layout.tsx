@@ -58,7 +58,8 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     withSchool((q) => q<{ enq: number; jobs: number; failed: number; tasters: number }>(`select (select count(*)::int from enquiries where handled_at is null) as enq, (select count(*)::int from job_applications where status = 'new') as jobs,
       (select count(*)::int from instalments where status = 'failed') as failed, 0 as tasters`)));
   const inboxUnread = await unreadInbox();
-  const mkOverdue = await import("@/lib/marking").then((m) => m.overdueMarkingCount()).catch(() => 0);   // 27 Nov: pieces past the marking turnaround
+  const mkOverdue = await import("@/lib/marking").then((m) => m.overdueMarkingCount()).catch(() => 0);
+  const newIdeas = await import("@/lib/workshop-ideas").then((m) => m.newIdeasCount()).catch(() => 0);   // 27 Nov: teachers' workshop ideas to look at   // 27 Nov: pieces past the marking turnaround
   const lessonReqs = await import("@/lib/lesson-changes").then((m) => m.pendingRequestCount()).catch(() => 0);   // teachers asking to cancel or move a lesson
   const chatAlerts = (await withSchool((q) => q<{ n: number }>(`select (select count(*)::int from student_chat_flags where status = 'open') + (select count(*)::int from student_chat_reports where status = 'open') as n`)).catch(() => [{ n: 0 }]))[0]?.n ?? 0;
   const pl = await schoolPlan();
@@ -81,7 +82,7 @@ export default async function PanelLayout({ children }: { children: React.ReactN
     { value: "p", label: "Parent…" }, { value: "s", label: "Student…" }];
   // 5 Nov: the School and Viewing as pickers sit at the top right, beside the section tabs (on phones they stay in the menu)
   const switchers = (idp: string) => <Switchers idp={idp} schools={schools.filter((x) => !isDemoVisitor(me.email) || x.slug === school).map((x) => ({ value: x.slug, label: x.name }))} school={school} views={views} view="admin" />;
-  const navCounts: Record<string, number> = { "/admin/enquiries": c.enq, "/admin/jobs": c.jobs, "/admin/payments": c.failed, "/admin/tasters": c.tasters, "/admin/reports": x.rep, "/admin/messages": x.msg, "/admin/students": x.joins, "/admin/email": inboxUnread, "/admin/student-chat": chatAlerts, "/admin/timetable": lessonReqs, "/admin/marking": mkOverdue };
+  const navCounts: Record<string, number> = { "/admin/enquiries": c.enq, "/admin/jobs": c.jobs, "/admin/payments": c.failed, "/admin/tasters": c.tasters, "/admin/reports": x.rep, "/admin/messages": x.msg, "/admin/students": x.joins, "/admin/email": inboxUnread, "/admin/student-chat": chatAlerts, "/admin/timetable": lessonReqs, "/admin/marking": mkOverdue, "/admin/workshops": newIdeas };
   return <div className="adm" data-theme={theme} data-palette={demo ? "demo" : undefined} style={{ ["--brand" as string]: hex(brand.primary, "#0f1747"), ["--brand-accent" as string]: hex(brand.accent, "#e3cd4b"), ["--brand-accent-ink" as string]: inkOn(hex(brand.accent, "#e3cd4b")) }}><DashStyles /><LessonWindow /><NotifyCenter api="/admin/notify-api" role="admin" /><div className="app">
     <aside className="side">
       {/* eslint-disable-next-line @next/next/no-img-element */}

@@ -782,7 +782,8 @@ export async function deleteGuideAction(f: FormData): Promise<void> {
 // ---------- workshops: create and edit ----------
 export async function saveWorkshopAction(f: FormData): Promise<void> {
   const me = await requireStaff();
-  const id = str(f, "id", 40) || null, back = (m: string) => redirect(`/admin/workshops/${id ?? "new"}?err=${encodeURIComponent(m)}`);
+  const idea = str(f, "idea", 40);   // 27 Nov: made from a teacher's workshop idea
+  const id = str(f, "id", 40) || null, back = (m: string) => redirect(`/admin/workshops/${id ?? "new"}?err=${encodeURIComponent(m)}${!id && idea ? `&idea=${idea}` : ""}`);
   const date = str(f, "date", 10), time = str(f, "time", 5), price = pounds(str(f, "price", 12) || "0"), pay = pounds(str(f, "pay", 12) || "0");
   const ep = str(f, "enrolled_price", 12), enrolledPrice = ep ? pounds(ep) : null;
   const cap = parseInt(str(f, "capacity", 4), 10);
@@ -809,6 +810,7 @@ export async function saveWorkshopAction(f: FormData): Promise<void> {
     size: str(f, "size") === "double" ? "double" : "single", image, removeImage: f.get("remove_image") === "on" });
   revalidatePath("/admin/workshops"); revalidatePath("/other-services"); revalidatePath("/more");
   if (r.error) return back(r.error);
+  if (idea && r.id) await import("@/lib/workshop-ideas").then((m) => m.linkIdea(idea, r.id!));
   redirect(`/admin/workshops/${r.id}?ok=${encodeURIComponent("Workshop saved.")}`);
 }
 
@@ -1280,6 +1282,27 @@ export async function addMyHoursAction(f: FormData): Promise<void> {
   const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
   const err = await addMyHours(me.id, Number(str(f, "weekday", 2)), str(f, "from", 5), str(f, "to", 5), real.id);
   tback("/admin/teacher/ones", "1:1 hours updated.", err);
+}
+// 27 Nov (Alfonso): teachers suggest workshops (subject, overview, slides later); the office reviews them on Workshops
+export async function saveIdeaAction(f: FormData): Promise<void> {
+  const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
+  const id = str(f, "id", 40);
+  const { saveIdea } = await import("@/lib/workshop-ideas");
+  const err = await saveIdea(me.id, /^[0-9a-f-]{36}$/.test(id) ? id : null, { title: str(f, "title", 120), subject: str(f, "subject", 80), overview: String(f.get("overview") ?? "").slice(0, 3000), slides: str(f, "slides", 500) }, real.id);
+  tback("/admin/teacher/ones", id ? "Idea updated." : "Thank you! Your idea has gone to the office. You’ll see here what they think.", err);
+}
+export async function deleteIdeaAction(f: FormData): Promise<void> {
+  const me = await requireViewer();
+  const { deleteIdea } = await import("@/lib/workshop-ideas");
+  await deleteIdea(me.id, str(f, "id", 40));
+  tback("/admin/teacher/ones", "Idea removed.");
+}
+export async function ideaStatusAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { setIdeaStatus } = await import("@/lib/workshop-ideas");
+  const err = await setIdeaStatus(me.id, str(f, "id", 40), str(f, "status", 20), str(f, "note", 500));
+  revalidatePath("/admin/workshops");
+  redirect(`/admin/workshops?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Saved. The teacher sees this on their 1:1s & workshops page.")}#ideas`);
 }
 export async function removeMyHoursAction(f: FormData): Promise<void> {
   const [me, real] = await Promise.all([requireViewer(), requireSignedIn()]);
