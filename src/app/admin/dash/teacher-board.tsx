@@ -14,6 +14,8 @@ import { LiveMessages } from "../LiveMessages";
 import { messagesStamp } from "@/lib/live-stamp";
 import { Ring, Ico, IC } from "../DashBits";
 import { joinLabel } from "@/lib/video";
+import { GuideSlides } from "../GuideSlides";
+import { TEACHER_GUIDES } from "../guides";
 import { markingQueue, countdown, tone, TURNAROUND_DAYS, REMIND_DAYS } from "@/lib/marking";
 
 
@@ -67,7 +69,7 @@ export async function teacherModules(me: { id: string; name: string }): Promise<
   const dueDay = (s: string) => new Date(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
   const modules: BoardModule[] = [
     { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`} data-lesson={next ? `${next.name}, ${next.time}` : undefined}><div className="fx-main">{next && <RefreshAt at={next.ends_at} />}
-        <p className="fx-live">{isToday && <i />}{termWeek ? <span className="fx-tw">{termWeek} ·</span> : ""}{next ? <span className="fx-daytime">{isToday ? `${new Date(next.d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" })} ${dm(next.d)} · ${next.time.slice(0, 5)}` : `${wd(next.d)} ${dm(next.d)} · ${next.time.slice(0, 5)}`}</span> : d.term?.name ?? "My day"} <NotifyBell settingsHref="/admin/teacher/notifications" /></p>
+        <p className="fx-live">{isToday && <i />}{termWeek ? <span className="fx-tw">{termWeek} ·</span> : ""}{next ? <span className="fx-daytime">{isToday ? `${new Date(next.d + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", timeZone: "UTC" })} ${dm(next.d)} · ${next.time.slice(0, 5)}` : `${wd(next.d)} ${dm(next.d)} · ${next.time.slice(0, 5)}`}</span> : d.term?.name ?? "My day"} <NotifyBell settingsHref="/admin/teacher/notifications" /><GuideSlides slides={TEACHER_GUIDES.myday.slides} variant="info" label="How My day works" title={TEACHER_GUIDES.myday.title} /></p>
         <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {me.name.split(" ")[0]}</span>{next && <><span className="fx-nextk">Next lesson</span><Link className="fx-title-link" href={next.kind && next.kind !== "class" ? "/admin/teacher/ones" : `/admin/register/${next.id}`} title={next.kind && next.kind !== "class" ? "Your 1:1s and workshops" : "The lesson: who’s expected, SEND, tasters and the register"}>{next.name}</Link></>}</h1>
         <div className="fx-sub-row"><p className="fx-hero-s">{next ? next.kind === "one" ? next.detail : next.kind === "workshop" ? `${next.students} booked · ${next.detail}` : <>{next.students} student{next.students === 1 ? "" : "s"}{next.tasters.length ? ` · ${next.tasters.length} taster${next.tasters.length > 1 ? "s" : ""}` : ""}{next.absent.length ? ` · away: ${next.absent.join(", ")}` : ""}</> : "No lessons in the next 7 days."}</p>{next && next.kind !== "one" && next.kind !== "workshop" && <SlidesButton eventId={next.id} url={next.slides_url ?? null} found={found.get(next.id) ?? null} n={next.lesson_no} school={schoolSlides} />}</div>
       </div>{next && <div className="fx-side"><LessonClock date={next.d} time={next.time} />

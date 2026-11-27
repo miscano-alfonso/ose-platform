@@ -3,6 +3,8 @@ import { requireViewer } from "@/lib/auth";
 import { familyMsgsOn } from "@/lib/teacher-area";
 import { myStudents, myClasses } from "@/lib/teacher-area";
 import { StudentRows, StudentTable, ViewSwitch, sortOf, sortStudents } from "../StudentRows";
+import { GuideSlides } from "../../../GuideSlides";
+import { TEACHER_GUIDES } from "../../../guides";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,7 @@ export default async function MyStudents({ searchParams }: { searchParams: Promi
   const href = (v: string, w = view, o: Record<string, string> = keep) => `/admin/teacher/students?${new URLSearchParams({ ...(v !== "all" ? { show: v } : {}), ...(sp.q ? { q: sp.q } : {}), ...(w === "cards" ? { view: "cards" } : {}), ...o })}`;
   const hidden = Object.entries(keep).map(([k, v]) => <input key={k} type="hidden" name={k} value={v} />);
   return <>
-    <div className="top"><div><h1>My students</h1><div className="sub">{all.length} student{all.length === 1 ? "" : "s"} across {classes.length} class{classes.length === 1 ? "" : "es"}{sendN ? ` · ${sendN} with SEND` : ""}</div></div></div>
+    <div className="top"><div><h1>My students</h1><div className="sub">{all.length} student{all.length === 1 ? "" : "s"} across {classes.length} class{classes.length === 1 ? "" : "es"}{sendN ? ` · ${sendN} with SEND` : ""}</div></div><span className="grow" /><GuideSlides slides={TEACHER_GUIDES.students.slides} title={TEACHER_GUIDES.students.title} /></div>
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", marginBottom: 14 }}>
       <form method="get" action="/admin/teacher/students" style={{ display: "flex", gap: 6 }}>{show !== "all" && <input type="hidden" name="show" value={show} />}{view === "cards" && <input type="hidden" name="view" value="cards" />}{hidden}
         <input name="q" defaultValue={sp.q ?? ""} placeholder="Search by name" aria-label="Search students" className="mini" style={{ width: 220 }} /><button className="abtn sm" type="submit">Search</button></form>

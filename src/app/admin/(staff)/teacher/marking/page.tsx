@@ -4,6 +4,8 @@ import { markingQueue, markingSubmissions, markingRoster, countdown, tone, TURNA
 import { dm } from "../fmt";
 import * as P from "@/lib/past-papers";
 import { paperDelayAction, paperReturnAction } from "../../../papers-actions";
+import { GuideSlides } from "../../../GuideSlides";
+import { TEACHER_GUIDES } from "../../../guides";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Marking" };
@@ -46,7 +48,7 @@ export default async function Marking({ searchParams }: { searchParams: Promise<
     <div className="top"><div><h1>Marking</h1>
       <div className="sub">{papers.some((p) => !p.returned_at) && `${papers.filter((p) => !p.returned_at).length} past paper${papers.filter((p) => !p.returned_at).length === 1 ? "" : "s"} · `}{total ? `${total} hand-in${total === 1 ? "" : "s"} to mark in ${queue.length} piece${queue.length === 1 ? "" : "s"} of work` : "Nothing waiting"} · mark and return work in Google Classroom within {TURNAROUND_DAYS} days of its due date</div></div>
       <div className="segl"><Link href="/admin/teacher/marking" aria-current={!byClass && !onPapers ? "true" : undefined}>Each piece of work</Link><Link href="/admin/teacher/marking?by=class" aria-current={byClass ? "true" : undefined}>By class</Link>
-        <Link href="/admin/teacher/marking?by=papers#papers" aria-current={onPapers ? "true" : undefined}>Past papers{openPapers ? ` (${openPapers})` : ""}</Link></div></div>
+        <Link href="/admin/teacher/marking?by=papers#papers" aria-current={onPapers ? "true" : undefined}>Past papers{openPapers ? ` (${openPapers})` : ""}</Link></div><span className="grow" /><GuideSlides slides={TEACHER_GUIDES.marking.slides} title={TEACHER_GUIDES.marking.title} /></div>
     {sp.ok && <p className="note msg" role="status">{sp.ok}</p>}{sp.err && <p className="note msg bad" role="alert">{sp.err}</p>}
     {/* 26 Nov: past papers bought on the website have their own tab (always there, even when none are waiting) */}
     {onPapers ? <Papers papers={papers} /> : <>

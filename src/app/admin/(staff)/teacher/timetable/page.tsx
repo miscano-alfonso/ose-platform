@@ -3,6 +3,8 @@ import { myTimetable } from "@/lib/teacher-area";
 import { DAYLONG } from "../fmt";
 import Link from "next/link";
 import { teacherUpcoming } from "@/lib/lesson-changes";
+import { GuideSlides } from "../../../GuideSlides";
+import { TEACHER_GUIDES } from "../../../guides";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +21,7 @@ export default async function MyTimetable() {
   const times = [...new Set(slots.map((s) => s.time))].sort();
   const days = [1, 2, 3, 4, 5, ...(slots.some((s) => s.weekday > 5) ? [6, 7] : [])];
   return <>
-    <div className="top"><div><h1>My timetable</h1><div className="sub">{slots.length} lesson{slots.length === 1 ? "" : "s"} a week</div></div></div>
+    <div className="top"><div><h1>My timetable</h1><div className="sub">{slots.length} lesson{slots.length === 1 ? "" : "s"} a week</div></div><span className="grow" /><GuideSlides slides={TEACHER_GUIDES.timetable.slides} title={TEACHER_GUIDES.timetable.title} /></div>
     {slots.length === 0 ? <p className="empty">No lessons on your timetable yet.</p> :
     <div className="tw"><table><thead><tr><th>Time</th>{days.map((d) => <th key={d}>{DAYLONG[d]}</th>)}</tr></thead><tbody>
       {times.map((tm) => <tr key={tm}><td className="mono">{tm}</td>{days.map((d) => <td key={d}>{slots.filter((s) => s.weekday === d && s.time === tm).map((s) =>

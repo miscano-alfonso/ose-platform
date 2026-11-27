@@ -1,4 +1,5 @@
 "use client";
+import { createPortal } from "react-dom";
 import { useEffect, useRef, useState } from "react";
 
 /** 27 Nov: "How it works" button that opens a short step-by-step slideshow in a pop-up (e.g. teachers' Reports).
@@ -6,6 +7,9 @@ import { useEffect, useRef, useState } from "react";
 export function GuideSlides({ slides, label = "How it works", title, variant = "button" }: { slides: { src: string; alt: string }[]; label?: string; title: string; variant?: "button" | "info" }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const [i, setI] = useState(0), last = slides.length - 1;
+  // 27 Nov: the dialog is placed at the top of the page (not inside the button's paragraph, where a dialog isn't allowed)
+  const [host, setHost] = useState<Element | null>(null);
+  useEffect(() => { setHost(document.querySelector(".adm") ?? document.body); }, []);
   const go = (n: number) => setI(Math.max(0, Math.min(last, n)));
   useEffect(() => {
     const key = (e: KeyboardEvent) => { if (!dlg.current?.open) return; if (e.key === "ArrowRight") go(i + 1); if (e.key === "ArrowLeft") go(i - 1); };
@@ -15,7 +19,7 @@ export function GuideSlides({ slides, label = "How it works", title, variant = "
     {variant === "info" ? <button type="button" className="gs-info" onClick={() => { setI(0); dlg.current?.showModal(); }} aria-label={label} title={label}>i</button> :
     <button type="button" className="abtn sm gv-btn" onClick={() => { setI(0); dlg.current?.showModal(); }}>
       <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="4" width="15" height="10.5" rx="1.8" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M7 17.5h6M10 14.5v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>{label}</button>}
-    <dialog ref={dlg} className="gv-dlg gs-dlg" aria-label={title} onClick={(e) => { if (e.target === dlg.current) dlg.current?.close(); }}>
+    {host && createPortal(<dialog ref={dlg} className="gv-dlg gs-dlg" aria-label={title} onClick={(e) => { if (e.target === dlg.current) dlg.current?.close(); }}>
       <div className="gv-head"><b>{title}</b><span className="gs-n">{i + 1} / {slides.length}</span><button type="button" className="abtn sm" onClick={() => dlg.current?.close()} aria-label="Close">✕</button></div>
       <div className="gs-stage">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -26,6 +30,6 @@ export function GuideSlides({ slides, label = "How it works", title, variant = "
         <div className="gs-dots" role="tablist" aria-label="Slides">{slides.map((s, n) => <button key={n} type="button" role="tab" aria-selected={n === i} aria-label={`Slide ${n + 1}`} onClick={() => go(n)} />)}</div>
         {i < last ? <button type="button" className="abtn pri" onClick={() => go(i + 1)}>Next →</button> : <button type="button" className="abtn pri" onClick={() => dlg.current?.close()}>Done</button>}
       </div>
-    </dialog>
+    </dialog>, host)}
   </>;
 }

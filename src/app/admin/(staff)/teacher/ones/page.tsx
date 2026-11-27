@@ -3,6 +3,8 @@ import { myOnes } from "@/lib/teacher-area";
 import { teacherOneWork, type OneWork } from "@/lib/one-courses";
 import { markOneTaughtAction, addMyHoursAction, removeMyHoursAction } from "../../../actions";
 import { DAYLONG, dlong, hm, gbp } from "../fmt";
+import { GuideSlides } from "../../../GuideSlides";
+import { TEACHER_GUIDES } from "../../../guides";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +12,7 @@ export default async function Ones({ searchParams }: { searchParams: Promise<{ o
   const [sp, me] = await Promise.all([searchParams, requireViewer()]);
   const [d, work] = await Promise.all([myOnes(me.id), teacherOneWork(me.id)]);
   return <>
-    <div className="top"><div><h1>1:1s and workshops</h1><div className="sub">Your bookings, and the hours you offer for 1:1s</div></div></div>
+    <div className="top"><div><h1>1:1s and workshops</h1><div className="sub">Your bookings, and the hours you offer for 1:1s</div></div><span className="grow" /><GuideSlides slides={TEACHER_GUIDES.ones.slides} title={TEACHER_GUIDES.ones.title} /></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <div className="dgrid"><div className="dstack">
       <section className="card"><h2>Booked 1:1s</h2><p className="cs">Teach each 1:1 from its own Meet link (in your Google Calendar and on My day), signed in with your school account: Google Meet’s log then marks it taught, and it goes into your pay, within a couple of hours.</p>
