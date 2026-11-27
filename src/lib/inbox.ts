@@ -85,8 +85,10 @@ export async function markInbox(actorId: string, ids: string[] | "all", read: bo
   await withSchool((q) =>
     q(`update inbox_messages set read_at = case when $3 then now() end, read_by = case when $3 then $1::uuid end, read_pending = gmail_id not like 'local:%'
        where id = any($2::uuid[])`, [actorId, ids, read]));
-  const done = await pushRead(ids, read);
-  if (done.size) await withSchool((q) => q(`update inbox_messages set read_pending = false where id = any($1::uuid[])`, [[...done]]));
+  // 27 Nov: Gmail is told after the page has answered, so marking read/unread doesn't wait for Gmail
+  const push = async () => { const done = await pushRead(ids, read);
+    if (done.size) await withSchool((q) => q(`update inbox_messages set read_pending = false where id = any($1::uuid[])`, [[...done]])); };
+  try { const { after } = await import("next/server"); after(() => push().catch((e) => console.error("inbox read sync", e))); } catch { await push(); }
 }
 /** Copy read/unread changes made here that Gmail hasn't got yet (e.g. made before the inbox was reconnected). */
 async function pushPending() {
@@ -195,11 +197,18 @@ export async function inboxBackground() {
 // ---------- reading a whole email and replying from the admin ----------
 type Part = { mimeType?: string; body?: { data?: string }; parts?: Part[] };
 const b64 = (s: string) => Buffer.from(s.replace(/-/g, "+").replace(/_/g, "/"), "base64").toString("utf8");
+/** 27 Nov: an email's words without the design code some newsletters put in (CSS like "@media … { … }"). */
+const noCss = (t: string) => t.replace(/@media[^{]*\{(?:[^{}]*\{[^{}]*\})*[^{}]*\}/g, "").replace(/(^|\n)[ \t]*[.#@a-z*][^{}\n]{0,200}\{[^{}]*:[^{}]*\}/gi, "$1");
+const ENT: Record<string, string> = { nbsp: " ", amp: "&", lt: "<", gt: ">", quot: "\"", apos: "'", rsquo: "’", lsquo: "‘", rdquo: "”", ldquo: "“", ndash: "–", mdash: "—", hellip: "…", pound: "£" };
+const htmlText = (h: string) => h.replace(/<(head|style|script|title)[^>]*>[\s\S]*?<\/\1>/gi, "").replace(/<!--[\s\S]*?-->/g, "")
+  .replace(/<(br|\/p|\/div|\/tr|\/h\d|\/li)[^>]*>/gi, "\n").replace(/<[^>]+>/g, "")
+  .replace(/&(#\d+|#x[0-9a-f]+|\w+);/gi, (m, e: string) => e[0] === "#" ? String.fromCodePoint(e[1].toLowerCase() === "x" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10)) : ENT[e.toLowerCase()] ?? m)
+  .replace(/[ \t]+\n/g, "\n");
 function textOf(p: Part | undefined): string {
   if (!p) return "";
-  if (p.mimeType === "text/plain" && p.body?.data) return b64(p.body.data);
-  for (const c of p.parts ?? []) { const t = textOf(c); if (t) return t; }
-  if (p.mimeType === "text/html" && p.body?.data) return b64(p.body.data).replace(/<(br|\/p|\/div)[^>]*>/gi, "\n").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ");
+  if (p.mimeType === "text/plain" && p.body?.data) return noCss(b64(p.body.data));
+  for (const c of p.parts ?? []) { const t = textOf(c); if (t.trim()) return t; }
+  if (p.mimeType === "text/html" && p.body?.data) return noCss(htmlText(b64(p.body.data)));
   return "";
 }
 /** The connected inbox for an address, with an access token. */
@@ -212,9 +221,11 @@ async function tokenFor(mailbox: string | null): Promise<{ token: string; box: M
 export type FullEmail = { body: string; to: string; replied: { at: string; from: string; body: string } | null; files?: { id: string; name: string; size: number }[]; links?: string[] };
 /** The full text of an email (fetched from Gmail when it's opened; only the preview is stored). */
 export async function inboxMessage(id: string): Promise<FullEmail | { error: string }> {
-  const m = (await withSchool((q) => q<{ gmail_id: string; mailbox: string | null; replied_at: string | null; reply_from: string | null; reply_body: string | null }>(
-    `select gmail_id, mailbox::text, replied_at::text, reply_from::text, reply_body from inbox_messages where id = $1`, [id])))[0];
+  const m = (await withSchool((q) => q<{ gmail_id: string; mailbox: string | null; replied_at: string | null; reply_from: string | null; reply_body: string | null; body_text: string | null; body_to: string | null }>(
+    `select gmail_id, mailbox::text, replied_at::text, reply_from::text, reply_body, body_text, body_to from inbox_messages where id = $1`, [id])))[0];
   if (!m) return { error: "That email wasn’t found." };
+  // 27 Nov: opened before: no need to ask Gmail again
+  if (m.body_text != null && !m.gmail_id.startsWith("local:")) return { body: m.body_text, to: m.body_to ?? "", replied: m.replied_at ? { at: m.replied_at, from: m.reply_from ?? "", body: m.reply_body ?? "" } : null };
   if (m.gmail_id.startsWith("local:")) {   // written in the site by a teacher
     const r = (await withSchool((q) => q<{ body: string | null; links: string[] | null; files: { id: string; name: string; size: number }[]; to_name: string | null }>(`select m.body, m.links, coalesce((select string_agg(split_part(x.name, ' ', 1), ' & ' order by array_position(m.to_users, x.id)) from users x where x.id = any(m.to_users)), tu.name) as to_name,
       coalesce((select json_agg(json_build_object('id', f.id, 'name', f.name, 'size', f.size) order by f.created_at) from inbox_attachments f where f.message_id = m.id), '[]'::json) as files
@@ -229,6 +240,7 @@ export async function inboxMessage(id: string): Promise<FullEmail | { error: str
     const j = (await r.json()) as { payload?: Part & { headers?: { name: string; value: string }[] } };
     const to = (j.payload?.headers ?? []).find((h) => h.name.toLowerCase() === "to")?.value ?? "";
     const body = textOf(j.payload).replace(/\r\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim().slice(0, 20000);
+    await withSchool((q) => q(`update inbox_messages set body_text = $2, body_to = $3 where id = $1`, [id, body, to.slice(0, 1000)])).catch(() => null);
     return { body, to, replied: m.replied_at ? { at: m.replied_at, from: m.reply_from ?? "", body: m.reply_body ?? "" } : null };
   } catch (e) { return { error: e instanceof MeetError ? e.message : "Couldn’t reach Gmail." }; }
 }

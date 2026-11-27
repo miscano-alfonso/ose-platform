@@ -6,7 +6,7 @@ import { automations } from "@/lib/automations";
 import { Composer, NotConnected } from "../../Composer";
 import { inboxStatus, inboxList } from "@/lib/inbox";
 import { syncInboxAction, markInboxAction } from "../../actions";
-import { InboxPanel, ReadToggle } from "../../InboxReply";
+import { InboxView, type InboxItem } from "../../InboxView";
 import { InboxLive } from "../../InboxLive";
 import { requireStaff } from "@/lib/auth";
 
@@ -86,10 +86,6 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
     const sel = rows.find((m) => m.id === sp.m) ?? rows[0] ?? null;
     // opening an email (picking it in the list) marks it read straight away, so its switch shows off on this same page
     if (sp.m && sel && sel.id === sp.m && !sel.read) { const { markInbox } = await import("@/lib/inbox"); await markInbox(me.id, [sel.id], true).catch(() => null); sel.read = true; }
-    const href = (id: string) => `/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}&m=${id}`;
-    const panel = sel && { id: sel.id, name: who(sel), email: sel.from_email, familyHref: sel.parent_id ? `/admin/families/${sel.parent_id}` : null, subject: sel.subject,
-      when: fullWhen(sel.received_at), kind: KIND[sel.kind] ?? null, mailbox: many ? sel.mailbox : null, gmail: sel.thread_id.startsWith("local:") ? null : gm(sel.thread_id, sel.mailbox), read: sel.read,
-      replied: !!sel.replied_at, first: (who(sel).includes("@") ? "" : who(sel).split(" ")[0]) || "there" };
     return <>{head}
       <InboxLive />
       {box.mailboxes.some((b) => !b.syncRead) && <p className="note msg" style={{ marginTop: 0 }}>Reading emails here doesn’t mark them read in Mail yet. <Link href="/admin/email-settings">Reconnect the inboxes in Settings → Email</Link> (allow the site to manage your email); changes made before then are copied over once you do.</p>}
@@ -102,16 +98,13 @@ export default async function Email({ searchParams }: { searchParams: Promise<{ 
         <Link className="abtn sm ibx-ico" href="/admin/email-settings#checking" title="How often to check for new emails" aria-label="Email settings: how often to check">
           <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg></Link></div>
       {rows.length === 0 ? <section className="card"><p className="empty">{show === "new" ? "Nothing new from families." : "No emails from families yet."}</p></section> :
-      <div className={`ibx${sp.m ? " picked" : ""}`}>
-        <nav className="ibx-list" aria-label="Emails">{rows.map((m) => <div key={m.id} className={`ibx-row${m.read ? "" : " unread"}`} aria-current={m.id === sel?.id ? "true" : undefined}>
-          <Link className="ibx-hit" href={href(m.id)} scroll={false} aria-label={`${who(m)}: ${m.subject || "(no subject)"}`} />
-          <span className="ibx-top"><b>{who(m)}</b><span className="ibx-tr"><ReadToggle id={m.id} read={m.read} /><time dateTime={m.received_at}>{shortWhen(m.received_at)}</time></span></span>
-          <span className="ibx-subj">{m.subject || "(no subject)"}</span>
-          <span className="ibx-snip">{m.snippet}</span>
-          <span className="ibx-tags">{KIND[m.kind] && <span className={`pill ${KIND[m.kind][0]}`}>{KIND[m.kind][1]}</span>}{m.to_name && <span className="pill info">To {m.to_name.includes(" & ") ? m.to_name : m.to_name.split(" ")[0]}</span>}{m.replied_at && <span className="pill good">Replied</span>}{many && m.mailbox && <span className="muted">to {m.mailbox}</span>}</span>
-        </div>)}</nav>
-        {panel && <InboxPanel key={panel.id} m={panel} sig={sig} from={box.replyFrom} opened={!!sp.m} />}
-      </div>}
+      // 27 Nov: the list and the open email are one client view (picking an email doesn't reload the page)
+      <InboxView key={show} items={rows.map((m): InboxItem => ({ id: m.id, who: who(m), subject: m.subject, snippet: m.snippet, when: shortWhen(m.received_at), at: m.received_at, read: m.read,
+          kind: KIND[m.kind] ?? null, to: m.to_name ? (m.to_name.includes(" & ") ? m.to_name : m.to_name.split(" ")[0]) : null, replied: !!m.replied_at, mailbox: many ? m.mailbox : null,
+          panel: { id: m.id, name: who(m), email: m.from_email, familyHref: m.parent_id ? `/admin/families/${m.parent_id}` : null, subject: m.subject, when: fullWhen(m.received_at), kind: KIND[m.kind] ?? null,
+            mailbox: many ? m.mailbox : null, gmail: m.thread_id.startsWith("local:") ? null : gm(m.thread_id, m.mailbox), read: m.read, replied: !!m.replied_at,
+            first: (who(m).includes("@") ? "" : who(m).split(" ")[0]) || "there" } }))}
+        initial={sel?.id ?? null} picked={!!sp.m} base={`/admin/email?tab=inbox${show === "all" ? "&show=all" : ""}`} sig={sig} from={box.replyFrom} />}
       <p className="muted" style={{ fontSize: 14, marginTop: 12 }}>Your signature, the connected inboxes and who teachers can email are in <Link href="/admin/email-settings">Settings → Email</Link>.</p></>;
   }
   const past = await history("message");

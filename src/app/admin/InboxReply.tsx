@@ -1,8 +1,8 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { inboxMessageAction, replyInboxAction, markInboxReadAction } from "./actions";
+import { replyInboxAction } from "./actions";
+import { loadMail } from "./InboxView";
 
 type Full = { body: string; to: string; replied: { at: string; from: string; body: string } | null; files?: { id: string; name: string; size: number }[]; links?: string[] };
 type Sig = { name: string; title: string; email: string; web: string; logo: string; logoDark: string };
@@ -12,28 +12,26 @@ export type PanelMail = { id: string; name: string; email: string; familyHref: s
 
 /** Inbox → the right-hand panel: the chosen email in full; "Reply" opens the reply box above it (sent from the
  *  Reply-from address). Opening an email (clicking it in the list) marks it read. */
-export function InboxPanel({ m, sig, from, opened }: { m: PanelMail; sig: Sig; from: string; opened: boolean }) {
+export function InboxPanel({ m, sig, from, onRead, onBack }: { m: PanelMail; sig: Sig; from: string; onRead: (read: boolean) => void; onBack?: () => void }) {
   const [mail, setMail] = useState<Full | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [text, setText] = useState(`Hi ${m.first},\n\n\n\nKind regards,\n${sig.name.split(" ")[0]}`);
   const [sent, setSent] = useState(m.replied);
-  const [read, setRead] = useState(m.read);
+  const read = m.read;
   const [replying, setReplying] = useState(false);
-  const router = useRouter();
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, start] = useTransition();
   useEffect(() => {
     let live = true;
-    inboxMessageAction(m.id).then((r) => { if (!live) return; if ("error" in r) setErr(r.error); else setMail(r); });
-    if (opened && !m.read) markInboxReadAction(m.id, true).then(() => { if (live) { setRead(true); router.refresh(); } });
+    loadMail(m.id).then((r) => { if (!live) return; if ("error" in r) setErr(r.error); else setMail(r as Full); });
     return () => { live = false; };
-  }, [m.id, m.read, opened]);
+  }, [m.id]);
   const send = () => start(async () => {
     setMsg(null); const r = await replyInboxAction(m.id, text);
     if (r.ok) { setSent(true); setMsg(`Sent from ${from}.`); setMail((x) => x && { ...x, replied: { at: new Date().toISOString(), from, body: `${text}\n\n${sigText(sig)}` } }); }
     else setMsg(r.error ?? "The reply wasn’t sent.");
   });
-  const toggleRead = () => start(async () => { await markInboxReadAction(m.id, !read); setRead(!read); router.refresh(); });
+  const toggleRead = () => onRead(!read);
   return <div className="ibp" aria-label={`Email from ${m.name}`}>
     <div className="ibp-head">
       <div className="ibp-who"><b>{m.familyHref ? <Link href={m.familyHref}>{m.name}</Link> : m.name}</b>
@@ -41,8 +39,8 @@ export function InboxPanel({ m, sig, from, opened }: { m: PanelMail; sig: Sig; f
       <span className="ibp-when"><button type="button" className="abtn sm pri" onClick={() => setReplying(true)} disabled={!mail || replying}>Reply</button>{m.when}</span>
     </div>
     <h3 className="ibp-subj">{m.subject || "(no subject)"} {m.kind && <span className={`pill ${m.kind[0]}`} style={{ fontSize: 12, verticalAlign: 2 }}>{m.kind[1]}</span>}{sent && <span className="pill good" style={{ fontSize: 12, verticalAlign: 2, marginLeft: 4 }}>Replied</span>}</h3>
-    <div className="ibp-acts">{m.gmail && <a className="abtn sm" href={m.gmail} target="_blank" rel="noopener">Open in Gmail</a>}
-      <button type="button" className="abtn sm" onClick={toggleRead} disabled={busy}>{read ? "Mark unread" : "Mark read"}</button></div>
+    <div className="ibp-acts">{onBack && <button type="button" className="abtn sm ibp-back" onClick={onBack}>← All emails</button>}{m.gmail && <a className="abtn sm" href={m.gmail} target="_blank" rel="noopener">Open in Gmail</a>}
+      <button type="button" className="abtn sm" onClick={toggleRead}>{read ? "Mark unread" : "Mark read"}</button></div>
     {!mail && !err && <p className="muted">Loading the email…</p>}
     {err && <p className="note msg bad" style={{ margin: 0 }}>{err}</p>}
     {mail && <>
@@ -71,13 +69,4 @@ export function SigPreview({ sig }: { sig: Sig }) {
   return <div className="irp-sig" aria-label="Your signature, added under the reply"><b>{sig.name}</b>{sig.title && <span>{sig.title}</span>}
     {(sig.email || sig.web) && <span className="sig-c">{sig.email}{sig.email && sig.web && <br />}{sig.web}</span>}
     {sig.logo && <><img className="sig-l" src={sig.logo} alt="School logo" width={130} /><img className="sig-d" src={sig.logoDark} alt="" width={130} /></>}</div>;
-}
-
-/** In the list: an on/off switch for "unread" (on = unread). Opening the email turns it off by itself. */
-export function ReadToggle({ id, read }: { id: string; read: boolean }) {
-  const [r, setR] = useState(read), [busy, start] = useTransition(), router = useRouter();
-  useEffect(() => { setR(read); }, [read]);   // follows the list when the email is opened (marked read) elsewhere
-  return <button type="button" role="switch" className={`ibx-sw${r ? "" : " on"}`} disabled={busy} aria-checked={!r}
-    title={r ? "Read: switch on to mark unread" : "Unread: switch off to mark read"} aria-label="Unread"
-    onClick={() => start(async () => { await markInboxReadAction(id, !r); setR(!r); router.refresh(); })}><i /></button>;
 }

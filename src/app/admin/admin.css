@@ -1835,3 +1835,6 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm .wi-sdate{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}.adm .wi-sdate .wi-warn{flex-basis:100%}.adm .wi-when{font-weight:600;min-width:190px}
 
 .adm .mk-empty{color:var(--bad);font-weight:600}
+/* 27 Nov: Inbox: no read/unread switches (the blue dot shows unread); "All emails" back button on phones */
+.adm .ibp-back{display:none}
+@media (max-width:900px){.adm .ibx.picked .ibp-back{display:inline-flex}.adm .ibx.picked .ibx-list{display:none}}
