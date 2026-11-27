@@ -1,5 +1,5 @@
 import "server-only";
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { randomBytes } from "node:crypto";
 import { withSchool } from "./db";
 
@@ -16,13 +16,24 @@ export async function logPresentationView(page: Kind): Promise<void> {
     vid = randomBytes(16).toString("base64url");
     jar.set(VID_COOKIE, vid, { httpOnly: true, secure: process.env.NODE_ENV === "production", sameSite: "lax", path: "/", maxAge: 400 * 86400 });
   }
-  await withSchool((q) => q(`insert into nd_page_views (school_id, vid, page) values (current_school(), $1, $2)`, [vid, page])).catch(() => null);
+  // 27 Nov: the kind of device and browser, and whether it's someone from the school (signed in to the admin)
+  const staff = await import("./auth").then((m) => m.currentStaff()).then((x) => !!x).catch(() => false);
+  const device = deviceOf((await headers()).get("user-agent") ?? "");
+  await withSchool((q) => q(`insert into nd_page_views (school_id, vid, page, device, staff) values (current_school(), $1, $2, $3, $4)`, [vid, page, device, staff])).catch(() => null);
   // a parent or student already signed in on this browser: we know who it is
   const { currentFamily } = await import("./family-auth");
   const f = await currentFamily().catch(() => null);
   if (f && !f.viewer) await link(vid!, f.kind, f.id);
 }
 
+/** "iPhone · Safari", "Mac · Chrome", "Windows · Edge"…: from the browser's description, nothing more. */
+export function deviceOf(ua: string): string {
+  const os = /iPhone/.test(ua) ? "iPhone" : /iPad/.test(ua) ? "iPad" : /Android/.test(ua) ? (/Mobile/.test(ua) ? "Android phone" : "Android tablet") : /CrOS/.test(ua) ? "Chromebook"
+    : /Mac OS X|Macintosh/.test(ua) ? "Mac" : /Windows/.test(ua) ? "Windows" : /Linux/.test(ua) ? "Linux" : "Unknown device";
+  const br = /Edg\//.test(ua) ? "Edge" : /OPR\//.test(ua) ? "Opera" : /SamsungBrowser/.test(ua) ? "Samsung Internet" : /CriOS|Chrome\//.test(ua) ? "Chrome" : /FxiOS|Firefox\//.test(ua) ? "Firefox"
+    : /Safari\//.test(ua) ? "Safari" : /bot|crawl|spider|preview|fetch/i.test(ua) ? "a link preview or bot" : "another browser";
+  return `${os} · ${br}`;
+}
 async function link(vid: string, kind: Kind, personId: string) {
   await withSchool((q) => q(`insert into nd_visitor_people (school_id, vid, kind, person_id) values (current_school(), $1, $2, $3) on conflict do nothing`, [vid, kind, personId])).catch(() => null);
 }
@@ -40,7 +51,9 @@ export async function logDashboard(kind: Kind, personId: string): Promise<void> 
 export type PersonRow = { id: string; name: string; detail: string; pages: string[] | null; seen_first: string | null; seen_last: string | null;
   dash_first: string | null; dash_last: string | null; days: number; invited?: boolean; has_pw?: boolean };
 export type VisitorStats = { teachers: PersonRow[]; parents: PersonRow[]; students: PersonRow[];
-  views: { page: Kind; views: number; browsers: number; unknown: number }[]; views7: number };
+  views: { page: Kind; views: number; browsers: number; unknown: number }[]; views7: number; log: VisitRow[] };
+/** 27 Nov: one row per introduction-page visit, newest first. browser: a number for each browser (Browser 1, 2…). */
+export type VisitRow = { at: string; page: Kind; browser: number; device: string | null; staff: boolean; who: string | null; whoKind: Kind | null; visits: number };
 
 const PRES = (kind: Kind, id: string) => `(select array_agg(distinct nv.page order by nv.page) from nd_visitor_people np join nd_page_views nv on nv.vid = np.vid where np.kind = '${kind}' and np.person_id = ${id}) as pages,
   (select min(nv.at)::text from nd_visitor_people np join nd_page_views nv on nv.vid = np.vid where np.kind = '${kind}' and np.person_id = ${id}) as seen_first,
@@ -71,6 +84,14 @@ export async function visitorStats(): Promise<VisitorStats> {
         count(distinct vid) filter (where not exists (select 1 from nd_visitor_people p where p.vid = v.vid))::int as unknown
       from nd_page_views v group by page`);
     const [w] = await q<{ n: number }>(`select count(*)::int as n from nd_page_views where at > now() - interval '7 days'`);
-    return { teachers, parents, students, views, views7: w?.n ?? 0 };
+    const log = await q<VisitRow>(`with b as (select vid, row_number() over (order by min(at))::int as n, count(*)::int as visits from nd_page_views group by vid)
+      select v.at::text, v.page, b.n as browser, v.device, v.staff, b.visits,
+        (select coalesce((select u.name from teachers t join users u on u.id = t.user_id where np.kind = 'teacher' and t.user_id = np.person_id),
+            (select p.first_name || ' ' || p.last_name from parents p where np.kind = 'parent' and p.id = np.person_id),
+            (select s.first_name || ' ' || s.last_name from students s where np.kind = 'student' and s.id = np.person_id))
+          from nd_visitor_people np where np.vid = v.vid order by np.kind limit 1) as who,
+        (select np.kind from nd_visitor_people np where np.vid = v.vid order by np.kind limit 1) as "whoKind"
+      from nd_page_views v join b on b.vid = v.vid order by v.at desc limit 300`).catch(() => [] as VisitRow[]);
+    return { teachers, parents, students, views, views7: w?.n ?? 0, log };
   });
 }

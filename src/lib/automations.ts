@@ -99,7 +99,7 @@ export const DEFS: AutoDef[] = [
   { key: "handin_redo", name: "Hand-in needs doing again", default_on: true, when: "After each Google Classroom read (every few hours): when a student hands in work with nothing attached, or a photo of their work that’s sideways or upside down. Once for each hand-in.", timing: null, to_parent: false, to_student: true,
     fields: ["name", "child", "work", "class", "problem", "fix", "link", "school"],
     subject: "Please hand in “{{work}}” again",
-    body: "Hi {{name}},\n\nYour work for {{class}}, “{{work}}”, {{problem}}, so your teacher can’t mark it yet.\n\nTo fix it: open it in Google Classroom, press **Unsubmit**, {{fix}}, then press **Hand in** again.\n\n[Open it in Classroom]({{link}})\n\nThank you,\n{{school}}" },
+    body: "Hi {{name}},\n\nYour work for {{class}}, “[{{work}}]({{link}})”, {{problem}}, so your teacher can’t mark it yet.\n\nTo fix it: open it in Google Classroom, press **Unsubmit**, {{fix}}, then press **Hand in** again.\n\n[Open it in Classroom]({{link}})\n\nThank you,\n{{school}}" },
   // 6 Nov: to the teacher, not families
   { key: "marking_reminder", name: "Marking reminder to the teacher", when: "Once a day (between 8am and 8pm) while any handed-in work in their classes is close to or past the 7-day marking turnaround, starting", timing: { label: "days before the marking deadline", unit: "days", default: 2 }, to_parent: false, to_student: false, to_teacher: true,
     fields: ["teacher", "count", "list", "dashboard_link", "school"],

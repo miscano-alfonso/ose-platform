@@ -45,5 +45,13 @@ export default async function Visitors({ searchParams }: { searchParams: Promise
           <td className="num">{r.days || "–"}</td></tr>)}</tbody></table></div>}
       <p className="note">{st.views.reduce((a, v) => a + v.unknown, 0)} browser{st.views.reduce((a, v) => a + v.unknown, 0) === 1 ? "" : "s"} looked at an introduction page but haven’t signed in on that browser yet, so we don’t know who they are. Teachers are matched the next time they open their dashboard on the same browser; parents and students as soon as they’re signed in. Admins “Viewing as” someone aren’t counted.</p>
     </section>
+    {/* 27 Nov (Alfonso): every visit to the introduction pages, including people who haven't signed in */}
+    <section className="card" id="log"><h2>Every visit</h2>
+      <p className="cs">Each time someone opens an introduction page, newest first. A browser keeps its number (Browser 1, 2…) on later visits; the name appears once that person signs in to their dashboard on the same browser. Visits from people signed in to the admin are marked Office.</p>
+      {st.log.length === 0 ? <p className="empty">No visits yet.</p> : <div className="tw"><table className="vs-table"><thead><tr><th>When</th><th>Page</th><th>Browser</th><th>Device</th><th>Who</th></tr></thead><tbody>
+        {st.log.map((v, i) => <tr key={i}><td>{when(v.at)}</td><td>{PAGE[v.page] ?? v.page}</td>
+          <td>Browser {v.browser}{v.visits > 1 && <span className="muted">{v.visits} visits</span>}</td><td>{v.device ?? <span className="muted">Not recorded</span>}</td>
+          <td>{v.staff ? <span className="pill info">Office</span> : v.who ? <><b>{v.who}</b><span className="muted">{v.whoKind ? PAGE[v.whoKind] : ""}</span></> : <span className="muted">Not known yet</span>}</td></tr>)}</tbody></table></div>}
+    </section>
   </>;
 }
