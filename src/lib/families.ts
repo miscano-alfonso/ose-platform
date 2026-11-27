@@ -44,13 +44,13 @@ export async function familyList(): Promise<FamilyListRow[]> {
 
 export type Cell = { id: string; status: string; amount: number; refunded: number; due_on: string; paid_on?: string | null } | null;
 export type Course = { id: string; group_id: string; subject: string; level: string; code: string; colour: string; status: string; needs_check: boolean; note: string | null;
-  enrolled_on: string; notice_terms: number | null; notice_given_on: string | null; end_reason: string | null; list: number; discount: number; net: number; cpl: number | null; cells: Cell[] };
+  enrolled_on: string; notice_terms: number | null; notice_given_on: string | null; end_reason: string | null; list: number; discount: number; net: number; cpl: number | null; year_of?: number | null; years_of?: number | null; cells: Cell[] };
 export type Child = { id: string; first: string; last: string; email: string | null; dob: string | null; year_group: number | null; level: string;
   send: string | null; send_details: string | null; adjustments: string | null; share: boolean | null; att: number | null; files?: { id: string; name: string }[]; needs?: string[] | null; ehcp?: boolean | null; courses: Course[] };
 export type FamilyDetail = {
   id: string; first: string; last: string; email: string; phone: string | null; heard: string | null; address: string | null; marketing: boolean; contact: boolean;
   since: string; note: string | null; guardian: { name: string; email: string; relationship: string; invoices: boolean; reports: boolean; marketing: string } | null;
-  invoiceTo: string[]; paid: number; toPay: number; failed: number; terms: { id: string; number: number; name: string }[]; children: Child[];
+  invoiceTo: string[]; paid: number; toPay: number; failed: number; terms: { id: string; number: number; name: string }[]; yearLabel?: string | null; children: Child[];
   agreed: { version: string; at: string } | null;
 };
 
@@ -66,6 +66,7 @@ export async function familyDetail(id: string): Promise<FamilyDetail | null> {
       from guardians where parent_id = $1`, [id]))[0] ?? null;
     const invoiceTo = (await q<{ s: string }>(`select name || ' (' || email || ')' as s from invoice_recipients($1)`, [id])).map((r) => r.s);
     const terms = await q<{ id: string; number: number; name: string }>(`select id, number, name from terms where academic_year_id = ${YEAR_SQL} order by number`);
+    const yearLabel = (await q<{ label: string }>(`select label from academic_years where id = ${YEAR_SQL}`))[0]?.label ?? null;   // 27 Nov: "2026/27" over the terms
     const [tot] = await q<{ paid: number; topay: number; failed: number }>(`select
         coalesce(sum(i.amount_pence - i.refunded_pence) filter (where i.status in ('paid','part_refunded')), 0)::int as paid,
         coalesce(sum(i.amount_pence) filter (where i.status in ('scheduled','processing')), 0)::int as topay,
@@ -83,6 +84,7 @@ export async function familyDetail(id: string): Promise<FamilyDetail | null> {
         coalesce(sj.colour, '#8494c2') as colour, e.status::text, e.needs_check, e.admin_note as note, e.enrolled_at::date::text as enrolled_on,
         coalesce(e.notice_terms, l.notice_terms) as notice_terms, e.notice_given_on::text, e.end_reason, e.list_price_pence as list, e.discount_pence as discount,
         (select pp.cost_per_lesson_pence from price_plans pp where pp.id = g.price_plan_id) as cpl,
+        (select pp.year_of_course from price_plans pp where pp.id = g.price_plan_id) as year_of, (select pp.course_years from price_plans pp where pp.id = g.price_plan_id) as years_of,
         coalesce((select sum(i.amount_pence) from instalments i where i.enrolment_id = e.id and i.status not in ('cancelled','waived')), 0)::int as net,
         coalesce((select json_object_agg(i.term_id, json_build_object('id', i.id, 'status', i.status, 'amount', i.amount_pence, 'refunded', i.refunded_pence, 'due_on', i.due_on, 'paid_on', (i.paid_at at time zone 'Europe/London')::date))
           from instalments i where i.enrolment_id = e.id), '{}') as cells
@@ -92,7 +94,7 @@ export async function familyDetail(id: string): Promise<FamilyDetail | null> {
     const children: Child[] = kids.map((k) => ({ ...k, courses: courses.filter((c) => c.student_id === k.id).map(({ student_id: _s, cells, ...c }) => ({ ...c, cells: terms.map((t) => cells[t.id] ?? null) })) }));
     const agreed = (await q<{ version: string; at: string }>(`select d.version, a.accepted_at::text as at from terms_acceptances a join terms_documents d on d.id = a.terms_id
       where a.parent_id = $1 order by a.accepted_at limit 1`, [id]))[0] ?? null;
-    return { ...p, guardian: g, invoiceTo, paid: tot.paid, toPay: tot.topay, failed: tot.failed, terms, children, agreed };
+    return { ...p, guardian: g, invoiceTo, paid: tot.paid, toPay: tot.topay, failed: tot.failed, terms, yearLabel, children, agreed };
   });
 }
 

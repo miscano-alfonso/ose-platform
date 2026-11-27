@@ -67,9 +67,12 @@ export default async function Payments({ searchParams }: { searchParams: Promise
     {d.children.map((st, si) => <section key={st.id} style={{ marginBottom: 16 }}><div className="pay-kid"><h3 style={{ margin: 0, font: "600 18px Jost, sans-serif" }}>{st.first}</h3>
       {/* 27 Nov (Alfonso): a key instead of a word in every cell; each payment's date sits in a colour-coded tab */}
       {si === 0 && <div className="pc-key" aria-label="Key"><span className="pc-tab paid">Paid</span><span className="pc-tab due">Due</span><span className="pc-tab late">Late</span></div>}</div>
-      <div className="tw" style={{ marginBottom: 0 }}><table className="pay-tbl"><thead><tr><th>Course</th><th className="n">Year</th>{d.terms.map((t) => <th key={t.id} className="n">T{t.number}</th>)}</tr></thead><tbody>
+      <div className="tw" style={{ marginBottom: 0 }}><table className="pay-tbl"><thead>
+        {/* 27 Nov (Alfonso): the school year over the term numbers (it moves on with the year, listing that year's courses) */}
+        <tr className="pay-yr"><th></th><th></th><th colSpan={d.terms.length} className="pay-yr-l">{d.yearLabel ?? "This school year"}</th></tr>
+        <tr><th>Course</th><th className="n">Totals</th>{d.terms.map((t) => <th key={t.id} className="n">T{t.number}</th>)}</tr></thead><tbody>
         {st.courses.length === 0 ? <tr><td colSpan={d.terms.length + 2} className="muted">No courses this year.</td></tr> : st.courses.map((c) => { return <tr key={c.id}>
-          <td><span className="dot" style={{ background: c.colour }} /> <b>{c.subject}</b> <span className="muted">{c.level}</span>
+          <td><span className="dot" style={{ background: c.colour }} /> <b>{c.subject}</b> <span className="muted">{c.level}</span>{c.years_of && c.years_of > 1 && c.year_of ? <> <span className="pay-yof">Year {c.year_of} of {c.years_of}</span></> : null}
             {c.cpl && c.list > 0 && <span className="muted" style={{ display: "block", fontSize: 13.5 }}>{Math.round(c.list / c.cpl)} lessons × {gbp(c.cpl)}{c.discount > 0 ? `, less ${Math.round((c.discount / c.list) * 100)}% multi-course discount` : ""}</span>}
             {c.status !== "active" && <> <span className="pill mute">{c.status === "swapped" ? "Swapped" : "Cancelled"}</span></>}
             {c.notice_given_on && c.status === "active" && <> <span className="pill warn">Notice given {dm(c.notice_given_on)}</span></>}
@@ -78,10 +81,10 @@ export default async function Payments({ searchParams }: { searchParams: Promise
           {c.cells.map((cell, i) => <td key={i} className="n">{cell ? <PayCell cell={cell} late={lateCell(cell)} /> : <span className="muted">—</span>}</td>)}</tr>; })}
       </tbody>
       {/* 27 Nov (Alfonso): what each term comes to, for this child */}
-      {st.courses.length > 1 && <tfoot><tr className="pay-tot"><td><b>Term totals</b></td><td className="n"><b>{gbp(st.courses.reduce((a, c) => a + c.net, 0))}</b></td>
+      {st.courses.length > 1 && <tfoot><tr className="pay-tot"><td><b>Totals</b></td><td className="n"><b>{gbp(st.courses.reduce((a, c) => a + c.net, 0))}</b></td>
         {d.terms.map((t, i) => { const v = termSum(st.courses, i); return <td key={t.id} className="n">{v ? <b>{gbp(v)}</b> : <span className="muted">—</span>}</td>; })}</tr></tfoot>}
       </table></div></section>)}
-    {d.children.filter((c) => c.courses.length).length > 1 && <div className="tw"><table><tbody><tr className="pay-tot"><td><b>All children: term totals</b></td><td className="n"><b>{gbp(allCourses.reduce((a, c) => a + c.net, 0))}</b></td>
+    {d.children.filter((c) => c.courses.length).length > 1 && <div className="tw"><table><tbody><tr className="pay-tot"><td><b>All children: totals</b></td><td className="n"><b>{gbp(allCourses.reduce((a, c) => a + c.net, 0))}</b></td>
       {d.terms.map((t, i) => { const v = termSum(allCourses, i); return <td key={t.id} className="n">{v ? <b>{gbp(v)}</b> : <span className="muted">—</span>}</td>; })}</tr></tbody></table></div>}
     <section className="card pay-hist" id="history"><div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Payment history</h2><span className="grow" style={{ flex: 1 }} /><PrintButton /></div>
       {hist.length === 0 ? <p className="empty">No payments yet.</p> : <div className="tw"><table><thead><tr><th>Date paid</th><th>Payment</th><th className="n">Amount</th><th>Receipt</th></tr></thead><tbody>

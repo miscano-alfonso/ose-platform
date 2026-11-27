@@ -1764,3 +1764,8 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm table.pay-tbl th:not(:first-child),.adm table.pay-tbl td:not(:first-child){padding-left:6px;padding-right:8px;white-space:nowrap}
 .adm table.pay-tbl td.n{font-size:14.5px}
 .adm table.pay-tbl .pc-tab{min-width:52px;padding:2px 8px}
+/* 27 Nov (Alfonso): Payments: the school year over the term numbers; "Year 1 of 2" on 2-year courses */
+.adm table.pay-tbl tr.pay-yr th{padding-top:8px;padding-bottom:2px;border-bottom:0}
+.adm table.pay-tbl tr.pay-yr th.pay-yr-l{text-align:center;color:var(--ink);font-size:12.5px;letter-spacing:.06em;border-bottom:2px solid var(--line)}
+.adm .pay-yof{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--info-bg);color:var(--info);vertical-align:1px;white-space:nowrap}
+.adm table.pay-tbl tr.pay-yr th{background:var(--soft)!important}
