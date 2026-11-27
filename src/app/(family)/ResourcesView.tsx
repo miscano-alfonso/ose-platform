@@ -7,13 +7,13 @@ import { Head } from "./fmt";
 // Resources on the parent and student dashboards (21 Nov): the website's Resources (Admin → Website → Resources),
 // opening on the subjects of the courses the family is booked on, with an "Other subjects" tab for the rest.
 // 27 Nov: teachers see the same page (their own subjects first), with their suggestion form and suggestions in `children`.
-export async function ResourcesView({ base, tab, courses, forParent, teacher, children }: { base: string; tab?: string; courses: CourseRef[]; forParent: boolean; teacher?: boolean; children?: React.ReactNode }) {
+export async function ResourcesView({ base, tab, courses, forParent, teacher, tools, children }: { base: string; tab?: string; courses: CourseRef[]; forParent: boolean; teacher?: boolean; tools?: React.ReactNode; children?: React.ReactNode }) {
   const [list, site] = await Promise.all([getResources(), siteInfo()]);
   const { mine, others } = resourcesForCourses(list, courses);
   const showOthers = tab === "others";
   const groups = showOthers ? others : mine;
   return <>
-    <Head title="Resources" sub={teacher ? "The ideas for learning at home that parents and students see on their dashboards and the website. Suggest your favourites for your subjects and the office will add them." : forParent ? "Ideas from the teachers for learning at home alongside lessons: things to watch, read and explore." : "Ideas from your teachers for learning alongside your lessons: things to watch, read and explore."} />
+    <Head title="Resources" sub={teacher ? "The ideas for learning at home that parents and students see on their dashboards and the website. Suggest your favourites for your subjects and the office will add them." : forParent ? "Ideas from the teachers for learning at home alongside lessons: things to watch, read and explore." : "Ideas from your teachers for learning alongside your lessons: things to watch, read and explore."} >{tools}</Head>
     <nav className="tabs rs-tabs" aria-label="Which subjects">
       <Link href={base} aria-current={!showOthers ? "page" : undefined} className={`abtn sm${!showOthers ? " pri" : ""}`}>{teacher ? "Your subjects" : forParent ? "Your children’s subjects" : "Your subjects"}</Link>
       {others.length > 0 && <Link href={`${base}?tab=others`} aria-current={showOthers ? "page" : undefined} className={`abtn sm${showOthers ? " pri" : ""}`}>Other subjects</Link>}

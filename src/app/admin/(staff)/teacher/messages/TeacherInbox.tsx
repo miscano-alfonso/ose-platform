@@ -128,7 +128,7 @@ export async function TeacherInbox({ mode, searchParams }: { mode: InboxMode; se
 
   return <>
     <div className="top"><div><h1>{mode === "email" ? "Email" : "Messages"}</h1><div className="sub">{mode === "email" ? "Your emails with the school: they come and go by email too." : "Messages in the app: from the office, and with the parents of the students you teach."}</div></div>
-      <span className="grow" />{mode === "messages" && <GuideSlides slides={TEACHER_GUIDES.messages.slides} title={TEACHER_GUIDES.messages.title} />}<Link className="abtn pri" href={`${base}?new=1`}>{mode === "email" ? "New email" : "New message"}</Link></div>
+      <span className="grow" /><GuideSlides slides={TEACHER_GUIDES.messages.slides} title={TEACHER_GUIDES.messages.title} /><Link className="abtn pri" href={`${base}?new=1`}>{mode === "email" ? "New email" : "New message"}</Link></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {!me.viewing && <NavCountSync href={base} count={unreadN} />}<LiveMessages stamp={await messagesStamp()} />
     <div className={`card ib${chosen ? " has-sel" : ""}`}>

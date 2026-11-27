@@ -4,6 +4,8 @@ import { withSchool } from "@/lib/db";
 import { ResourcesView } from "@/app/(family)/ResourcesView";
 import { suggestResourceAction, withdrawSuggestionAction } from "../../../actions";
 import { dm } from "../fmt";
+import { GuideSlides } from "../../../GuideSlides";
+import { TEACHER_GUIDES } from "../../../guides";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +19,7 @@ export default async function TeacherResources({ searchParams }: { searchParams:
   const courses = mine.map((s) => ({ subject: s, level: "" }));
   const others = all.map((s) => s.name).filter((s) => !mine.includes(s));
   const open = !!sp.err || sugg.length === 0;
-  return <ResourcesView base="/admin/teacher/resources" tab={sp.tab} courses={courses} forParent={false} teacher>
+  return <ResourcesView base="/admin/teacher/resources" tab={sp.tab} courses={courses} forParent={false} teacher tools={<GuideSlides slides={TEACHER_GUIDES.resources.slides} title={TEACHER_GUIDES.resources.title} label="How it works" />}>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <section className="card rs-suggest" id="suggest">
       <details open={open}><summary><h2>Suggest a resource</h2><span className="abtn sm pri" aria-hidden="true">Suggest one</span></summary>
