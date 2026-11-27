@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 
 /** 27 Nov: "How it works" button that opens a short step-by-step slideshow in a pop-up (e.g. teachers' Reports).
  *  Next / Back, the dots, or the arrow keys move between slides; Escape closes. */
-export function GuideSlides({ slides, label = "How it works", title }: { slides: { src: string; alt: string }[]; label?: string; title: string }) {
+export function GuideSlides({ slides, label = "How it works", title, variant = "button" }: { slides: { src: string; alt: string }[]; label?: string; title: string; variant?: "button" | "info" }) {
   const dlg = useRef<HTMLDialogElement>(null);
   const [i, setI] = useState(0), last = slides.length - 1;
   const go = (n: number) => setI(Math.max(0, Math.min(last, n)));
@@ -12,8 +12,9 @@ export function GuideSlides({ slides, label = "How it works", title }: { slides:
     window.addEventListener("keydown", key); return () => window.removeEventListener("keydown", key);
   });
   return <>
+    {variant === "info" ? <button type="button" className="gs-info" onClick={() => { setI(0); dlg.current?.showModal(); }} aria-label={label} title={label}>i</button> :
     <button type="button" className="abtn sm gv-btn" onClick={() => { setI(0); dlg.current?.showModal(); }}>
-      <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="4" width="15" height="10.5" rx="1.8" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M7 17.5h6M10 14.5v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>{label}</button>
+      <svg viewBox="0 0 20 20" width="15" height="15" aria-hidden="true"><rect x="2.5" y="4" width="15" height="10.5" rx="1.8" fill="none" stroke="currentColor" strokeWidth="1.6" /><path d="M7 17.5h6M10 14.5v3" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" /></svg>{label}</button>}
     <dialog ref={dlg} className="gv-dlg gs-dlg" aria-label={title} onClick={(e) => { if (e.target === dlg.current) dlg.current?.close(); }}>
       <div className="gv-head"><b>{title}</b><span className="gs-n">{i + 1} / {slides.length}</span><button type="button" className="abtn sm" onClick={() => dlg.current?.close()} aria-label="Close">✕</button></div>
       <div className="gs-stage">

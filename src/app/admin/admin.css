@@ -1651,3 +1651,10 @@
 /* 27 Nov (Alfonso): the day and time never split across lines; more room under "Hello …" */
 .adm .fx-live .fx-when{white-space:nowrap}
 .adm .fx-hero-t .fx-nextk{margin-top:14px}
+/* 27 Nov: (i) that opens a how-to slideshow (GuideSlides variant="info") */
+.adm .gs-info{width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;background:transparent;color:inherit;font:700 13px/1 Georgia,serif;font-style:italic;cursor:pointer;display:inline-grid;place-items:center;padding:0;opacity:.85}
+.adm .gs-info:hover{opacity:1;background:rgba(255,255,255,.12)}
+/* 27 Nov (Alfonso): the Beta note is a yellow bar along the bottom of the window, like the Viewing as bar at the top */
+.adm .beta-strip{position:fixed;left:0;right:0;bottom:0;z-index:45;margin:0;border:0;border-radius:0;padding:10px clamp(16px,3vw,34px);
+  background:var(--pop,var(--brand-accent,#e3cd4b));color:var(--pop-ink,var(--brand-accent-ink,#0f1747));font-weight:500;font-size:15px;line-height:1.4;box-shadow:0 -4px 16px rgba(5,15,45,.12)}
+.adm .main:has(> .beta-strip){padding-bottom:72px}

@@ -4,6 +4,8 @@ import { requireViewer } from "@/lib/auth";
 import { myClassFolders } from "@/lib/teacher-area";
 import { folderInfo, schoolDriveAccount } from "@/lib/lesson-slides";
 import { classFolderAction } from "./actions";
+import { GuideSlides } from "../../../GuideSlides";
+import { DRIVE_SLIDES } from "../../../guides";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +18,7 @@ export default async function TeacherDrive({ searchParams }: { searchParams: Pro
   const info = await Promise.all(classes.map((c) => (c.folder ? folderInfo(c.folder) : Promise.resolve(null))));
   const acct = account ?? "the school’s Google account (ose@)";
   return <><SettingsTabs area="teacher" here="/admin/teacher/drive" />
-    <div className="top"><div><h1>Google Drive</h1><div className="sub">Choose the Drive folder that holds each class’s lesson slides. My day then shows <b>Lesson slides</b> for your next lesson, found by name: “Lesson 7”, for example (a subfolder per term is fine, and “T2” or “Term 2” in the name helps).</div></div></div>
+    <div className="top"><div><h1>Google Drive</h1><div className="sub">Choose the Drive folder that holds each class’s lesson slides. My day then shows <b>Lesson slides</b> for your next lesson, found by name: “Lesson 7”, for example (a subfolder per term is fine, and “T2” or “Term 2” in the name helps).</div></div><span className="grow" /><GuideSlides slides={DRIVE_SLIDES} title="Lesson slides: connect your Google Drive" label="How it works" /></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <section className="card"><h2>How it connects</h2>
       <ol style={{ margin: "6px 0 0", paddingLeft: 20, display: "grid", gap: 4 }}>

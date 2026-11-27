@@ -1,6 +1,8 @@
 "use client";
 import { useState, useTransition } from "react";
 import { lessonSlidesAction } from "./slides-actions";
+import { GuideSlides } from "../../GuideSlides";
+import { DRIVE_SLIDES } from "../../guides";
 
 // "Lesson slides" on My day. The slides are found on their own (the class's Classroom post for "Lesson N", or a
 // Slides file named "Lesson N" in the course's Drive folder); the pencil lets the teacher point it at a different file.
@@ -23,5 +25,7 @@ export function SlidesButton({ eventId, url, found, n, compact }: { eventId: str
     {href ? <a href={href} target="_blank" rel="noopener" title={tip}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 5h18v12H3zM12 17v4M8 21h8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>{compact ? "Slides" : "Lesson slides"}</a>
       : <span className="none" title={n ? `Name the file “Lesson ${n}” in this class’s slides folder (set it on your Google Drive page).` : undefined}>No slides found{n ? ` for Lesson ${n}` : ""}</span>}
     {!compact && pencil}
+    {/* 27 Nov: no slides found: an (i) that opens the how-to slides for connecting a Drive folder */}
+    {!href && !compact && <GuideSlides slides={DRIVE_SLIDES} variant="info" label="How to connect your lesson slides" title="Lesson slides: connect your Google Drive" />}
   </span>;
 }
