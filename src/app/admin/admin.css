@@ -1881,3 +1881,9 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm .tb-slot{margin-left:auto;display:flex;align-items:center}.adm .tb-slot:empty{display:none}
 .adm .tb-slot .bb-bar{min-height:0;flex-wrap:nowrap}.adm .tb-slot .bb-msg{white-space:nowrap}
 .adm .tb-slot + .sw-top{margin-left:12px}.adm .tb-slot:empty + .sw-top{margin-left:auto}
+/* 27 Nov (Alfonso: "can you stop this happening on all the dashboards"): on a Mac, pulling past the top of the page showed
+   the website's navy behind it as a strip (the page background is navy for the website). Every dashboard (admin, teacher,
+   parent, student) now doesn't bounce, and the colour behind it matches the dashboard in light and dark. */
+html:has(.adm),html:has(.adm) body{overscroll-behavior:none;background:#f3f4f8}
+@media (prefers-color-scheme:dark){html:has(.adm:not([data-theme=light])),html:has(.adm:not([data-theme=light])) body{background:#0d0f1c}}
+html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:#0d0f1c}
