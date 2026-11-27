@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireStaff } from "@/lib/auth";
 import { visitorStats, type PersonRow, type Kind } from "@/lib/visitors";
+import { hideVisitorAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Visitors" };
@@ -13,6 +14,9 @@ const SHOW = [["all", "Everyone"], ["used", "Signed in"], ["not", "Not signed in
 const when = (iso: string | null) => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" }) + " " +
   new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }) : "";
 const PAGE = { teacher: "Teacher", parent: "Parent", student: "Student" } as const;
+/** "London, GB" → 🇬🇧 (the country's flag) */
+const flag = (place: string) => { const cc = place.match(/, ([A-Z]{2})$/)?.[1]; return cc ? String.fromCodePoint(...[...cc].map((c) => 0x1f1a5 + c.charCodeAt(0))) : ""; };
+const kindOf = (device: string) => /iPhone|Android phone/.test(device) ? "phone" : /iPad|tablet/.test(device) ? "tablet" : /bot|preview/.test(device) ? "link preview" : "computer";
 
 export default async function Visitors({ searchParams }: { searchParams: Promise<{ role?: string; show?: string; office?: string }> }) {
   await requireStaff();
@@ -50,11 +54,15 @@ export default async function Visitors({ searchParams }: { searchParams: Promise
     {/* 27 Nov (Alfonso): every visit to the introduction pages, including people who haven't signed in */}
     <section className="card" id="log"><div className="vs-bar"><h2 style={{ margin: 0 }}>Every visit</h2>
         <div className="segl" role="group" aria-label="The office’s visits"><Link href={`${q({ office: "" })}#log`} aria-current={hide ? "true" : undefined}>Hide the office’s visits</Link><Link href={`${q({ office: "show" })}#log`} aria-current={!hide ? "true" : undefined}>Show them</Link></div></div>
-      <p className="cs">Each time someone opens an introduction page, newest first. A browser keeps its number (Browser 1, 2…) on later visits; the name appears once that person signs in to their dashboard on the same browser. {hide ? "Visits by the office (anyone using this admin, on any browser they’ve used it on) are left out here and in the views counts at the top." : "Visits by the office are marked Office."}</p>
-      {st.log.length === 0 ? <p className="empty">No visits yet.</p> : <div className="tw"><table className="vs-table"><thead><tr><th>When</th><th>Page</th><th>Browser</th><th>Device</th><th>Who</th></tr></thead><tbody>
-        {st.log.map((v, i) => <tr key={i}><td>{when(v.at)}</td><td>{PAGE[v.page] ?? v.page}</td>
-          <td>Browser {v.browser}{v.visits > 1 && <span className="muted">{v.visits} visits</span>}</td><td>{v.device ?? <span className="muted">Not recorded</span>}</td>
-          <td>{v.staff ? <span className="pill info">Office</span> : v.who ? <><b>{v.who}</b><span className="muted">{v.whoKind ? PAGE[v.whoKind] : ""}</span></> : <span className="muted">Not known yet</span>}</td></tr>)}</tbody></table></div>}
+      <p className="cs">Each time someone opens an introduction page, newest first. Each browser has its own visitor code, the same on later visits; the name appears once that person signs in to their dashboard on the same browser. <b>Hide</b> leaves out every visit from that browser (for example your own). {hide ? "Visits by the office (anyone using this admin, on any browser they’ve used it on) are left out here and in the views counts at the top." : "Visits by the office are marked Office."}</p>
+      {st.log.length === 0 ? <p className="empty">No visits yet.</p> : <div className="tw"><table className="vs-table"><thead><tr><th>When</th><th>Visitor</th><th>Place</th><th>Page</th><th>Who</th><th></th></tr></thead><tbody>
+        {st.log.map((v, i) => <tr key={i} className={v.hidden ? "vs-hid" : undefined}><td>{when(v.at)}</td>
+          <td><code className="vs-code" title={`Browser ${v.browser}`}>{v.code}</code>{v.visits > 1 && <span className="muted">{v.visits} visits</span>}</td>
+          <td>{v.place ? <>{flag(v.place)} {v.place.replace(/, [A-Z]{2}$/, "")}</> : <span className="muted">Not recorded</span>}<span className="muted">{v.device ? kindOf(v.device) : ""}</span></td>
+          <td>{PAGE[v.page] ?? v.page}</td>
+          <td>{v.who ? <><b>{v.who}</b><span className="muted">{v.whoKind ? PAGE[v.whoKind] : ""}</span></> : v.staff ? <span className="pill info">{v.hidden ? "Hidden" : "Office"}</span> : <span className="muted">Not known yet</span>}</td>
+          <td><form action={hideVisitorAction}><input type="hidden" name="code" value={v.code} /><input type="hidden" name="hide" value={v.hidden ? "0" : "1"} /><input type="hidden" name="q" value={hide ? "" : "office=show"} />
+            <button className="abtn sm" type="submit" title={v.hidden ? "Show this visitor’s visits again" : "Hide every visit from this browser (e.g. your own)"}>{v.hidden ? "Show" : "Hide"}</button></form></td></tr>)}</tbody></table></div>}
     </section>
   </>;
 }

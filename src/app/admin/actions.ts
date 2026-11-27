@@ -2096,3 +2096,12 @@ export async function studentGenderAction(f: FormData): Promise<void> {
   revalidatePath(`/admin/students/${id}`);
   redirect(`/admin/students/${id}`);
 }
+
+/** 27 Nov (Alfonso): Visitors → Every visit → Hide (all visits from that browser) / Show again. */
+export async function hideVisitorAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { hideBrowser } = await import("@/lib/visitors");
+  await hideBrowser(me.id, str(f, "code", 6), f.get("hide") === "1");
+  revalidatePath("/admin/visitors");
+  redirect(`/admin/visitors?${str(f, "q", 200).replace(/^\?/, "")}#log`);
+}

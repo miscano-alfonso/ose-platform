@@ -45,14 +45,15 @@ export default async function StaffLayout({ children }: { children: React.ReactN
   // Admin → Visitors: a teacher using their dashboard (not an admin, not "Viewing as")
   if (me.role === "school_admin") await import("@/lib/visitors").then((v) => v.noteStaffBrowser(me.id)).catch(() => null);   // 27 Nov: e.g. Leanne in Teacher mode
   if (!me.viewing && me.role === "teacher") await import("@/lib/visitors").then((v) => v.logDashboard("teacher", me.id)).catch(() => null);
-  const [c] = await withSchool((q) => q<{ msgs: number; reports: number; marking: number }>(`select
+  const [c] = await withSchool((q) => q<{ msgs: number; email: number; reports: number; marking: number }>(`select
     -- 26 Nov: unread conversations in the Messages inbox (families, messages from the office, replies from the school)
     ((select count(*)::int from message_threads th join teachers t on t.id = th.teacher_id where t.user_id = $1
         and exists (select 1 from messages m where m.thread_id = th.id and m.sender = 'parent' and m.read_by_teacher_at is null))
      + (select count(*)::int from office_threads th join teachers t on t.id = th.teacher_id where t.user_id = $1 and th.to_kind = 'teacher'
-        and exists (select 1 from office_messages m where m.thread_id = th.id and m.sender = 'office' and m.read_at is null))
-     + (select count(distinct im.thread_id)::int from inbox_messages im where im.kind = 'staff' and lower(im.from_email::text) = (select lower(email::text) from users where id = $1)
-        and im.replied_at > coalesce((select ts.seen_at from teacher_seen ts where ts.user_id = $1 and ts.key = 'school:' || im.thread_id), '2026-11-26T12:00:00Z'::timestamptz))) as msgs,
+        and exists (select 1 from office_messages m where m.thread_id = th.id and m.sender = 'office' and m.read_at is null))) as msgs,
+    -- 27 Nov: replies from the school to the teacher's emails count on Email
+    ((select count(distinct im.thread_id)::int from inbox_messages im where im.kind = 'staff' and lower(im.from_email::text) = (select lower(email::text) from users where id = $1)
+        and im.replied_at > coalesce((select ts.seen_at from teacher_seen ts where ts.user_id = $1 and ts.key = 'school:' || im.thread_id), '2026-11-26T12:00:00Z'::timestamptz))) as email,
     (select count(*)::int from report_entries e join report_cycles cy on cy.id = e.cycle_id join course_groups g on g.id = e.group_id join teachers t on t.id = g.teacher_id
       where t.user_id = $1 and cy.status <> 'published' and e.status in ('todo','draft','returned')) as reports,
     (select count(*)::int from classroom_submissions s join classroom_coursework cw on cw.id = s.coursework_id join course_groups g on g.id = cw.group_id join teachers t on t.id = g.teacher_id
@@ -70,7 +71,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         {sch?.is_demo ? <a className="logo" href="/admin/teacher" title="My day" style={{ font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
         : <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>}
         <MenuSearch area="teacher" page="/admin/teacher/search" />
-        <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/reports": c.reports, "/admin/teacher/marking": c.marking }} groups={await teacherMenu()} />
+        <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/email": c.email, "/admin/teacher/reports": c.reports, "/admin/teacher/marking": c.marking }} groups={await teacherMenu()} />
         <SideFoot theme={theme} signOut={signOutAction} inline toggle settings="/admin/teacher/notifications" mode={ownTeacher ? "teacher" : undefined} home={{ href: "/admin/teacher", label: "My day" }} />
       </aside>
       <main className="main"><TopBar />{await import("@/lib/test-mode").then(async (t) => await t.betaOn() ? <p className="note beta-strip" role="note">{t.BETA.stripTeacher}</p> : null)}{children}</main>

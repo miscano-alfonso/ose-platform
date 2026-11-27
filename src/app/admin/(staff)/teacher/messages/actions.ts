@@ -7,7 +7,7 @@ import { markUnread, type InboxKind } from "@/lib/teacher-inbox";
 export async function markUnreadAction(f: FormData) {
   const me = await requireViewer();
   const kind = String(f.get("kind") ?? "") as InboxKind, id = String(f.get("id") ?? "").slice(0, 200), tab = String(f.get("f") ?? "");
-  const list = `/admin/teacher/messages${/^(unread|school|families)$/.test(tab) ? `?f=${tab}` : ""}`;
+  const list = `/admin/teacher/${f.get("mode") === "email" ? "email" : "messages"}${/^(unread|school|families)$/.test(tab) ? `?f=${tab}` : ""}`;
   if (me.viewing) redirect(list);   // an admin Viewing as doesn't change what the teacher has read
   if (["office", "school", "family"].includes(kind) && id) await markUnread(me.id, kind, id);
   redirect(list);

@@ -11,6 +11,6 @@ export async function teacherEmailAction(f: FormData): Promise<void> {
       { links: s("links", 6000).split(/\s+/).filter(Boolean), files: f.getAll("files").filter((x): x is File => typeof x === "object" && "arrayBuffer" in x) });
   // back to Messages (31 Oct: teachers message the school there): the conversation for a reply, the list for a new message
   const th = s("thread", 120), to = s("to", 40);
-  const back = th ? `/admin/teacher/messages?school=${encodeURIComponent(th)}` : `/admin/teacher/messages${err && to ? `?to=${to}` : ""}`;
+  const back = th ? `/admin/teacher/email?school=${encodeURIComponent(th)}` : `/admin/teacher/email${err && to ? `?to=${to}` : ""}`;
   redirect(`${back}${back.includes("?") ? "&" : "?"}${err ? `err=${encodeURIComponent(err)}` : `ok=${encodeURIComponent("Sent. The reply shows here and comes by email too.")}`}`);
 }

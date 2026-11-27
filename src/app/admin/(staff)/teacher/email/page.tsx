@@ -1,7 +1,8 @@
-import { redirect } from "next/navigation";
+import { TeacherInbox, type InboxParams } from "../messages/TeacherInbox";
 
-// Teachers' Email is now part of Messages (31 Oct): old links (and notifications) land there.
-export default async function TeacherEmail({ searchParams }: { searchParams: Promise<{ to?: string }> }) {
-  const to = (await searchParams).to;
-  redirect(to && /^[0-9a-f-]{36}$/.test(to) ? `/admin/teacher/messages?to=${to}` : "/admin/teacher/messages");
+export const dynamic = "force-dynamic";
+// 27 Nov (Alfonso: "separate the emails and messages on teacher and parent dashboards, like the admin one"): the teacher's
+// emails with the school (Messages has the conversations in the app). See ../messages/TeacherInbox.tsx.
+export default function TeacherEmail({ searchParams }: { searchParams: Promise<InboxParams> }) {
+  return <TeacherInbox mode="email" searchParams={searchParams} />;
 }

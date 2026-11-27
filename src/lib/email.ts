@@ -121,6 +121,13 @@ export async function saveEmailDesign(d: { logo: boolean; color: string; footer:
     [JSON.stringify({ logo: d.logo, color: /^#[0-9a-f]{6}$/i.test(d.color) ? d.color : "#0f1747", footer: d.footer.slice(0, 1000) })]));
 }
 const html = async (body: string, marketing: boolean) => emailHtml(body, marketing, await emailDesign());
+/** 27 Nov: keep a copy of each email sent to each person (for a parent's Email page). Sign-in and password emails aren't kept. */
+const NOT_LOGGED = new Set(["sign-in-link", "staff-sign-in-link", "staff-password-reset", "register-verify", "newsletter-test"]);
+async function logSent(to: Recipient[], subject: string, body: string, tag: string, scheduledAt?: string) {
+  if (NOT_LOGGED.has(tag) || tag.startsWith("auto-test") || !to.length) return;
+  await withSchool((q) => q(`insert into email_log (school_id, to_email, subject, body, tag, scheduled_for) select current_school(), x, $2, $3, $4, $5::timestamptz from unnest($1::text[]) x`,
+    [to.map((r) => r.email.toLowerCase()), subject.slice(0, 500), body.slice(0, 20000), tag, scheduledAt ?? null])).catch((e) => console.error("email log", e));
+}
 
 /** Sends one email per recipient (nobody sees anyone else's address), in batches. Returns how many were accepted by Brevo. */
 export async function sendBatch(subject: string, body: string, to: Recipient[], marketing: boolean): Promise<{ sent: number; failed: number; error?: string; held?: number }> {
@@ -137,7 +144,7 @@ export async function sendBatch(subject: string, body: string, to: Recipient[], 
       body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, marketing), textContent: plainText(body),
         messageVersions: chunk.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [marketing ? "marketing" : "admin-message"] }),
     }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
-    if (res.ok) sent += chunk.length; else { failed += chunk.length; error = `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}`; }
+    if (res.ok) { sent += chunk.length; await logSent(chunk, subject, body, marketing ? "marketing" : "admin-message"); } else { failed += chunk.length; error = `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}`; }
   }
   if (sent) await keepCopy(c, subject, await html(body, marketing), body, to, failed ? `${failed} failed` : undefined);
   return { sent, failed, error, held: g.held.length };
@@ -192,6 +199,7 @@ export async function sendOne(to: Recipient[], subject: string, body: string, op
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e), json: async () => ({}) }) as Response);
   if (!res.ok) return { ok: false, ids: [], error: `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}` };
   const j = await res.json().catch(() => ({})) as { messageId?: string; messageIds?: string[] };
+  await logSent(to, subject, body, opts.tag, opts.scheduledAt);
   await keepCopy(c, subject, await html(body, false), body, to, opts.scheduledAt ? `scheduled for ${new Date(opts.scheduledAt).toLocaleString("en-GB", { timeZone: "Europe/London", dateStyle: "medium", timeStyle: "short" })}` : undefined);
   return { ok: true, ids: j.messageIds ?? (j.messageId ? [j.messageId] : []) };
 }

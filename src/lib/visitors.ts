@@ -18,8 +18,11 @@ export async function logPresentationView(page: Kind): Promise<void> {
   }
   // 27 Nov: the kind of device and browser, and whether it's someone from the school (signed in to the admin)
   const staff = await import("./auth").then((m) => m.currentStaff()).then((x) => !!x).catch(() => false);
-  const device = deviceOf((await headers()).get("user-agent") ?? "");
-  await withSchool((q) => q(`insert into nd_page_views (school_id, vid, page, device, staff) values (current_school(), $1, $2, $3, $4)`, [vid, page, device, staff])).catch(() => null);
+  const h = await headers(), device = deviceOf(h.get("user-agent") ?? "");
+  // 27 Nov: the town and country the hosting (Vercel) works out for each visit; the IP address itself isn't kept
+  const city = (() => { try { return decodeURIComponent(h.get("x-vercel-ip-city") ?? ""); } catch { return ""; } })(), cc = (h.get("x-vercel-ip-country") ?? "").toUpperCase();
+  const place = city || cc ? [city, /^[A-Z]{2}$/.test(cc) ? cc : ""].filter(Boolean).join(", ").slice(0, 80) : null;
+  await withSchool((q) => q(`insert into nd_page_views (school_id, vid, page, device, staff, place) values (current_school(), $1, $2, $3, $4, $5)`, [vid, page, device, staff, place])).catch(() => null);
   // a parent or student already signed in on this browser: we know who it is
   const { currentFamily } = await import("./family-auth");
   const f = await currentFamily().catch(() => null);
@@ -58,7 +61,7 @@ export async function noteStaffBrowser(userId: string): Promise<void> {
 }
 /** A visit counts as the office's when it was made signed in to the admin, from a browser staff use for the admin, or by a
  *  browser tied to an admin's own account. Alias v = nd_page_views. */
-const OFFICE_SQL = `(v.staff or exists (select 1 from nd_staff_browsers sb where sb.vid = v.vid)
+const OFFICE_SQL = `(v.staff or exists (select 1 from nd_staff_browsers sb where sb.vid = v.vid) or exists (select 1 from nd_hidden_browsers hb where hb.vid = v.vid)
   or exists (select 1 from nd_visitor_people np join users u on u.id = np.person_id where np.vid = v.vid and u.role = 'school_admin'))`;
 
 export type PersonRow = { id: string; name: string; detail: string; pages: string[] | null; seen_first: string | null; seen_last: string | null;
@@ -66,7 +69,7 @@ export type PersonRow = { id: string; name: string; detail: string; pages: strin
 export type VisitorStats = { teachers: PersonRow[]; parents: PersonRow[]; students: PersonRow[];
   views: { page: Kind; views: number; browsers: number; unknown: number }[]; views7: number; log: VisitRow[] };
 /** 27 Nov: one row per introduction-page visit, newest first. browser: a number for each browser (Browser 1, 2…). */
-export type VisitRow = { at: string; page: Kind; browser: number; device: string | null; staff: boolean; who: string | null; whoKind: Kind | null; visits: number };
+export type VisitRow = { at: string; page: Kind; browser: number; device: string | null; staff: boolean; who: string | null; whoKind: Kind | null; visits: number; code: string; place: string | null; hidden: boolean };
 
 const PRES = (kind: Kind, id: string) => `(select array_agg(distinct nv.page order by nv.page) from nd_visitor_people np join nd_page_views nv on nv.vid = np.vid where np.kind = '${kind}' and np.person_id = ${id}) as pages,
   (select min(nv.at)::text from nd_visitor_people np join nd_page_views nv on nv.vid = np.vid where np.kind = '${kind}' and np.person_id = ${id}) as seen_first,
@@ -98,7 +101,8 @@ export async function visitorStats(hideOffice = false): Promise<VisitorStats> {
       from nd_page_views v ${hideOffice ? `where not ${OFFICE_SQL}` : ""} group by page`);
     const [w] = await q<{ n: number }>(`select count(*)::int as n from nd_page_views v where at > now() - interval '7 days' ${hideOffice ? `and not ${OFFICE_SQL}` : ""}`);
     const log = await q<VisitRow>(`with b as (select vid, row_number() over (order by min(at))::int as n, count(*)::int as visits from nd_page_views group by vid)
-      select v.at::text, v.page, b.n as browser, v.device, ${OFFICE_SQL} as staff, b.visits,
+      select v.at::text, v.page, b.n as browser, v.device, ${OFFICE_SQL} as staff, b.visits, left(md5(v.vid), 6) as code, v.place,
+        exists (select 1 from nd_hidden_browsers hb where hb.vid = v.vid) as hidden,
         (select coalesce((select u.name from teachers t join users u on u.id = t.user_id where np.kind = 'teacher' and t.user_id = np.person_id),
             (select p.first_name || ' ' || p.last_name from parents p where np.kind = 'parent' and p.id = np.person_id),
             (select s.first_name || ' ' || s.last_name from students s where np.kind = 'student' and s.id = np.person_id))
@@ -107,4 +111,17 @@ export async function visitorStats(hideOffice = false): Promise<VisitorStats> {
       from nd_page_views v join b on b.vid = v.vid ${hideOffice ? `where not ${OFFICE_SQL}` : ""} order by v.at desc limit 300`).catch(() => [] as VisitRow[]);
     return { teachers, parents, students, views, views7: w?.n ?? 0, log };
   });
+}
+
+/** 27 Nov: hide (or show again) every visit from the browser with this visitor code (the first 6 characters of a hash of
+ *  the browser's id, as shown on Visitors). */
+export async function hideBrowser(actorId: string, code: string, hide: boolean): Promise<void> {
+  if (!/^[0-9a-f]{6}$/.test(code)) return;
+  await withSchool(async (q) => {
+    const vids = (await q<{ vid: string }>(`select distinct vid from nd_page_views where left(md5(vid), 6) = $1`, [code])).map((r) => r.vid);
+    for (const vid of vids) {
+      if (hide) await q(`insert into nd_hidden_browsers (school_id, vid, hidden_by) values (current_school(), $1, $2) on conflict do nothing`, [vid, actorId]);
+      else { await q(`delete from nd_hidden_browsers where vid = $1`, [vid]); await q(`delete from nd_staff_browsers where vid = $1`, [vid]); }
+    }
+  }).catch(() => null);
 }
