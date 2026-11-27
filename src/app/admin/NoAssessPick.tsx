@@ -2,8 +2,8 @@
 import { useState } from "react";
 
 // 27 Nov: "No assessment because": a choice of common reasons, or Other to type one. The chosen wording is saved as before.
-export const NO_ASSESS_REASONS = ["Absent for the assessment", "Joined the class after the assessment", "No assessment set for this class this term",
-  "Handed in, not marked yet", "Sent back to redo, not resubmitted", "Medical or personal reasons", "Taking a break from the course"];
+export const NO_ASSESS_REASONS = ["Absent for the assessment", "Sent back to redo, not resubmitted", "Handed in, not marked yet",
+  "Medical or personal reasons", "Joined the class after the assessment", "No assessment set for this class this term", "Taking a break from the course"];
 
 export function NoAssessPick({ name, value, disabled }: { name: string; value: string; disabled?: boolean }) {
   const known = NO_ASSESS_REASONS.includes(value);
