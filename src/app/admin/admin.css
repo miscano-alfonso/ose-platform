@@ -1775,3 +1775,4 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm .ib-b.me small .ib-via{color:inherit;opacity:.85}
 /* 27 Nov: Payments: Swap or cancel a course at the bottom */
 .adm .sc-bottom{margin:4px 0 20px}
+.adm .pay-thisyr{display:block;font-size:12px;color:var(--muted);margin-top:2px}

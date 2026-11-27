@@ -28,6 +28,9 @@ export default async function Payments({ searchParams }: { searchParams: Promise
   const counts = (c: { status: string } | null) => !!c && c.status !== "cancelled" && c.status !== "waived";
   const termSum = (courses: { cells: ({ status: string; amount: number; refunded: number } | null)[] }[], i: number) => courses.reduce((a, c) => a + (counts(c.cells[i]) ? c.cells[i]!.amount - c.cells[i]!.refunded : 0), 0);
   const allCourses = d ? d.children.flatMap((c) => c.courses) : [];
+  // a later course year is priced at its own plan with this year's discount (an estimate until it's booked)
+  const laterOf = (c: { later_list?: number; list: number; discount: number; status: string }) => c.status === "active" && c.later_list ? Math.round(c.later_list * (c.list > 0 ? 1 - c.discount / c.list : 1)) : 0;
+  const courseTotal = (c: { net: number; later_list?: number; list: number; discount: number; status: string }) => c.net + laterOf(c);
   return <>
     <Head title="Payments" sub={online ? "Each term’s payment for all your children’s courses is collected automatically, by Direct Debit" : "Each course is paid in one payment per term, taken from your saved card"} />
     <Flash sp={sp} />
@@ -64,14 +67,15 @@ export default async function Payments({ searchParams }: { searchParams: Promise
             {c.status !== "active" && <> <span className="pill mute">{c.status === "swapped" ? "Swapped" : "Cancelled"}</span></>}
             {c.notice_given_on && c.status === "active" && <> <span className="pill warn">Notice given {dm(c.notice_given_on)}</span></>}
             </td>
-          <td className="n">{gbp(c.net)}</td>
+          {/* 27 Nov (Alfonso): Totals is the whole course: a 2-year course includes its later year (this year's amount under it) */}
+          <td className="n">{gbp(courseTotal(c))}{laterOf(c) > 0 && <span className="pay-thisyr">{gbp(c.net)} this year</span>}</td>
           {c.cells.map((cell, i) => <td key={i} className="n">{cell ? <PayCell cell={cell} late={lateCell(cell)} /> : <span className="muted">—</span>}</td>)}</tr>; })}
       </tbody>
       {/* 27 Nov (Alfonso): what each term comes to, for this child */}
-      {st.courses.length > 1 && <tfoot><tr className="pay-tot"><td><b>Totals</b></td><td className="n"><b>{gbp(st.courses.reduce((a, c) => a + c.net, 0))}</b></td>
+      {st.courses.length > 1 && <tfoot><tr className="pay-tot"><td><b>Totals</b></td><td className="n"><b>{gbp(st.courses.reduce((a, c) => a + courseTotal(c), 0))}</b></td>
         {d.terms.map((t, i) => { const v = termSum(st.courses, i); return <td key={t.id} className="n">{v ? <b>{gbp(v)}</b> : <span className="muted">—</span>}</td>; })}</tr></tfoot>}
       </table></div></section>)}
-    {d.children.filter((c) => c.courses.length).length > 1 && <div className="tw"><table><tbody><tr className="pay-tot"><td><b>All children: totals</b></td><td className="n"><b>{gbp(allCourses.reduce((a, c) => a + c.net, 0))}</b></td>
+    {d.children.filter((c) => c.courses.length).length > 1 && <div className="tw"><table><tbody><tr className="pay-tot"><td><b>All children: totals</b></td><td className="n"><b>{gbp(allCourses.reduce((a, c) => a + courseTotal(c), 0))}</b></td>
       {d.terms.map((t, i) => { const v = termSum(allCourses, i); return <td key={t.id} className="n">{v ? <b>{gbp(v)}</b> : <span className="muted">—</span>}</td>; })}</tr></tbody></table></div>}
     <section className="card pay-hist" id="history"><div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Payment history</h2><span className="grow" style={{ flex: 1 }} /><PrintButton /></div>
       {hist.length === 0 ? <p className="empty">No payments yet.</p> : <div className="tw"><table><thead><tr><th>Date paid</th><th>Payment</th><th className="n">Amount</th><th>Receipt</th></tr></thead><tbody>

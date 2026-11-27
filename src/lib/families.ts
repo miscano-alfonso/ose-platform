@@ -44,7 +44,7 @@ export async function familyList(): Promise<FamilyListRow[]> {
 
 export type Cell = { id: string; status: string; amount: number; refunded: number; due_on: string; paid_on?: string | null } | null;
 export type Course = { id: string; group_id: string; subject: string; level: string; code: string; colour: string; status: string; needs_check: boolean; note: string | null;
-  enrolled_on: string; notice_terms: number | null; notice_given_on: string | null; end_reason: string | null; list: number; discount: number; net: number; cpl: number | null; year_of?: number | null; years_of?: number | null; cells: Cell[] };
+  enrolled_on: string; notice_terms: number | null; notice_given_on: string | null; end_reason: string | null; list: number; discount: number; net: number; cpl: number | null; year_of?: number | null; years_of?: number | null; later_list?: number; cells: Cell[] };
 export type Child = { id: string; first: string; last: string; email: string | null; dob: string | null; year_group: number | null; level: string;
   send: string | null; send_details: string | null; adjustments: string | null; share: boolean | null; att: number | null; files?: { id: string; name: string }[]; needs?: string[] | null; ehcp?: boolean | null; courses: Course[] };
 export type FamilyDetail = {
@@ -85,6 +85,9 @@ export async function familyDetail(id: string): Promise<FamilyDetail | null> {
         coalesce(e.notice_terms, l.notice_terms) as notice_terms, e.notice_given_on::text, e.end_reason, e.list_price_pence as list, e.discount_pence as discount,
         (select pp.cost_per_lesson_pence from price_plans pp where pp.id = g.price_plan_id) as cpl,
         (select pp.year_of_course from price_plans pp where pp.id = g.price_plan_id) as year_of, (select pp.course_years from price_plans pp where pp.id = g.price_plan_id) as years_of,
+        -- 27 Nov (Alfonso): a 2-year course's later year(s), at their own plan's price with this year's discount, for the whole-course total
+        (select coalesce(sum(p2.total_pence), 0)::int from price_plans pp join price_plans p2 on p2.academic_year_id = pp.academic_year_id and p2.level_id = pp.level_id
+           and p2.course_years = pp.course_years and p2.year_of_course > pp.year_of_course where pp.id = g.price_plan_id) as later_list,
         coalesce((select sum(i.amount_pence) from instalments i where i.enrolment_id = e.id and i.status not in ('cancelled','waived')), 0)::int as net,
         coalesce((select json_object_agg(i.term_id, json_build_object('id', i.id, 'status', i.status, 'amount', i.amount_pence, 'refunded', i.refunded_pence, 'due_on', i.due_on, 'paid_on', (i.paid_at at time zone 'Europe/London')::date))
           from instalments i where i.enrolment_id = e.id), '{}') as cells
