@@ -1833,3 +1833,5 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm .wi-warn{margin:4px 0 0;padding-left:18px;font-size:13.5px;color:var(--warn)}.adm .wi-warn li{margin:2px 0}
 .adm .wi-sdates{display:grid;gap:8px;border-top:1px solid var(--line);padding-top:10px}
 .adm .wi-sdate{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center}.adm .wi-sdate .wi-warn{flex-basis:100%}.adm .wi-when{font-weight:600;min-width:190px}
+
+.adm .mk-empty{color:var(--bad);font-weight:600}

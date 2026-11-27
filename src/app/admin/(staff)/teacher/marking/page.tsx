@@ -24,11 +24,14 @@ function Piece({ m, subs, roster, showClass }: { m: MarkItem; subs: MarkSub[]; r
     return <><li className={`mk-grp ${state}`}>{label} · {rows.length}</li>{rows.map((r) => { const link = r.link;
       return <li key={r.studentId} className={`mk-st ${state}${state === "not_in" ? " mk-not" : ""}`}>
         <span className="mk-who"><b>{r.student}</b><span>{state === "not_in" ? "Not handed in" : state === "sent_back" ? "Returned without a mark, to redo" : r.turnedIn ? `Handed in ${dm(r.turnedIn)}` : "Handed in"}</span>
-          {r.late && <span className="pill warn">Late</span>}{state === "marked" && r.pct != null && <span className="pill good">{r.pct}%</span>}</span>
+          {r.late && <span className="pill warn">Late</span>}{state === "marked" && r.pct != null && <span className="pill good">{r.pct}%</span>}
+          {/* 27 Nov (Alfonso): handed in with nothing in it */}
+          {state !== "not_in" && r.content === "none" && <span className="pill bad" title="Handed in in Classroom with no file, link or answer attached. Check it in Classroom: if there’s no work, return it so they can hand it in again.">Nothing attached</span>}
+          {state !== "not_in" && r.content === "template_only" && <span className="pill mute" title="Only the copy of your file that Classroom made for them is attached. Open it to check they’ve written in it.">Only your template copy</span>}</span>
         {state !== "not_in" && (link ? <a className="abtn sm" href={link} target="_blank" rel="noopener">Open in Classroom</a> : m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>)}
       </li>; })}</>; };
   return <details className="mk-piece">
-    <summary><div className="t"><b>{m.title}</b><span>{showClass ? `${m.cls} · ` : ""}{m.toMark} to mark{m.late ? <> (<b className="mk-late">{m.late} late</b>)</> : ""} · return by {dm(m.deadline)}</span></div>
+    <summary><div className="t"><b>{m.title}</b><span>{showClass ? `${m.cls} · ` : ""}{m.toMark} to mark{m.late || m.empty ? <> ({[m.late && <b key="l" className="mk-late">{m.late} late</b>, m.empty && <b key="e" className="mk-empty">{m.empty} with nothing attached</b>].filter(Boolean).flatMap((x, i) => i ? [", ", x] : [x])})</> : ""} · return by {dm(m.deadline)}</span></div>
       {total > 0 && <span className="mk-count" title="Students who have handed it in, out of everyone on the class">{handed}/{total} handed in</span>}<Pill m={m} /></summary>
     <ul className="mk-subs">{total ? <>{group("to_mark", "To mark")}{group("marked", "Marked")}{group("sent_back", "Sent back to redo")}{group("not_in", "Not handed in yet")}</>
       : subs.map((x) => <li key={x.sid}><span className="mk-who"><b>{x.student}</b><span>{x.turnedIn ? `Handed in ${dm(x.turnedIn)}` : "Handed in"}</span></span></li>)}</ul>

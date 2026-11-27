@@ -11,14 +11,14 @@ export const REMIND_DAYS = 2;
 const LIVE_SQL = `c.resolved_at is null and not coursework_earlier_term(c.title, coalesce(c.due_at, c.created_at))`;
 
 export type MarkItem = { cw: string; title: string; link: string | null; gid: string; cls: string; teacherUserId: string | null; teacher: string | null; teacherEmail: string | null;
-  toMark: number; late: number; deadline: string; daysLeft: number; names: string[] };   // daysLeft: whole days, negative once past
+  toMark: number; late: number; empty: number; deadline: string; daysLeft: number; names: string[] };   // empty: handed in with nothing attached (27 Nov)   // daysLeft: whole days, negative once past
 
 /** Handed-in work waiting to be returned, one row per piece of work, soonest deadline first. Only this teacher's classes when given. */
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 export async function markingQueue(teacherUserId: string | null = null, qq?: Q): Promise<MarkItem[]> {
   const run = (q: Q) => q<Omit<MarkItem, "daysLeft">>(`select c.id as cw, c.title, c.link, g.id as gid, l.name || ' ' || coalesce(sj.short_name, sj.name) as cls,
       t.user_id as "teacherUserId", u.name as teacher, u.email::text as "teacherEmail",
-      count(*)::int as "toMark", count(*) filter (where s.late)::int as late, min(coalesce(c.due_at, s.turned_in_at) + make_interval(days => $2))::text as deadline,
+      count(*)::int as "toMark", count(*) filter (where s.late)::int as late, count(*) filter (where s.content = 'none')::int as empty, min(coalesce(c.due_at, s.turned_in_at) + make_interval(days => $2))::text as deadline,
       array_agg(st.first_name || ' ' || st.last_name order by s.turned_in_at nulls last) as names
     from classroom_submissions s join classroom_coursework c on c.id = s.coursework_id join course_groups g on g.id = c.group_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join students st on st.id = s.student_id
@@ -61,13 +61,14 @@ export async function markingSubmissions(teacherUserId: string): Promise<MarkSub
 
 /** 26 Nov: everyone booked on the class for each piece of work, with where they are: handed in (to mark), marked
  *  (returned), or not handed in. For the Marking page's "2/6 handed in" and its full list of students. */
-export type RosterRow = { cw: string; studentId: string; student: string; state: "to_mark" | "marked" | "sent_back" | "not_in"; late: boolean; turnedIn: string | null; link: string | null; pct: number | null };
+export type RosterRow = { cw: string; studentId: string; student: string; state: "to_mark" | "marked" | "sent_back" | "not_in"; late: boolean; turnedIn: string | null; link: string | null; pct: number | null;
+  content: "files" | "answer" | "template_only" | "none" | null };
 export async function markingRoster(cwIds: string[]): Promise<RosterRow[]> {
   if (!cwIds.length) return [];
   return withSchool((q) => q<RosterRow>(`select c.id as cw, st.id as "studentId", st.first_name || ' ' || st.last_name as student,
       case when s.state = 'turned_in' then 'to_mark' when s.state = 'returned' and s.points is null and c.max_points is not null then 'sent_back'
         when s.state = 'returned' then 'marked' else 'not_in' end as state,
-      coalesce(s.late, false) as late, s.turned_in_at::text as "turnedIn", s.link,
+      coalesce(s.late, false) as late, s.turned_in_at::text as "turnedIn", s.link, s.content,
       case when s.points is not null and c.max_points > 0 then round(s.points / c.max_points * 100)::int end as pct
     from classroom_coursework c join enrolments e on e.group_id = c.group_id and e.status in ('active', 'pending') and not e.is_taster
       join students st on st.id = e.student_id

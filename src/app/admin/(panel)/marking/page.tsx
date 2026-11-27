@@ -22,7 +22,7 @@ export default async function AdminMarking({ searchParams }: { searchParams: Pro
   const Row = ({ m }: { m: MarkItem }) => { const c = counts.get(m.cw);
     return <li className={`am-piece ${tone(m.daysLeft)}`}>
       <span className="t"><b>{m.link ? <a href={m.link} target="_blank" rel="noopener">{m.title}</a> : m.title}</b>
-        <span>{m.cls} · {m.toMark} to mark{m.late ? <> (<b className="mk-late">{m.late} late</b>)</> : ""} · return by {dayMonth(m.deadline.slice(0, 10))}</span></span>
+        <span>{m.cls} · {m.toMark} to mark{m.late ? <> (<b className="mk-late">{m.late} late</b>)</> : ""}{m.empty ? <> · <b className="mk-empty">{m.empty} with nothing attached</b></> : ""} · return by {dayMonth(m.deadline.slice(0, 10))}</span></span>
       {c && c.total > 0 && <span className="mk-count">{c.handed}/{c.total} handed in</span>}
       <span className={`pill ${PILL[tone(m.daysLeft)]}`}>{countdown(m.daysLeft)}</span></li>; };
   return <>

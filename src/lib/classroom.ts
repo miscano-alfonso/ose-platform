@@ -24,7 +24,7 @@ async function all<T>(token: string, path: string, key: string): Promise<{ ok: t
 
 type Student = { userId: string; profile?: { emailAddress?: string; name?: { fullName?: string; givenName?: string; familyName?: string } } };
 type Work = { id: string; title?: string; description?: string; creationTime?: string;
-  materials?: { driveFile?: { driveFile?: { title?: string; alternateLink?: string } }; link?: { title?: string; url?: string }; youtubeVideo?: { title?: string; alternateLink?: string }; form?: { title?: string; formUrl?: string } }[]; dueDate?: { year: number; month: number; day: number }; dueTime?: { hours?: number; minutes?: number }; maxPoints?: number; alternateLink?: string; state?: string };
+  materials?: { driveFile?: { driveFile?: { title?: string; alternateLink?: string }; shareMode?: string }; link?: { title?: string; url?: string }; youtubeVideo?: { title?: string; alternateLink?: string }; form?: { title?: string; formUrl?: string } }[]; dueDate?: { year: number; month: number; day: number }; dueTime?: { hours?: number; minutes?: number }; maxPoints?: number; alternateLink?: string; state?: string };
 /** 27 Nov: what's attached to a piece of work, for the parents' Assignments page (names; web links and videos open). */
 const materialsOf = (w: Work) => JSON.stringify((w.materials ?? []).slice(0, 20).map((m) =>
   m.link ? { kind: "link", title: (m.link.title || m.link.url || "Link").slice(0, 200), url: m.link.url ?? null }
@@ -32,7 +32,20 @@ const materialsOf = (w: Work) => JSON.stringify((w.materials ?? []).slice(0, 20)
   : m.form ? { kind: "form", title: (m.form.title || "Form").slice(0, 200), url: null }
   : m.driveFile ? { kind: "file", title: (m.driveFile.driveFile?.title || "File").slice(0, 200), url: null } : null).filter(Boolean));
 type Sub = { courseWorkId: string; userId: string; alternateLink?: string; state?: string; late?: boolean; assignedGrade?: number; updateTime?: string;
-  submissionHistory?: { stateHistory?: { state?: string; stateTimestamp?: string } }[] };
+  submissionHistory?: { stateHistory?: { state?: string; stateTimestamp?: string } }[];
+  courseWorkType?: string; assignmentSubmission?: { attachments?: unknown[] }; shortAnswerSubmission?: { answer?: string }; multipleChoiceSubmission?: { answer?: string } };
+
+/** 27 Nov (Alfonso: Najmi handed in with nothing attached): what came with a hand-in. Classroom gives every student a copy
+ *  of a "make a copy for each student" file, so a hand-in with only that copy may or may not have been written in. */
+const contentOf = (s: Sub, w: Work | undefined): string | null => {
+  if (s.state !== "TURNED_IN" && s.state !== "RETURNED") return null;
+  if (s.courseWorkType === "SHORT_ANSWER_QUESTION") return (s.shortAnswerSubmission?.answer ?? "").trim() ? "answer" : "none";
+  if (s.courseWorkType === "MULTIPLE_CHOICE_QUESTION") return (s.multipleChoiceSubmission?.answer ?? "").trim() ? "answer" : "none";
+  const n = s.assignmentSubmission?.attachments?.length ?? 0;
+  if (!n) return "none";
+  const copies = (w?.materials ?? []).filter((m) => m.driveFile?.shareMode === "STUDENT_COPY").length;
+  return n <= copies ? "template_only" : "files";
+};
 
 const dueOf = (w: Work) => w.dueDate ? new Date(Date.UTC(w.dueDate.year, w.dueDate.month - 1, w.dueDate.day, w.dueTime ? w.dueTime.hours ?? 0 : 23, w.dueTime ? w.dueTime.minutes ?? 0 : 59)).toISOString() : null;
 const STATE: Record<string, string> = { TURNED_IN: "turned_in", RETURNED: "returned" };
@@ -142,6 +155,7 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
       // 26 Nov: a student can have two Classroom accounts (e.g. a parent's at first, then their own): per piece of work keep
       // the most complete hand-in (marked > returned > handed in > not handed in), so an empty one doesn't hide the real one
       const rank = (x: Sub) => (x.state === "RETURNED" && typeof x.assignedGrade === "number" ? 4 : x.state === "RETURNED" ? 3 : x.state === "TURNED_IN" ? 2 : 1);
+      const workById = new Map(work.items.map((w) => [w.id, w]));
       const best = new Map<string, Sub>();
       for (const x of subs.items) {
         const sid = uid.get(x.userId), cw = wid.get(x.courseWorkId); if (!sid || !cw) continue;
@@ -153,10 +167,10 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
         const st = STATE[s.state ?? ""] ?? "assigned";
         const turned = [...(s.submissionHistory ?? [])].reverse().find((h) => h.stateHistory?.state === "TURNED_IN")?.stateHistory?.stateTimestamp ?? null;
         const pts = st === "returned" && typeof s.assignedGrade === "number" ? s.assignedGrade : null;
-        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8)
-          on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points, link = excluded.link,
+        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link, content) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8, $9)
+          on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points, link = excluded.link, content = excluded.content,
             graded_at = case when excluded.points is null then null else coalesce(classroom_submissions.graded_at, excluded.graded_at) end`,
-          [cw, sid, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null]);
+          [cw, sid, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null, contentOf(s, workById.get(s.courseWorkId))]);
         info.submissions!++;
       }
     });
@@ -195,10 +209,10 @@ async function syncOneCourses(token: string, info: ClassroomInfo) {
         const st = STATE[s.state ?? ""] ?? "assigned";
         const turned = [...(s.submissionHistory ?? [])].reverse().find((h) => h.stateHistory?.state === "TURNED_IN")?.stateHistory?.stateTimestamp ?? null;
         const pts = st === "returned" && typeof s.assignedGrade === "number" ? s.assignedGrade : null;
-        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8)
-          on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points, link = excluded.link,
+        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link, content) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8, $9)
+          on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points, link = excluded.link, content = excluded.content,
             graded_at = case when excluded.points is null then null else coalesce(classroom_submissions.graded_at, excluded.graded_at) end`,
-          [cw, o.student_id, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null]);
+          [cw, o.student_id, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null, contentOf(s, work.items.find((w) => w.id === s.courseWorkId))]);
         info.submissions!++;
       }
     });
