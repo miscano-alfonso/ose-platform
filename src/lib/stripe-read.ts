@@ -62,7 +62,7 @@ export async function connectStripe(by: string, key: string, webhookSecret: stri
 export async function disconnectStripe() { const c = await kv(); delete c.key; delete c.webhookSecret; delete c.account; await kvPut(c); }
 export async function setStripeAuto(on: boolean) { const c = await kv(); c.auto = on; await kvPut(c); }
 
-type Charge = { id: string; payment_intent?: string | null; created: number; amount: number; amount_refunded: number; currency: string; status: string; description?: string | null;
+type Charge = { id: string; payment_intent?: string | null; created: number; receipt_url?: string | null; amount: number; amount_refunded: number; currency: string; status: string; description?: string | null;
   receipt_email?: string | null; billing_details?: { email?: string | null; name?: string | null }; customer?: string | { id: string; email?: string | null; name?: string | null } | null;
   payment_method_details?: { card?: { fingerprint?: string | null; last4?: string | null } | null } | null };
 async function saveCharge(q: Q, ch: Charge) {
@@ -70,14 +70,14 @@ async function saveCharge(q: Q, ch: Charge) {
   const email = (ch.billing_details?.email || ch.receipt_email || cust?.email || "").toLowerCase() || null;
   const parent = email ? (await q<{ id: string }>(`select id from parents where email = $1 union select parent_id from guardians where email = $1 limit 1`, [email]))[0]?.id ?? null : null;
   const card = ch.payment_method_details?.card, name = (ch.billing_details?.name || cust?.name || "").replace(/\s+/g, " ").trim().slice(0, 120) || null;
-  const r = await q(`insert into stripe_charges (id, school_id, payment_intent, created_at, amount_pence, refunded_pence, currency, status, email, customer, description, parent_id, card_fp, card_last4, payer_name, linked_by)
-      values ($1, current_school(), $2, to_timestamp($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, case when $11::uuid is not null then 'email' end)
+  const r = await q(`insert into stripe_charges (id, school_id, payment_intent, created_at, amount_pence, refunded_pence, currency, status, email, customer, description, parent_id, card_fp, card_last4, payer_name, linked_by, receipt_url)
+      values ($1, current_school(), $2, to_timestamp($3), $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, case when $11::uuid is not null then 'email' end, $15)
     on conflict (id) do update set refunded_pence = excluded.refunded_pence, status = excluded.status, email = coalesce(excluded.email, stripe_charges.email),
       parent_id = coalesce(stripe_charges.parent_id, excluded.parent_id), linked_by = coalesce(stripe_charges.linked_by, excluded.linked_by),
       card_fp = coalesce(excluded.card_fp, stripe_charges.card_fp), card_last4 = coalesce(excluded.card_last4, stripe_charges.card_last4),
-      payer_name = coalesce(excluded.payer_name, stripe_charges.payer_name), synced_at = now() returning (xmax = 0) as added`,
+      payer_name = coalesce(excluded.payer_name, stripe_charges.payer_name), receipt_url = coalesce(excluded.receipt_url, stripe_charges.receipt_url), synced_at = now() returning (xmax = 0) as added`,
     [ch.id, ch.payment_intent ?? null, ch.created, ch.amount, ch.amount_refunded ?? 0, ch.currency, ch.status, email, cust?.id ?? (typeof ch.customer === "string" ? ch.customer : null), ch.description?.slice(0, 300) ?? null, parent,
-     card?.fingerprint ?? null, card?.last4 ?? null, name]);
+     card?.fingerprint ?? null, card?.last4 ?? null, name, ch.receipt_url ?? null]);
   return (r[0] as { added?: boolean } | undefined)?.added ?? false;
 }
 
@@ -277,4 +277,23 @@ export async function recentCharges(limit = 30) {
     select c.id, c.created_at::text, c.amount_pence, c.refunded_pence, c.status, c.email::text, p.first_name || ' ' || p.last_name as family, c.matched_by, c.ignored,
       (select string_agg(distinct t.name, ', ') from instalments i join terms t on t.id = i.term_id where i.id = any(c.instalment_ids)) as terms
     from stripe_charges c left join parents p on p.id = c.parent_id order by c.created_at desc limit $1`, [limit]));
+}
+
+/** 27 Nov: the Stripe receipt for a payment (a charge ch_… or payment ph_/pi_…): the address kept with the charge, or read
+ *  from Stripe once (a GET with the read-only key) and kept. Null when Stripe has no receipt for it. */
+export async function receiptFor(ref: string): Promise<string | null> {
+  if (!/^(ch|py|pi)_[A-Za-z0-9]{8,}$/.test(ref)) return null;
+  return withSchool(async (q) => {
+    const kept = (await q<{ id: string; receipt_url: string | null }>(`select id, receipt_url from stripe_charges where id = $1 or payment_intent = $1 order by created_at desc limit 1`, [ref]))[0];
+    if (kept?.receipt_url) return kept.receipt_url;
+    const key = keyOf(await kv(q)); if (!key) return null;
+    try {
+      const ch = ref.startsWith("pi_")
+        ? (await sget<{ latest_charge?: Charge | null }>(key, `/payment_intents/${ref}?expand[]=latest_charge`)).latest_charge ?? null
+        : await sget<Charge>(key, `/charges/${kept?.id ?? ref}`);
+      const url = ch?.receipt_url ?? null;
+      if (url && ch) await q(`update stripe_charges set receipt_url = $2 where id = $1`, [ch.id, url]);
+      return url;
+    } catch { return null; }
+  });
 }

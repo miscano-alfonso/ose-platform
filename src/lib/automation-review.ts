@@ -43,6 +43,7 @@ export function sampleVars(key: string, school: string, base: string): Record<st
     meet_link: "https://meet.google.com/abc-defg-hij", book_link: `${site}/courses`, taster_link: `${site}/taster`,
     join_link: `${site}/waitlist/join?t=…`, needed: "5", count: "2", hours: "48", amount: "£68.00", how: "collected by Direct Debit",
     payments_link: `${site}/parent/payments`, report: "Term 2 Progress Report", dashboard_link: `${site}/admin/teacher`, school,
+    term: "Term 2", days: "14", courses: "• Sam: Pre-GCSE History\n• Sam: KS3 Maths",
     list: "• Essay: causes of WW1 (Pre-GCSE History) · 3 to mark · 2 days left\n• Source analysis (KS3 History) · 1 to mark · Due tomorrow",
   };
   if (key === "trial_waitlist_invite" || key === "waitlist_joined" || key === "waitlist_open" || key === "trial_opened") v.class = "Pre-GCSE Economics";

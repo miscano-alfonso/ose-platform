@@ -106,7 +106,7 @@ export async function publishCycle(actorId: string, cycleId: string): Promise<st
 // ---------- writing (teachers, or an admin for any class) ----------
 export type WriteRow = { id: string; student: string; avg_pct: string | null; marked: number | null; auto_progress: number | null; progress_override: number | null;
   effort: number | null; working_grade: number | null; predicted_grade: number | null; comment: string | null; status: string; review_note: string | null;
-  assess: string; assess_pct: number | null; assess_title: string | null; no_assessment: string | null; assess_parts: { label: string; state: string; pct: number | null; title: string | null }[];
+  assess: string; assess_pct: number | null; assess_title: string | null; no_assessment: string | null; assess_parts: { label: string; state: string; pct: number | null; title: string | null; link: string | null }[];
   marks?: { pct: number; at: string; term: boolean; assess: boolean }[] };
 
 /** 26 Nov (Alfonso, changed later that day): teachers can write and save drafts any time, but can only submit reports to the
@@ -127,7 +127,7 @@ export async function getWriteSheet(cycleId: string, groupId: string) {
     const rows = await q<WriteRow>(`select e.id, s.first_name || ' ' || s.last_name as student, rl.avg_pct::text, rl.marked,
         progress_score(e.school_id, rl.avg_pct) as auto_progress, e.progress_override, e.effort, e.working_grade, e.predicted_grade, e.comment, e.status::text, e.review_note,
         a.state as assess, a.pct::float as assess_pct, a.title as assess_title, e.no_assessment,
-        coalesce((select json_agg(json_build_object('label', p.label, 'state', p.state, 'pct', p.pct::float, 'title', p.title) order by p.term_no) from report_assessment_parts(e.id) p), '[]') as assess_parts,
+        coalesce((select json_agg(json_build_object('label', p.label, 'state', p.state, 'pct', p.pct::float, 'title', p.title, 'link', p.link) order by p.term_no) from report_assessment_parts(e.id) p), '[]') as assess_parts,
         -- every marked piece in this class this school year up to the report window's end, for suggested grades
         coalesce((select json_agg(json_build_object('pct', round(cs.points / cw.max_points * 100, 1), 'at', coalesce(cw.due_at, cs.graded_at)::date::text,
             'term', cs.graded_at::date between c.marks_from and c.marks_to and not outside_round(cw.title, (select t.number from terms t where t.id = c.term_id)), 'assess', exists (select 1 from report_assessment_parts(e.id) p where p.title = cw.title)) order by coalesce(cw.due_at, cs.graded_at))

@@ -1699,3 +1699,33 @@
 .adm .as-terms{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:12px 16px;margin-bottom:14px}
 .adm .as-terms label{display:inline-flex;gap:6px;align-items:center}
 .adm .pay-hist .tw{margin-top:12px}
+/* 27 Nov: the tips on a report-writing page, one per line */
+.adm .wr-tips{margin:6px 0 0;padding:0 0 0 20px;display:grid;gap:3px}
+.adm .wr-tips li{line-height:1.45}
+/* 27 Nov: parent Payments: term totals, overdue, payment history */
+.adm tr.pay-tot td{background:var(--soft);border-top:2px solid var(--line)}
+.adm .pay-lines{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:2px;font-size:14px;color:var(--muted);max-width:520px}
+.adm .pay-lines li{display:flex;justify-content:space-between;gap:16px}
+.adm .pay-late{border:1.5px solid var(--bad);background:var(--bad-bg)}
+.adm .pay-late-row{padding:10px 0;border-top:1px solid color-mix(in srgb,var(--bad) 25%,transparent)}.adm .pay-late-row:first-of-type{border-top:0}
+.adm .pay-late-acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+/* 27 Nov: Marking: late hand-ins, Resolve, Archived */
+.adm .mk-late{color:var(--warn);font-weight:600}
+.adm .mk-resolve{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:8px 0 4px;padding-top:10px;border-top:1px dashed var(--line);font-size:14px}
+.adm .mk-resolve select,.adm .mk-resolve input{padding:5px 10px;border-radius:9px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-size:14px}
+.adm .mk-resolve input{display:none}.adm .mk-resolve:has(select option[value=other]:checked) input{display:block}
+.adm .mk-arch>summary{cursor:pointer;list-style:none}.adm .mk-arch>summary::-webkit-details-marker{display:none}
+.adm .mk-arch-list{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.adm .mk-arch-list li{display:flex;gap:10px;align-items:center;padding:9px 12px;border-radius:12px;background:var(--soft)}
+.adm .mk-arch-list .t{flex:1;min-width:0;display:flex;flex-direction:column}.adm .mk-arch-list .t span{font-size:13.5px;color:var(--muted)}
+/* 27 Nov: report-writing card: status on the right of the name; assessment and marks average under the scores */
+.adm .wr-name{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.adm .wr-facts{grid-column:1/-1;display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--line)}
+.adm .wr-as{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.adm .wr-facts .fld select{width:100%}
+/* 27 Nov (Alfonso): Settings → Show tips (unticked: every How it works guide, (i) and tip list is hidden) */
+html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tips=off] .adm .wr-tips,html[data-tips=off] .adm .fins-tip,html[data-tips=off] .adm .tip{display:none!important}
+.adm .tips-set{padding:14px 16px}
+.adm .tips-row{display:flex;gap:12px;align-items:flex-start;cursor:pointer}.adm .tips-row input{margin-top:4px;accent-color:var(--brand);width:18px;height:18px}
+.adm .tips-row span{display:flex;flex-direction:column;gap:2px}.adm .tips-row small{color:var(--muted);font-size:14px;line-height:1.45}
+.adm .wr-as .pill{white-space:normal}

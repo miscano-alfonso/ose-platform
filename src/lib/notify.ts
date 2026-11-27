@@ -75,7 +75,8 @@ export async function notifyEvents(w: Who, since: Date): Promise<NotifyEvent[]> 
             min(coalesce(c.due_at, s.turned_in_at) + interval '7 days') as deadline
           from classroom_submissions s join classroom_coursework c on c.id = s.coursework_id join course_groups g on g.id = c.group_id
             join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
-          where s.state = 'turned_in' and g.teacher_id = ${T} group by c.id, c.title, c.link, g.id, l.name, sj.name) x
+          where s.state = 'turned_in' and g.teacher_id = ${T} and c.resolved_at is null and not coursework_earlier_term(c.title, coalesce(c.due_at, c.created_at))
+          group by c.id, c.title, c.link, g.id, l.name, sj.name) x
         where x.deadline - interval '2 days' > $2::timestamptz and x.deadline - interval '2 days' <= now() limit 10`, [w.id, from]),
     ];
     const KIDS = `(select e.group_id from enrolments e join students s on s.id = e.student_id where s.parent_id = $1 and e.status in ('pending','active'))`;

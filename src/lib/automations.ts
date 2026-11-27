@@ -69,6 +69,11 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "amount", "child", "class", "payments_link", "school"],
     subject: "We couldn’t take your payment of {{amount}}",
     body: "Dear {{parent}},\n\nWe tried to take this term’s payment of {{amount}} for {{child}}’s {{class}} course, but it didn’t go through. We’ll try once more in a few days.\n\nPlease check your bank account or card, or [update how you pay]({{payments_link}})\n\nOr reply to this email if you’d like to talk about it.\n\n{{school}}" },
+  // 27 Nov (Alfonso): chase a payment that was declined or rejected, until it's paid (up to 3 times)
+  { key: "payment_chase", name: "Payment still unpaid: chase", default_on: true, when: "While a termly payment that was declined or rejected is still unpaid: a reminder every few days, up to 3 times. Stops as soon as it’s paid.", timing: { label: "days between reminders", unit: "days", default: 7 }, to_parent: true, to_student: false,
+    fields: ["parent", "amount", "term", "courses", "days", "payments_link", "school"],
+    subject: "Reminder: your {{term}} payment of {{amount}} is still unpaid",
+    body: "Dear {{parent}},\n\nYour {{term}} payment of {{amount}} is now {{days}} days overdue. It’s for:\n\n{{courses}}\n\nYour bank or card declined it when we tried to take it. Please check your account, or [update how you pay]({{payments_link}}), and we’ll try again.\n\nIf something’s wrong, just reply to this email and we’ll help.\n\n{{school}}" },
   { key: "report_published", name: "Report ready", when: "When a progress report is published.", timing: null, to_parent: true, to_student: false,
     fields: ["parent", "child", "report", "school"],
     subject: "{{child}}’s {{report}} is ready",
@@ -267,6 +272,25 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
           join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
         where i.status = 'failed' and i.due_on > current_date - 30`);
       for (const r of rows) await deliver(q, "payment_failed", c, { ref: r.id, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent, amount: gbp(r.amount), child: r.child, class: r.class, payments_link: base ? `${base}/parent/payments` : "your account", school } }, budget);
+    }
+
+    // 27 Nov: chase payments still unpaid after being declined: one reminder each time another "every N days" passes, up to 3
+    c = cfg("payment_chase");
+    if (c) {
+      const every = Math.max(1, c.minutes ?? 7);
+      const rows = await q<{ parent_id: string; parent: string; email: string; due: string; term: string; amount: number; courses: string; days: number }>(`
+        select p.id as parent_id, p.first_name as parent, p.email::text, i.due_on::text as due, coalesce(min(t.name), 'term') as term, sum(i.amount_pence - i.refunded_pence)::int as amount,
+          string_agg('• ' || coalesce(nullif(s.known_as, ''), s.first_name) || ': ' || l.name || ' ' || sj.name, E'\n' order by s.first_name, l.sort_order) as courses,
+          (current_date - i.due_on)::int as days
+        from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id join parents p on p.id = s.parent_id
+          join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id left join terms t on t.id = i.term_id
+        where i.status = 'failed' and i.amount_pence > 0 and current_date - i.due_on >= $1::int and current_date - i.due_on < $1::int * 4
+        group by p.id, i.due_on`, [every]);
+      for (const r of rows) {
+        const n = Math.min(3, Math.floor(r.days / every));   // 1st, 2nd, 3rd reminder
+        if (n >= 1) await deliver(q, "payment_chase", c, { ref: `${r.parent_id}:${r.due}:${n}`, to: [{ name: r.parent, email: r.email }], vars: { parent: r.parent, amount: gbp(r.amount), term: r.term,
+          courses: r.courses, days: String(r.days), payments_link: base ? `${base}/parent/payments` : "your account", school } }, budget);
+      }
     }
 
     // reports: tell parents when a report round is published

@@ -20,8 +20,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   // light or dark, if the person picked one (website and dashboards share it); otherwise the device decides
   const tv = (await cookies()).get("ose_theme")?.value, theme = tv === "light" || tv === "dark" ? tv : undefined;
+  const tips = (await cookies()).get("ose_tips")?.value === "off" ? "off" : undefined;   // 27 Nov: Settings → Show tips
   return (
-    <html lang="en-GB" data-theme={theme}>
+    <html lang="en-GB" data-theme={theme} data-tips={tips}>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />

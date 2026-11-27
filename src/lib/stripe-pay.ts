@@ -274,3 +274,11 @@ export async function collectBackground() {
   last = Date.now();
   await collectDue().catch((e) => console.error("termly collection", e));
 }
+
+/** 27 Nov: the Stripe receipt for a payment this site collected (a GET only). */
+export async function payReceipt(pi: string): Promise<string | null> {
+  if (!/^pi_[A-Za-z0-9]{8,}$/.test(pi)) return null;
+  const c = await cfg(); if (!usable(c)) return null;
+  const r = await call<{ latest_charge?: { receipt_url?: string | null } | null }>(c.key!, "GET", `/payment_intents/${pi}?expand[]=latest_charge`).catch(() => null);
+  return r?.ok ? r.j.latest_charge?.receipt_url ?? null : null;
+}

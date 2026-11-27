@@ -8,7 +8,7 @@ import { LINK_FIELDS } from "@/lib/email-layout";
 const LABELS: Record<string, string> = {
   parent: "Parent’s first name", child: "Child’s first name", class: "Class name", date: "Lesson date", time: "Lesson time",
   teacher: "Teacher’s name", school: "School name", amount: "Amount", how: "How it’s paid (Direct Debit / card)", hours: "Head start (hours)",
-  report: "Report name", old_when: "Original date and time", new_when: "New date and time", reason: "Reason (if one was given)", needed: "Families needed to start", count: "How many so far", list: "List of work to mark",
+  report: "Report name", old_when: "Original date and time", new_when: "New date and time", reason: "Reason (if one was given)", needed: "Families needed to start", count: "How many so far", list: "List of work to mark", term: "Term (e.g. Term 2)", courses: "Courses it’s for (list)", days: "Days overdue",
 };
 
 export function FieldInserter({ fields }: { fields: string[] }) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireViewer } from "@/lib/auth";
-import { markingQueue, markingSubmissions, markingRoster, countdown, tone, TURNAROUND_DAYS, type MarkItem, type MarkSub, type RosterRow } from "@/lib/marking";
+import { markingQueue, markingSubmissions, markingRoster, markingArchive, countdown, tone, TURNAROUND_DAYS, type MarkItem, type MarkSub, type RosterRow, type ArchItem } from "@/lib/marking";
+import { resolveWorkAction } from "./actions";
 import { dm } from "../fmt";
 import * as P from "@/lib/past-papers";
 import { paperDelayAction, paperReturnAction } from "../../../papers-actions";
@@ -27,11 +28,17 @@ function Piece({ m, subs, roster, showClass }: { m: MarkItem; subs: MarkSub[]; r
         {state !== "not_in" && (link ? <a className="abtn sm" href={link} target="_blank" rel="noopener">Open in Classroom</a> : m.link && <a className="abtn sm" href={m.link} target="_blank" rel="noopener">Open in Classroom</a>)}
       </li>; })}</>; };
   return <details className="mk-piece">
-    <summary><div className="t"><b>{m.title}</b><span>{showClass ? `${m.cls} · ` : ""}{m.toMark} to mark · return by {dm(m.deadline)}</span></div>
+    <summary><div className="t"><b>{m.title}</b><span>{showClass ? `${m.cls} · ` : ""}{m.toMark} to mark{m.late ? <> (<b className="mk-late">{m.late} late</b>)</> : ""} · return by {dm(m.deadline)}</span></div>
       {total > 0 && <span className="mk-count" title="Students who have handed it in, out of everyone on the class">{handed}/{total} handed in</span>}<Pill m={m} /></summary>
     <ul className="mk-subs">{total ? <>{group("to_mark", "To mark")}{group("marked", "Marked")}{group("not_in", "Not handed in yet")}</>
       : subs.map((x) => <li key={x.sid}><span className="mk-who"><b>{x.student}</b><span>{x.turnedIn ? `Handed in ${dm(x.turnedIn)}` : "Handed in"}</span></span></li>)}</ul>
     {m.link && <p className="mk-all"><a href={m.link} target="_blank" rel="noopener">All hand-ins for this work in Classroom ↗</a></p>}
+    {/* 27 Nov (Alfonso): not marking this one? Resolve it: it leaves the list (and the reminders), and can be put back */}
+    <form action={resolveWorkAction} className="mk-resolve"><input type="hidden" name="cw" value={m.cw} /><input type="hidden" name="on" value="1" />
+      <span className="muted">Not marking this one?</span>
+      <select name="why" defaultValue="Not being marked" aria-label="Why it won’t be marked"><option>Not being marked</option><option>Practice or optional task</option><option>Marked in the lesson</option><option>Set by mistake</option><option value="other">Other…</option></select>
+      <input name="other" maxLength={200} placeholder="Other reason" aria-label="Other reason" />
+      <button className="abtn sm" type="submit">Resolve</button></form>
   </details>;
 }
 
@@ -42,7 +49,7 @@ export default async function Marking({ searchParams }: { searchParams: Promise<
   const openPapers = papers.filter((p) => !p.returned_at).length;
   const classes = [...new Map(queue.map((m) => [m.gid, m.cls])).entries()].sort((a, b) => a[1].localeCompare(b[1]));
   const subsOf = (cw: string) => subs.filter((s) => s.cw === cw);
-  const roster = await markingRoster(queue.map((m) => m.cw));
+  const [roster, archived] = await Promise.all([markingRoster(queue.map((m) => m.cw)), markingArchive(me.id)]);
   const rosterOf = (cw: string) => roster.filter((r) => r.cw === cw);
   return <>
     <div className="top"><div><h1>Marking</h1>
@@ -58,7 +65,8 @@ export default async function Marking({ searchParams }: { searchParams: Promise<
         return <section className="card mk-card" key={gid}><h2>{cls} <span className="muted">· {items.reduce((a, m) => a + m.toMark, 0)} to mark</span></h2>
           {items.map((m) => <Piece key={m.cw} m={m} subs={subsOf(m.cw)} roster={rosterOf(m.cw)} showClass={false} />)}</section>; })
     : <section className="card mk-card">{queue.map((m) => <Piece key={m.cw} m={m} subs={subsOf(m.cw)} roster={rosterOf(m.cw)} showClass />)}</section>}
-    <p className="note">Marked work counts as done once you return it to the student in Classroom. The list updates each time Classroom is read.</p></>}
+    <p className="note">Marked work counts as done once you return it to the student in Classroom. The list updates each time Classroom is read. Work from an earlier term that’s still not marked moves to Archived.</p>
+    {archived.length > 0 && <Archived items={archived} />}</>}
   </>;
 }
 
@@ -96,4 +104,15 @@ function Papers({ papers }: { papers: P.PaperJob[] }) {
         </div>
       </details>; })}
   </section>;
+}
+
+// 27 Nov (Alfonso): handed-in work from an earlier term that wasn't marked, and work the teacher resolved
+function Archived({ items }: { items: ArchItem[] }) {
+  return <details className="card mk-card mk-arch"><summary><h2 style={{ display: "inline", margin: 0 }}>Archived</h2> <span className="muted">· {items.length} piece{items.length === 1 ? "" : "s"} of work, off your list</span></summary>
+    <p className="cs">Work from an earlier term that wasn’t marked, and work you chose not to mark. Nothing here counts towards your marking or sends reminders.</p>
+    <ul className="mk-arch-list">{items.map((a) => <li key={a.cw}><div className="t"><b>{a.title}</b><span>{a.cls}{a.toMark ? ` · ${a.toMark} handed in, not marked` : ""}{a.due ? ` · due ${dm(a.due)}` : ""}</span></div>
+      {a.resolvedAt ? <><span className="pill mute" title={a.note ?? undefined}>Resolved{a.note ? `: ${a.note}` : ""}</span>
+        <form action={resolveWorkAction}><input type="hidden" name="cw" value={a.cw} /><input type="hidden" name="on" value="0" /><button className="abtn sm" type="submit">Put back</button></form></>
+        : <span className="pill mute">Earlier term</span>}</li>)}</ul>
+  </details>;
 }

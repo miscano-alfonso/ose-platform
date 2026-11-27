@@ -2,11 +2,12 @@ import { requireViewer } from "@/lib/auth";
 import { SettingsTabs } from "@/app/SettingsTabs";
 import { getNotify } from "@/lib/notify";
 import { NotifySettingsForm } from "../../../../NotifySettingsForm";
+import { TipsToggle } from "../../../../TipsToggle";
 
 export const dynamic = "force-dynamic";
 export default async function TeacherNotifications() {
   const me = await requireViewer();
   const s = await getNotify({ role: "teacher", id: me.id });
-  return <><SettingsTabs area="teacher" here="/admin/teacher/notifications" /><div className="top"><div><h1>Notifications</h1><div className="sub">Choose what you’re told about while My day is open, and a sound for each.</div></div></div>
+  return <><SettingsTabs area="teacher" here="/admin/teacher/notifications" /><div className="top"><div><h1>Notifications</h1><div className="sub">Choose what you’re told about while My day is open, and a sound for each.</div></div></div><TipsToggle />
     <NotifySettingsForm api="/admin/notify-api" role="teacher" initial={s} viewing={!!me.viewing} /></>;
 }

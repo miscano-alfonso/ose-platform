@@ -501,30 +501,64 @@ export async function weekOrNext(who: { student: string } | { parent: string }):
   return nx.length ? { rows: nx, next: true } : { rows, next: false };
 }
 
-// 27 Nov (Alfonso): the parent's payment history (Payments → Payment history): every payment taken or due back, newest first.
-export type PaidRow = { key: string; day: string; what: string; who: string | null; amount: number; refunded: number; status: string };
+// 27 Nov (Alfonso): the parent's payment history (Payments → Payment history): each payment once it's been taken, newest
+// first. A term's payment lists the courses it paid for; the receipt is Stripe's (ref = the Stripe payment, when known).
+export type PaidLine = { who: string | null; what: string; amount: number; refunded: number };
+export type PaidRow = { key: string; day: string; title: string; lines: PaidLine[]; total: number; refunded: number; ref: string | null };
 export async function paymentHistory(parentId: string): Promise<PaidRow[]> {
-  return withSchool((q) => q<PaidRow>(`
-    select * from (
-      select 'i' || i.id as key, coalesce((i.paid_at at time zone 'Europe/London')::date, i.due_on)::text as day,
-        l.name || ' ' || sj.name || coalesce(' · ' || t.name, '') as what, coalesce(nullif(s.known_as, ''), s.first_name) as who,
-        i.amount_pence as amount, i.refunded_pence as refunded, i.status::text as status
-      from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id join course_groups g on g.id = e.group_id
-        join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id left join terms t on t.id = i.term_id
-      where s.parent_id = $1 and i.status in ('paid', 'processing', 'failed', 'refunded', 'part_refunded')
-      union all
-      select 'o' || o.id, (o.paid_at at time zone 'Europe/London')::date::text, 'Registration fee', null, o.registration_fee_pence, 0, 'paid'
-      from orders o where o.parent_id = $1 and o.status = 'paid' and o.registration_fee_pence > 0 and o.paid_at is not null
-      union all
-      select 'b' || b.id, (b.created_at at time zone 'Europe/London')::date::text,
-        '1:1 ' || sj.name || ' · ' || to_char(b.starts_at at time zone 'Europe/London', 'FMDy FMDD Mon HH24:MI'), coalesce(s.first_name, b.student_name), b.price_pence, 0,
-        case when b.status = 'cancelled' then 'refunded' else 'paid' end
-      from tutoring_bookings b join subjects sj on sj.id = b.subject_id left join students s on s.id = b.student_id
-      where b.parent_id = $1 and b.price_pence > 0 and b.status in ('booked', 'completed', 'no_show', 'cancelled') and b.stripe_payment_intent_id is not null
-      union all
-      select 'w' || wb.id, (wb.created_at at time zone 'Europe/London')::date::text, 'Workshop: ' || w.title, coalesce(s.first_name, wb.student_name), wb.price_pence, 0,
-        case when wb.status = 'cancelled' then 'refunded' else 'paid' end
-      from workshop_bookings wb join workshops w on w.id = wb.workshop_id left join students s on s.id = wb.student_id
-      where wb.parent_id = $1 and wb.price_pence > 0 and wb.status in ('booked', 'attended', 'absent', 'cancelled') and wb.stripe_payment_intent_id is not null
-    ) h order by day desc, what`, [parentId])).catch((e) => { console.error("paymentHistory", e); return []; });
+  const rows = await withSchool((q) => q<{ src: string; grp: string; day: string; term: string | null; term_no: number | null; who: string | null; what: string; amount: number; refunded: number; ref: string | null }>(`
+    select 'i' as src, coalesce(i.stripe_payment_intent_id, i.term_id::text || ':' || coalesce((i.paid_at at time zone 'Europe/London')::date, i.due_on)::text) as grp,
+      coalesce((i.paid_at at time zone 'Europe/London')::date, i.due_on)::text as day, t.name as term, t.number as term_no,
+      coalesce(nullif(s.known_as, ''), s.first_name) as who, l.name || ' ' || sj.name as what, i.amount_pence as amount, i.refunded_pence as refunded,
+      i.stripe_payment_intent_id as ref
+    from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id join course_groups g on g.id = e.group_id
+      join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id left join terms t on t.id = i.term_id
+    where s.parent_id = $1 and i.status in ('paid', 'refunded', 'part_refunded')
+    union all
+    select 'o', 'o' || o.id, (o.paid_at at time zone 'Europe/London')::date::text, null, null, null, 'Registration fee', o.registration_fee_pence, 0,
+      (select split_part(le.stripe_object_id, ':', 1) from ledger_entries le where le.order_id = o.id and le.kind = 'charge' and le.stripe_object_id is not null limit 1)
+    from orders o where o.parent_id = $1 and o.status = 'paid' and o.registration_fee_pence > 0 and o.paid_at is not null
+    union all
+    select 'b', 'b' || b.id, (b.created_at at time zone 'Europe/London')::date::text, null, null, coalesce(s.first_name, b.student_name),
+      '1:1 ' || sj.name || ' · ' || to_char(b.starts_at at time zone 'Europe/London', 'FMDy FMDD Mon HH24:MI'), b.price_pence, case when b.status = 'cancelled' then b.price_pence else 0 end, b.stripe_payment_intent_id
+    from tutoring_bookings b join subjects sj on sj.id = b.subject_id left join students s on s.id = b.student_id
+    where b.parent_id = $1 and b.price_pence > 0 and b.status in ('booked', 'completed', 'no_show', 'cancelled') and b.stripe_payment_intent_id is not null
+    union all
+    select 'w', 'w' || wb.id, (wb.created_at at time zone 'Europe/London')::date::text, null, null, coalesce(s.first_name, wb.student_name), 'Workshop: ' || w.title, wb.price_pence,
+      case when wb.status = 'cancelled' then wb.price_pence else 0 end, wb.stripe_payment_intent_id
+    from workshop_bookings wb join workshops w on w.id = wb.workshop_id left join students s on s.id = wb.student_id
+    where wb.parent_id = $1 and wb.price_pence > 0 and wb.status in ('booked', 'attended', 'absent', 'cancelled') and wb.stripe_payment_intent_id is not null`, [parentId])).catch((e) => { console.error("paymentHistory", e); return []; });
+  const by = new Map<string, PaidRow & { terms: Set<string> }>();
+  for (const r of rows) {
+    let g = by.get(r.grp);
+    if (!g) { g = { key: r.grp.replace(/[^A-Za-z0-9_-]/g, "-"), day: r.day, title: "", lines: [], total: 0, refunded: 0, ref: r.ref && /^(pi|ch|py)_/.test(r.ref) ? r.ref : null, terms: new Set() }; by.set(r.grp, g); }
+    if (r.src === "i" && r.term) g.terms.add(r.term);
+    if (r.day < g.day) g.day = r.day;
+    g.lines.push({ who: r.who, what: r.what, amount: r.amount, refunded: r.refunded }); g.total += r.amount; g.refunded += r.refunded;
+    if (r.src !== "i") g.title = r.what;
+  }
+  return [...by.values()].map(({ terms, ...g }) => ({ ...g, title: g.title || (terms.size ? `${[...terms].join(" and ")} payment` : "Course payment") }))
+    .sort((a, b) => (a.day < b.day ? 1 : a.day > b.day ? -1 : a.title.localeCompare(b.title)));
+}
+
+/** 27 Nov: payments that are late: declined or rejected (failed), or (where the school collects through this site) past
+ *  their date and not taken. One row per payment date, with the courses in it. */
+export type LateRow = { due: string; term: string; amount: number; failed: boolean; retry: string | null; reason: string | null; lines: { who: string; what: string; amount: number }[] };
+export async function latePayments(parentId: string, collectsHere: boolean): Promise<LateRow[]> {
+  const rows = await withSchool((q) => q<{ due: string; term: string; who: string; what: string; amount: number; failed: boolean; retry: string | null; reason: string | null }>(`
+    select i.due_on::text as due, coalesce(t.name, 'Term') as term, coalesce(nullif(s.known_as, ''), s.first_name) as who, l.name || ' ' || sj.name as what,
+      i.amount_pence - i.refunded_pence as amount, i.status = 'failed' as failed, i.next_attempt_on::text as retry,
+      (select pc.error from pay_collections pc where pc.parent_id = s.parent_id and pc.due_on = i.due_on and pc.error is not null order by pc.attempt desc limit 1) as reason
+    from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id join course_groups g on g.id = e.group_id
+      join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id left join terms t on t.id = i.term_id
+    where s.parent_id = $1 and i.amount_pence > 0
+      and (i.status = 'failed' or ($2::boolean and i.status = 'scheduled' and i.due_on < (now() at time zone 'Europe/London')::date - 3))
+    order by i.due_on, s.first_name, l.sort_order`, [parentId, collectsHere])).catch((e) => { console.error("latePayments", e); return []; });
+  const by = new Map<string, LateRow>();
+  for (const r of rows) {
+    const g = by.get(r.due) ?? { due: r.due, term: r.term, amount: 0, failed: false, retry: null, reason: null, lines: [] };
+    g.amount += r.amount; g.failed ||= r.failed; g.retry = g.retry ?? r.retry; g.reason = g.reason ?? r.reason;
+    g.lines.push({ who: r.who, what: r.what, amount: r.amount }); by.set(r.due, g);
+  }
+  return [...by.values()];
 }

@@ -7,21 +7,24 @@ import { withSchool } from "./db";
 // on) a daily email.
 export const TURNAROUND_DAYS = 7;
 export const REMIND_DAYS = 2;
+/** 27 Nov: work still to mark: not resolved by the teacher, and not from an earlier term (db/111). Alias c = classroom_coursework. */
+const LIVE_SQL = `c.resolved_at is null and not coursework_earlier_term(c.title, coalesce(c.due_at, c.created_at))`;
 
 export type MarkItem = { cw: string; title: string; link: string | null; gid: string; cls: string; teacherUserId: string | null; teacher: string | null; teacherEmail: string | null;
-  toMark: number; deadline: string; daysLeft: number; names: string[] };   // daysLeft: whole days, negative once past
+  toMark: number; late: number; deadline: string; daysLeft: number; names: string[] };   // daysLeft: whole days, negative once past
 
 /** Handed-in work waiting to be returned, one row per piece of work, soonest deadline first. Only this teacher's classes when given. */
 type Q = <T = Record<string, unknown>>(s: string, p?: unknown[]) => Promise<T[]>;
 export async function markingQueue(teacherUserId: string | null = null, qq?: Q): Promise<MarkItem[]> {
   const run = (q: Q) => q<Omit<MarkItem, "daysLeft">>(`select c.id as cw, c.title, c.link, g.id as gid, l.name || ' ' || coalesce(sj.short_name, sj.name) as cls,
       t.user_id as "teacherUserId", u.name as teacher, u.email::text as "teacherEmail",
-      count(*)::int as "toMark", min(coalesce(c.due_at, s.turned_in_at) + make_interval(days => $2))::text as deadline,
+      count(*)::int as "toMark", count(*) filter (where s.late)::int as late, min(coalesce(c.due_at, s.turned_in_at) + make_interval(days => $2))::text as deadline,
       array_agg(st.first_name || ' ' || st.last_name order by s.turned_in_at nulls last) as names
     from classroom_submissions s join classroom_coursework c on c.id = s.coursework_id join course_groups g on g.id = c.group_id
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join students st on st.id = s.student_id
       left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id
     where s.state = 'turned_in' and coalesce(c.due_at, s.turned_in_at) is not null and ($1::uuid is null or t.user_id = $1)
+      and ${LIVE_SQL}
       and exists (select 1 from enrolments e where e.group_id = g.id and e.student_id = s.student_id and e.status in ('active', 'pending'))
     group by c.id, c.title, c.link, g.id, l.name, coalesce(sj.short_name, sj.name), t.user_id, u.name, u.email
     order by min(coalesce(c.due_at, s.turned_in_at)), c.title`, [teacherUserId, TURNAROUND_DAYS]);
@@ -51,6 +54,7 @@ export async function markingSubmissions(teacherUserId: string): Promise<MarkSub
       join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join students st on st.id = s.student_id
       join teachers t on t.id = g.teacher_id
     where s.state = 'turned_in' and t.user_id = $1
+      and ${LIVE_SQL}
       and exists (select 1 from enrolments e where e.group_id = g.id and e.student_id = s.student_id and e.status in ('active', 'pending'))
     order by s.turned_in_at nulls last, st.last_name`, [teacherUserId])).catch(() => []);
 }
@@ -80,4 +84,27 @@ export async function markingCounts(cwIds: string[]): Promise<Map<string, { hand
       left join classroom_submissions s on s.coursework_id = c.id and s.student_id = e.student_id
     where c.id = any($1::uuid[]) group by c.id`, [cwIds])).catch(() => []);
   return new Map(rows.map((r) => [r.cw, { handed: r.handed, total: r.total }]));
+}
+
+/** 27 Nov (Alfonso): the Marking page's Archived list: handed-in work still not marked that is from an earlier term, or
+ *  that the teacher resolved (chose not to mark). */
+export type ArchItem = { cw: string; title: string; cls: string; toMark: number; due: string | null; resolvedAt: string | null; note: string | null };
+export async function markingArchive(teacherUserId: string): Promise<ArchItem[]> {
+  return withSchool((q) => q<ArchItem>(`select c.id as cw, c.title, l.name || ' ' || coalesce(sj.short_name, sj.name) as cls,
+      count(s.id) filter (where s.state = 'turned_in')::int as "toMark", c.due_at::text as due, c.resolved_at::text as "resolvedAt", c.resolved_note as note
+    from classroom_coursework c join course_groups g on g.id = c.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+      join teachers t on t.id = g.teacher_id left join classroom_submissions s on s.coursework_id = c.id
+    where t.user_id = $1 and (c.resolved_at is not null or coursework_earlier_term(c.title, coalesce(c.due_at, c.created_at)))
+    group by c.id, l.name, sj.short_name, sj.name
+    having c.resolved_at is not null or count(s.id) filter (where s.state = 'turned_in') > 0
+    order by coalesce(c.resolved_at, c.due_at) desc nulls last limit 200`, [teacherUserId])).catch(() => []);
+}
+/** Resolve a piece of work (won't be marked), or put it back on the list. Only the class's teacher (or an admin). */
+export async function resolveWork(userId: string, cwId: string, on: boolean, note: string | null): Promise<string | null> {
+  if (!/^[0-9a-f-]{36}$/.test(cwId)) return "That piece of work wasn’t found.";
+  const r = await withSchool((q) => q(`update classroom_coursework c set resolved_at = case when $3 then now() end, resolved_by = case when $3 then $2::uuid end,
+      resolved_note = case when $3 then nullif($4, '') end
+    where c.id = $1 and exists (select 1 from course_groups g join teachers t on t.id = g.teacher_id where g.id = c.group_id and t.user_id = $2
+      union all select 1 from users u where u.id = $2 and u.role = 'school_admin') returning c.id`, [cwId, userId, on, (note ?? "").trim().slice(0, 200)]));
+  return r.length ? null : "That piece of work isn’t in one of your classes.";
 }
