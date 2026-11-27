@@ -1648,3 +1648,6 @@
 .adm .side-home:hover{filter:brightness(1.1)}
 .adm .app.side-closed .side-home{visibility:visible}.adm .app.side-closed:has(.side-home) .main{padding-top:60px}
 @media (max-width:820px){.adm .side-home{display:none}}
+/* 27 Nov (Alfonso): the day and time never split across lines; more room under "Hello …" */
+.adm .fx-live .fx-when{white-space:nowrap}
+.adm .fx-hero-t .fx-nextk{margin-top:14px}
