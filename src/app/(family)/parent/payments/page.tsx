@@ -29,20 +29,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
   const termSum = (courses: { cells: ({ status: string; amount: number; refunded: number } | null)[] }[], i: number) => courses.reduce((a, c) => a + (counts(c.cells[i]) ? c.cells[i]!.amount - c.cells[i]!.refunded : 0), 0);
   const allCourses = d ? d.children.flatMap((c) => c.courses) : [];
   return <>
-    <Head title="Payments" sub={online ? "Each term’s payment for all your children’s courses is collected automatically, by Direct Debit" : "Each course is paid in one payment per term, taken from your saved card"}>
-      {live.length > 0 && <SwapCancel>{d.children.flatMap((st) => st.courses.filter((c) => X[c.id]).map((c) => { const x = X[c.id];
-        return <section key={c.id} className="sc-course"><h3><span className="dot" style={{ background: c.colour }} /> {st.first}: {c.level} {c.subject}</h3>
-          <div style={{ display: "grid", gap: 10, background: "var(--soft)", borderRadius: 10, padding: 12, marginTop: 8, maxWidth: "none" }}>
-                {x.sw.length > 0 && <form action={parentSwapAction} style={{ display: "grid", gap: 8 }}><input type="hidden" name="id" value={c.id} /><b>Swap to another class</b>
-                  <select name="to" className="mini">{x.sw.map((o) => <option key={o.id} value={o.id}>{o.name}{o.slots ? ` · ${o.slots}` : ""}</option>)}</select>
-                  <select name="start" className="mini"><option value="current">Move now: the new course’s lessons from the start of this term</option><option value="next">From next term (nothing to pay now)</option></select>
-                  <div><button className="abtn sm" type="submit">Swap</button></div></form>}
-                {x.pre && <form action={parentCancelAction} style={{ display: "grid", gap: 8, borderTop: x.sw.length ? "1px solid var(--line)" : 0, paddingTop: x.sw.length ? 10 : 0 }}><input type="hidden" name="id" value={c.id} />
-                  <b>Cancel {c.subject}</b><span>{x.pre.cooling ? <>You’re within the 14-day cooling-off period: everything is cancelled{x.pre.refund ? <> and {gbp(x.pre.refund)} is refunded</> : null}.</>
-                    : <>{x.pre.notice} term{x.pre.notice > 1 ? "s’" : "’s"} notice: lessons and payments continue{x.pre.lastTerm ? ` to the end of ${x.pre.lastTerm}` : ""} ({gbp(x.pre.stillDue)} still to pay){x.pre.notCharged ? <>, then nothing more ({gbp(x.pre.notCharged)} not charged)</> : null}.</>}</span>
-                  <div><button className="abtn sm danger" type="submit">{x.pre.cooling ? "Cancel and refund" : "Cancel with notice"}</button></div></form>}
-              </div></section>; }))}</SwapCancel>}
-    </Head>
+    <Head title="Payments" sub={online ? "Each term’s payment for all your children’s courses is collected automatically, by Direct Debit" : "Each course is paid in one payment per term, taken from your saved card"} />
     <Flash sp={sp} />
     {pm && <section className="card pm-how" id="how">
       <div><h3 style={{ margin: "0 0 4px", font: "600 18px Jost, sans-serif" }}>How you pay each term</h3>
@@ -95,6 +82,21 @@ export default async function Payments({ searchParams }: { searchParams: Promise
       </tbody></table></div>}
       <p className="cs" style={{ marginTop: 8 }}>Receipts open on Stripe, who handle our payments. No receipt link? Message us and we’ll send one.</p></section>
     <p className="note">Each course costs its lessons × its price per lesson, paid in equal termly payments. Swapping charges the new course for its lessons from the start of the term you move in, less what you’ve already paid for that term. Cancelling needs one full term’s notice for KS3 and Pre-GCSE courses and two full terms’ notice for GCSE courses, as agreed when you booked. Within 14 days of the first lesson, before the Classroom is used, you can cancel for a full refund.{online ? null : " To update your card, message us for now: card payments online are coming."}</p>
+    {/* 27 Nov (Alfonso): Swap or cancel at the bottom, under how swapping and cancelling work */}
+    <div className="sc-bottom">
+      {live.length > 0 && <SwapCancel>{d.children.flatMap((st) => st.courses.filter((c) => X[c.id]).map((c) => { const x = X[c.id];
+        return <section key={c.id} className="sc-course"><h3><span className="dot" style={{ background: c.colour }} /> {st.first}: {c.level} {c.subject}</h3>
+          <div style={{ display: "grid", gap: 10, background: "var(--soft)", borderRadius: 10, padding: 12, marginTop: 8, maxWidth: "none" }}>
+                {x.sw.length > 0 && <form action={parentSwapAction} style={{ display: "grid", gap: 8 }}><input type="hidden" name="id" value={c.id} /><b>Swap to another class</b>
+                  <select name="to" className="mini">{x.sw.map((o) => <option key={o.id} value={o.id}>{o.name}{o.slots ? ` · ${o.slots}` : ""}</option>)}</select>
+                  <select name="start" className="mini"><option value="current">Move now: the new course’s lessons from the start of this term</option><option value="next">From next term (nothing to pay now)</option></select>
+                  <div><button className="abtn sm" type="submit">Swap</button></div></form>}
+                {x.pre && <form action={parentCancelAction} style={{ display: "grid", gap: 8, borderTop: x.sw.length ? "1px solid var(--line)" : 0, paddingTop: x.sw.length ? 10 : 0 }}><input type="hidden" name="id" value={c.id} />
+                  <b>Cancel {c.subject}</b><span>{x.pre.cooling ? <>You’re within the 14-day cooling-off period: everything is cancelled{x.pre.refund ? <> and {gbp(x.pre.refund)} is refunded</> : null}.</>
+                    : <>{x.pre.notice} term{x.pre.notice > 1 ? "s’" : "’s"} notice: lessons and payments continue{x.pre.lastTerm ? ` to the end of ${x.pre.lastTerm}` : ""} ({gbp(x.pre.stillDue)} still to pay){x.pre.notCharged ? <>, then nothing more ({gbp(x.pre.notCharged)} not charged)</> : null}.</>}</span>
+                  <div><button className="abtn sm danger" type="submit">{x.pre.cooling ? "Cancel and refund" : "Cancel with notice"}</button></div></form>}
+              </div></section>; }))}</SwapCancel>}
+    </div>
   </>;
 }
 

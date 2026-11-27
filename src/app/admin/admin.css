@@ -1769,3 +1769,9 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm table.pay-tbl tr.pay-yr th.pay-yr-l{text-align:center;color:var(--ink);font-size:12.5px;letter-spacing:.06em;border-bottom:2px solid var(--line)}
 .adm .pay-yof{display:inline-block;padding:1px 8px;border-radius:999px;font-size:12px;font-weight:600;background:var(--info-bg);color:var(--info);vertical-align:1px;white-space:nowrap}
 .adm table.pay-tbl tr.pay-yr th{background:var(--soft)!important}
+/* 27 Nov: Messages: an envelope (by email) or a speech bubble (in the app) */
+.adm .ib-via{display:inline-block;width:14px;height:14px;line-height:0;vertical-align:-2px;margin-right:5px;color:var(--muted);overflow:hidden}.adm .ib-via svg{display:block;width:14px;height:14px}
+.adm .ib-via.via-email{color:#b0741a}.adm .ib-via.via-app{color:var(--info)}
+.adm .ib-b.me small .ib-via{color:inherit;opacity:.85}
+/* 27 Nov: Payments: Swap or cancel a course at the bottom */
+.adm .sc-bottom{margin:4px 0 20px}

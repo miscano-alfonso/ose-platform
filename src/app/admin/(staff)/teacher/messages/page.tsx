@@ -57,8 +57,9 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
   const head = (it: { initials: string; kind: string }, title: string, sub: string, tag: string, mu?: [InboxItem["kind"], string]) => <div className="ib-ch">
     <span className={`ib-av ${it.kind === "family" ? "fam" : "sch"}`} aria-hidden="true">{it.initials}</span>
     <div className="t"><h2>{title}</h2><span className="muted">{sub}</span></div>{mu && unreadBtn(mu[0], mu[1], "ib-mu-h", "Mark as unread")}<span className={`ib-tag ${it.kind === "family" ? "fam" : "sch"}`}>{tag}</span></div>;
-  const bubble = (key: string, mine: boolean, who: string, at: string, body: React.ReactNode, extra?: React.ReactNode, id?: string) =>
-    <div key={key} id={id} className={`ib-b ${mine ? "me" : "them"}`}><div className="ib-body">{body}</div>{extra}<small>{who} · {when(at)}</small></div>;
+  // 27 Nov (Alfonso): each message says whether it came by email or in the app (an envelope or a speech bubble)
+  const bubble = (key: string, mine: boolean, who: string, at: string, body: React.ReactNode, extra?: React.ReactNode, id?: string, via: "email" | "app" = "app") =>
+    <div key={key} id={id} className={`ib-b ${mine ? "me" : "them"}`}><div className="ib-body">{body}</div>{extra}<small><Via v={via} /> {who} · {via === "email" ? "by email" : "in the app"} · {when(at)}</small></div>;
   const itemFor = (kind: InboxItem["kind"], id: string) => items.find((i) => i.kind === kind && i.id === id);
 
   // ---------- the right-hand pane ----------
@@ -79,10 +80,10 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
   else if (school.length) { const last = school[school.length - 1], it = itemFor("school", sp.school!); pane = <>
     {head({ initials: it?.initials ?? "S", kind: "school" }, last.subject || "(no subject)", `${it?.who ?? office.label} · the school`, "School", school.some((e) => e.replied_at) ? ["school", sp.school!] : undefined)}
     <div className="ib-msgs">{school.map((e) => <div key={e.id} id={`e-${e.id}`} className="ib-pair">
-      {bubble(e.id + "a", true, `You${e.local ? "" : " · from your email"}`, e.at, e.body, (e.files.length > 0 || (e.links?.length ?? 0) > 0) && <div className="tm-att">
+      {bubble(e.id + "a", true, "You", e.at, e.body, (e.files.length > 0 || (e.links?.length ?? 0) > 0) && <div className="tm-att">
         {e.files.map((x) => <a key={x.id} className="abtn sm" href={`/admin/email-file/${x.id}`}>{x.name} · {kb(x.size)}</a>)}
-        {(e.links ?? []).map((l) => <a key={l} className="abtn sm" href={l} target="_blank" rel="noopener">{/drive\.google|docs\.google/.test(l) ? "Google Drive link" : l.replace(/^https:\/\//, "").slice(0, 40)}</a>)}</div>)}
-      {e.replied_at && bubble(e.id + "b", false, `${e.to_name ?? office.label}${e.reply_from ? ` (${e.reply_from})` : ""}`, e.replied_at, e.reply_body)}</div>)}</div>
+        {(e.links ?? []).map((l) => <a key={l} className="abtn sm" href={l} target="_blank" rel="noopener">{/drive\.google|docs\.google/.test(l) ? "Google Drive link" : l.replace(/^https:\/\//, "").slice(0, 40)}</a>)}</div>, undefined, e.local ? "app" : "email")}
+      {e.replied_at && bubble(e.id + "b", false, `${e.to_name ?? office.label}${e.reply_from ? ` (${e.reply_from})` : ""}`, e.replied_at, e.reply_body, undefined, undefined, "email")}</div>)}</div>
     <form action={teacherEmailAction} encType="multipart/form-data" className="ib-reply wide"><input type="hidden" name="thread" value={last.thread_id} />
       <input type="hidden" name="subject" value={/^re:/i.test(last.subject) ? last.subject : `Re: ${last.subject}`} />
       <textarea name="body" required rows={3} maxLength={20000} placeholder="Write a reply…" aria-label="Reply" />
@@ -125,7 +126,7 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
           : <nav className="ib-items" aria-label="Conversations">{list.map((it) => { const k = `${it.kind}:${it.id}`;
             return <div key={k} className="ib-row"><Link href={href(it, f)} className={`ib-it${it.unread ? " unread" : " read"}${sel === k ? " sel" : ""}`} aria-current={sel === k ? "true" : undefined}>
               <span className={`ib-av ${it.kind === "family" ? "fam" : "sch"}`} aria-hidden="true">{it.initials}</span>
-              <span className="t"><span className="n"><b>{it.who}</b><span className="d">{stamp(it.at)}</span></span>
+              <span className="t"><span className="n"><b>{it.who}</b><span className="d"><Via v={it.via} />{stamp(it.at)}</span></span>
                 <span className="s">{it.subject}</span><span className="p">{it.preview}</span>
                 <span className="m"><span className={`ib-tag ${it.kind === "family" ? "fam" : "sch"}`}>{it.kind === "family" ? "Family" : "School"}</span>{it.sub && it.kind === "family" && <span className="muted">{it.sub}</span>}
                   {it.waiting && <span className="pill warn">Waiting for your reply</span>}{it.closed && <span className="pill mute">Closed</span>}</span></span>
@@ -135,4 +136,11 @@ export default async function TeacherMessages({ searchParams }: { searchParams: 
       <section className="ib-conv" aria-label="Conversation">{chosen && back}{pane}</section>
     </div>
   </>;
+}
+
+/** 27 Nov (Alfonso): an envelope (came by email) or a speech bubble (sent in the app). */
+function Via({ v }: { v: "email" | "app" }) {
+  return <span className={`ib-via via-${v}`} title={v === "email" ? "By email" : "In the app"} aria-label={v === "email" ? "By email" : "In the app"}>
+    {v === "email" ? <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M3 5h14v10H3z M3 5.5l7 5.5 7-5.5" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /></svg>
+      : <svg viewBox="0 0 20 20" width="14" height="14" aria-hidden="true"><path d="M4 4h12a1.5 1.5 0 0 1 1.5 1.5v7A1.5 1.5 0 0 1 16 14H9l-4 3v-3H4a1.5 1.5 0 0 1-1.5-1.5v-7A1.5 1.5 0 0 1 4 4z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /></svg>}</span>;
 }

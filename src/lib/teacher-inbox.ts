@@ -7,7 +7,7 @@ import { teacherEmails, type TeacherEmail } from "./teacher-area";
 // school, and conversations with families), newest first, each with how many messages are unread.
 export type InboxKind = "office" | "school" | "family";
 export type InboxItem = { kind: InboxKind; id: string; subject: string; who: string; sub: string | null; initials: string; at: string; preview: string;
-  mine: boolean; unread: number; waiting: boolean; closed: boolean };
+  mine: boolean; unread: number; waiting: boolean; closed: boolean; via: "email" | "app" };   // 27 Nov: how the latest message came
 const SEEN_FROM = "2026-11-26T12:00:00Z";   // replies before the inbox started count as read
 const ini = (s: string) => s.replace(/[^A-Za-z\s-]/g, "").split(/[\s-]+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
 /** Postgres text timestamps ("2026-11-26 12:39:55.6+00") and ISO ones, as milliseconds. */
@@ -41,7 +41,7 @@ export async function teacherInbox(userId: string, officeLabel: string, contacts
   for (const t of office) {
     const who = cap(t.office_name || officeLabel);
     items.push({ kind: "office", id: t.id, subject: t.subject, who, sub: "The office", initials: ini(who), at: t.last_at, preview: (t.last_sender === "teacher" ? "You: " : "") + cut(t.last_body),
-      mine: t.last_sender === "teacher", unread: t.unread_n ?? (t.unread ? 1 : 0), waiting: false, closed: t.status === "closed" });
+      mine: t.last_sender === "teacher", unread: t.unread_n ?? (t.unread ? 1 : 0), waiting: false, closed: t.status === "closed", via: "app" });
   }
   // emails to the school: one conversation per thread (each row is the teacher's email, with the school's reply on it)
   const threads = new Map<string, TeacherEmail[]>();
@@ -53,10 +53,11 @@ export async function teacherInbox(userId: string, officeLabel: string, contacts
     const name = rows.find((e) => e.to_name)?.to_name ?? null;
     const label = cap(name && contacts.some((c) => c.name === name) ? name : name ?? officeLabel);
     items.push({ kind: "school", id: tid, subject: last.subject || "(no subject)", who: label, sub: "The school", initials: ini(label), at: lastAt,
-      preview: last.replied_at ? cut(last.reply_body) : "You: " + cut(last.body), mine: !last.replied_at, unread, waiting: false, closed: false });
+      preview: last.replied_at ? cut(last.reply_body) : "You: " + cut(last.body), mine: !last.replied_at, unread, waiting: false, closed: false,
+      via: last.replied_at || !last.local ? "email" : "app" });
   }
   for (const t of family) items.push({ kind: "family", id: t.id, subject: t.subject, who: t.parent, sub: `about ${t.student}`, initials: ini(t.parent), at: t.at,
-    preview: (t.last_sender === "parent" ? "" : "You: ") + cut(t.last_body), mine: t.last_sender !== "parent", unread: t.unread, waiting: t.last_sender === "parent" && t.status === "open", closed: t.status === "closed" });
+    preview: (t.last_sender === "parent" ? "" : "You: ") + cut(t.last_body), mine: t.last_sender !== "parent", unread: t.unread, waiting: t.last_sender === "parent" && t.status === "open", closed: t.status === "closed", via: "app" });
   items.sort((a, b) => b.at.localeCompare(a.at));
   return { items, mails };
 }
