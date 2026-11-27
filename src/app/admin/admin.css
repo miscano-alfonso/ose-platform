@@ -1981,3 +1981,7 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 .adm .rs-loc label{display:flex;align-items:center;gap:10px;font-weight:600;font-size:15px}
 .adm .rs-loc select{width:auto;min-width:220px}
 .adm .rs-loc select{padding:7px 12px;border-radius:999px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font:inherit;font-weight:500}
+/* 27 Nov: payments tables share fixed column widths so the All children totals line up with each child's terms */
+.adm table.pay-tbl{table-layout:fixed;width:100%;min-width:820px}
+.adm table.pay-tbl th:first-child,.adm table.pay-tbl td:first-child{max-width:none}
+.adm table.pay-tbl td.n,.adm table.pay-tbl th{overflow:hidden;text-overflow:ellipsis}

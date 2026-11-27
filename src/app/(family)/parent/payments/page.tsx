@@ -59,7 +59,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
     {d.children.map((st, si) => <section key={st.id} style={{ marginBottom: 16 }}><div className="pay-kid"><h3 style={{ margin: 0, font: "600 18px Jost, sans-serif" }}>{st.first}</h3>
       {/* 27 Nov (Alfonso): a key instead of a word in every cell; each payment's date sits in a colour-coded tab */}
       {si === 0 && <div className="pc-key" aria-label="Key"><span className="pc-tab paid">Paid</span><span className="pc-tab due">Due</span><span className="pc-tab late">Late</span></div>}</div>
-      <div className="tw" style={{ marginBottom: 0 }}><table className="pay-tbl"><thead>
+      <div className="tw" style={{ marginBottom: 0 }}><table className="pay-tbl">{payCols(d.terms.length)}<thead>
         {/* 27 Nov (Alfonso): the school year over the term numbers (it moves on with the year, listing that year's courses) */}
         <tr className="pay-yr"><th></th><th></th><th colSpan={d.terms.length} className="pay-yr-l">{d.yearLabel ?? "This school year"}</th></tr>
         <tr><th>Course</th><th className="n">Totals</th>{d.terms.map((t) => <th key={t.id} className="n">T{t.number}</th>)}</tr></thead><tbody>
@@ -77,7 +77,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
       {st.courses.length > 1 && <tfoot><tr className="pay-tot"><td><b>Totals</b></td><td className="n"><b>{gbp(st.courses.reduce((a, c) => a + courseTotal(c), 0))}</b></td>
         {d.terms.map((t, i) => { const v = termSum(st.courses, i); return <td key={t.id} className="n">{v ? <b>{gbp(v)}</b> : <span className="muted">—</span>}</td>; })}</tr></tfoot>}
       </table></div></section>)}
-    {d.children.filter((c) => c.courses.length).length > 1 && <div className="tw"><table><tbody><tr className="pay-tot"><td><b>All children: totals</b></td><td className="n"><b>{gbp(allCourses.reduce((a, c) => a + courseTotal(c), 0))}</b></td>
+    {d.children.filter((c) => c.courses.length).length > 1 && <div className="tw"><table className="pay-tbl pay-all">{payCols(d.terms.length)}<tbody><tr className="pay-tot"><td><b>All children: totals</b></td><td className="n"><b>{gbp(allCourses.reduce((a, c) => a + courseTotal(c), 0))}</b></td>
       {d.terms.map((t, i) => { const v = termSum(allCourses, i); return <td key={t.id} className="n">{v ? <b>{gbp(v)}</b> : <span className="muted">—</span>}</td>; })}</tr></tbody></table></div>}
     <section className="card pay-hist" id="history"><div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Payment history</h2><span className="grow" style={{ flex: 1 }} /><PrintButton /></div>
       {hist.length === 0 ? <p className="empty">No payments yet.</p> : <div className="tw"><table><thead><tr><th>Date paid</th><th>Payment</th><th className="n">Amount</th><th>Receipt</th></tr></thead><tbody>
@@ -117,4 +117,10 @@ function PayCell({ cell, late }: { cell: { status: string; amount: number; due_o
     : cell.status === "refunded" || cell.status === "part_refunded" ? <a href="#history" className="pc-tab info">{cell.status === "refunded" ? "Refunded" : "Part refund"}</a>
     : <span className="pc-tab none">{cell.status === "waived" ? "Waived" : "Not charged"}</span>;
   return <div className="pc"><span>{gbp(cell.amount)}</span>{tab}</div>;
+}
+
+/** 27 Nov (Alfonso: "can all children totals line up accurately with the term totals"): every payments table has the same
+ *  column widths (course, totals, then the terms sharing the rest), so the All children row lines up with each child's. */
+function payCols(terms: number) {
+  return <colgroup><col style={{ width: "30%" }} /><col style={{ width: "13%" }} />{Array.from({ length: terms }, (_, i) => <col key={i} style={{ width: `${57 / Math.max(1, terms)}%` }} />)}</colgroup>;
 }
