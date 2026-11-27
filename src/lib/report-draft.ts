@@ -46,11 +46,12 @@ async function context(actor: { id: string; role: string }, entryId: string): Pr
     // the teacher's own words, newest first: report comments for other students, messages to parents, class-chat posts
     const style = e.teacher_id ? (await q<{ t: string }>(`
       (select x.comment as t, coalesce(x.submitted_at, now() - interval '1 year') as at from report_entries x join course_groups g2 on g2.id = x.group_id
-         where (x.teacher_id = $1 or (x.teacher_id is null and g2.teacher_id = $1)) and x.student_id <> $2 and coalesce(x.comment, '') <> '' order by 2 desc limit 6)
+         where (x.teacher_id = $1 or (x.teacher_id is null and g2.teacher_id = $1)) and x.student_id <> $2 and coalesce(x.comment, '') <> ''
+         order by (g2.subject_id = (select g3.subject_id from course_groups g3 where g3.id = $3)) desc, 2 desc limit 6)
       union all (select m.body, m.created_at from messages m join message_threads th on th.id = m.thread_id
          where th.teacher_id = $1 and m.sender = 'teacher' and char_length(m.body) > 60 order by m.created_at desc limit 4)
       union all (select cm.body, cm.created_at from student_chat_messages cm where cm.sender_teacher_id = $1 and char_length(cm.body) > 40 order by cm.created_at desc limit 4)
-      order by 2 desc limit 10`, [e.teacher_id, e.student_id]).catch(() => [])).map((r) => r.t.slice(0, 500)) : [];
+      order by 2 desc limit 10`, [e.teacher_id, e.student_id, e.group_id]).catch(() => [])).map((r) => r.t.slice(0, 500)) : [];   // 27 Nov: this subject's comments first
     return { ...e, previous, work, rewards, style };
   });
 }
@@ -64,6 +65,8 @@ Write ONE comment for the student, as the teacher, in British English: warm, spe
 - Only use facts given to you. Never invent marks, events, quotes or diagnoses. Don't mention SEND, attendance percentages or reward point totals by number.
 - Use the student's first name, and the pronouns given with the student (he/him/his, she/her or they/their). If none are given, use they/their.
 - Write in the teacher's own voice: when examples of their writing are given, match their tone, warmth, sentence length and the way they phrase praise and targets (without copying sentences).
+- Make it clearly about this subject: use the subject's own skills and vocabulary (e.g. analysing quotations in English, method and working in Maths, evaluating sources in History). Earlier reports from other subjects are background only: never reuse their wording, structure or targets.
+- Avoid stock report phrases ("has worked hard this term", "is a pleasure to teach", "keep up the good work") unless the teacher's examples use them, and vary how the comment opens.
 Reply with the comment only.`;
 
 /** A first draft of the comment for one report entry. `scores` are what the teacher has picked on the page right now. */
@@ -89,7 +92,11 @@ export async function draftComment(actor: { id: string; role: string }, entryId:
     c.work.length ? `Classroom work this term:\n${c.work.map((w) => `- "${w.title}"${w.due ? `, due ${w.due}` : ""}: ${w.state === "returned" ? `marked${pct(w)}` : w.state === "turned_in" ? "handed in, not marked yet" : w.missing ? "not handed in" : "not due yet"}${w.late ? ", handed in late" : ""}${w.rubric ? `; rubric: ${JSON.stringify(w.rubric).slice(0, 400)}` : ""}`).join("\n")}` : "No Classroom work recorded this term.",
     c.rewards.length ? `Reward points from the teacher, with reasons:\n${c.rewards.map((r) => `- ${r.on}: +${r.points} for "${r.reason}"`).join("\n")}` : "",
     chat.length ? `Things ${c.first} wrote in the lesson chat (Google Meet) recently, as evidence of how they take part:\n${chat.map((l) => `- ${l.day}: "${l.text}"`).join("\n")}` : "",
-    c.previous.length ? `Earlier reports:\n${c.previous.map((p) => `- ${p.cycle}, ${p.klass}${p.effort ? `, effort ${p.effort}` : ""}${p.working ? `, working grade ${p.working}` : ""}${p.predicted ? `, predicted ${p.predicted}` : ""}: "${p.comment.slice(0, 900)}"`).join("\n")}` : "No earlier reports.",
+    // 27 Nov (Alfonso: "the comments should not all sound the same for each subject"): this class's earlier reports to build on, others as background
+    (() => { const line = (p: Ctx["previous"][number]) => `- ${p.cycle}, ${p.klass}${p.effort ? `, effort ${p.effort}` : ""}${p.working ? `, working grade ${p.working}` : ""}${p.predicted ? `, predicted ${p.predicted}` : ""}: "${p.comment.slice(0, 900)}"`;
+      const same = c.previous.filter((p) => p.klass === c.klass), other = c.previous.filter((p) => p.klass !== c.klass);
+      return [same.length ? `Earlier reports for this class (build on these):\n${same.map(line).join("\n")}` : "No earlier report for this class.",
+        other.length ? `Earlier reports from other subjects (background only: don't reuse their wording or targets):\n${other.map(line).join("\n")}` : ""].filter(Boolean).join("\n\n"); })(),
     c.style.length ? `Examples of how ${c.teacher || "this teacher"} writes (match this voice; don't copy sentences or details about other students):\n${c.style.map((t) => `- "${t.replace(/\s+/g, " ")}"`).join("\n")}` : "",
   ].filter(Boolean).join("\n\n");
   try {

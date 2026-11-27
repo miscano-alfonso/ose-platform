@@ -30,18 +30,18 @@ export default async function AdminMarking({ searchParams }: { searchParams: Pro
       <div className="sub">Every teacher’s work still to mark · teachers mark and return it in Google Classroom within {TURNAROUND_DAYS} days of its due date</div></div></div>
 
     <div className="dx-mini am-tiles">
-      <a href="#teachers"><b>{toMark}</b><span>hand-ins to mark, in {queue.length} piece{queue.length === 1 ? "" : "s"} of work</span></a>
-      <a href="#teachers" className={overdue ? "bad" : undefined}><b>{overdue}</b><span>piece{overdue === 1 ? "" : "s"} overdue</span></a>
-      <a href="#teachers" className={soon ? "warn" : undefined}><b>{soon}</b><span>due in the next {REMIND_DAYS} days</span></a>
-      <a href="#teachers"><b>{pct(onTime, marked)}</b><span>marked on time in the last 30 days ({marked} hand-ins)</span></a>
+      <a href="#teachers"><b>{toMark}</b><span>students’ hand-ins waiting to be marked, from {queue.length} piece{queue.length === 1 ? "" : "s"} of work</span></a>
+      <a href="#teachers" className={overdue ? "bad" : undefined}><b>{overdue}</b><span>piece{overdue === 1 ? "" : "s"} of work past the 7-day marking deadline</span></a>
+      <a href="#teachers" className={soon ? "warn" : undefined}><b>{soon}</b><span>piece{soon === 1 ? "" : "s"} due to be marked in the next {REMIND_DAYS} days</span></a>
+      <a href="#teachers"><b>{pct(onTime, marked)}</b><span>of the {marked} hand-ins marked in the last 30 days were marked within 7 days</span></a>
     </div>
 
     <section className="card" id="teachers"><h2>By teacher</h2>
       {teachers.length === 0 ? <p className="empty">No teachers with classes yet.</p> :
-      <div className="tw"><table className="am-table"><thead><tr><th>Teacher</th><th>To mark</th><th>Overdue</th><th>Due soon</th><th>Late hand-ins</th><th title="Hand-ins returned in Classroom in the last 30 days">Marked, 30 days</th><th title="Of those, returned within the turnaround">On time</th><th title="Pieces the teacher chose not to mark, in the last 60 days">Not marking</th></tr></thead>
+      <div className="tw"><table className="am-table"><thead><tr><th>Teacher</th><th title="Students’ hand-ins waiting, and how many pieces of work they’re from">To mark</th><th title="Pieces of work past the 7-day marking deadline">Overdue to mark</th><th title="Pieces of work due to be marked in the next 2 days">Due soon</th><th title="Hand-ins the students handed in after the due date">Handed in late</th><th title="Hand-ins returned in Classroom in the last 30 days">Marked, 30 days</th><th title="Of those, returned within the turnaround">On time</th><th title="Pieces the teacher chose not to mark, in the last 60 days">Not marking</th></tr></thead>
         <tbody>{teachers.map((t) => <tr key={t.userId || "none"} className={t.overdue ? "am-bad" : undefined}>
           <td><Link href={`/admin/marking?t=${t.userId}#work`}><b>{t.name}</b></Link></td>
-          <td>{t.toMark ? <>{t.toMark} <span className="muted">in {t.pieces}</span></> : <span className="pill good">All marked</span>}</td>
+          <td>{t.toMark ? <>{t.toMark} <span className="muted">from {t.pieces} piece{t.pieces === 1 ? "" : "s"}</span></> : <span className="pill good">All marked</span>}</td>
           <td>{t.overdue ? <span className="pill bad">{t.overdue}{t.worst != null && t.worst < 0 ? ` · oldest ${-t.worst} day${t.worst === -1 ? "" : "s"}` : ""}</span> : <span className="muted">0</span>}</td>
           <td>{t.soon ? <span className="pill warn">{t.soon}</span> : <span className="muted">0</span>}</td>
           <td>{t.late || <span className="muted">0</span>}</td>
@@ -56,7 +56,7 @@ export default async function AdminMarking({ searchParams }: { searchParams: Pro
           <summary><b>{t.name}</b><span className="muted">{t.toMark} to mark in {t.pieces} piece{t.pieces === 1 ? "" : "s"}</span>
             {t.overdue > 0 && <span className="pill bad">{t.overdue} overdue</span>}{t.soon > 0 && <span className="pill warn">{t.soon} due soon</span>}</summary>
           <ul className="am-list">{t.items.map((m) => <Row key={m.cw} m={m} />)}</ul></details>)}
-      <p className="muted" style={{ fontSize: 14, margin: "12px 0 0" }}>From the last Classroom read. Work counts as marked once the teacher returns it in Classroom; work from an earlier term that’s still not marked is archived and left off.</p>
+      <p className="muted" style={{ fontSize: 14, margin: "12px 0 0" }}>A <b>hand-in</b> is one student’s work; a <b>piece of work</b> is the assignment set to the class. Each piece should be marked within 7 days of its due date. From the last Classroom read. Work counts as marked once the teacher returns it in Classroom; work from an earlier term that’s still not marked is archived and left off.</p>
     </section>
 
     {resolved.length > 0 && <section className="card"><h2>Not being marked <span className="muted" style={{ fontWeight: 400, fontSize: 15 }}>· last 60 days</span></h2>

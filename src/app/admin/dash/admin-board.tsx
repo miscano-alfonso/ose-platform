@@ -198,14 +198,14 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
       <header><h2>Marking</h2>{mkOver > 0 && <span className="dx-count" title="Pieces of work past the 7-day turnaround">{mkOver}</span>}<span className="dx-sub">7-day turnaround</span><Link className="dx-more" href="/admin/marking">All marking →</Link></header>
       {!mk ? <p className="empty">Couldn’t load the marking.</p> : <>
         <div className="dx-mini">
-          <Link href="/admin/marking"><b>{mkQ.reduce((a, x) => a + x.toMark, 0)}</b><span>hand-ins to mark</span></Link>
-          <Link href="/admin/marking" className={mkOver ? "bad" : undefined}><b>{mkOver}</b><span>piece{mkOver === 1 ? "" : "s"} overdue</span></Link>
-          <Link href="/admin/marking"><b>{mkMarked ? `${Math.round((mkOnTime / mkMarked) * 100)}%` : "–"}</b><span>marked on time, 30 days</span></Link>
+          <Link href="/admin/marking"><b>{mkQ.reduce((a, x) => a + x.toMark, 0)}</b><span>students’ hand-ins waiting to be marked</span></Link>
+          <Link href="/admin/marking" className={mkOver ? "bad" : undefined}><b>{mkOver}</b><span>piece{mkOver === 1 ? "" : "s"} of work past the 7-day marking deadline</span></Link>
+          <Link href="/admin/marking"><b>{mkMarked ? `${Math.round((mkOnTime / mkMarked) * 100)}%` : "–"}</b><span>of hand-ins marked within 7 days (last 30 days)</span></Link>
         </div>
         {mk.teachers.every((x) => !x.items.length) ? <div className="dx-clear"><Ico d={I.check} /><b>All marked</b><span>No handed-in work is waiting for a teacher.</span></div>
           : <MoreList className="dx-list" limit={4}>{mk.teachers.filter((x) => x.items.length).map((x) => { const next = x.items[0];
             return <Link key={x.userId || "none"} className={`dx-item ${x.overdue ? "bad" : x.soon ? "warn" : "info"}`} href={`/admin/marking?t=${x.userId}#work`}>
-              <span className="t"><b>{x.name}</b><span>{x.toMark} to mark in {x.pieces} piece{x.pieces === 1 ? "" : "s"}{x.overdue ? ` · ${x.overdue} overdue` : x.soon ? ` · ${x.soon} due soon` : ""}{x.late ? ` · ${x.late} late` : ""}</span>
+              <span className="t"><b>{x.name}</b><span>{x.toMark} hand-in{x.toMark === 1 ? "" : "s"} to mark, from {x.pieces} piece{x.pieces === 1 ? "" : "s"} of work{x.overdue ? ` · ${x.overdue} overdue to mark` : x.soon ? ` · ${x.soon} due to mark soon` : ""}</span>
                 {next && <span style={{ fontSize: 13 }}>{next.daysLeft < 0 ? "Oldest" : "Next"}: {next.title} · {next.cls} · {next.daysLeft < 0 ? `${-next.daysLeft} day${next.daysLeft === -1 ? "" : "s"} overdue` : next.daysLeft === 0 ? "due today" : `${next.daysLeft} day${next.daysLeft === 1 ? "" : "s"} left`}</span>}</span>
               <span className="go" aria-hidden="true">→</span></Link>; })}</MoreList>}
       </>}
