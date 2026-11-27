@@ -140,7 +140,8 @@ export async function syncInbox(): Promise<InboxInfo> {
     } catch (e) { errors.push(`${box.mailbox}: couldn’t read which emails are read (${e instanceof Error ? e.message : "?"})`); }
     const everyone = (await googleKv<boolean>("inbox_everyone").catch(() => null)) !== false;   // on unless switched off
     await withSchool(async (q) => {
-      const have = new Set((await q<{ g: string }>(`select gmail_id as g from inbox_messages where gmail_id = any($1::text[])`, [ids.map((x) => x.id)])).map((x) => x.g));
+      const have = new Set((await q<{ g: string }>(`select gmail_id as g from inbox_messages where gmail_id = any($1::text[])
+        union all select gmail_id from inbox_threaded where gmail_id = any($1::text[])`, [ids.map((x) => x.id)])).map((x) => x.g));   // 27 Nov: or filed into a conversation
       for (const { id } of ids) {
         if (have.has(id) || seen.has(id)) continue;
         const r = await fetch(`${GMAIL_URL()}/users/me/messages/${id}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Cc&metadataHeaders=Subject&metadataHeaders=Message-ID`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) });
@@ -151,6 +152,9 @@ export async function syncInbox(): Promise<InboxInfo> {
         const from = fromOf(h.from ?? ""), msgId = (h["message-id"] ?? "").trim().slice(0, 300) || null;
         seen.add(id);
         if (!/@/.test(from.email)) continue;
+        // 27 Nov: a reply to an email about a message (sent to ose+o<id>@ / ose+f<id>@) goes into that conversation
+        const tag = to.map((a) => /^[^@+\s]+\+([of])([0-9a-f]{32})@/.exec(a)).find(Boolean);
+        if (tag && await fileReply(token, id, tag[1] as "o" | "f", tag[2].replace(/^(.{8})(.{4})(.{4})(.{4})(.{12})$/, "$1-$2-$3-$4-$5"), from.email).catch((e) => { console.error("email reply", e); return false; })) continue;
         // the same email sent to two of the school's inboxes shows once
         if (msgId && (await q(`select 1 from inbox_messages where message_id = $1 limit 1`, [msgId])).length) continue;
         // who is it? a family first, then someone who enquired, is waiting, or booked a taster
@@ -180,6 +184,60 @@ export async function syncInbox(): Promise<InboxInfo> {
   const info: InboxInfo = { at: new Date().toISOString(), added, last: ok ? new Date().toISOString() : prev.last, ...(errors.length ? { error: errors.join("; ") } : {}) };
   await googleKvSet("inbox", info);
   return info;
+}
+/** 27 Nov: the reply address for one conversation: the school inbox's own address with a tag (ose+o<id>@ohsoed.co.uk for a
+ *  conversation with the office, ose+f<id>@ for parents ↔ teachers). Gmail delivers it to the school inbox as usual. Null
+ *  when no inbox is connected (replies then go to the usual address, and on to Admin → Email). */
+export async function replyAddresser(): Promise<((kind: "o" | "f", threadId: string) => string) | null> {
+  const box = (await googleKv<Mailbox>("gmail").catch(() => null))?.mailbox;
+  const m = box ? /^([^@+\s]+)@([^@\s]+)$/.exec(box) : null;
+  if (!m) return null;
+  return (kind, id) => `${m[1]}+${kind}${id.replace(/-/g, "").toLowerCase()}@${m[2]}`;
+}
+/** 27 Nov: an email reply to a conversation's own address: added to that conversation as its writer (the parent, student,
+ *  teacher or an admin, checked by the address it came from), with the earlier emails quoted under it left off. False when
+ *  it can't be (not someone in that conversation, closed, empty): it then shows in Admin → Email as usual. */
+async function fileReply(token: string, gmailId: string, kind: "o" | "f", threadId: string, fromEmail: string): Promise<boolean> {
+  const r = await fetch(`${GMAIL_URL()}/users/me/messages/${gmailId}?format=full`, { headers: { authorization: `Bearer ${token}` }, signal: AbortSignal.timeout(20000) });
+  if (!r.ok) return false;
+  const j = (await r.json()) as { payload?: Part };
+  const body = stripQuoted(textOf(j.payload).replace(/\r\n/g, "\n")).replace(/\n*———[\s\S]*$/, "").trim().slice(0, 4500);
+  if (!body) return false;
+  const from = fromEmail.toLowerCase();
+  const who = await withSchool(async (q) => {
+    if (kind === "o") {
+      const [t] = await q<{ to_kind: string; parent_id: string | null; student_id: string | null; teacher_user: string | null; ok: boolean }>(`select th.to_kind, th.parent_id, th.student_id, t.user_id as teacher_user,
+          (th.to_kind = 'parent' and (exists (select 1 from parents p where p.id = th.parent_id and lower(p.email::text) = $2) or exists (select 1 from guardians g where g.parent_id = th.parent_id and lower(g.email::text) = $2)))
+          or (th.to_kind = 'student' and exists (select 1 from students s where s.id = th.student_id and lower(s.email::text) = $2))
+          or (th.to_kind = 'teacher' and lower(u.email::text) = $2) as ok
+        from office_threads th left join teachers t on t.id = th.teacher_id left join users u on u.id = t.user_id where th.id = $1`, [threadId, from]);
+      if (!t) return null;
+      if (t.ok) return { as: t.to_kind as "parent" | "student" | "teacher", id: (t.to_kind === "parent" ? t.parent_id : t.to_kind === "student" ? t.student_id : t.teacher_user)! };
+    } else {
+      const [t] = await q<{ parent_id: string; teacher_user: string; parent_ok: boolean; teacher_ok: boolean }>(`select th.parent_id, t.user_id as teacher_user,
+          exists (select 1 from parents p where p.id = th.parent_id and lower(p.email::text) = $2) or exists (select 1 from guardians g where g.parent_id = th.parent_id and lower(g.email::text) = $2) as parent_ok,
+          lower(u.email::text) = $2 as teacher_ok
+        from message_threads th join teachers t on t.id = th.teacher_id join users u on u.id = t.user_id where th.id = $1`, [threadId, from]);
+      if (!t) return null;
+      if (t.parent_ok) return { as: "parent" as const, id: t.parent_id };
+      if (t.teacher_ok) return { as: "teacher" as const, id: t.teacher_user };
+    }
+    const [a] = await q<{ id: string }>(`select id from users where role = 'school_admin' and disabled_at is null and lower(email::text) = $1`, [from]);   // an admin answering from their email
+    return a ? { as: "admin" as const, id: a.id } : null;
+  });
+  if (!who) return false;
+  let err: string | null | undefined;
+  if (kind === "o") {
+    const om = await import("./office-messages");
+    if (who.as === "admin") { const base = (process.env.SITE_URL || (await siteBase().catch(() => "")) || "").replace(/\/$/, ""); err = (await om.officeReply(who.id, threadId, body, false, base)).error; }
+    else err = await om.myOfficeReply(who.as, who.id, threadId, body);
+  } else if (who.as === "parent") err = await (await import("./family")).parentReply(who.id, threadId, body);
+  else if (who.as === "teacher" || who.as === "admin") err = await (await import("./community")).replyThread({ id: who.id, role: who.as === "admin" ? "school_admin" : "teacher" }, threadId, body, who.as === "admin");
+  else return false;
+  if (err) return false;
+  await withSchool((q) => q(`insert into inbox_threaded (school_id, gmail_id, kind, thread_id, from_email) values (current_school(), $1, $2, $3, $4) on conflict do nothing`,
+    [gmailId, kind === "o" ? "office" : "family", threadId, from]));
+  return true;
 }
 /** 27 Nov: the school's sent emails that go to a teacher, or answer an email from a teacher (same Gmail thread). Skips the
  *  replies sent from the admin's Reply (those are kept on the teacher's email already). */

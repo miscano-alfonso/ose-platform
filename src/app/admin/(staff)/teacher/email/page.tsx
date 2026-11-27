@@ -1,8 +1,10 @@
-import { TeacherMail, type MailParams } from "./TeacherMail";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
-// 27 Nov (Alfonso: "why are the teacher email feature not working like the admin's one?"): the teacher's emails with the
-// school, as a mail reader like Admin → Email (see ./TeacherMail.tsx). Messages has the conversations in the app.
-export default function TeacherEmail({ searchParams }: { searchParams: Promise<MailParams> }) {
-  return <TeacherMail searchParams={searchParams} />;
+// 27 Nov (Alfonso: Email and Messages are confusing for teachers; one place): the teacher's emails with the school are back
+// in Messages (with an envelope on each one that came by email). Old links (?school=…, ?to=…) open the same thing there.
+export default async function TeacherEmail({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const sp = await searchParams;
+  const keep = new URLSearchParams(Object.entries(sp).filter(([k, v]) => typeof v === "string" && ["school", "to", "new", "ok", "err"].includes(k)) as [string, string][]).toString();
+  redirect(`/admin/teacher/messages${keep ? `?${keep}` : ""}`);
 }

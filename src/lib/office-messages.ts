@@ -117,7 +117,10 @@ export async function sendOfficeMessage(actorId: string, d: { aud: Audience; tar
     // one email per kind of person (the link differs); a single person gets a link straight to their conversation
     for (const kind of ["parent", "student", "teacher"] as ToKind[]) {
       const list = withEmail.filter((r) => r.kind === kind); if (!list.length) continue;
-      const r = await sendBatch(subject, body + footer(d.base, kind, list.length === 1 && ids.length === 1 ? list[0].id : null), list.map((x): Recipient => ({ name: x.name, email: x.email! })), false);
+      const addr = await import("./inbox").then((m) => m.replyAddresser()).catch(() => null);   // 27 Nov: each person's reply goes into their own conversation
+      const threadOf = new Map(list.map((x) => [x.email!.toLowerCase(), x.id]));
+      const r = await sendBatch(subject, body + footer(d.base, kind, list.length === 1 && ids.length === 1 ? list[0].id : null), list.map((x): Recipient => ({ name: x.name, email: x.email! })), false,
+        { replyTo: (x) => { const t = threadOf.get(x.email.toLowerCase()); return addr && t ? addr("o", t) : null; } });
       emailed += r.sent; held += r.held ?? 0; if (r.error) emailError = r.error;
     }
     const sentIds = withEmail.map((r) => r.id);
@@ -179,7 +182,8 @@ export async function officeReply(actorId: string, id: string, body: string, ema
     : (await withSchool((q) => q<{ p: string | null; s: string | null }>(`select parent_id as p, student_id as s from office_threads where id = $1`, [id])))[0]?.[t.th.to_kind === "parent" ? "p" : "s"];
   const opted = who ? (await getNotify({ role: t.th.to_kind, id: who }).catch(() => null))?.email?.messages === true : false;
   if (!opted || !t.th.email) return {};
-  const r = await sendBatch(/^re:/i.test(t.th.subject) ? t.th.subject : `Re: ${t.th.subject}`, text + footer(base, t.th.to_kind, id), [{ name: t.th.name, email: t.th.email }], false);
+  const addr = await import("./inbox").then((m) => m.replyAddresser()).catch(() => null);
+  const r = await sendBatch(/^re:/i.test(t.th.subject) ? t.th.subject : `Re: ${t.th.subject}`, text + footer(base, t.th.to_kind, id), [{ name: t.th.name, email: t.th.email }], false, { replyTo: () => addr ? addr("o", id) : null });
   if (r.sent) await withSchool((q) => q(`update office_messages set emailed = true where id = $1`, [mid]));
   return r.error ? { error: `Saved, but the email didn’t send: ${r.error}` } : { emailed: r.sent > 0, held: (r.held ?? 0) > 0 };
 }

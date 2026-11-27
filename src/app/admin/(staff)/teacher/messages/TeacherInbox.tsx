@@ -5,7 +5,7 @@ import { teacherContacts, officeInfo, familyMsgsOn, FAMILY_MSGS_OFF } from "@/li
 import { teacherEmailAction } from "../email/actions";
 import { teacherOfficeReplyAction, replyThreadAction } from "../../../actions";
 import { myOfficeThread } from "@/lib/office-messages";
-import { teacherInbox, markSchoolSeen, familyThread, type InboxItem } from "@/lib/teacher-inbox";
+import { teacherInbox, markSchoolSeen, familyThread, fillMailBodies, type InboxItem } from "@/lib/teacher-inbox";
 import { markUnreadAction } from "./actions";
 import { NavCountSync } from "../../../NavCountSync";
 import { LiveMessages } from "../../../LiveMessages";
@@ -22,12 +22,12 @@ function stamp(iso: string) {
   if (f(d) === f(new Date(now.getTime() - 864e5))) return "Yest.";
   return d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" });
 }
-// 27 Nov (Alfonso: "separate the emails and messages ... like the admin one"): Email (the teacher's emails with the school)
-// and Messages (in the app: from the office and with families) are two pages built from this one view.
+// 27 Nov: Email and Messages were two pages for a few hours (updates 518–521); Alfonso then chose one place for teachers.
+// Everything is here again: messages in the app (speech bubble) and emails with the school (envelope), both sides of each.
 export type InboxMode = "email" | "messages";
-const BASE = { email: "/admin/teacher/email", messages: "/admin/teacher/messages" } as const;
-const TABS_OF = { email: [["all", "All"], ["unread", "Unread"]], messages: [["all", "All"], ["unread", "Unread"], ["school", "Office"], ["families", "Families"]] } as const;
-const href = (it: InboxItem, f: string) => `${it.kind === "school" ? BASE.email : BASE.messages}?${it.kind === "office" ? "office" : it.kind === "school" ? "school" : "family"}=${encodeURIComponent(it.id)}${f !== "all" ? `&f=${f}` : ""}`;
+const BASE = { email: "/admin/teacher/messages", messages: "/admin/teacher/messages" } as const;
+const TABS_OF = { email: [["all", "All"], ["unread", "Unread"], ["school", "Office"], ["families", "Families"]], messages: [["all", "All"], ["unread", "Unread"], ["school", "Office"], ["families", "Families"]] } as const;
+const href = (it: InboxItem, f: string) => `${BASE.messages}?${it.kind === "office" ? "office" : it.kind === "school" ? "school" : "family"}=${encodeURIComponent(it.id)}${f !== "all" ? `&f=${f}` : ""}`;
 
 // Messages (31 Oct; 26 Nov as one inbox, Option B): every conversation in one list on the left (messages from the office, the
 // teacher's emails to the school, conversations with families), unread in bold with a yellow count; the open conversation
@@ -37,8 +37,7 @@ export async function TeacherInbox({ mode, searchParams }: { mode: InboxMode; se
   const [sp, me] = await Promise.all([searchParams, requireViewer()]);
   // a link to the other kind of conversation (e.g. an old notification) goes to the right page
   const qs = new URLSearchParams(Object.entries(sp).filter(([, v]) => typeof v === "string") as [string, string][]).toString();
-  if (mode === "messages" && (sp.school || sp.to)) redirect(`${BASE.email}?${qs}`);
-  if (mode === "email" && (sp.office || sp.family)) redirect(`${BASE.messages}?${qs}`);
+  if (mode === "email") redirect(`${BASE.messages}${qs ? `?${qs}` : ""}`);
   const TABS = TABS_OF[mode], base = BASE[mode];
   const f = TABS.some(([k]) => k === sp.f) ? sp.f! : "all";
   const [contacts, office, canMsg, paused] = await Promise.all([teacherContacts().catch(() => []), officeInfo().catch(() => ({ label: "the office", mailbox: null })), familyMsgsOn(),
@@ -48,18 +47,20 @@ export async function TeacherInbox({ mode, searchParams }: { mode: InboxMode; se
   const ot = sp.office ? await myOfficeThread("teacher", me.id, sp.office, read) : null;
   const ft = sp.family ? await familyThread(me.id, sp.family, read) : null;
   if (sp.school && read) await markSchoolSeen(me.id, sp.school);
-  const { items, mails } = await teacherInbox(me.id, office.label, contacts);
-  const school = sp.school ? mails.filter((e) => e.thread_id === sp.school).reverse() : [];   // oldest first
+  const { items, threads } = await teacherInbox(me.id, office.label);
+  const st = sp.school ? threads.find((t) => t.id === sp.school) ?? null : null;
+  if (st) await fillMailBodies(st);   // the whole text of the teacher's own emails, the first time they're opened
+  const school = st ? [...st.msgs].reverse() : [];   // oldest first
   const to = sp.to === "all" && contacts.length > 1 ? { user_id: "all", name: contacts.map((c) => c.name.split(" ")[0]).join(" & "), label: "everyone" } : contacts.find((c) => c.user_id === sp.to);
   const writing = !!to || sp.new === "1";
   const chosen = ot || ft || school.length > 0 || writing;
-  const mine = items.filter((i) => mode === "email" ? i.kind === "school" : i.kind !== "school");
+  const mine = items;
   const unreadN = mine.filter((i) => i.unread > 0).length;
-  const list = mine.filter((i) => f === "unread" ? i.unread > 0 : f === "school" ? i.kind === "office" : f === "families" ? i.kind === "family" : true);
+  const list = mine.filter((i) => f === "unread" ? i.unread > 0 : f === "school" ? i.kind !== "family" : f === "families" ? i.kind === "family" : true);
   const sel = ot ? `office:${ot.th.id}` : ft ? `family:${ft.th.id}` : school.length ? `school:${sp.school}` : "";
   const off = me.viewing ? <p className="note">You’re viewing as {me.name}: you can read their messages but not send as them.</p> : null;
   const familyOff = !canMsg ? FAMILY_MSGS_OFF : paused ? "Messages to families are paused during the beta." : null;
-  const back = <Link className="abtn sm ib-back" href={`${base}${f !== "all" ? `?f=${f}` : ""}`}>← All {mode === "email" ? "emails" : "messages"}</Link>;
+  const back = <Link className="abtn sm ib-back" href={`${base}${f !== "all" ? `?f=${f}` : ""}`}>← All {"messages"}</Link>;
 
   // 26 Nov: "Mark as unread" (a small form, so it works without scripts)
   const unreadBtn = (kind: InboxItem["kind"], id: string, cls: string, label: string) => me.viewing ? null : <form action={markUnreadAction} className={cls}>
@@ -74,9 +75,9 @@ export async function TeacherInbox({ mode, searchParams }: { mode: InboxMode; se
   const itemFor = (kind: InboxItem["kind"], id: string) => items.find((i) => i.kind === kind && i.id === id);
 
   // ---------- the right-hand pane ----------
-  let pane: React.ReactNode = <div className="ib-empty"><b>{mine.length ? "Choose a conversation" : mode === "email" ? "No emails yet" : "No messages yet"}</b>
-    <span>{mine.length ? "Pick one on the left to read it and reply." : mode === "email" ? "Your emails with the school show here." : "Messages from the office and from families show here."}</span>
-    <Link className="abtn pri" href={`${base}?new=1`}>{mode === "email" ? "New email" : "New message"}</Link></div>;
+  let pane: React.ReactNode = <div className="ib-empty"><b>{mine.length ? "Choose a conversation" : "No messages yet"}</b>
+    <span>{mine.length ? "Pick one on the left to read it and reply." : "Messages from the office and from families show here."}</span>
+    <Link className="abtn pri" href={`${base}?new=1`}>New message</Link></div>;
   if (ot) { const it = itemFor("office", ot.th.id); pane = <>
     {head({ initials: it?.initials ?? "O", kind: "office" }, ot.th.subject, `${it?.who ?? office.label} · the office${ot.th.status === "closed" ? " · closed" : ""}`, "School", ["office", ot.th.id])}
     <div className="ib-msgs">{ot.msgs.map((m) => bubble(m.id, m.sender !== "office", m.who, m.at, m.body))}</div>
@@ -89,23 +90,22 @@ export async function TeacherInbox({ mode, searchParams }: { mode: InboxMode; se
     {familyOff ? <p className="note">{familyOff}</p> : ft.th.status === "closed" ? <p className="note">This conversation is closed.</p>
       : <form action={replyThreadAction} className="ib-reply"><input type="hidden" name="id" value={ft.th.id} /><input type="hidden" name="back" value="teacher" />
         <textarea name="body" required rows={3} maxLength={5000} placeholder="Write a reply…" aria-label="Reply" /><button className="abtn pri" type="submit" disabled={!!me.viewing}>Send</button></form>}{off}</>; }
-  else if (school.length) { const last = school[school.length - 1], it = itemFor("school", sp.school!); pane = <>
-    {head({ initials: it?.initials ?? "S", kind: "school" }, last.subject || "(no subject)", `${it?.who ?? office.label} · the school`, "School", school.some((e) => e.replied_at) ? ["school", sp.school!] : undefined)}
-    <div className="ib-msgs">{school.map((e) => <div key={e.id} id={`e-${e.id}`} className="ib-pair">
-      {bubble(e.id + "a", true, "You", e.at, e.body, (e.files.length > 0 || (e.links?.length ?? 0) > 0) && <div className="tm-att">
-        {e.files.map((x) => <a key={x.id} className="abtn sm" href={`/admin/email-file/${x.id}`}>{x.name} · {kb(x.size)}</a>)}
-        {(e.links ?? []).map((l) => <a key={l} className="abtn sm" href={l} target="_blank" rel="noopener">{/drive\.google|docs\.google/.test(l) ? "Google Drive link" : l.replace(/^https:\/\//, "").slice(0, 40)}</a>)}</div>, undefined, e.local ? "app" : "email")}
-      {e.replied_at && bubble(e.id + "b", false, `${e.to_name ?? office.label}${e.reply_from ? ` (${e.reply_from})` : ""}`, e.replied_at, e.reply_body, undefined, undefined, "email")}</div>)}</div>
-    <form action={teacherEmailAction} encType="multipart/form-data" className="ib-reply wide"><input type="hidden" name="thread" value={last.thread_id} />
-      <input type="hidden" name="subject" value={/^re:/i.test(last.subject) ? last.subject : `Re: ${last.subject}`} />
-      <textarea name="body" required rows={3} maxLength={20000} placeholder="Write a reply…" aria-label="Reply" />
+  else if (st && school.length) { const it = itemFor("school", st.id), subject = st.subject || "(no subject)"; pane = <>
+    {head({ initials: it?.initials ?? "S", kind: "school" }, subject, `${st.who} · the school · by email`, "School", st.officeAt ? ["school", st.id] : undefined)}
+    <div className="ib-msgs">{school.map((m) => bubble(m.key, m.mine, m.who, m.at, m.body || (m.partial ? "Couldn’t load this email just now. Try again in a moment." : "(This email has no text.)"),
+      (m.files.length > 0 || m.links.length > 0) && <div className="tm-att">
+        {m.files.map((x) => <a key={x.id} className="abtn sm" href={`/admin/email-file/${x.id}`}>{x.name} · {kb(x.size)}</a>)}
+        {m.links.map((l) => <a key={l} className="abtn sm" href={l} target="_blank" rel="noopener">{/drive\.google|docs\.google/.test(l) ? "Google Drive link" : l.replace(/^https:\/\//, "").slice(0, 40)}</a>)}</div>, undefined, m.via))}</div>
+    <form action={teacherEmailAction} encType="multipart/form-data" className="ib-reply wide"><input type="hidden" name="thread" value={st.id} />
+      <input type="hidden" name="subject" value={/^re:/i.test(subject) ? subject : `Re: ${subject}`} />
+      <textarea name="body" required rows={3} maxLength={20000} placeholder="Write a reply… (it goes by email)" aria-label="Reply" />
       <details><summary>Attach</summary><div className="tm-extra">
         <label className="fld">Files <span className="muted">(up to 5, 3.5 MB in total)</span><input type="file" name="files" multiple /></label>
         <label className="fld">Google Drive links <span className="muted">(one per line)</span><textarea name="links" rows={2} placeholder="https://drive.google.com/…" /></label></div></details>
       <button className="abtn pri" type="submit" disabled={!!me.viewing}>Send</button></form>{off}</>; }
   else if (writing) pane = <div className="ib-new">
-    <h2>{mode === "email" ? "New email" : "New message"}</h2>
-    {mode === "email" && <><p className="ct-k">To the school</p>
+    <h2>{"New message"}</h2>
+    {<><p className="ct-k">To the school (by email)</p>
     <div className="tm-contacts">{contacts.length === 0 ? <p className="muted" style={{ margin: 0 }}>No one is set up yet. Ask the office to choose who teachers can message.</p>
       : contacts.map((c) => <Link key={c.user_id} href={`${BASE.email}?to=${c.user_id}#write`} className={`tm-contact${to?.user_id === c.user_id ? " on" : ""}`}>
         <span className="tm-av" aria-hidden="true">{c.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span><span><b>{c.name}</b><span className="muted">{c.label}</span></span></Link>)}
@@ -121,27 +121,26 @@ export async function TeacherInbox({ mode, searchParams }: { mode: InboxMode; se
       <div style={{ display: "flex", gap: 8 }}><button className="abtn pri" type="submit" disabled={!!me.viewing}>Send</button><Link className="abtn" href={base}>Cancel</Link></div>
       <p className="note" style={{ margin: 0 }}>{to.user_id === "all" ? "Each of them also gets it by email." : "They also get it by email."} Their reply shows here and comes to {me.email}.</p>
     </form>}</>}
-    {mode === "messages" && <><p className="ct-k">To a family</p>
-    {familyOff ? <p className="note" style={{ margin: 0 }}>{familyOff}</p> : <Link className="abtn" href="/admin/messages/new">Message a family</Link>}
-    <p className="muted" style={{ fontSize: 14, marginTop: 14 }}>To write to the school, use <Link href={`${BASE.email}?new=1`}>Email</Link>.</p></>}
+    {<><p className="ct-k">To a family</p>
+    {familyOff ? <p className="note" style={{ margin: 0 }}>{familyOff}</p> : <Link className="abtn" href="/admin/messages/new">Message a family</Link>}</>}
     {off}</div>;
 
   return <>
-    <div className="top"><div><h1>{mode === "email" ? "Email" : "Messages"}</h1><div className="sub">{mode === "email" ? "Your emails with the school: they come and go by email too." : "Messages in the app: from the office, and with the parents of the students you teach."}</div></div>
-      <span className="grow" /><GuideSlides slides={TEACHER_GUIDES.messages.slides} title={TEACHER_GUIDES.messages.title} /><Link className="abtn pri" href={`${base}?new=1`}>{mode === "email" ? "New email" : "New message"}</Link></div>
+    <div className="top"><div><h1>Messages</h1><div className="sub">Everything with the office and the parents of the students you teach, in one place. A speech bubble means it was sent in the app, an envelope that it came by email.</div></div>
+      <span className="grow" /><GuideSlides slides={TEACHER_GUIDES.messages.slides} title={TEACHER_GUIDES.messages.title} /><Link className="abtn pri" href={`${base}?new=1`}>New message</Link></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {!me.viewing && <NavCountSync href={base} count={unreadN} />}<LiveMessages stamp={await messagesStamp()} />
     <div className={`card ib${chosen ? " has-sel" : ""}`}>
       <div className="ib-list">
         <div className="segl ib-tabs" role="group" aria-label="Show">{TABS.map(([k, l]) => <Link key={k} scroll={false} href={`${base}${k !== "all" ? `?f=${k}` : ""}`} aria-current={f === k ? "true" : undefined}>
           {l}{k === "unread" && unreadN > 0 && <b className="ib-n">{unreadN}</b>}</Link>)}</div>
-        {list.length === 0 ? <p className="empty">{f === "unread" ? "Nothing unread." : mode === "email" ? "No emails yet." : "No conversations yet."}</p>
+        {list.length === 0 ? <p className="empty">{f === "unread" ? "Nothing unread." : "No conversations yet."}</p>
           : <nav className="ib-items" aria-label="Conversations">{list.map((it) => { const k = `${it.kind}:${it.id}`;
             return <div key={k} className="ib-row"><Link href={href(it, f)} className={`ib-it${it.unread ? " unread" : " read"}${sel === k ? " sel" : ""}`} aria-current={sel === k ? "true" : undefined}>
               <span className={`ib-av ${it.kind === "family" ? "fam" : "sch"}`} aria-hidden="true">{it.initials}</span>
-              <span className="t"><span className="n"><b>{it.who}</b><span className="d">{stamp(it.at)}</span></span>
+              <span className="t"><span className="n"><b>{it.who}</b><span className="d"><Via v={it.via} />{stamp(it.at)}</span></span>
                 <span className="s">{it.subject}</span><span className="p">{it.preview}</span>
-                <span className="m"><span className={`ib-tag ${it.kind === "family" ? "fam" : "sch"}`}>{it.kind === "family" ? "Family" : it.kind === "office" ? "Office" : "School"}</span>{it.sub && it.kind === "family" && <span className="muted">{it.sub}</span>}
+                <span className="m"><span className={`ib-tag ${it.kind === "family" ? "fam" : "sch"}`}>{it.kind === "family" ? "Family" : it.kind === "office" ? "Office" : "Email"}</span>{it.sub && it.kind === "family" && <span className="muted">{it.sub}</span>}
                   {it.waiting && <span className="pill warn">Waiting for your reply</span>}{it.closed && <span className="pill mute">Closed</span>}</span></span>
               {it.unread > 0 && <span className="ib-n" aria-label={`${it.unread} unread`}>{it.unread}</span>}</Link>
               {!it.unread && !(it.kind === "school" && it.mine && it.preview.startsWith("You:")) && unreadBtn(it.kind, it.id, "ib-mu", "Mark unread")}</div>; })}</nav>}

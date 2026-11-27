@@ -1,5 +1,6 @@
 "use client";
-import { useState, useTransition, type ReactNode, useRef, useLayoutEffect } from "react";
+import { useState, useTransition, type ReactNode, useRef, useLayoutEffect, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { pack, spanOf } from "./bento-pack";
 import { saveDashLayoutAction } from "./actions";
 import { saveBoardAction } from "../dash-actions";
@@ -23,6 +24,10 @@ export function BentoBoard({ page, modules, layout, defaults, saved, scope = "ow
   const setDrag = (d: string | null) => { dragRef.current = d; setDragS(d); };
   const [pending, start] = useTransition();
   const [msg, setMsg] = useState("");
+  // 27 Nov (Alfonso: "move up to save space"): on a computer, the admin's Customise button sits in the top bar (#tb-slot)
+  const [slot, setSlot] = useState<Element | null>(null);
+  useEffect(() => { const mq = window.matchMedia("(min-width: 821px)"), f = () => setSlot(mq.matches ? document.getElementById("tb-slot") : null);
+    f(); mq.addEventListener("change", f); return () => mq.removeEventListener("change", f); }, []);
   const byId = new Map(modules.map((m) => [m.id, m]));
   const hidden = modules.filter((m) => !items.some((i) => i.id === m.id));
   const move = (id: string, to: number) => setItems((xs) => { const i = xs.findIndex((x) => x.id === id); if (i < 0) return xs; const c = [...xs]; const [it] = c.splice(i, 1); c.splice(Math.max(0, Math.min(c.length, to)), 0, it); return c; });
@@ -58,9 +63,7 @@ export function BentoBoard({ page, modules, layout, defaults, saved, scope = "ow
     await (page.startsWith("admin-") ? saveDashLayoutAction : saveBoardAction)(page, next);
     setMsg(next ? (std ? `Saved as the standard for all ${audience ?? "people"}.` : "Saved. This is now your dashboard.") : (std ? "Back to the built-in layout." : "Back to the standard layout."));
     if (!next) setItems(defaults); setEditing(false); });
-  return <div className={`bb${editing ? " editing" : ""}`}>
-    {/* 27 Nov: tools (e.g. the teachers' Tips) sit in the bar even where the layout can't be changed */}
-    {(!locked || tools) && <div className="bb-bar">{tools}
+  const bar = <div className="bb-bar">{tools}
       {locked ? null : !editing ? <><button type="button" className="abtn sm" onClick={() => { setEditing(true); setMsg(""); }}>
         <svg aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z" /></svg>{std ? `Customise for all ${audience ?? ""}` : "Customise"}</button>
         {msg && <span className="bb-msg" role="status">{msg}</span>}</>
@@ -68,7 +71,10 @@ export function BentoBoard({ page, modules, layout, defaults, saved, scope = "ow
         <button type="button" className="abtn sm pri" disabled={pending} onClick={() => save(items)}>{pending ? "Saving…" : "Save"}</button>
         <button type="button" className="abtn sm" disabled={pending} onClick={() => { setItems(layout); setEditing(false); }}>Cancel</button>
         {saved && <button type="button" className="abtn sm" disabled={pending} onClick={() => save(null)}>{std ? "Reset to built-in" : "Reset to standard"}</button>}</>}
-    </div>}
+    </div>;
+  return <div className={`bb${editing ? " editing" : ""}`}>
+    {/* 27 Nov: tools (e.g. the teachers' Tips) sit in the bar even where the layout can't be changed */}
+    {(!locked || tools) && (slot && !editing && !tools ? createPortal(bar, slot) : bar)}
     <div className="bb-grid" ref={gridRef}>
       {items.map((it, i) => { const m = byId.get(it.id); if (!m) return null;
         return <div key={it.id} data-size={it.size} data-h={it.h ?? undefined} className={`bb-cell s-${it.size}${it.h ? ` h-${it.h}` : ""}${drag === it.id ? " dragging" : ""}`}

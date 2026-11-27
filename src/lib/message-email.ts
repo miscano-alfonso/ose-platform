@@ -11,10 +11,10 @@ const cut = (s: string, n = 600) => { const t = s.trim(); return t.length > n ? 
 type Person = Who & { name: string; email: string | null; link: string };
 
 async function wants(w: Who, what: "messages" | "digest") { const e = (await getNotify(w).catch(() => null))?.email; return what === "messages" ? e?.messages !== false : e?.digest === true; }
-async function send(to: Person, subject: string, body: string, tag: string) {
+async function send(to: Person, subject: string, body: string, tag: string, replyTo?: string | null) {
   if (!to.email) return false;
   const { sendOne } = await import("./email");
-  const r = await sendOne([{ name: to.name, email: to.email }], subject, body, { tag }).catch(() => null);
+  const r = await sendOne([{ name: to.name, email: to.email }], subject, body, { tag, replyTo }).catch(() => null);
   return !!r?.ok;
 }
 const first = (n: string) => n.split(" ")[0] || "there";
@@ -55,10 +55,13 @@ export async function emailNewMessage(kind: "family" | "office", threadId: strin
       return { subject: t.subject, people: [p], from: "The office" };
     });
     let n = 0;
+    // 27 Nov (Alfonso): replying to this email adds the reply to the conversation (its own reply address; see syncInbox)
+    const addr = await import("./inbox").then((m) => m.replyAddresser()).catch(() => null);
+    const replyTo = addr ? addr(kind === "office" ? "o" : "f", threadId) : null;
     for (const p of people) {
       if (!p.id || !p.email || !(await wants(p, "messages"))) continue;
       const who = fromName || from || "Someone";
-      if (await send(p, `New message: ${subject}`, `Hello ${first(p.name)},\n\n${who} wrote:\n\n${cut(body)}\n\n[Read and reply](${SITE()}${p.link})${optOut(p, "messages")}`, "message-copy")) n++;
+      if (await send(p, `New message: ${subject}`, `Hello ${first(p.name)},\n\n${who} wrote:\n\n${cut(body)}\n\n${replyTo ? `Just reply to this email to answer, or [read and reply](${SITE()}${p.link}) on your dashboard.` : `[Read and reply](${SITE()}${p.link})`}${optOut(p, "messages")}`, "message-copy", replyTo)) n++;
     }
     return n;
   } catch { return 0; }

@@ -96,7 +96,7 @@ export default async function Messages({ searchParams }: { searchParams: Promise
       <div style={{ display: "flex", gap: 8 }}><button className="abtn pri" type="submit" disabled={!!fam.viewer}>Send</button><Link className="abtn" href="/parent/messages">Cancel</Link></div></form></div>;
 
   return <>
-    <Head title="Messages" sub={teachersOn ? "Messages with the office and your children’s teachers. The office can read conversations with teachers." : "Messages with the office: they’ll reply here, and pass anything on to the teachers."}>
+    <Head title="Messages" sub={`${teachersOn ? "Messages with the office and your children’s teachers. The office can read conversations with teachers." : "Messages with the office: they’ll reply here, and pass anything on to the teachers."} Replying to one of our message emails adds your answer here too.`}>
       <GuideSlides slides={[...FAMILY_GUIDES["p-messages"].slides]} title={FAMILY_GUIDES["p-messages"].title} /><Link className="abtn pri" href="/parent/messages?new=1">New message</Link></Head>
     <Flash sp={sp} />
     <div className={`card ib${chosen ? " has-sel" : ""}`}>

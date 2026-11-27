@@ -1,7 +1,6 @@
 import "server-only";
 import { withSchool } from "./db";
 import { myOfficeThreads } from "./office-messages";
-import { teacherEmails, type TeacherEmail } from "./teacher-area";
 
 // 26 Nov: the teacher's Messages inbox: every conversation in one list (messages from the office, the teacher's emails to the
 // school, and conversations with families), newest first, each with how many messages are unread.
@@ -15,10 +14,10 @@ const ms = (s: string) => Date.parse(s.replace(" ", "T").replace(/([+-]\d\d)$/, 
 const cap = (s: string) => s ? s[0].toUpperCase() + s.slice(1) : s;
 const cut = (s: string | null | undefined, n = 140) => { const t = (s ?? "").replace(/\s+/g, " ").trim(); return t.length > n ? t.slice(0, n) + "…" : t; };
 
-export async function teacherInbox(userId: string, officeLabel: string, contacts: { name: string }[]): Promise<{ items: InboxItem[]; mails: TeacherEmail[] }> {
-  const [office, mails, family, seen] = await Promise.all([
+export async function teacherInbox(userId: string, officeLabel: string): Promise<{ items: InboxItem[]; threads: MailThread[] }> {
+  const [office, threads, family, seen] = await Promise.all([
     myOfficeThreads("teacher", userId).catch(() => []),
-    teacherEmails(userId).catch(() => [] as TeacherEmail[]),
+    teacherMail(userId, officeLabel).catch(() => [] as MailThread[]),   // 27 Nov: emails with the school, both sides
     withSchool((q) => q<{ id: string; subject: string; status: string; parent: string; student: string; at: string; last_sender: string | null; last_body: string | null; unread: number }>(`
       select th.id, th.subject, th.status, p.first_name || ' ' || p.last_name as parent, s.first_name as student, th.last_message_at::text as at,
         (select m.sender from messages m where m.thread_id = th.id order by m.created_at desc limit 1) as last_sender,
@@ -29,37 +28,23 @@ export async function teacherInbox(userId: string, officeLabel: string, contacts
     withSchool((q) => q<{ key: string; seen_at: string }>(`select key, seen_at::text from teacher_seen where user_id = $1`, [userId])).catch(() => []),
   ]);
   const seenAt = new Map(seen.map((r) => [r.key, r.seen_at]));
-  // 26 Nov: threads with a reply not yet seen but older than the newest 60 emails were left out of the list while the menu
-  // still counted them ("Messages 1" with nothing unread). Those threads are added, using the menu's own rule.
-  const have = new Set(mails.map((e) => e.thread_id));
-  const older = (await withSchool((q) => q<{ t: string }>(`select distinct im.thread_id as t from inbox_messages im
-      where im.kind = 'staff' and lower(im.from_email::text) = (select lower(email::text) from users where id = $1)
-        and im.replied_at > coalesce((select ts.seen_at from teacher_seen ts where ts.user_id = $1 and ts.key = 'school:' || im.thread_id), $2::timestamptz)`,
-    [userId, SEEN_FROM])).catch(() => [])).map((r) => r.t).filter((t) => !have.has(t));
-  if (older.length) mails.push(...await teacherEmails(userId, 200, older));
   const items: InboxItem[] = [];
   for (const t of office) {
     const who = cap(t.office_name || officeLabel);
     items.push({ kind: "office", id: t.id, subject: t.subject, who, sub: "The office", initials: ini(who), at: t.last_at, preview: (t.last_sender === "teacher" ? "You: " : "") + cut(t.last_body),
       mine: t.last_sender === "teacher", unread: t.unread_n ?? (t.unread ? 1 : 0), waiting: false, closed: t.status === "closed", via: "app" });
   }
-  // emails to the school: one conversation per thread (each row is the teacher's email, with the school's reply on it)
-  const threads = new Map<string, TeacherEmail[]>();
-  for (const e of mails) threads.set(e.thread_id, [...(threads.get(e.thread_id) ?? []), e]);
-  for (const [tid, rows] of threads) {
-    const last = rows[0];   // newest first
-    const lastAt = last.replied_at ?? last.at, since = seenAt.get("school:" + tid) ?? SEEN_FROM;
-    const unread = rows.filter((e) => e.replied_at && ms(e.replied_at) > ms(since)).length;
-    const name = rows.find((e) => e.to_name)?.to_name ?? null;
-    const label = cap(name && contacts.some((c) => c.name === name) ? name : name ?? officeLabel);
-    items.push({ kind: "school", id: tid, subject: last.subject || "(no subject)", who: label, sub: "The school", initials: ini(label), at: lastAt,
-      preview: last.replied_at ? cut(last.reply_body) : "You: " + cut(last.body), mine: !last.replied_at, unread, waiting: false, closed: false,
-      via: last.replied_at || !last.local ? "email" : "app" });
+  // emails with the school: one conversation per Gmail thread, unread when the school wrote since the teacher last opened it
+  for (const t of threads) {
+    const since = ms(seenAt.get("school:" + t.id) ?? SEEN_FROM);
+    const unread = t.msgs.filter((m) => !m.mine && ms(m.at) > since).length;
+    items.push({ kind: "school", id: t.id, subject: t.subject || "(no subject)", who: t.who, sub: "The school", initials: ini(t.who), at: t.at, preview: t.preview,
+      mine: t.mine, unread, waiting: false, closed: false, via: t.msgs[0]?.via ?? "email" });
   }
   for (const t of family) items.push({ kind: "family", id: t.id, subject: t.subject, who: t.parent, sub: `about ${t.student}`, initials: ini(t.parent), at: t.at,
     preview: (t.last_sender === "parent" ? "" : "You: ") + cut(t.last_body), mine: t.last_sender !== "parent", unread: t.unread, waiting: t.last_sender === "parent" && t.status === "open", closed: t.status === "closed", via: "app" });
-  items.sort((a, b) => b.at.localeCompare(a.at));
-  return { items, mails };
+  items.sort((a, b) => ms(b.at) - ms(a.at));
+  return { items, threads };
 }
 
 /** Opening a conversation with the school: its replies count as read from now on. */
@@ -106,7 +91,7 @@ export async function markUnread(userId: string, kind: InboxKind, id: string): P
 // A teacher's Email as a mail reader: each conversation with the school and every email in it, both sides: the teacher's
 // emails (written here, or sent from their own email to the school's), the office's replies from the admin's Reply, and
 // emails the school sent them from Gmail itself (inbox_sent, db/129).
-export type MailMsg = { key: string; mine: boolean; who: string; email: string | null; at: string; body: string; partial: string | null;
+export type MailMsg = { key: string; mine: boolean; who: string; email: string | null; at: string; body: string; partial: string | null; via: "email" | "app";
   files: { id: string; name: string; size: number }[]; links: string[] };
 export type MailThread = { id: string; subject: string; who: string; at: string; officeAt: string | null; msgs: MailMsg[]; preview: string; mine: boolean };
 export async function teacherMail(userId: string, officeLabel: string): Promise<MailThread[]> {
@@ -133,14 +118,14 @@ export async function teacherMail(userId: string, officeLabel: string): Promise<
     const t = th(r.thread_id, r.subject);
     if (r.to_name) t.who = r.to_name;
     const full = r.body ?? r.body_text;
-    t.msgs.push({ key: "m" + r.id, mine: true, who: "You", email: null, at: r.at, body: stripQuoted(full ?? r.snippet ?? ""), partial: full == null && !r.local ? r.id : null, files: r.files ?? [], links: r.links ?? [] });
-    if (r.replied_at) t.msgs.push({ key: "r" + r.id, mine: false, who: r.replier ?? r.to_name ?? cap(officeLabel), email: r.reply_from, at: r.replied_at, body: stripQuoted(r.reply_body ?? ""), partial: null, files: [], links: [] });
+    t.msgs.push({ key: "m" + r.id, mine: true, who: "You", email: null, at: r.at, body: stripQuoted(full ?? r.snippet ?? ""), partial: full == null && !r.local ? r.id : null, files: r.files ?? [], links: r.links ?? [], via: r.local ? "app" : "email" });
+    if (r.replied_at) t.msgs.push({ key: "r" + r.id, mine: false, who: r.replier ?? r.to_name ?? cap(officeLabel), email: r.reply_from, at: r.replied_at, body: stripQuoted(r.reply_body ?? ""), partial: null, files: [], links: [], via: "email" });
   }
   for (const s of rows.sent) {
     const t = th(s.thread_id, s.subject);
     const who = s.sender ?? cap(officeLabel);   // the school's own inbox (e.g. ose@) shows as the office's name
     if (!rows.own.some((r) => r.thread_id === s.thread_id)) t.who = who;
-    t.msgs.push({ key: "s" + s.id, mine: false, who, email: s.from_email, at: s.at, body: s.body ?? "", partial: null, files: [], links: [] });
+    t.msgs.push({ key: "s" + s.id, mine: false, who, email: s.from_email, at: s.at, body: s.body ?? "", partial: null, files: [], links: [], via: "email" });
   }
   for (const t of threads.values()) {
     t.msgs.sort((a, b) => ms(b.at) - ms(a.at));   // newest first, as in the admin's inbox

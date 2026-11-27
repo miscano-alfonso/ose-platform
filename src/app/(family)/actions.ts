@@ -215,14 +215,3 @@ export async function parentMarkUnreadAction(f: FormData): Promise<void> {
   }
   redirect(back);
 }
-/** Email: "Mark unread" / "Mark all read". */
-export async function parentEmailReadAction(f: FormData): Promise<void> {
-  const p = await parent("/parent/email");
-  const id = str(f, "id", 40), all = f.get("all") === "1", show = str(f, "show", 5);
-  if (!p.viewer) {
-    const { withSchool } = await import("@/lib/db");
-    if (all) await withSchool((q) => q(`update email_log set read_at = now() where to_email = $1 and read_at is null`, [p.email.toLowerCase()])).catch(() => null);
-    else if (/^\d+$/.test(id)) await withSchool((q) => q(`update email_log set read_at = null where id = $1 and to_email = $2`, [id, p.email.toLowerCase()])).catch(() => null);
-  }
-  redirect(`/parent/email${show === "all" ? "?show=all" : ""}`);
-}

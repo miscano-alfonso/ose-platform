@@ -130,7 +130,8 @@ async function logSent(to: Recipient[], subject: string, body: string, tag: stri
 }
 
 /** Sends one email per recipient (nobody sees anyone else's address), in batches. Returns how many were accepted by Brevo. */
-export async function sendBatch(subject: string, body: string, to: Recipient[], marketing: boolean): Promise<{ sent: number; failed: number; error?: string; held?: number }> {
+/** opts.replyTo (27 Nov): a reply address for each person (e.g. one that files their email reply into their Messages conversation). */
+export async function sendBatch(subject: string, body: string, to: Recipient[], marketing: boolean, opts: { replyTo?: (r: Recipient) => string | null | undefined } = {}): Promise<{ sent: number; failed: number; error?: string; held?: number }> {
   const c = await creds();
   if (!c) return { sent: 0, failed: to.length, error: "Brevo isn’t connected yet." };
   const g = await gate(to, { subject, body, tag: marketing ? "marketing" : "admin-message" });
@@ -142,7 +143,7 @@ export async function sendBatch(subject: string, body: string, to: Recipient[], 
     const res = await fetch(SMTP_URL(), {
       method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
       body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, marketing), textContent: plainText(body),
-        messageVersions: chunk.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [marketing ? "marketing" : "admin-message"] }),
+        messageVersions: chunk.map((r) => { const rt = opts.replyTo?.(r); return { to: [{ email: r.email, name: r.name }], ...(rt ? { replyTo: { email: rt } } : {}) }; }), tags: [marketing ? "marketing" : "admin-message"] }),
     }).catch((e) => ({ ok: false, status: 0, text: async () => String(e) }) as Response);
     if (res.ok) { sent += chunk.length; await logSent(chunk, subject, body, marketing ? "marketing" : "admin-message"); } else { failed += chunk.length; error = `Brevo said ${res.status}: ${(await res.text()).slice(0, 200)}`; }
   }
@@ -183,7 +184,7 @@ export async function sendHtml(subject: string, htmlContent: string, to: string[
 }
 
 /** One email (to one or more people, each sent separately), optionally scheduled with Brevo up to 72 hours ahead. Returns Brevo's message id(s). */
-export async function sendOne(to: Recipient[], subject: string, body: string, opts: { tag: string; scheduledAt?: string; attachments?: { name: string; content: string }[] } ): Promise<{ ok: boolean; ids: string[]; error?: string; held?: number }> {
+export async function sendOne(to: Recipient[], subject: string, body: string, opts: { tag: string; scheduledAt?: string; attachments?: { name: string; content: string }[]; replyTo?: string | null } ): Promise<{ ok: boolean; ids: string[]; error?: string; held?: number }> {
   const c = await creds();
   if (!c) return { ok: false, ids: [], error: "Brevo isn’t connected yet." };
   if (!to.length) return { ok: false, ids: [], error: "No one to send it to." };
@@ -193,7 +194,7 @@ export async function sendOne(to: Recipient[], subject: string, body: string, op
   if (!to.length) return { ok: true, ids: [], held: g.held.length };
   const res = await fetch(SMTP_URL(), {
     method: "POST", headers: { "api-key": c.key, "content-type": "application/json", accept: "application/json" },
-    body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, false), textContent: plainText(body),
+    body: JSON.stringify({ sender: { email: c.email, name: c.name }, ...(opts.replyTo ? { replyTo: { email: opts.replyTo } } : c.replyTo ? { replyTo: { email: c.replyTo } } : {}), subject, htmlContent: await html(body, false), textContent: plainText(body),
       messageVersions: to.map((r) => ({ to: [{ email: r.email, name: r.name }] })), tags: [opts.tag], ...(opts.scheduledAt ? { scheduledAt: opts.scheduledAt } : {}),
       ...(opts.attachments?.length ? { attachment: opts.attachments } : {}) }),   // 26 Nov: e.g. a report PDF
   }).catch((e) => ({ ok: false, status: 0, text: async () => String(e), json: async () => ({}) }) as Response);

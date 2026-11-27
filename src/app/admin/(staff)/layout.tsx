@@ -73,7 +73,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         {sch?.is_demo ? <a className="logo" href="/admin/teacher" title="My day" style={{ font: "600 24px/1.1 Jost, sans-serif", letterSpacing: ".06em", textTransform: "uppercase", textDecoration: "none" }}>{sch.name}<br /><span style={{ fontSize: 12, letterSpacing: ".2em", opacity: .8 }}>Demo school</span></a>
         : <a className="logo" href="/admin/teacher" title="My day"><img src={logo} alt="OH-SO ED: go to My day" width={773} height={224} /></a>}
         <MenuSearch area="teacher" page="/admin/teacher/search" />
-        <TeacherNav counts={{ "/admin/teacher/messages": c.msgs, "/admin/teacher/email": c.email, "/admin/teacher/reports": c.reports, "/admin/teacher/marking": c.marking }} groups={await teacherMenu()} />
+        <TeacherNav counts={{ "/admin/teacher/messages": c.msgs + c.email, "/admin/teacher/reports": c.reports, "/admin/teacher/marking": c.marking }} groups={await teacherMenu()} />
         <SideFoot theme={theme} signOut={signOutAction} inline toggle settings="/admin/teacher/notifications" mode={ownTeacher ? "teacher" : undefined} home={{ href: "/admin/teacher", label: "My day" }} />
       </aside>
       <main className="main"><TopBar />{await import("@/lib/test-mode").then(async (t) => await t.betaOn() ? <p className="note beta-strip" role="note">{t.BETA.stripTeacher}</p> : null)}{children}</main>

@@ -1874,3 +1874,10 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm .tml-msg{display:grid;gap:8px}
 .adm .irp-mail.mine{background:var(--soft)}
 .adm .pe-mail{white-space:normal}.adm .pe-mail p{margin:0 0 .8em}.adm .pe-mail p:last-child{margin:0}
+/* 27 Nov (Alfonso): menu foot: Sign out | Test mode on, then View the website | the round buttons */
+.adm .side .sf-row .sf-links{min-width:0}.adm .side .sf-row .sf-links a{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+.adm .side .sf-top .tm-pill{flex:none}
+/* 27 Nov: Customise in the top bar, before the School / Viewing as switchers */
+.adm .tb-slot{margin-left:auto;display:flex;align-items:center}.adm .tb-slot:empty{display:none}
+.adm .tb-slot .bb-bar{min-height:0;flex-wrap:nowrap}.adm .tb-slot .bb-msg{white-space:nowrap}
+.adm .tb-slot + .sw-top{margin-left:12px}.adm .tb-slot:empty + .sw-top{margin-left:auto}
