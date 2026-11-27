@@ -97,14 +97,31 @@ export async function sendStaffLink(email: string, base: string): Promise<string
   if (!r) return null;
   const first = (r.name || "").split(" ")[0] || "there";
   const { sendOne } = await import("./email");
-  if (r.admin) await sendOne([{ name: r.name, email }], `Signing in to ${r.school}`,
-    `Hello ${first},\n\nSomeone asked for a sign-in link for your ${r.school} account. Admin accounts sign in with their password instead:\n\n${base}/admin/login?pw=1\n\nIf it wasn’t you, you can ignore this email.\n\n${r.school}`, { tag: "staff-sign-in-link" });
-  else await sendOne([{ name: r.name, email }], `Your ${r.school} sign-in link`,
+  const res = r.admin ? await sendOne([{ name: r.name, email }], `Signing in to ${r.school}`,
+    `Hello ${first},\n\nSomeone asked for a sign-in link for your ${r.school} account. Admin accounts sign in with their password instead:\n\n${base}/admin/login?pw=1\n\nIf it wasn’t you, you can ignore this email.\n\n${r.school}`, { tag: "staff-sign-in-link" })
+    : await sendOne([{ name: r.name, email }], `Your ${r.school} sign-in link`,
     `Hello ${first},\n\nUse this link to sign in to your ${r.school} teacher dashboard. It works once, for the next ${LINK_MINUTES} minutes:\n\n${base}/admin/login/link?t=${r.token}\n\nIf you didn’t ask for it, you can ignore this email.\n\n${r.school}`, { tag: "staff-sign-in-link" });
+  // 27 Nov: what happened to the email, shown on Staff & access (it was invisible before)
+  await withSchool((q) => q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), null, 'staff_link_email', 'user', null, $1)`,
+    [JSON.stringify({ email, admin: r.admin, ok: res.ok, held: !!(res as { held?: boolean }).held, error: res.error ?? null })])).catch(() => null);
   return null;
 }
 
 /** The button on the emailed link's page: signs the teacher in on this device. False when the link is used up or too old. */
+/** 27 Nov: the office makes a sign-in link for a teacher (to send another way, e.g. WhatsApp, when the email doesn't arrive).
+ *  Works once, for 24 hours. Teachers only (admins sign in with their password). */
+export async function makeStaffLinkFor(adminId: string, userId: string, base: string): Promise<{ url?: string; error?: string }> {
+  const token = randomBytes(32).toString("base64url");
+  return withSchool(async (q) => {
+    const u = (await q<{ id: string; role: string; name: string }>(`select id, role::text, name from users where id = $1 and disabled_at is null`, [userId]))[0];
+    if (!u) return { error: "That person wasn’t found." };
+    if (u.role !== "teacher") return { error: "Admins sign in with their password." };
+    await q(`insert into staff_links (school_id, user_id, token_hash, ip, expires_at) values (current_school(), $1, $2, 'office', now() + interval '24 hours')`, [u.id, sha256(token)]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'staff_link_made', 'user', null, $2)`, [adminId, JSON.stringify({ for: u.name })]);
+    return { url: `${base}/admin/login/link?t=${token}` };
+  });
+}
+
 export async function redeemStaffLink(token: string): Promise<boolean> {
   if (!token || token.length > 100) return false;
   const { ip, ua } = await clientInfo();

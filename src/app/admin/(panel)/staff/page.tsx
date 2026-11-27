@@ -2,6 +2,8 @@ import { getStaff } from "@/lib/admin-data";
 import { requireStaff } from "@/lib/auth";
 import { revokeInviteAction, setStaffAccessAction, setStaffRoleAction } from "../../actions";
 import { InviteForm } from "../../forms";
+import { StaffLinkButton } from "../../StaffLinkButton";
+import { withSchool } from "@/lib/db";
 
 const d = (iso: string | null) => iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "Europe/London" }) : "Never";
 const ROLE: Record<string, string> = { school_admin: "Admin", teacher: "Teacher" };
@@ -9,6 +11,12 @@ const ROLE: Record<string, string> = { school_admin: "Admin", teacher: "Teacher"
 export default async function Staff() {
   const me = await requireStaff();
   const { staff, invites, teachers } = await getStaff();
+  // 27 Nov: the last sign-in email each person asked for, and whether it went
+  const mails = await withSchool((q) => q<{ email: string; at: string; ok: boolean; held: boolean; error: string | null }>(`select distinct on (lower(detail::jsonb->>'email')) lower(detail::jsonb->>'email') as email,
+      created_at::text as at, coalesce((detail::jsonb->>'ok')::boolean, false) as ok, coalesce((detail::jsonb->>'held')::boolean, false) as held, detail::jsonb->>'error' as error
+    from audit_log where action = 'staff_link_email' and created_at > now() - interval '30 days' order by lower(detail::jsonb->>'email'), created_at desc`)).catch(() => []);
+  const mailOf = (e: string) => mails.find((m) => m.email === e.toLowerCase());
+  const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" });
   return <>
     <div className="top"><div><h1>Staff &amp; access</h1><div className="sub">Invite admins and teachers to sign in, and remove access when someone leaves.</div></div></div>
     <section className="card"><h2>Invite someone</h2>
@@ -21,7 +29,9 @@ export default async function Staff() {
       <p className="note">Lost a link? Invite them again: the old link stops working and you get a new one.</p></section>}
     <section className="card"><h2>People with access</h2>
       {staff.map((u) => <div className="li" key={u.id}><span className={`pill ${u.disabled ? "mute" : u.role === "school_admin" ? "good" : "info"}`}>{u.disabled ? "No access" : ROLE[u.role]}</span>
-        <div className="t"><b>{u.name}{u.id === me.id ? " (you)" : ""} · {u.email}</b><span>Last signed in: {d(u.last_sign_in_at)}{u.teaches ? ` · teaches ${u.teaches}` : ""}</span></div>
+        <div className="t"><b>{u.name}{u.id === me.id ? " (you)" : ""} · {u.email}</b><span>Last signed in: {d(u.last_sign_in_at)}{u.teaches ? ` · teaches ${u.teaches}` : ""}</span>
+          {(() => { const m = mailOf(u.email); return m ? <span className={m.ok ? "sl-st" : "sl-st bad-t"}>Sign-in email asked for {when(m.at)}: {m.held ? "held by test mode" : m.ok ? "sent (if it hasn’t arrived, check spam, or use Sign-in link)" : `didn’t send${m.error ? ` (${m.error})` : ""}`}</span> : null; })()}</div>
+        {u.role === "teacher" && !u.disabled && <StaffLinkButton id={u.id} name={u.name} />}
         {u.id !== me.id && !u.disabled && <form action={setStaffRoleAction}><input type="hidden" name="id" value={u.id} /><input type="hidden" name="role" value={u.role === "school_admin" ? "teacher" : "school_admin"} />
           <button className="abtn sm" type="submit" title={u.role === "school_admin" ? "They keep their own classes and dashboard, without the admin" : "Full admin access; they keep their classes"}>{u.role === "school_admin" ? "Make teacher only" : "Make admin"}</button></form>}
         {u.id !== me.id && <form action={setStaffAccessAction}><input type="hidden" name="id" value={u.id} /><input type="hidden" name="on" value={u.disabled ? "1" : "0"} />

@@ -40,6 +40,15 @@ export async function signInAction(_: unknown, f: FormData): Promise<{ error?: s
 }
 
 // Staff sign in (26 Nov): teachers ask for an emailed link; the link's page signs them in.
+/** 27 Nov: Staff & access → "Sign-in link": a link the office can send a teacher another way (24 hours, works once). */
+export async function staffSignInLinkAction(_: unknown, f: FormData): Promise<{ url?: string; error?: string }> {
+  const me = await requireStaff();
+  const { makeStaffLinkFor } = await import("@/lib/auth");
+  const h = await headers();
+  const host = h.get("x-forwarded-host") || h.get("host") || "dev.ohsoed.co.uk";
+  const base = (process.env.SITE_URL && host === new URL(process.env.SITE_URL).host ? process.env.SITE_URL : `${h.get("x-forwarded-proto") || "https"}://${host}`).replace(/\/$/, "");
+  return makeStaffLinkFor(me.id, str(f, "id", 40), base);
+}
 export async function staffLinkAction(f: FormData): Promise<void> {
   const { sendStaffLink } = await import("@/lib/auth");
   const h = await headers();

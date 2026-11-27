@@ -1615,3 +1615,6 @@
 .adm .mode-seg a{text-align:center;padding:6px 8px;border-radius:8px;font-size:14px;font-weight:500;text-decoration:none;color:inherit;opacity:.8}
 .adm .mode-seg a:hover{opacity:1;background:color-mix(in srgb,currentColor 8%,transparent)}
 .adm .mode-seg a[aria-current=true]{opacity:1;background:var(--brand-accent,#e3cd4b);color:var(--brand-accent-ink,#0f1747)}
+.adm .sl-form{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.adm .sl-out{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.adm .sl-out input{width:260px}
+.adm .bad-t{color:var(--bad,#c0392b)}
+.adm .sl-st{display:block;font-size:13.5px}
