@@ -37,7 +37,7 @@ export default async function Visitors({ searchParams }: { searchParams: Promise
         <th>{role.label.slice(0, -1)}</th><th>Introduction page</th><th>Dashboard</th><th>Days used</th></tr></thead><tbody>
         {rows.map((r: PersonRow) => <tr key={r.id}>
           <td><b>{r.name}</b><span className="muted">{role.k === "parent" ? (r.detail ? `Parent of ${r.detail}` : "") : r.detail}</span>
-            {role.k === "teacher" && !r.has_pw && <span className="pill mute">{r.invited ? "Invited, no password yet" : "Not invited yet"}</span>}</td>
+            {/* 27 Nov: teachers sign in with an emailed one-time link (update 476), so there's no invite or password to wait for */}</td>
           <td>{r.pages?.length ? <><span className="pill good">Seen</span><span className="muted">{when(r.seen_first)}{r.seen_last && r.seen_last !== r.seen_first ? ` · last ${when(r.seen_last)}` : ""}</span>
               {r.pages.some((p) => p !== role.k) && <span className="muted">also the {r.pages.filter((p) => p !== role.k).join(" and ")} page</span>}</>
             : <span className="pill mute">Not seen</span>}</td>
