@@ -67,7 +67,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
     {d.children.map((st, si) => <section key={st.id} style={{ marginBottom: 16 }}><div className="pay-kid"><h3 style={{ margin: 0, font: "600 18px Jost, sans-serif" }}>{st.first}</h3>
       {/* 27 Nov (Alfonso): a key instead of a word in every cell; each payment's date sits in a colour-coded tab */}
       {si === 0 && <div className="pc-key" aria-label="Key"><span className="pc-tab paid">Paid</span><span className="pc-tab due">Due</span><span className="pc-tab late">Late</span></div>}</div>
-      <div className="tw" style={{ marginBottom: 0 }}><table><thead><tr><th>Course</th><th className="n">Year</th>{d.terms.map((t) => <th key={t.id} className="n">T{t.number}</th>)}</tr></thead><tbody>
+      <div className="tw" style={{ marginBottom: 0 }}><table className="pay-tbl"><thead><tr><th>Course</th><th className="n">Year</th>{d.terms.map((t) => <th key={t.id} className="n">T{t.number}</th>)}</tr></thead><tbody>
         {st.courses.length === 0 ? <tr><td colSpan={d.terms.length + 2} className="muted">No courses this year.</td></tr> : st.courses.map((c) => { return <tr key={c.id}>
           <td><span className="dot" style={{ background: c.colour }} /> <b>{c.subject}</b> <span className="muted">{c.level}</span>
             {c.cpl && c.list > 0 && <span className="muted" style={{ display: "block", fontSize: 13.5 }}>{Math.round(c.list / c.cpl)} lessons × {gbp(c.cpl)}{c.discount > 0 ? `, less ${Math.round((c.discount / c.list) * 100)}% multi-course discount` : ""}</span>}

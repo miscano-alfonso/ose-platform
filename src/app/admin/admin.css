@@ -1758,3 +1758,9 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .gv-dlg.sc-dlg .gv-head{border-bottom:1px solid var(--line)}
 .gv-dlg.sc-dlg .gv-head .abtn{color:var(--ink);border-color:var(--line)}
 .gv-dlg.sc-dlg .sc-body{padding:14px 16px 18px}
+/* 27 Nov (Alfonso): the course column takes less room so every term fits: the name and price line wrap */
+.adm table.pay-tbl th:first-child,.adm table.pay-tbl td:first-child{width:30%;max-width:300px;white-space:normal}
+.adm table.pay-tbl td:first-child .muted[style*="block"]{font-size:13px!important;line-height:1.35;margin-top:2px}
+.adm table.pay-tbl th:not(:first-child),.adm table.pay-tbl td:not(:first-child){padding-left:6px;padding-right:8px;white-space:nowrap}
+.adm table.pay-tbl td.n{font-size:14.5px}
+.adm table.pay-tbl .pc-tab{min-width:52px;padding:2px 8px}
