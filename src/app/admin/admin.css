@@ -1838,3 +1838,11 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 /* 27 Nov: Inbox: no read/unread switches (the blue dot shows unread); "All emails" back button on phones */
 .adm .ibp-back{display:none}
 @media (max-width:900px){.adm .ibx.picked .ibp-back{display:inline-flex}.adm .ibx.picked .ibx-list{display:none}}
+/* 27 Nov (Alfonso chose option A): unread emails: a blue bar down the left and bold sender and subject; read emails:
+   sender and subject in grey. The open email keeps its soft background. */
+.adm .ibx-row.unread::before{content:none}
+.adm .ibx-row.unread{box-shadow:inset 4px 0 0 var(--info)}
+.adm .ibx-row[aria-current=true]{box-shadow:none}
+.adm .ibx-row.unread[aria-current=true]{box-shadow:inset 4px 0 0 var(--info)}
+.adm .ibx-row.unread .ibx-top b,.adm .ibx-row.unread .ibx-subj{font-weight:700;color:var(--ink)}
+.adm .ibx-row:not(.unread) .ibx-top b,.adm .ibx-row:not(.unread) .ibx-subj{font-weight:500;color:var(--muted)}
