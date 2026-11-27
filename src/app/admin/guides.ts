@@ -10,3 +10,9 @@ const DRIVE_ALT = ["Your lesson slides on My day: connect a Google Drive folder 
   "In OH-SO ED, the cog next to Sign out, then Google Drive", "Paste the address in the class's box and press Save", "Name each file with its lesson number, e.g. Lesson 7",
   "My day shows Lesson slides for your next lesson", "No slides found? Use the pencil to paste a link for one lesson", "Students see the slides when your Classroom post goes out"];
 export const DRIVE_SLIDES = DRIVE_ALT.map((alt, n) => ({ src: `/guides/drive/${String(n + 1).padStart(2, "0")}.jpg`, alt }));
+
+// 27 Nov: the same, for a school that owns the slides library (Settings → Lesson slides): no sharing step for teachers
+const DRIVE_SCHOOL_ALT = ["Your lesson slides on My day: from the school's slides folder for each class", "How it works: the school's folder for each class shows on My day",
+  "The cog next to Sign out, then Google Drive: your classes and their folders", "Press Open in Drive to open a class's folder", "Name each file with its lesson number, e.g. Lesson 7",
+  "My day shows Lesson slides for your next lesson", "No slides found? Use the pencil to paste a link for one lesson", "Students see the slides when your Classroom post goes out"];
+export const DRIVE_SCHOOL_SLIDES = DRIVE_SCHOOL_ALT.map((alt, n) => ({ src: `/guides/drive-school/${String(n + 1).padStart(2, "0")}.jpg`, alt }));

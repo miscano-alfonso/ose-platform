@@ -2,33 +2,40 @@ import { NotifyBell } from "../../NotifyBell";
 import Link from "next/link";
 import { LessonClock, LessonCountdown } from "../../LessonClock";
 import { requireParent } from "@/lib/family-auth";
-import { kids, parentHome, parentAttendance, parentThreads } from "@/lib/family";
+import { kids, parentHome, parentAttendance, parentThreads, weekOrNext } from "@/lib/family";
+import { ThisWeek } from "../ThisWeek";
 import { boardLayout } from "@/lib/dashboard-layout";
 import { BOARD_MODULES } from "@/lib/dash-modules";
 import { BentoBoard, type BoardModule } from "../../admin/BentoBoard";
 import { dm, dlong, gbp } from "../fmt";
 import { Ring } from "../../admin/DashBits";
 import { familyMsgsOn } from "@/lib/teacher-area";
+import { termWeekFor, heroWhen } from "@/lib/term-week";
 
 // The parent's home, Bento style: the family's next lesson up top (with Report an absence), the next payment in lime,
 // a card per child with their attendance ring and classes, then work due and reports.
 export default async function ParentHome() {
   const f = await requireParent();
-  const [ks, h, a, threads, teachersOn] = await Promise.all([kids(f.id), parentHome(f.id), parentAttendance(f.id), parentThreads(f.id).catch(() => []), familyMsgsOn()]);
+  const [ks, h, a, threads, teachersOn, week] = await Promise.all([kids(f.id), parentHome(f.id), parentAttendance(f.id), parentThreads(f.id).catch(() => []), familyMsgsOn(), weekOrNext({ parent: f.id })]);
   const next = a.upcoming.find((u) => !u.absent) ?? null, who = next ? ks.find((k) => k.id === next.student_id) : null;
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
   const tone = (p: number | null) => p == null ? "brand" : p < 50 ? "bad" : p < 80 ? "warn" : "good";
   const unread = threads.filter((t) => t.unread).length;
+  const tw = next ? await termWeekFor(next.date) : "";   // 27 Nov: the hero mirrors the teacher's
+  // "Coming up" lists what comes after this week (This week shows the rest)
+  const sunday = (() => { const d = new Date(today + "T12:00:00Z"); d.setUTCDate(d.getUTCDate() + ((7 - d.getUTCDay()) % 7) + (week.next ? 7 : 0)); return d.toISOString().slice(0, 10); })();
+  const later = a.upcoming.filter((u) => u.date > sunday);
   const modules: BoardModule[] = [
     { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`}><div className="fx-main">
-        <p className="fx-live" style={next?.date === today ? undefined : { color: "var(--hero-soft)" }}>{next?.date === today && <i />}{next ? (next.date === today ? "Today" : `Next lesson · ${dlong(next.date)}`) : "Your account"}</p>
-        <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {f.first}</span>{next && <><br />{who?.first ?? ""}: {next.class}</>}</h1>
-        <p className="fx-hero-s">{next ? `${dlong(next.date)} · ${next.time}` : ks.length ? "No lessons in the next four weeks." : "No children on your account yet."}</p>
+        <p className="fx-live">{next?.date === today && <i />}{tw && <span className="fx-tw">{tw} ·</span>}{next ? <span className="fx-daytime">{heroWhen(next.date, next.time, today)}</span> : "Your account"} <NotifyBell settingsHref="/parent/notifications" /></p>
+        <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {f.first}</span>{next && <><span className="fx-nextk">Next lesson</span>{who?.first ? `${who.first}: ` : ""}{next.class}</>}</h1>
+        <p className="fx-hero-s">{next ? `Starts at ${next.time.slice(0, 5)}` : ks.length ? "No lessons in the next four weeks." : "No children on your account yet."}</p>
         <div className="fx-btns"><Link className="go" href="/parent/attendance">Report an absence</Link><Link href="/parent/messages?new=1">{teachersOn ? "Message a teacher" : "Message the office"}</Link>
           {next && <LessonCountdown date={next.date} time={next.time} />}</div>
-      </div>{next && <div className="fx-side"><LessonClock date={next.date} time={next.time} /><NotifyBell settingsHref="/parent/notifications" /></div>}</section> },
+      </div>{next && <div className="fx-side"><LessonClock date={next.date} time={next.time} /></div>}</section> },
     { id: "payment", title: "Next payment", node: <Link href="/parent/payments" className="dx-pop c4"><span>Next payment</span>
         <b className="fx-big">{h.next ? gbp(h.next.amount) : "£0"}</b><span>{h.next ? `on ${dm(h.next.due)} from your saved card →` : "Nothing due →"}</span></Link> },
+    { id: "thisweek", title: "This week", size: "l", node: <ThisWeek rows={week.rows} next={week.next} parent more={{ href: "/parent/attendance", label: "Attendance" }} /> },
     { id: "children", title: "Your children", size: "full", node: <div className="fx-kids">{ks.map((st) => <section className="dx-card c6" key={st.id}>
         <div className="fx-kid"><Ring pct={st.att} tone={tone(st.att)} /><div><h2>{st.first}</h2><span className="muted" style={{ fontSize: 14.5 }}>{st.level || "No level yet"} · {st.att == null ? "attendance shows after the first lesson" : `${st.att}% attendance this term`}</span></div></div>
         {st.classes.length === 0 ? <p className="empty">No courses this year.</p> : st.classes.map((c) => <div className="fx-row" key={c.group_id}>
@@ -43,7 +50,7 @@ export default async function ParentHome() {
         {h.reports.length ? h.reports.map((r) => <div className="fx-row" key={r.id}><div className="t"><b>{r.name}</b><span>{r.published ? dm(r.published) : ""}</span></div><Link className="abtn sm" href="/parent/reports">View</Link></div>) : <p className="empty">No reports yet.</p>}
         {h.upcoming && <p className="note" style={{ marginTop: 8 }}>The {h.upcoming.name} will be here on {dm(h.upcoming.publish_on)}.</p>}</section> },
     { id: "coming", title: "Coming up", size: "l", node: <section className="dx-card c6"><header><h2>Coming up</h2><Link className="dx-more" href="/parent/attendance">Attendance →</Link></header>
-        {a.upcoming.slice(0, 5).map((u) => <div className="fx-row" key={u.id + u.student_id}><span className="fx-when">{dlong(u.date)}</span><div className="t"><b>{ks.find((k) => k.id === u.student_id)?.first}: {u.class}</b><span>{u.time}</span></div>{u.absent && <span className="pill mute">Away</span>}</div>)}</section> },
+        {later.slice(0, 5).map((u) => <div className="fx-row" key={u.id + u.student_id}><span className="fx-when">{dlong(u.date)}</span><div className="t"><b>{ks.find((k) => k.id === u.student_id)?.first}: {u.class}</b><span>{u.time}</span></div>{u.absent && <span className="pill mute">Away</span>}</div>)}</section> },
     { id: "messages", title: "Messages", size: "l", node: <section className="dx-card"><header><h2>Messages</h2>{unread > 0 && <span className="dx-count">{unread}</span>}<Link className="dx-more" href="/parent/messages">All messages →</Link></header>
       {threads.length === 0 ? <p className="empty">No messages yet. {teachersOn ? "You can message your children’s teachers or the office." : "You can message the office."}</p> : threads.slice(0, 4).map((t) => <div className="fx-row" key={t.id}><div className="t"><b>{t.subject}</b><span>{t.teacher} · about {t.student} · {dm(t.last_at)}</span></div>
         {t.unread ? <span className="pill info">New</span> : null}<Link className="abtn sm" href={`/parent/messages?t=${t.id}`}>Open</Link></div>)}
@@ -51,12 +58,12 @@ export default async function ParentHome() {
   ];
   const b = await boardLayout("parent-home", null, BOARD_MODULES["parent-home"], BUILT_IN);
   return <div className="fx fx-board">
-    <BentoBoard page="parent-home" modules={modules.filter((m) => m.id !== "coming" || a.upcoming.length > 1)} layout={b.layout} defaults={BUILT_IN}
+    <BentoBoard page="parent-home" modules={modules.filter((m) => m.id !== "coming" || later.length > 0)} layout={b.layout} defaults={BUILT_IN}
       saved={b.std} scope="standard" locked={!f.viewer || b.mirrored} audience="parents" />
   </div>;
 }
 
 const BUILT_IN: { id: string; size: "s" | "q" | "m" | "l" | "xl" | "full" }[] = [
-  { id: "hero", size: "xl" }, { id: "payment", size: "m" }, { id: "children", size: "full" },
-  { id: "work", size: "l" }, { id: "reports", size: "l" }, { id: "coming", size: "l" }, { id: "messages", size: "l" },
+  { id: "hero", size: "xl" }, { id: "payment", size: "m" }, { id: "thisweek", size: "l" }, { id: "messages", size: "l" }, { id: "children", size: "full" },
+  { id: "work", size: "l" }, { id: "reports", size: "l" }, { id: "coming", size: "l" },
 ];

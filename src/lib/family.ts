@@ -448,3 +448,53 @@ export async function studentNextOne(studentId: string): Promise<{ id: string; a
       and b.status = 'booked' and b.starts_at + make_interval(mins => b.minutes) > now()
     order by b.starts_at limit 1`, [studentId])))[0] ?? null;
 }
+
+// 27 Nov (Alfonso): "This week" on the student and parent dashboards: every lesson Monday to Sunday of this week (group
+// lessons, booked tasters and 1:1 lessons), so a family sees the week at a glance. Lessons already over are marked done;
+// a cancelled lesson shows as cancelled (unless it was moved; the new lesson shows as moved instead).
+export type WeekLesson = { key: string; date: string; time: string; ends: string; class: string; colour: string; teacher: string | null; student_id: string; first: string;
+  group_id: string | null; status: "on" | "done" | "cancelled" | "moved"; absent: boolean; taster: boolean; one: boolean };
+export async function weekLessons(who: { student: string } | { parent: string }, ahead = 0): Promise<WeekLesson[]> {
+  const byStudent = "student" in who, id = byStudent ? who.student : who.parent;
+  if (!/^[0-9a-f-]{36}$/.test(id)) return [];
+  const sf = byStudent ? "s.id = $1" : "s.parent_id = $1";
+  const mon = `(date_trunc('week', (now() at time zone 'Europe/London'))::date + ${ahead ? 7 : 0})`;
+  const wk = `between ${mon} and ${mon} + 6`;
+  const cls = `l.name || ' ' || coalesce(sj.short_name, sj.name)`;
+  return withSchool((q) => q<WeekLesson>(`
+    select * from (
+      select e.id::text || s.id::text as key, e.lesson_date::text as date, to_char(sl.starts_at,'HH24:MI') as time, to_char(sl.ends_at,'HH24:MI') as ends,
+        ${cls} as class, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, s.id::text as student_id, coalesce(nullif(s.known_as,''), s.first_name) as first, g.id::text as group_id,
+        case when e.status = 'cancelled' then 'cancelled' when (e.lesson_date + sl.ends_at) at time zone 'Europe/London' <= now() then 'done'
+          when e.moved_from is not null then 'moved' else 'on' end as status,
+        exists (select 1 from absence_notices n where n.lesson_event_id = e.id and n.student_id = s.id and n.cancelled_at is null) as absent, false as taster, false as one
+      from students s join enrolments x on x.student_id = s.id and x.status = 'active' and not x.is_taster join lesson_events e on e.group_id = x.group_id
+        join lesson_slots sl on sl.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+        left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id
+      where ${sf} and e.lesson_date ${wk} and not (e.status = 'cancelled' and exists (select 1 from lesson_events m where m.moved_from = e.id))
+      union all
+      select e.id::text || s.id::text, e.lesson_date::text, to_char(sl.starts_at,'HH24:MI'), to_char(sl.ends_at,'HH24:MI'), ${cls} || ' (taster)', coalesce(sj.colour,'#8494c2'), u.name,
+        s.id::text, coalesce(nullif(s.known_as,''), s.first_name), g.id::text,
+        case when e.status = 'cancelled' then 'cancelled' when (e.lesson_date + sl.ends_at) at time zone 'Europe/London' <= now() then 'done' else 'on' end, false, true, false
+      from taster_bookings tb join taster_requests r on r.id = tb.request_id join students s on s.id = r.student_id join lesson_events e on e.id = tb.lesson_event_id
+        join lesson_slots sl on sl.id = e.slot_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+        left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id
+      where ${sf} and tb.status = 'booked' and e.lesson_date ${wk}
+      union all
+      select b.id::text || s.id::text, (b.starts_at at time zone 'Europe/London')::date::text, to_char(b.starts_at at time zone 'Europe/London','HH24:MI'),
+        to_char((b.starts_at + make_interval(mins => b.minutes)) at time zone 'Europe/London','HH24:MI'), coalesce(l.name || ' ', '') || coalesce(sj.short_name, sj.name) || ' (1:1)',
+        coalesce(sj.colour,'#8494c2'), u.name, s.id::text, coalesce(nullif(s.known_as,''), s.first_name), null,
+        case when b.starts_at + make_interval(mins => b.minutes) <= now() then 'done' else 'on' end, false, false, true
+      from tutoring_bookings b join students s on (b.student_id = s.id or (b.student_id is null and lower(b.student_email::text) = lower(s.email::text)))
+        join subjects sj on sj.id = b.subject_id left join levels l on l.id = b.level_id join teachers t on t.id = b.teacher_id join users u on u.id = t.user_id
+      where ${sf} and b.status in ('booked', 'completed') and (b.starts_at at time zone 'Europe/London')::date ${wk}
+    ) w order by date, time, first`, [id])).catch((e) => { console.error("weekLessons", e); return []; });
+}
+
+/** This week's lessons, or next week's once this week has none left (Friday evening onwards, or a week off). */
+export async function weekOrNext(who: { student: string } | { parent: string }): Promise<{ rows: WeekLesson[]; next: boolean }> {
+  const rows = await weekLessons(who);
+  if (rows.some((r) => r.status === "on" || r.status === "moved")) return { rows, next: false };
+  const nx = await weekLessons(who, 1);
+  return nx.length ? { rows: nx, next: true } : { rows, next: false };
+}

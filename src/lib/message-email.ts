@@ -18,6 +18,11 @@ async function send(to: Person, subject: string, body: string, tag: string) {
   return !!r?.ok;
 }
 const first = (n: string) => n.split(" ")[0] || "there";
+// 27 Nov (Alfonso): every message email ends with how to opt out, with a link straight to the person's Notifications page
+const SETTINGS: Record<string, string> = { admin: "/admin/notifications", teacher: "/admin/teacher/notifications", parent: "/parent/notifications", student: "/student/notifications" };
+const optOut = (p: Person, what: "messages" | "digest") => `\n\n———\n${what === "messages"
+  ? "You’re getting this because messages to you are also sent to your email. Don’t want them by email? Untick **Send my messages to my email too**"
+  : "You’re getting this daily round-up because you chose it. To stop it, untick **Daily round-up**"} in [your Notifications settings](${SITE()}${SETTINGS[p.role as string] ?? "/account"}).`;
 
 /** A new message was written: email a copy to whoever it's for, if they asked for messages by email. */
 export async function emailNewMessage(kind: "family" | "office", threadId: string, sender: string, body: string, fromName?: string | null): Promise<number> {
@@ -53,7 +58,7 @@ export async function emailNewMessage(kind: "family" | "office", threadId: strin
     for (const p of people) {
       if (!p.id || !p.email || !(await wants(p, "messages"))) continue;
       const who = fromName || from || "Someone";
-      if (await send(p, `New message: ${subject}`, `Hello ${first(p.name)},\n\n${who} wrote:\n\n${cut(body)}\n\nRead and reply: ${SITE()}${p.link}\n\nYou can stop getting messages by email in your Notifications settings.`, "message-copy")) n++;
+      if (await send(p, `New message: ${subject}`, `Hello ${first(p.name)},\n\n${who} wrote:\n\n${cut(body)}\n\n[Read and reply](${SITE()}${p.link})${optOut(p, "messages")}`, "message-copy")) n++;
     }
     return n;
   } catch { return 0; }
@@ -99,7 +104,7 @@ export async function messageDigests(): Promise<number> {
     if (!list || !list.rows.length) continue;
     const lines = list.rows.slice(0, 30).map((r) => `• ${r.subject} (${r.who})`).join("\n");
     if (await send(list.person, `${list.rows.length} message${list.rows.length === 1 ? "" : "s"} waiting for your reply`,
-      `Hello ${first(list.person.name)},\n\nThese conversations are waiting for your reply:\n\n${lines}${list.rows.length > 30 ? `\n…and ${list.rows.length - 30} more` : ""}\n\nOpen your messages: ${SITE()}${list.person.link}\n\nYou get this daily round-up because you chose it in Notifications. You can switch it off there.`, "message-digest")) sent++;
+      `Hello ${first(list.person.name)},\n\nThese conversations are waiting for your reply:\n\n${lines}${list.rows.length > 30 ? `\n…and ${list.rows.length - 30} more` : ""}\n\n[Open your messages](${SITE()}${list.person.link})${optOut(list.person, "digest")}`, "message-digest")) sent++;
   }
   return sent;
 }

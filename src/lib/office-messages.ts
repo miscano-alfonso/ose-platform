@@ -73,8 +73,10 @@ async function resolve(q: Q, aud: Audience, target: string): Promise<{ to: To[];
 }
 
 const LINK: Record<ToKind, string> = { parent: "/parent/messages", student: "/student/messages", teacher: "/admin/teacher/messages" };
+// 27 Nov (Alfonso): the footer also says how to stop messages coming by email, with a link to the Notifications page
+const NOTIFY: Record<string, string> = { teacher: "/admin/teacher/notifications", parent: "/parent/notifications", student: "/student/notifications" };
 const footer = (base: string, kind: ToKind, id: string | null) =>
-  `\n\n—\nReply to this email, or read and reply in your ${kind === "teacher" ? "staff area" : "account"}: ${base}${LINK[kind]}${id ? `?${kind === "teacher" ? "office" : "o"}=${id}` : ""}`;
+  `\n\n———\nReply to this email, or [read and reply in your ${kind === "teacher" ? "staff area" : "account"}](${base}${LINK[kind]}${id ? `?${kind === "teacher" ? "office" : "o"}=${id}` : ""}).\nDon’t want messages by email? Untick **Send my messages to my email too** in [your Notifications settings](${base}${NOTIFY[kind] ?? "/account"}).`;
 
 /** Start a conversation with everyone the audience reaches, and email each of them a copy (test mode can hold the emails). */
 export async function sendOfficeMessage(actorId: string, d: { aud: Audience; target: string; subject: string; body: string; email: boolean; base: string }):

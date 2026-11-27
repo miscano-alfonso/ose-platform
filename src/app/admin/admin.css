@@ -1649,7 +1649,10 @@
 .adm .app.side-closed .side-home{visibility:visible}.adm .app.side-closed:has(.side-home) .main{padding-top:60px}
 @media (max-width:820px){.adm .side-home{display:none}}
 /* 27 Nov (Alfonso): the day and time never split across lines; more room under "Hello …" */
-.adm .fx-live .fx-when{white-space:nowrap}
+.adm .fx-live .fx-daytime{white-space:nowrap;color:#7fe0aa}
+.adm .fx .dx-hero .fx-live{flex-wrap:wrap;row-gap:4px}
+.adm .fx .dx-hero .fx-live .fx-tw{color:#fff;font-size:13px;letter-spacing:.12em;opacity:.9;white-space:nowrap}
+.adm .fx .dx-hero .fx-main .fx-live{margin-bottom:20px}
 .adm .fx-hero-t .fx-nextk{margin-top:14px}
 /* 27 Nov: (i) that opens a how-to slideshow (GuideSlides variant="info") */
 .adm .gs-info{width:22px;height:22px;border-radius:50%;border:1.5px solid currentColor;background:transparent;color:inherit;font:700 13px/1 Georgia,serif;font-style:italic;cursor:pointer;display:inline-grid;place-items:center;padding:0;opacity:.85}
@@ -1658,3 +1661,23 @@
 .adm .beta-strip{position:fixed;left:0;right:0;bottom:0;z-index:45;margin:0;border:0;border-radius:0;padding:10px clamp(16px,3vw,34px);
   background:var(--pop,var(--brand-accent,#e3cd4b));color:var(--pop-ink,var(--brand-accent-ink,#0f1747));font-weight:500;font-size:15px;line-height:1.4;box-shadow:0 -4px 16px rgba(5,15,45,.12)}
 .adm .main:has(> .beta-strip){padding-bottom:72px}
+/* 27 Nov: a row of page tools above the heading (e.g. How reports work), level with the My day button when the menu is hidden */
+.adm .top-tools{display:flex;justify-content:flex-end;gap:8px;margin:0 0 8px}
+.adm .app.side-closed .top-tools{margin-top:-46px;min-height:34px;align-items:center}
+/* 27 Nov: "This week" on the student and parent dashboards */
+.adm .fx-week .fx-wk+.fx-wk{margin-top:12px}
+.adm .fx-week .fx-wk-day{font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:2px 2px 0}
+.adm .fx-week .fx-wk.is-today .fx-wk-day{color:var(--brand)}
+.adm .fx-week a.fx-row{color:inherit;text-decoration:none}
+.adm .fx-week a.fx-row:hover{background:color-mix(in srgb,var(--soft) 70%,var(--brand) 8%)}
+.adm .fx-week .fx-row.past{opacity:.6}
+/* 27 Nov: Settings → Lesson slides */
+.adm .ls-opt{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border:1.5px solid var(--line);border-radius:14px;cursor:pointer}
+.adm .ls-opt:has(input:checked){border-color:var(--brand);background:color-mix(in srgb,var(--brand) 6%,transparent)}
+.adm .ls-opt input{margin-top:4px;accent-color:var(--brand)}
+.adm .ls-opt span{display:flex;flex-direction:column;gap:2px}.adm .ls-opt small{font-size:14px;color:var(--muted);line-height:1.45}
+.adm .ls-list{display:grid;gap:10px}
+.adm .ls-row{padding:14px 16px}
+.adm .ls-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
+.adm .ls-form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.adm .ls-form input[name=folder]{flex:1 1 320px;min-width:0;padding:8px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:inherit}

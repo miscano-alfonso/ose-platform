@@ -402,6 +402,8 @@ export function folderId(v: string): string | null {
   return m ? m[1] : null;
 }
 export async function setClassFolder(userId: string, groupId: string, value: string): Promise<string | null> {
+  const { slidesOwner } = await import("./slides-owner");
+  if ((await slidesOwner()) === "school") return "The office looks after the slides folders. Message the office to change one.";
   const id = value.trim() ? folderId(value) : null;
   if (value.trim() && !id) return "That doesn’t look like a Google Drive folder link. Open the folder in Drive and copy the address.";
   if (!/^[0-9a-f-]{36}$/.test(groupId)) return "That class isn’t one of yours.";
