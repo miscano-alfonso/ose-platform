@@ -1887,3 +1887,9 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 html:has(.adm),html:has(.adm) body{overscroll-behavior:none;background:#f3f4f8}
 @media (prefers-color-scheme:dark){html:has(.adm:not([data-theme=light])),html:has(.adm:not([data-theme=light])) body{background:#0d0f1c}}
 html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:#0d0f1c}
+/* 27 Nov (Alfonso: "to save space"): "Viewing as … · Back to the admin" on the same bottom bar as the Beta note */
+.adm .beta-strip{display:flex;align-items:center;gap:10px 18px;flex-wrap:wrap}
+.adm .beta-strip .bs-view{margin-left:auto;display:flex;align-items:center;gap:12px;white-space:nowrap}
+.adm .beta-strip .bs-view .abtn{background:var(--pop-ink,#0f1747);color:var(--pop,#e9f56a);border-color:transparent}
+/* the menu ends above the bottom bar, so Sign out and the round buttons aren't hidden behind it */
+@media (min-width:821px){.adm:has(.main > .beta-strip) .side{height:calc(100dvh - 48px)}.adm .beta-strip{min-height:48px;box-sizing:border-box;padding-block:7px}}

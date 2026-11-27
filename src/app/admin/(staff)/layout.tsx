@@ -65,8 +65,6 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     + (select count(*)::int from marking_jobs j join teachers t on t.id = j.teacher_id where t.user_id = $1 and j.paid_at is not null and j.returned_at is null) as marking`, [me.id]));
 
   return <div className="adm" data-theme={theme} data-palette={palette} style={style}><DashStyles who="teacher" />
-    {me.viewing && !(await headers()).get("x-ose-preview") && <form action={stopViewingAction} className="viewbar"><span>Viewing as <b>{me.name}</b> (teacher). You see exactly what they see; anything you change is recorded as you, {me.realName}.</span>
-      <button className="abtn sm" type="submit">Back to the admin</button></form>}
     <LessonWindow /><NotifyCenter api="/admin/notify-api" role="teacher" /><div className="app">
       <aside className="side">
         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -76,7 +74,12 @@ export default async function StaffLayout({ children }: { children: React.ReactN
         <TeacherNav counts={{ "/admin/teacher/messages": c.msgs + c.email, "/admin/teacher/reports": c.reports, "/admin/teacher/marking": c.marking }} groups={await teacherMenu()} />
         <SideFoot theme={theme} signOut={signOutAction} inline toggle settings="/admin/teacher/notifications" mode={ownTeacher ? "teacher" : undefined} home={{ href: "/admin/teacher", label: "My day" }} />
       </aside>
-      <main className="main"><TopBar />{await import("@/lib/test-mode").then(async (t) => await t.betaOn() ? <p className="note beta-strip" role="note">{t.BETA.stripTeacher}</p> : null)}{children}</main>
+      <main className="main"><TopBar />{await (async () => {
+        // 27 Nov (Alfonso: "to save space"): "Viewing as …" sits on the yellow bar along the bottom, with the Beta note
+        const t = await import("@/lib/test-mode"), beta = await t.betaOn(), view = me.viewing && !(await headers()).get("x-ose-preview");
+        return beta || view ? <div className="note beta-strip" role="note">{beta && <span>{t.BETA.stripTeacher}</span>}
+          {view && <form action={stopViewingAction} className="bs-view"><span>Viewing as <b>{me.name}</b> (teacher)</span><button className="abtn sm" type="submit">Back to the admin</button></form>}</div> : null;
+      })()}{children}</main>
     </div></div>;
 }
 
