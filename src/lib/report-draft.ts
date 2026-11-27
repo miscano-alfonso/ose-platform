@@ -1,4 +1,5 @@
 import "server-only";
+import { countWords, MIN_WORDS, MAX_WORDS } from "./report-words";
 import { withSchool, runAsSchool, siteSchool } from "./db";
 import { getAiConfig } from "./social";
 
@@ -55,7 +56,7 @@ async function context(actor: { id: string; role: string }, entryId: string): Pr
 }
 
 const SYSTEM = `You help UK secondary school teachers at a live online school draft end-of-term report comments for parents.
-Write ONE comment for the student, as the teacher, in British English: warm, specific, honest and encouraging. 70 to 120 words, plain text, one or two short paragraphs, no headings, lists, emoji or sign-off.
+Write ONE comment for the student, as the teacher, in British English: warm, specific, honest and encouraging. Between 120 and 180 words (the school asks for 100 to 200), plain text, two short paragraphs, no headings, lists, emoji or sign-off.
 - Name at least one specific piece of work by its title (and what it showed), so the comment is clearly about this child.
 - Say what they have done well, then give one or two clear, practical targets for next term, linked to the subject.
 - If there is a previous report, build on it: note progress on earlier targets where the evidence shows it, and don't repeat its wording.
@@ -98,7 +99,18 @@ export async function draftComment(actor: { id: string; role: string }, entryId:
     });
     const j = await res.json().catch(() => ({})) as { content?: { type: string; text?: string }[]; error?: { message?: string }; stop_reason?: string; model?: string };
     if (!res.ok) return { error: `Claude couldn’t draft it just now${j.error?.message ? `: ${j.error.message.slice(0, 120)}` : ""}.` };
-    const text = (j.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim();
+    let text = (j.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim();
+    // 27 Nov (Alfonso): comments are 100–200 words; if the draft lands outside that, ask once more for the right length
+    const n = countWords(text);
+    if (text && (n < MIN_WORDS || n > MAX_WORDS)) {
+      const again = await fetch(process.env.ANTHROPIC_API_URL || "https://api.anthropic.com/v1/messages", {
+        method: "POST", headers: { "x-api-key": ai.key, "anthropic-version": "2023-06-01", "content-type": "application/json" },
+        body: JSON.stringify({ model: ai.model || "claude-sonnet-5-5", max_tokens: 4000, system: SYSTEM, messages: [{ role: "user", content: facts }, { role: "assistant", content: text },
+          { role: "user", content: `That is ${n} words. Rewrite it to between 120 and 180 words, keeping the same facts and voice. Reply with the comment only.` }] }), signal: AbortSignal.timeout(60000),
+      }).then((r) => r.ok ? r.json() : null).catch(() => null) as { content?: { type: string; text?: string }[] } | null;
+      const t2 = (again?.content ?? []).filter((b) => b.type === "text").map((b) => b.text ?? "").join("").trim();
+      if (t2 && Math.abs(countWords(t2) - 150) < Math.abs(n - 150)) text = t2;
+    }
     if (!text) console.error("report draft: no text", j.model, j.stop_reason, (j.content ?? []).map((b) => b.type).join(","));
     return text ? { text: text.slice(0, 2000) }
       : { error: j.stop_reason === "refusal" ? "Claude declined to write this one. Try again, or write it yourself."

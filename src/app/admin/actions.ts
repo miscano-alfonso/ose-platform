@@ -1765,7 +1765,7 @@ export async function saveQuickLinksAction(hrefs: string[] | null): Promise<void
   revalidatePath("/admin");
 }
 // ---------- customisable dashboard ----------
-const DASH_MODULES: Record<string, string[]> = { "admin-home": ["hero", "k-students", "k-places", "k-attendance", "k-collected", "k-next", "k-failed", "today", "attention", "collections", "bookings", "coming", "fullest", "tasters", "quick", "email", "messages", "students"] };   // every module adminModules() offers; one missing here is dropped when the layout is saved
+const DASH_MODULES: Record<string, string[]> = { "admin-home": ["hero", "k-students", "k-places", "k-attendance", "k-collected", "k-next", "k-failed", "today", "attention", "collections", "bookings", "coming", "fullest", "tasters", "quick", "email", "messages", "marking", "students"] };   // every module adminModules() offers; one missing here is dropped when the layout is saved
 export async function saveDashLayoutAction(page: string, layout: { id: string; size: string }[] | null): Promise<void> {
   const me = await requireStaff();
   const { PAGE_MODULES } = await import("@/lib/dash-pages");

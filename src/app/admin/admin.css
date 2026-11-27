@@ -1776,3 +1776,27 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 /* 27 Nov: Payments: Swap or cancel a course at the bottom */
 .adm .sc-bottom{margin:4px 0 20px}
 .adm .pay-thisyr{display:block;font-size:12px;color:var(--muted);margin-top:2px}
+
+/* 27 Nov: live word count under each report comment (100–200 words) */
+.adm .wr-wc{margin:5px 2px 0;font-size:13px;font-weight:600;color:var(--muted)}
+.adm .wr-wc[data-state=short]{color:var(--warn)}.adm .wr-wc[data-state=ok]{color:var(--good)}.adm .wr-wc[data-state=long]{color:var(--bad)}
+.adm .aid-box textarea{min-height:250px;max-height:560px;field-sizing:content;padding-bottom:44px}
+/* 27 Nov: Admin → Marking, and the admin home's Marking box */
+.adm .am-tiles{margin:0 0 16px}.adm .am-tiles b{font-size:26px;line-height:1.1}.adm .am-tiles span{font-size:14px;color:var(--muted)}
+.adm .am-tiles a.bad b{color:var(--bad)}.adm .am-tiles a.warn b{color:var(--warn)}
+.adm .am-table tr.am-bad td:first-child{box-shadow:inset 3px 0 0 var(--bad)}
+.adm .am-teacher{border:1px solid var(--line);border-radius:12px;background:var(--soft);margin:0 0 10px}
+.adm .am-teacher>summary{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:12px 14px;cursor:pointer;list-style:none}
+.adm .am-teacher>summary::-webkit-details-marker{display:none}
+.adm .am-teacher>summary::before{content:"▸";color:var(--muted);transition:transform .15s}.adm .am-teacher[open]>summary::before{transform:rotate(90deg)}
+.adm .am-list{list-style:none;margin:0;padding:0 14px 8px}
+.adm .am-teacher .am-list{padding-left:34px}
+.adm .am-piece{display:flex;align-items:center;gap:12px;padding:9px 0 9px 10px;border-top:1px solid var(--line);border-left:3px solid transparent}
+.adm .am-piece.bad{border-left-color:var(--bad)}.adm .am-piece.warn{border-left-color:var(--warn)}.adm .am-piece.ok{border-left-color:var(--good)}
+.adm .am-piece .t{flex:1;min-width:0;display:grid;gap:2px}.adm .am-piece .t>span{color:var(--muted);font-size:14px}
+.adm .am-piece .t a{color:inherit}
+.adm .am-note{font-size:14px;color:var(--muted);font-style:italic;max-width:40%}
+@media (max-width:600px){.adm .am-piece{flex-wrap:wrap}.adm .am-piece .t{flex-basis:100%}.adm .am-teacher .am-list{padding-left:14px}}
+.adm .dx-amk .dx-item .t>span{font-size:14px}
+.adm .am-tiles a{background:var(--panel);border-color:var(--line)}
+.adm .am-table td:first-child{white-space:nowrap}

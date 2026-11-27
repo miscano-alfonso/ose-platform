@@ -1,4 +1,5 @@
 import { NoAssessPick } from "../../../../NoAssessPick";
+import { countWords } from "@/lib/report-words";
 import { GuideSlides } from "../../../../GuideSlides";
 import { REPORT_SLIDES } from "../../../../guides";
 import { notFound } from "next/navigation";
@@ -41,7 +42,7 @@ export default async function Write({ params, searchParams }: { params: Promise<
         {notYet && <li>You can write and save drafts now.</li>}
         <li>Effort and Progress are 1–5 (5 = Exceeding).</li>
         <li>Progress comes from Classroom marks when there are any; choose a score to overrule it.</li>
-        <li>Each comment needs at least 20 characters.</li>
+        <li>Each comment should be <b>100–200 words</b>: the count under it turns green when it’s in range.</li>
         <li>A report can be submitted once its assessment is marked in Classroom (the office chooses which term’s), or once you’ve said why there isn’t one.</li>
       </ul>
     </div>
@@ -84,7 +85,8 @@ export default async function Write({ params, searchParams }: { params: Promise<
                 <button className="abtn sm" type="submit" name="one" value={`${r.id}:0`}>Save draft</button>
                 <button className="abtn sm pri" type="submit" name="one" value={`${r.id}:1`} disabled={!!wait} title={wait || undefined}>Submit</button></div>}</div>
             <div className="aid-box"><textarea id={`comment_${r.id}`} name={`comment_${r.id}`} defaultValue={r.comment ?? ""} rows={7} maxLength={2000} disabled={ro} className="mini" style={{ width: "100%" }} />
-              {tools && <AiDraft id={r.id} auto={r.auto_progress ?? null} has={!!r.comment} />}</div></div>
+              {tools && <AiDraft id={r.id} auto={r.auto_progress ?? null} has={!!r.comment} />}</div>
+            <p className="wr-wc" data-for={r.id}>{countWords(r.comment)} words · 100–200</p></div>
         </div>
       </section>; })}
     </form>}

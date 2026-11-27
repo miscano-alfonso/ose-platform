@@ -16,6 +16,7 @@ import { notInPlan, type PlanId } from "@/lib/plan";
 import type { BoardModule } from "../BentoBoard";
 import { LiveMessages } from "../LiveMessages";
 import { messagesStamp } from "@/lib/live-stamp";
+import { markingOverview } from "@/lib/marking";
 
 const PILL: Record<string, [string, string]> = { failed: ["bad", "Payment failed"], full: ["warn", "Class full"], almost: ["warn", "Almost full"], enquiry: ["info", "New enquiry"], waitlist: ["mute", "Waiting list"],
   clash: ["bad", "Timetable clash"], lesson: ["warn", "Lesson change"], access: ["bad", "Lesson access"], low: ["warn", "Low attendance"], chat: ["bad", "Chat alert"] };
@@ -55,6 +56,10 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
     .sort((a, b) => b.missing - a.missing || (a.att ?? 100) - (b.att ?? 100)) : [];
   const handRate = so && so.totals.due ? Math.round((so.totals.handed / so.totals.due) * 100) : null;
   const replies = officeAll.filter((x) => x.unread > 0);
+  // 27 Nov (Alfonso): every teacher's marking, so the office can keep tabs
+  const mk = await markingOverview().catch(() => null);
+  const mkQ = mk?.queue ?? [], mkOver = mkQ.filter((x) => x.daysLeft < 0).length;
+  const mkMarked = mk ? mk.teachers.reduce((a, x) => a + x.marked30, 0) : 0, mkOnTime = mk ? mk.teachers.reduce((a, x) => a + x.onTime30, 0) : 0;
   const fromParent = threads.filter((x) => x.last_sender === "parent").length + replies.length;
   const mail = box?.connected ? await inboxList("new").catch(() => ({ rows: [], unread: 0 })) : { rows: [], unread: 0 };
   const ago = (iso: string) => { const h = (Date.now() - Date.parse(iso)) / 3600e3; return h < 1 ? `${Math.max(1, Math.round(h * 60))} min ago` : h < 24 ? `${Math.round(h)} h ago` : dayMonth(iso.slice(0, 10)); };
@@ -188,6 +193,22 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
               <span className="t"><b>{x.subject}</b><span>{x.parent} ↔ {x.teacher} · about {x.student}</span>
                 <span style={{ fontSize: 13 }}>{x.last_sender === "parent" ? "Parent wrote" : x.last_sender === "teacher" ? "Teacher replied" : x.last_sender === "office" ? "Office replied" : "Started"} {ago(x.last_message_at)}{x.office_copied ? " · passed to the office" : ""}</span></span>
               <span className="go" aria-hidden="true">→</span></Link>; })}</MoreList></>}
+    </section> },
+    { id: "marking", title: "Marking", node: <section className="dx-card dx-amk">
+      <header><h2>Marking</h2>{mkOver > 0 && <span className="dx-count" title="Pieces of work past the 7-day turnaround">{mkOver}</span>}<span className="dx-sub">7-day turnaround</span><Link className="dx-more" href="/admin/marking">All marking →</Link></header>
+      {!mk ? <p className="empty">Couldn’t load the marking.</p> : <>
+        <div className="dx-mini">
+          <Link href="/admin/marking"><b>{mkQ.reduce((a, x) => a + x.toMark, 0)}</b><span>hand-ins to mark</span></Link>
+          <Link href="/admin/marking" className={mkOver ? "bad" : undefined}><b>{mkOver}</b><span>piece{mkOver === 1 ? "" : "s"} overdue</span></Link>
+          <Link href="/admin/marking"><b>{mkMarked ? `${Math.round((mkOnTime / mkMarked) * 100)}%` : "–"}</b><span>marked on time, 30 days</span></Link>
+        </div>
+        {mk.teachers.every((x) => !x.items.length) ? <div className="dx-clear"><Ico d={I.check} /><b>All marked</b><span>No handed-in work is waiting for a teacher.</span></div>
+          : <MoreList className="dx-list" limit={4}>{mk.teachers.filter((x) => x.items.length).map((x) => { const next = x.items[0];
+            return <Link key={x.userId || "none"} className={`dx-item ${x.overdue ? "bad" : x.soon ? "warn" : "info"}`} href={`/admin/marking?t=${x.userId}#work`}>
+              <span className="t"><b>{x.name}</b><span>{x.toMark} to mark in {x.pieces} piece{x.pieces === 1 ? "" : "s"}{x.overdue ? ` · ${x.overdue} overdue` : x.soon ? ` · ${x.soon} due soon` : ""}{x.late ? ` · ${x.late} late` : ""}</span>
+                {next && <span style={{ fontSize: 13 }}>{next.daysLeft < 0 ? "Oldest" : "Next"}: {next.title} · {next.cls} · {next.daysLeft < 0 ? `${-next.daysLeft} day${next.daysLeft === -1 ? "" : "s"} overdue` : next.daysLeft === 0 ? "due today" : `${next.daysLeft} day${next.daysLeft === 1 ? "" : "s"} left`}</span>}</span>
+              <span className="go" aria-hidden="true">→</span></Link>; })}</MoreList>}
+      </>}
     </section> },
     { id: "students", title: "Students: work & attendance", node: <section className="dx-card">
       <header><h2>Students</h2>{so && so.totals.withMissing > 0 && <span className="dx-count">{so.totals.withMissing}</span>}<Link className="dx-more" href="/admin/students">All students →</Link></header>

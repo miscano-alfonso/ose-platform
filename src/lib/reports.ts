@@ -1,4 +1,5 @@
 import "server-only";
+import { wordsOk, MIN_WORDS, MAX_WORDS } from "./report-words";
 import { withSchool } from "./db";
 
 // Termly reports: one entry per student per class. Teachers write them; an admin approves and publishes.
@@ -158,7 +159,7 @@ export async function saveWriteSheet(actor: { id: string; role: string }, cycleI
       const [a] = await q<{ state: string }>(`select state from report_assessment($1)`, [r.id]);
       const assessOk = !a || a.state === "marked" || a.state === "unknown" || (r.noAssessment ?? "").trim().length >= 3;
       if (submit && !assessOk) waiting++;
-      const ready = r.effort != null && r.comment.trim().length >= 20 && assessOk;
+      const ready = r.effort != null && wordsOk(r.comment) && assessOk;
       const status = submit && ready ? "submitted" : (r.effort != null || r.comment.trim()) ? "draft" : "todo";
       if (submit && !ready && (r.effort != null || r.comment.trim())) problems.push("x");
       await q(`update report_entries set progress_override = $2::smallint, effort = $3::smallint, working_grade = $4::smallint, predicted_grade = $5::smallint, comment = nullif($6, ''),
@@ -169,7 +170,7 @@ export async function saveWriteSheet(actor: { id: string; role: string }, cycleI
     }
     if (held) return held;
     if (!problems.length) return null;
-    return `${problems.length} report${problems.length === 1 ? " was" : "s were"} saved as a draft: each needs an Effort score, a comment of at least 20 characters${waiting ? `, and the assessment marked in Classroom (or a reason there isn’t one: ${waiting} waiting)` : ""}.`;
+    return `${problems.length} report${problems.length === 1 ? " was" : "s were"} saved as a draft: each needs an Effort score, a comment of ${MIN_WORDS}–${MAX_WORDS} words${waiting ? `, and the assessment marked in Classroom (or a reason there isn’t one: ${waiting} waiting)` : ""}.`;
   });
 }
 

@@ -21,5 +21,6 @@ const DEFAULT_LAYOUT: { id: string; size: "s" | "m" | "l" | "xl" | "full" }[] = 
   { id: "today", size: "l" }, { id: "attention", size: "l" },
   { id: "collections", size: "m" }, { id: "bookings", size: "m" }, { id: "tasters", size: "m" },
   { id: "email", size: "l" }, { id: "students", size: "l" },
+  { id: "marking", size: "l" },
   { id: "coming", size: "l" }, { id: "fullest", size: "l" },
 ];

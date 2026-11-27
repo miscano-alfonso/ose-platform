@@ -109,3 +109,53 @@ export async function resolveWork(userId: string, cwId: string, on: boolean, not
       union all select 1 from users u where u.id = $2 and u.role = 'school_admin') returning c.id`, [cwId, userId, on, (note ?? "").trim().slice(0, 200)]));
   return r.length ? null : "That piece of work isn’t in one of your classes.";
 }
+
+/** 27 Nov (Alfonso: "admin needs an overview of all markings, so we can keep tabs"): every teacher's marking in one
+ *  place, for the admin home's Marking box and Admin → Marking. Per teacher: hand-ins to mark, pieces overdue or due
+ *  within 2 days, late hand-ins, and how much they've marked in the last 30 days (and how much of it on time). */
+export type TeacherMarking = { userId: string; name: string; toMark: number; pieces: number; overdue: number; soon: number; late: number; worst: number | null;
+  marked30: number; onTime30: number; resolved: number; items: MarkItem[] };
+export type ResolvedItem = { cw: string; title: string; cls: string; teacher: string | null; at: string; note: string | null; toMark: number };
+export async function markingOverview(): Promise<{ teachers: TeacherMarking[]; queue: MarkItem[]; resolved: ResolvedItem[] }> {
+  const [queue, staff, recent] = await Promise.all([
+    markingQueue(null),
+    withSchool((q) => q<{ userId: string; name: string; marked30: number; onTime30: number; resolved: number }>(`select u.id as "userId", u.name,
+        (select count(*)::int from classroom_submissions s join classroom_coursework c on c.id = s.coursework_id join course_groups g on g.id = c.group_id
+          where g.teacher_id = t.id and s.state = 'returned' and s.graded_at > now() - interval '30 days') as marked30,
+        (select count(*)::int from classroom_submissions s join classroom_coursework c on c.id = s.coursework_id join course_groups g on g.id = c.group_id
+          where g.teacher_id = t.id and s.state = 'returned' and s.graded_at > now() - interval '30 days'
+            and s.graded_at <= coalesce(c.due_at, s.turned_in_at, s.graded_at) + make_interval(days => $1)) as "onTime30",
+        (select count(*)::int from classroom_coursework c join course_groups g on g.id = c.group_id where g.teacher_id = t.id and c.resolved_at > now() - interval '60 days') as resolved
+      from teachers t join users u on u.id = t.user_id
+      where t.archived_at is null and u.disabled_at is null and exists (select 1 from course_groups g where g.teacher_id = t.id and g.status <> 'closed')
+      order by u.name`, [TURNAROUND_DAYS])).catch(() => []),
+    withSchool((q) => q<ResolvedItem>(`select c.id as cw, c.title, l.name || ' ' || coalesce(sj.short_name, sj.name) as cls, u.name as teacher, c.resolved_at::text as at, c.resolved_note as note,
+        (select count(*)::int from classroom_submissions s where s.coursework_id = c.id and s.state = 'turned_in') as "toMark"
+      from classroom_coursework c join course_groups g on g.id = c.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+        left join teachers t on t.id = g.teacher_id left join users u on u.id = t.user_id
+      where c.resolved_at > now() - interval '60 days' order by c.resolved_at desc limit 50`)).catch(() => []),
+  ]);
+  const byUser = new Map<string, MarkItem[]>();
+  for (const m of queue) if (m.teacherUserId) byUser.set(m.teacherUserId, [...(byUser.get(m.teacherUserId) ?? []), m]);
+  const known = new Set(staff.map((s) => s.userId));
+  // a class whose teacher has left (or none set) still shows, under "No teacher"
+  const extra = queue.filter((m) => !m.teacherUserId || !known.has(m.teacherUserId));
+  const rows = [...staff, ...(extra.length ? [{ userId: "", name: "No teacher set", marked30: 0, onTime30: 0, resolved: 0 }] : [])].map((s) => {
+    const items = s.userId ? byUser.get(s.userId) ?? [] : extra;
+    const overdue = items.filter((m) => m.daysLeft < 0).length;
+    return { ...s, items, pieces: items.length, toMark: items.reduce((a, m) => a + m.toMark, 0), overdue, late: items.reduce((a, m) => a + m.late, 0),
+      soon: items.filter((m) => m.daysLeft >= 0 && m.daysLeft <= REMIND_DAYS).length, worst: items.length ? Math.min(...items.map((m) => m.daysLeft)) : null };
+  });
+  // most behind first: overdue pieces (oldest first), then due soon, then most to mark
+  rows.sort((a, b) => b.overdue - a.overdue || (a.worst ?? 99) - (b.worst ?? 99) || b.soon - a.soon || b.toMark - a.toMark || a.name.localeCompare(b.name));
+  return { teachers: rows, queue, resolved: recent };
+}
+
+/** The admin menu's Marking badge: pieces of work past their marking deadline, across the school. */
+export async function overdueMarkingCount(): Promise<number> {
+  const r = await withSchool((q) => q<{ n: number }>(`select count(*)::int as n from (select c.id from classroom_submissions s join classroom_coursework c on c.id = s.coursework_id
+      where s.state = 'turned_in' and ${LIVE_SQL} and coalesce(c.due_at, s.turned_in_at) is not null
+        and exists (select 1 from enrolments e where e.group_id = c.group_id and e.student_id = s.student_id and e.status in ('active', 'pending'))
+      group by c.id having min(coalesce(c.due_at, s.turned_in_at)) + make_interval(days => $1) < now()) x`, [TURNAROUND_DAYS])).catch(() => [{ n: 0 }]);
+  return r[0]?.n ?? 0;
+}
