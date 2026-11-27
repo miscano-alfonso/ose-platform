@@ -5,6 +5,7 @@ import { payAccess, payMethod } from "@/lib/stripe-pay";
 import { Head, Flash, gbp, dm } from "../../fmt";
 import { paymentHistory, latePayments } from "@/lib/family";
 import { PrintButton } from "../../PrintButton";
+import { SwapCancel } from "./SwapCancel";
 
 const CELL: Record<string, [string, string]> = { paid: ["good", "Paid"], scheduled: ["mute", "Due"], processing: ["info", "Processing"], failed: ["bad", "Failed"], refunded: ["info", "Refunded"],
   part_refunded: ["info", "Part refund"], cancelled: ["mute", "Not charged"], waived: ["mute", "Waived"] };
@@ -28,7 +29,20 @@ export default async function Payments({ searchParams }: { searchParams: Promise
   const termSum = (courses: { cells: ({ status: string; amount: number; refunded: number } | null)[] }[], i: number) => courses.reduce((a, c) => a + (counts(c.cells[i]) ? c.cells[i]!.amount - c.cells[i]!.refunded : 0), 0);
   const allCourses = d ? d.children.flatMap((c) => c.courses) : [];
   return <>
-    <Head title="Payments" sub={online ? "Each term’s payment for all your children’s courses is collected automatically, by Direct Debit" : "Each course is paid in one payment per term, taken from your saved card"} />
+    <Head title="Payments" sub={online ? "Each term’s payment for all your children’s courses is collected automatically, by Direct Debit" : "Each course is paid in one payment per term, taken from your saved card"}>
+      {live.length > 0 && <SwapCancel>{d.children.flatMap((st) => st.courses.filter((c) => X[c.id]).map((c) => { const x = X[c.id];
+        return <section key={c.id} className="sc-course"><h3><span className="dot" style={{ background: c.colour }} /> {st.first}: {c.level} {c.subject}</h3>
+          <div style={{ display: "grid", gap: 10, background: "var(--soft)", borderRadius: 10, padding: 12, marginTop: 8, maxWidth: "none" }}>
+                {x.sw.length > 0 && <form action={parentSwapAction} style={{ display: "grid", gap: 8 }}><input type="hidden" name="id" value={c.id} /><b>Swap to another class</b>
+                  <select name="to" className="mini">{x.sw.map((o) => <option key={o.id} value={o.id}>{o.name}{o.slots ? ` · ${o.slots}` : ""}</option>)}</select>
+                  <select name="start" className="mini"><option value="current">Move now: the new course’s lessons from the start of this term</option><option value="next">From next term (nothing to pay now)</option></select>
+                  <div><button className="abtn sm" type="submit">Swap</button></div></form>}
+                {x.pre && <form action={parentCancelAction} style={{ display: "grid", gap: 8, borderTop: x.sw.length ? "1px solid var(--line)" : 0, paddingTop: x.sw.length ? 10 : 0 }}><input type="hidden" name="id" value={c.id} />
+                  <b>Cancel {c.subject}</b><span>{x.pre.cooling ? <>You’re within the 14-day cooling-off period: everything is cancelled{x.pre.refund ? <> and {gbp(x.pre.refund)} is refunded</> : null}.</>
+                    : <>{x.pre.notice} term{x.pre.notice > 1 ? "s’" : "’s"} notice: lessons and payments continue{x.pre.lastTerm ? ` to the end of ${x.pre.lastTerm}` : ""} ({gbp(x.pre.stillDue)} still to pay){x.pre.notCharged ? <>, then nothing more ({gbp(x.pre.notCharged)} not charged)</> : null}.</>}</span>
+                  <div><button className="abtn sm danger" type="submit">{x.pre.cooling ? "Cancel and refund" : "Cancel with notice"}</button></div></form>}
+              </div></section>; }))}</SwapCancel>}
+    </Head>
     <Flash sp={sp} />
     {pm && <section className="card pm-how" id="how">
       <div><h3 style={{ margin: "0 0 4px", font: "600 18px Jost, sans-serif" }}>How you pay each term</h3>
@@ -54,22 +68,12 @@ export default async function Payments({ searchParams }: { searchParams: Promise
       {/* 27 Nov (Alfonso): a key instead of a word in every cell; each payment's date sits in a colour-coded tab */}
       {si === 0 && <div className="pc-key" aria-label="Key"><span className="pc-tab paid">Paid</span><span className="pc-tab due">Due</span><span className="pc-tab late">Late</span></div>}</div>
       <div className="tw" style={{ marginBottom: 0 }}><table><thead><tr><th>Course</th><th className="n">Year</th>{d.terms.map((t) => <th key={t.id} className="n">T{t.number}</th>)}</tr></thead><tbody>
-        {st.courses.length === 0 ? <tr><td colSpan={d.terms.length + 2} className="muted">No courses this year.</td></tr> : st.courses.map((c) => { const x = X[c.id]; return <tr key={c.id}>
+        {st.courses.length === 0 ? <tr><td colSpan={d.terms.length + 2} className="muted">No courses this year.</td></tr> : st.courses.map((c) => { return <tr key={c.id}>
           <td><span className="dot" style={{ background: c.colour }} /> <b>{c.subject}</b> <span className="muted">{c.level}</span>
             {c.cpl && c.list > 0 && <span className="muted" style={{ display: "block", fontSize: 13.5 }}>{Math.round(c.list / c.cpl)} lessons × {gbp(c.cpl)}{c.discount > 0 ? `, less ${Math.round((c.discount / c.list) * 100)}% multi-course discount` : ""}</span>}
             {c.status !== "active" && <> <span className="pill mute">{c.status === "swapped" ? "Swapped" : "Cancelled"}</span></>}
             {c.notice_given_on && c.status === "active" && <> <span className="pill warn">Notice given {dm(c.notice_given_on)}</span></>}
-            {x && <details style={{ marginTop: 6 }}><summary className="abtn sm" style={{ cursor: "pointer" }}>Swap or cancel</summary>
-              <div style={{ display: "grid", gap: 10, background: "var(--soft)", borderRadius: 10, padding: 12, marginTop: 8, maxWidth: 520 }}>
-                {x.sw.length > 0 && <form action={parentSwapAction} style={{ display: "grid", gap: 8 }}><input type="hidden" name="id" value={c.id} /><b>Swap to another class</b>
-                  <select name="to" className="mini">{x.sw.map((o) => <option key={o.id} value={o.id}>{o.name}{o.slots ? ` · ${o.slots}` : ""}</option>)}</select>
-                  <select name="start" className="mini"><option value="current">Move now: the new course’s lessons from the start of this term</option><option value="next">From next term (nothing to pay now)</option></select>
-                  <div><button className="abtn sm" type="submit">Swap</button></div></form>}
-                {x.pre && <form action={parentCancelAction} style={{ display: "grid", gap: 8, borderTop: x.sw.length ? "1px solid var(--line)" : 0, paddingTop: x.sw.length ? 10 : 0 }}><input type="hidden" name="id" value={c.id} />
-                  <b>Cancel {c.subject}</b><span>{x.pre.cooling ? <>You’re within the 14-day cooling-off period: everything is cancelled{x.pre.refund ? <> and {gbp(x.pre.refund)} is refunded</> : null}.</>
-                    : <>{x.pre.notice} term{x.pre.notice > 1 ? "s’" : "’s"} notice: lessons and payments continue{x.pre.lastTerm ? ` to the end of ${x.pre.lastTerm}` : ""} ({gbp(x.pre.stillDue)} still to pay){x.pre.notCharged ? <>, then nothing more ({gbp(x.pre.notCharged)} not charged)</> : null}.</>}</span>
-                  <div><button className="abtn sm danger" type="submit">{x.pre.cooling ? "Cancel and refund" : "Cancel with notice"}</button></div></form>}
-              </div></details>}</td>
+            </td>
           <td className="n">{gbp(c.net)}</td>
           {c.cells.map((cell, i) => <td key={i} className="n">{cell ? <PayCell cell={cell} late={lateCell(cell)} /> : <span className="muted">—</span>}</td>)}</tr>; })}
       </tbody>

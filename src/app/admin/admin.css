@@ -1748,3 +1748,13 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm .pc-tab.none{background:transparent;color:var(--muted);font-weight:500}
 .adm a.pc-tab:hover{filter:brightness(.95);text-decoration:underline}
 .adm .pc-key .pc-tab{min-width:0;font-size:13px}
+/* 27 Nov (Alfonso): Payments: "Swap or cancel a course" is underlined text at the top right, bringing up a window */
+.adm .sc-open{background:none;border:0;padding:0;font:inherit;font-size:15px;color:var(--ink);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+.adm .sc-open:hover{color:var(--brand)}
+.adm .sc-dlg{width:min(640px,94vw)}
+.adm .sc-body{display:grid;gap:16px;max-height:70vh;overflow:auto;padding:4px 2px}
+.adm .sc-course h3{margin:0 0 8px;font:600 17px Jost,sans-serif;display:flex;align-items:center;gap:8px}
+.gv-dlg.sc-dlg{background:var(--panel,#fff);color:var(--ink,#0f1747)}
+.gv-dlg.sc-dlg .gv-head{border-bottom:1px solid var(--line)}
+.gv-dlg.sc-dlg .gv-head .abtn{color:var(--ink);border-color:var(--line)}
+.gv-dlg.sc-dlg .sc-body{padding:14px 16px 18px}
