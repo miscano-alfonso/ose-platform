@@ -95,6 +95,11 @@ export const DEFS: AutoDef[] = [
     fields: ["name", "child", "list", "points", "total", "rewards_link", "school"],
     subject: "{{child}} earned {{points}} reward points",
     body: "Hi {{name}},\n\nWell done! {{child}} has been given reward points:\n\n{{list}}\n\nThat’s **{{total}} points this term**. The top 3 in the school at the end of term win a prize. [See the leaderboard]({{rewards_link}})\n\n{{school}}" },
+  // 27 Nov (Alfonso): a hand-in with nothing attached, or a photo the wrong way round: the student is asked to hand it in again
+  { key: "handin_redo", name: "Hand-in needs doing again", default_on: true, when: "After each Google Classroom read (every few hours): when a student hands in work with nothing attached, or a photo of their work that’s sideways or upside down. Once for each hand-in.", timing: null, to_parent: false, to_student: true,
+    fields: ["name", "child", "work", "class", "problem", "fix", "link", "school"],
+    subject: "Please hand in “{{work}}” again",
+    body: "Hi {{name}},\n\nYour work for {{class}}, “{{work}}”, {{problem}}, so your teacher can’t mark it yet.\n\nTo fix it: open it in Google Classroom, press **Unsubmit**, {{fix}}, then press **Hand in** again.\n\n[Open it in Classroom]({{link}})\n\nThank you,\n{{school}}" },
   // 6 Nov: to the teacher, not families
   { key: "marking_reminder", name: "Marking reminder to the teacher", when: "Once a day (between 8am and 8pm) while any handed-in work in their classes is close to or past the 7-day marking turnaround, starting", timing: { label: "days before the marking deadline", unit: "days", default: 2 }, to_parent: false, to_student: false, to_teacher: true,
     fields: ["teacher", "count", "list", "dashboard_link", "school"],
@@ -359,6 +364,28 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
           assignments_link: who === "parent" ? kidsLink("parent", "/assignments") : kidsLink("student", ""), school, parent: k.parent ?? name });
         if (c.to_student && k.semail) await deliverDigest(q, key, c, { name: k.child, email: k.semail }, lines, vars("student", k.child), budget);
         if (c.to_parent && k.pemail) await deliverDigest(q, key, c, { name: k.parent ?? "", email: k.pemail }, lines, vars("parent", k.parent ?? "there"), budget);
+      }
+    }
+
+    // 27 Nov (Alfonso): hand-ins with nothing attached, or a photo the wrong way round (handin-checks.ts): ask the student to hand in again
+    c = cfg("handin_redo");
+    if (c) {
+      const rows = await q<{ id: string; at: string; why: string; sid: string; child: string; semail: string | null; parent: string | null; pemail: string | null; work: string; class: string; link: string | null }>(`
+        select s.id::text, s.turned_in_at::text as at, case when s.content = 'none' then 'none' else s.photo_check end as why, st.id as sid, coalesce(nullif(st.known_as, ''), st.first_name) as child,
+          st.email::text as semail, p.first_name as parent, p.email::text as pemail, cw.title as work, coalesce(l.name || ' ' || coalesce(sj.short_name, sj.name), 'your 1:1') as class, coalesce(s.link, cw.link) as link
+        from classroom_submissions s join classroom_coursework cw on cw.id = s.coursework_id join students st on st.id = s.student_id left join parents p on p.id = st.parent_id
+          left join course_groups g on g.id = cw.group_id left join levels l on l.id = g.level_id left join subjects sj on sj.id = g.subject_id
+        where s.turned_in_at > now() - interval '14 days' and cw.resolved_at is null
+          and ((s.state = 'assigned' and s.content = 'none') or (s.state = 'turned_in' and s.photo_check in ('sideways', 'upside_down')))`);
+      const WHY: Record<string, [string, string]> = {
+        none: ["was handed in with nothing attached", "add your work (a photo, a file or a document)"],
+        sideways: ["has a photo that looks sideways", "remove the photo, turn it the right way up (rotate it in your photos app first) and add it again"],
+        upside_down: ["has a photo that looks upside down", "remove the photo, turn it the right way up (rotate it in your photos app first) and add it again"] };
+      for (const r of rows) {
+        const [problem, fix] = WHY[r.why] ?? WHY.none;
+        const vars = (name: string) => ({ name, child: r.child, work: r.work, class: r.class, problem, fix, link: r.link ?? "https://classroom.google.com", school, parent: r.parent ?? name });
+        const to = [...(c.to_student && r.semail ? [{ name: r.child, email: r.semail, v: vars(r.child) }] : []), ...(c.to_parent && r.pemail ? [{ name: r.parent ?? "", email: r.pemail, v: vars(r.parent ?? "there") }] : [])];
+        for (const t of to) await deliver(q, "handin_redo", c, { ref: `${r.id}:${r.at}:${r.why}`, to: [{ name: t.name, email: t.email }], vars: t.v }, budget);
       }
     }
 

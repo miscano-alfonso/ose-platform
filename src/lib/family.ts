@@ -83,8 +83,8 @@ export async function cancelAbsence(parentId: string, id: string) {
 // ---------- assignments (from Google Classroom) ----------
 export async function assignments(studentIds: string[]) {
   return withSchool((q) => q<{ student_id: string; title: string; due_at: string | null; link: string | null; class: string; colour: string; status: string; points: number | null; max: number | null; late: boolean;
-    description: string | null; materials: { kind: string; title: string; url: string | null }[]; posted_at: string | null; teacher: string | null; sent_back: boolean; content: string | null }>(`
-    select a.student_id, a.title, a.due_at::text, a.link, a.description, a.materials, a.posted_at::text, coalesce(a.sent_back, false) as sent_back, a.content,
+    description: string | null; materials: { kind: string; title: string; url: string | null }[]; posted_at: string | null; teacher: string | null; sent_back: boolean; content: string | null; photo_check: string | null }>(`
+    select a.student_id, a.title, a.due_at::text, a.link, a.description, a.materials, a.posted_at::text, coalesce(a.sent_back, false) as sent_back, a.content, a.photo_check,
       (select u.name from teachers t join users u on u.id = t.user_id where t.id = coalesce(g.teacher_id, oc.teacher_id)) as teacher, coalesce(l.name || ' ' || coalesce(sj.short_name, sj.name), '1:1 ' || coalesce(osj.name, oc.name, '')) as class,
       coalesce(sj.colour, osj.colour, '#8494c2') as colour, a.parent_status as status, a.points::float as points, a.max_points::float as max, a.late
     from student_assignments a left join course_groups g on g.id = a.group_id left join levels l on l.id = g.level_id left join subjects sj on sj.id = g.subject_id
@@ -333,7 +333,7 @@ export async function studentClass(studentId: string, groupId: string) {
       lessons: await q<{ date: string; time: string; status: string; mark: string | null }>(`select e.lesson_date::text as date, to_char(s.starts_at,'HH24:MI') as time, e.status::text,
           (select m.mark::text from attendance_marks m where m.lesson_event_id = e.id and m.student_id = $1) as mark
         from lesson_events e join lesson_slots s on s.id = e.slot_id where e.group_id = $2 and e.term_id = ${TERM_NOW} and e.status <> 'cancelled' order by e.lesson_date, s.starts_at`, [studentId, groupId]),
-      work: await q<{ title: string; due_at: string | null; link: string | null; status: string; points: number | null; max: number | null; content: string | null }>(`select title, due_at::text, link, parent_status as status, points::float, max_points::float as max, content
+      work: await q<{ title: string; due_at: string | null; link: string | null; status: string; points: number | null; max: number | null; content: string | null; photo_check: string | null }>(`select title, due_at::text, link, parent_status as status, points::float, max_points::float as max, content, photo_check
         from student_assignments where student_id = $1 and group_id = $2 order by due_at desc nulls last limit 30`, [studentId, groupId]),
       classmates: (await q<{ first: string }>(`select s.first_name as first from enrolments x join students s on s.id = x.student_id where x.group_id = $1 and x.status = 'active' and not x.is_taster and s.id <> $2 order by s.first_name`, [groupId, studentId])).map((r) => r.first),
     };

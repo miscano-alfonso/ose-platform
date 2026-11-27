@@ -56,6 +56,7 @@ export function sampleVars(key: string, school: string, base: string): Record<st
       : "• Essay plan: causes of WW1 (Pre-GCSE History) · was due Monday 30 November at 16:00\n• Fractions practice (KS3 Maths) · sent back to redo, was due Friday 27 November at 09:00" });
   if (key === "attendance_week") Object.assign(v, { week: "w/c Monday 30 November", attendance_link: `${site}/parent/attendance`,
     summary: "**Sam**: 3 of 4 lessons attended\n• Mon 30 Nov 09:30 · Pre-GCSE History · ✓ Present\n• Tue 01 Dec 14:00 · KS3 Maths · ✓ Late\n• Thu 03 Dec 09:30 · Pre-GCSE History · Absent (you told us)\n• Fri 04 Dec 14:00 · KS3 Maths · ✓ Present" });
+  if (key === "handin_redo") Object.assign(v, { name: "Sam", work: "Essay plan: causes of WW1", class: "Pre-GCSE History", problem: "has a photo that looks sideways", fix: "remove the photo, turn it the right way up (rotate it in your photos app first) and add it again", link: "https://classroom.google.com" });
   if (key === "reward_points") Object.assign(v, { name: "Laura", points: "5", total: "23", rewards_link: `${site}/parent`,
     list: "• +3 for “Helping a classmate” · Pre-GCSE History · Leanne Iacurci\n• +2 for “Brilliant effort” · KS3 Maths · Becky Randle" });
   if (key === "lesson_moved" || key === "lesson_cancelled") Object.assign(v, { class: "Pre-GCSE History", old_when: "Thursday 3 December at 14:00", new_when: "Friday 4 December at 11:30", reason: " Reason: Leanne is at a training day." });

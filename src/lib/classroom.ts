@@ -33,10 +33,13 @@ const materialsOf = (w: Work) => JSON.stringify((w.materials ?? []).slice(0, 20)
   : m.driveFile ? { kind: "file", title: (m.driveFile.driveFile?.title || "File").slice(0, 200), url: null } : null).filter(Boolean));
 type Sub = { courseWorkId: string; userId: string; alternateLink?: string; state?: string; late?: boolean; assignedGrade?: number; updateTime?: string;
   submissionHistory?: { stateHistory?: { state?: string; stateTimestamp?: string } }[];
-  courseWorkType?: string; assignmentSubmission?: { attachments?: unknown[] }; shortAnswerSubmission?: { answer?: string }; multipleChoiceSubmission?: { answer?: string } };
+  courseWorkType?: string; assignmentSubmission?: { attachments?: { driveFile?: { id?: string; title?: string } }[] }; shortAnswerSubmission?: { answer?: string }; multipleChoiceSubmission?: { answer?: string } };
 
 /** 27 Nov (Alfonso: Najmi handed in with nothing attached): what came with a hand-in. Classroom gives every student a copy
  *  of a "make a copy for each student" file, so a hand-in with only that copy may or may not have been written in. */
+/** 27 Nov: the Drive files attached to a hand-in (for the photo check), or null when it hasn't been handed in. */
+const filesOf = (s: Sub): string | null => s.state !== "TURNED_IN" && s.state !== "RETURNED" ? null
+  : JSON.stringify((s.assignmentSubmission?.attachments ?? []).filter((a) => a.driveFile?.id).slice(0, 10).map((a) => ({ id: a.driveFile!.id, title: (a.driveFile!.title ?? "").slice(0, 200) })));
 const contentOf = (s: Sub, w: Work | undefined): string | null => {
   if (s.state !== "TURNED_IN" && s.state !== "RETURNED") return null;
   if (s.courseWorkType === "SHORT_ANSWER_QUESTION") return (s.shortAnswerSubmission?.answer ?? "").trim() ? "answer" : "none";
@@ -168,10 +171,11 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
         const content = contentOf(s, workById.get(s.courseWorkId)), st0 = STATE[s.state ?? ""] ?? "assigned", st = st0 === "turned_in" && content === "none" ? "assigned" : st0;
         const turned = [...(s.submissionHistory ?? [])].reverse().find((h) => h.stateHistory?.state === "TURNED_IN")?.stateHistory?.stateTimestamp ?? null;
         const pts = st === "returned" && typeof s.assignedGrade === "number" ? s.assignedGrade : null;
-        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link, content) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8, $9)
+        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link, content, files) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8, $9, $10::jsonb)
           on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points, link = excluded.link, content = excluded.content,
+            photo_check = case when classroom_submissions.files is distinct from excluded.files then null else classroom_submissions.photo_check end, files = excluded.files,
             graded_at = case when excluded.points is null then null else coalesce(classroom_submissions.graded_at, excluded.graded_at) end`,
-          [cw, sid, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null, content]);
+          [cw, sid, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null, content, filesOf(s)]);
         info.submissions!++;
       }
     });
@@ -210,10 +214,11 @@ async function syncOneCourses(token: string, info: ClassroomInfo) {
         const content = contentOf(s, work.items.find((w) => w.id === s.courseWorkId)), st0 = STATE[s.state ?? ""] ?? "assigned", st = st0 === "turned_in" && content === "none" ? "assigned" : st0;
         const turned = [...(s.submissionHistory ?? [])].reverse().find((h) => h.stateHistory?.state === "TURNED_IN")?.stateHistory?.stateTimestamp ?? null;
         const pts = st === "returned" && typeof s.assignedGrade === "number" ? s.assignedGrade : null;
-        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link, content) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8, $9)
+        await q(`insert into classroom_submissions (school_id, coursework_id, student_id, state, late, turned_in_at, points, graded_at, link, content, files) values (current_school(), $1, $2, $3::submission_state, $4, $5, $6, $7, $8, $9, $10::jsonb)
           on conflict (coursework_id, student_id) do update set state = excluded.state, late = excluded.late, turned_in_at = excluded.turned_in_at, points = excluded.points, link = excluded.link, content = excluded.content,
+            photo_check = case when classroom_submissions.files is distinct from excluded.files then null else classroom_submissions.photo_check end, files = excluded.files,
             graded_at = case when excluded.points is null then null else coalesce(classroom_submissions.graded_at, excluded.graded_at) end`,
-          [cw, o.student_id, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null, content]);
+          [cw, o.student_id, st, !!s.late, turned, pts, pts == null ? null : s.updateTime ?? new Date().toISOString(), s.alternateLink ?? null, content, filesOf(s)]);
         info.submissions!++;
       }
     });
@@ -250,6 +255,7 @@ export async function classroomBackground() {
     if (info.at && Date.now() - Date.parse(info.at) < 2 * 3600e3) return;
     await googleKvSet("classroom", { ...info, at: new Date().toISOString() });   // so two page loads don't both start a sync
     await syncClassroom("auto");
+    await import("./handin-checks").then((m) => m.checkHandInPhotos(25)).catch((e) => console.error("hand-in photos", e));   // 27 Nov
   } catch (e) { console.error("classroom background", e); }
 }
 
