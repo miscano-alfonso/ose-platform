@@ -368,11 +368,12 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
     }
 
     // 27 Nov (Alfonso): hand-ins with nothing attached, or a photo the wrong way round (handin-checks.ts): ask the student to hand in again
+    // the link is the piece of work's own Classroom page (opens on the student's "Your work", with Unsubmit); the hand-in's own link is the teacher's marking view
     c = cfg("handin_redo");
     if (c) {
       const rows = await q<{ id: string; at: string; why: string; sid: string; child: string; semail: string | null; parent: string | null; pemail: string | null; work: string; class: string; link: string | null }>(`
         select s.id::text, s.turned_in_at::text as at, case when s.content = 'none' then 'none' else s.photo_check end as why, st.id as sid, coalesce(nullif(st.known_as, ''), st.first_name) as child,
-          st.email::text as semail, p.first_name as parent, p.email::text as pemail, cw.title as work, coalesce(l.name || ' ' || coalesce(sj.short_name, sj.name), 'your 1:1') as class, coalesce(s.link, cw.link) as link
+          st.email::text as semail, p.first_name as parent, p.email::text as pemail, cw.title as work, coalesce(l.name || ' ' || coalesce(sj.short_name, sj.name), 'your 1:1') as class, coalesce(cw.link, s.link) as link
         from classroom_submissions s join classroom_coursework cw on cw.id = s.coursework_id join students st on st.id = s.student_id left join parents p on p.id = st.parent_id
           left join course_groups g on g.id = cw.group_id left join levels l on l.id = g.level_id left join subjects sj on sj.id = g.subject_id
         where s.turned_in_at > now() - interval '14 days' and cw.resolved_at is null
