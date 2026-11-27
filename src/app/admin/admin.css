@@ -898,9 +898,10 @@
 .adm[data-palette=demo] .fx-bday{background:rgba(255,179,198,.1);border-color:rgba(255,179,198,.35)}
 .adm[data-palette=demo] .lwin{background:#6e1830}
 .adm[data-palette=demo] .fx-send{background:rgba(255,179,198,.1);border-color:rgba(255,179,198,.35)}.adm[data-palette=demo] .fx-send svg,.adm[data-palette=demo] .fx-send b{color:#ffb3c6}
-/* 31 Oct: page titles line up with the buttons on the right (first line of text, not the middle of title + subtitle) */
-.adm .top{align-items:baseline}
-.adm .top>:not(:first-child){position:relative;top:-5px}
+/* 27 Nov (Alfonso): a page's buttons on the right (How it works, New message…) sit on the line of the small text under
+   the title, just above the page's content; the top right corner is kept for the My day button */
+.adm .top{align-items:flex-end}
+.adm .top>:not(:first-child){position:relative;top:4px}
 /* 31 Oct: birthdays and SEND on the teacher's hero, one person per line */
 .adm .fx-lines{display:grid;gap:3px}.adm .fx-lines>a{justify-self:start;margin-top:3px}
 .adm .fx-send .fx-nm{color:#fff}
@@ -1642,8 +1643,8 @@
 .adm .segl button[aria-current]{background:var(--rail-on,var(--brand));color:var(--rail-on-ink,#fff)}
 .adm #add .segl{justify-self:start;display:inline-flex}
 .adm .na-pick{display:inline-flex;gap:6px;flex-wrap:wrap;align-items:center}
-/* 27 Nov: with the side menu hidden, a button back to My day / the dashboard (SideToggle home=) */
-.adm .side-home{position:fixed;z-index:31;top:12px;left:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--brand);color:#fff;
+/* 27 Nov: with the side menu hidden, a button back to My day / the dashboard (SideToggle home=), top right */
+.adm .side-home{position:fixed;z-index:31;top:12px;right:16px;display:inline-flex;align-items:center;gap:6px;padding:7px 12px;border-radius:999px;background:var(--brand);color:#fff;
   font-weight:600;font-size:14px;text-decoration:none;box-shadow:0 6px 18px rgba(5,15,45,.2)}
 .adm .side-home:hover{filter:brightness(1.1)}
 .adm .app.side-closed .side-home{visibility:visible}.adm .app.side-closed:has(.side-home) .main{padding-top:60px}
@@ -1661,9 +1662,6 @@
 .adm .beta-strip{position:fixed;left:0;right:0;bottom:0;z-index:45;margin:0;border:0;border-radius:0;padding:10px clamp(16px,3vw,34px);
   background:var(--pop,var(--brand-accent,#e3cd4b));color:var(--pop-ink,var(--brand-accent-ink,#0f1747));font-weight:500;font-size:15px;line-height:1.4;box-shadow:0 -4px 16px rgba(5,15,45,.12)}
 .adm .main:has(> .beta-strip){padding-bottom:72px}
-/* 27 Nov: a row of page tools above the heading (e.g. How reports work), level with the My day button when the menu is hidden */
-.adm .top-tools{display:flex;justify-content:flex-end;gap:8px;margin:0 0 8px}
-.adm .app.side-closed .top-tools{margin-top:-46px;min-height:34px;align-items:center}
 /* 27 Nov: "This week" on the student and parent dashboards */
 .adm .fx-week .fx-wk+.fx-wk{margin-top:12px}
 .adm .fx-week .fx-wk-day{font-size:12.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin:2px 2px 0}

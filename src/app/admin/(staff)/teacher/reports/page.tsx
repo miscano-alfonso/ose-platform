@@ -15,9 +15,7 @@ export default async function ReportsToWrite() {
   const line = (c: (typeof cycles)[number]) => today < c.opens_on ? <>Comments due {dm(c.comments_due)} · write and save drafts now; <b>Submit</b> opens {dm(c.opens_on)} (the last week of term)</> : <>Comments due {dm(c.comments_due)}</>;
   return <>
     {/* 27 Nov (Alfonso): the round itself is the page heading, with its dates under it */}
-    {/* 27 Nov (Alfonso): the guide button sits on the top row (level with My day), the heading under it */}
-    <div className="top-tools"><GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How reports work" /></div>
-    <div className="top"><div><h1>{cycles[0]?.cycle ?? "Reports"}</h1><div className="sub">{cycles[0] ? line(cycles[0]) : "Termly progress reports for your classes"}</div></div></div>
+    <div className="top"><div><h1>{cycles[0]?.cycle ?? "Reports"}</h1><div className="sub">{cycles[0] ? line(cycles[0]) : "Termly progress reports for your classes"}</div></div><span className="grow" /><GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How reports work" /></div>
     {rows.length === 0 && <p className="empty">No reports to write right now. The office opens each report round.</p>}
     {cycles.map((c, ci) => <section className="card" key={c.cycle_id}>{ci > 0 && <><h2>{c.cycle}</h2><p className="cs">{line(c)}</p></>}
       {/* 26 Nov: the whole row opens the class's reports, with a tinted hover */}

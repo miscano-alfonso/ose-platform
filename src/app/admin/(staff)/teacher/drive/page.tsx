@@ -20,8 +20,7 @@ export default async function TeacherDrive({ searchParams }: { searchParams: Pro
   const acct = account ?? "the school’s Google account (ose@)";
   // 27 Nov: when the school owns the slides library (Settings → Lesson slides) the office sets the folders; teachers open and work in them
   if (owner === "school") return <><SettingsTabs area="teacher" here="/admin/teacher/drive" />
-    <div className="top-tools"><GuideSlides slides={DRIVE_SCHOOL_SLIDES} title="Lesson slides: how they work" label="How it works" /></div>
-    <div className="top"><div><h1>Google Drive</h1><div className="sub">The school keeps a lesson-slides folder for each of your classes. Put each lesson’s slides in it, named with the lesson number (“Lesson 7”, for example), and My day shows <b>Lesson slides</b> for your next lesson.</div></div></div>
+    <div className="top"><div><h1>Google Drive</h1><div className="sub">The school keeps a lesson-slides folder for each of your classes. Put each lesson’s slides in it, named with the lesson number (“Lesson 7”, for example), and My day shows <b>Lesson slides</b> for your next lesson.</div></div><span className="grow" /><GuideSlides slides={DRIVE_SCHOOL_SLIDES} title="Lesson slides: how they work" label="How it works" /></div>
     <section className="card"><h2>How it works</h2>
       <ol style={{ margin: "6px 0 0", paddingLeft: 20, display: "grid", gap: 4 }}>
         <li>Press <b>Open in Drive</b> on a class to open its folder. The school has shared it with you so you can add and change slides.</li>
@@ -39,8 +38,7 @@ export default async function TeacherDrive({ searchParams }: { searchParams: Pro
     <p className="muted" style={{ fontSize: 14 }}>The folder is checked again every 10 minutes, so a new file can take that long to show on <Link href="/admin/teacher">My day</Link>.</p>
   </>;
   return <><SettingsTabs area="teacher" here="/admin/teacher/drive" />
-    <div className="top-tools"><GuideSlides slides={DRIVE_SLIDES} title="Lesson slides: connect your Google Drive" label="How it works" /></div>
-    <div className="top"><div><h1>Google Drive</h1><div className="sub">Choose the Drive folder that holds each class’s lesson slides. My day then shows <b>Lesson slides</b> for your next lesson, found by name: “Lesson 7”, for example (a subfolder per term is fine, and “T2” or “Term 2” in the name helps).</div></div></div>
+    <div className="top"><div><h1>Google Drive</h1><div className="sub">Choose the Drive folder that holds each class’s lesson slides. My day then shows <b>Lesson slides</b> for your next lesson, found by name: “Lesson 7”, for example (a subfolder per term is fine, and “T2” or “Term 2” in the name helps).</div></div><span className="grow" /><GuideSlides slides={DRIVE_SLIDES} title="Lesson slides: connect your Google Drive" label="How it works" /></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <section className="card"><h2>How it connects</h2>
       <ol style={{ margin: "6px 0 0", paddingLeft: 20, display: "grid", gap: 4 }}>
