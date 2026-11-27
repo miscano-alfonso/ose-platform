@@ -1,3 +1,5 @@
+import { GuideSlides } from "../../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../../admin/guides";
 import { requireParent } from "@/lib/family-auth";
 import { tutoringChoices } from "@/lib/family";
 import { openTimes } from "@/lib/tutoring";
@@ -11,7 +13,7 @@ export default async function Book({ searchParams }: { searchParams: Promise<{ o
   const times = opt ? (await openTimes(opt.level_id, opt.subject_id)).filter((t) => Date.parse(t.starts_at) < Date.now() + 15 * 864e5) : [];
   const days = [...new Set(times.map((t) => t.starts_at.slice(0, 10)))];
   return <>
-    <Head title="Book a 1:1" sub={`One-to-one lessons with our teachers${c.price ? `, from ${gbp(c.price)} for 45 minutes as an enrolled family` : ""}`} />
+    <Head title="Book a 1:1" sub={`One-to-one lessons with our teachers${c.price ? `, from ${gbp(c.price)} for 45 minutes as an enrolled family` : ""}`}><GuideSlides slides={[...FAMILY_GUIDES["p-book"].slides]} title={FAMILY_GUIDES["p-book"].title} /></Head>
     <Flash sp={sp} />
     <div className="dgrid"><section className="card" style={{ margin: 0 }}>
       {c.options.length === 0 ? <p className="empty">1:1s are for children enrolled on a course.</p> : <>

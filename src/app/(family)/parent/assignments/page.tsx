@@ -1,3 +1,5 @@
+import { GuideSlides } from "../../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../../admin/guides";
 import { requireParent } from "@/lib/family-auth";
 import { kids, assignments } from "@/lib/family";
 import { Head } from "../../fmt";
@@ -11,7 +13,7 @@ export default async function Assignments({ searchParams }: { searchParams: Prom
   const list = all.filter((w) => w.status === tab);
   const now = Date.now();
   return <>
-    <Head title="Assignments" sub="Work set in your children’s classes, updated through the day" />
+    <Head title="Assignments" sub="Work set in your children’s classes, updated through the day"><GuideSlides slides={[...FAMILY_GUIDES["p-assignments"].slides]} title={FAMILY_GUIDES["p-assignments"].title} /></Head>
     {kid?.classes.some((c) => c.invited) && <p className="note msg">{kid.first} hasn’t joined {kid.classes.filter((c) => c.invited).map((c) => c.subject).join(" and ")} yet. {kid.first} needs to accept the Google Classroom invitation sent to {kid.email ?? "their Google account"} to see the work and join lessons.</p>}
     <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginBottom: 12 }}>
       {ks.length > 1 && <div className="segl">{ks.map((k) => <a key={k.id} href={`/parent/assignments?kid=${k.id}&tab=${tab}`} aria-current={k.id === kid?.id ? "true" : undefined}>{k.first}</a>)}</div>}

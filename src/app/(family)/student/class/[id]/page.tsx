@@ -1,3 +1,5 @@
+import { GuideSlides } from "../../../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../../../admin/guides";
 import { notFound } from "next/navigation";
 import { requireStudent } from "@/lib/family-auth";
 import { studentClass } from "@/lib/family";
@@ -12,7 +14,7 @@ export default async function StudentClass({ params }: { params: Promise<{ id: s
   const today = new Date().toISOString().slice(0, 10);
   const next = c.lessons.filter((l) => l.date >= today && l.status === "scheduled").slice(0, 4), past = c.lessons.filter((l) => l.date < today).reverse().slice(0, 8);
   return <>
-    <Head title={`${c.g.level} ${c.g.subject}`} sub={`${c.g.slots ?? ""}${c.g.teacher ? ` · ${c.g.teacher}` : ""}`}>{c.g.meet && <a className="abtn pri" href={`/join/${id}`} target="_blank" rel="noopener">{joinLabel(c.g.meet)}</a>}</Head>
+    <Head title={`${c.g.level} ${c.g.subject}`} sub={`${c.g.slots ?? ""}${c.g.teacher ? ` · ${c.g.teacher}` : ""}`}><GuideSlides slides={[...FAMILY_GUIDES["s-class"].slides]} title={FAMILY_GUIDES["s-class"].title} />{c.g.meet && <a className="abtn pri" href={`/join/${id}`} target="_blank" rel="noopener">{joinLabel(c.g.meet)}</a>}</Head>
     <div className="dgrid"><div className="dstack">
       <section className="card" style={{ margin: 0 }}><h2>Coming up</h2>{next.length === 0 ? <p className="empty">No lessons coming up this term.</p> : next.map((l, i) => <div className="li" key={i}><div className="t"><b>{dlong(l.date)} {l.time}</b><span>{c.g.meet ? toolOf(c.g.meet).id === "other" ? "Live lesson" : toolOf(c.g.meet).name : "Live lesson"}</span></div></div>)}</section>
       <section className="card" style={{ margin: 0 }}><h2>Work</h2>{c.work.length === 0 ? <p className="empty">Your work is in Google Classroom; it shows here once the school connects it.</p> : c.work.map((w, i) => <div className="li" key={i}>

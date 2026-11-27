@@ -1,3 +1,5 @@
+import { GuideSlides } from "../../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../../admin/guides";
 import { requireParent } from "@/lib/family-auth";
 import { kids, parentThreads, parentThread } from "@/lib/family";
 import { parentReplyAction, parentStartAction, familyOfficeReplyAction } from "../../actions";
@@ -17,7 +19,7 @@ export default async function Messages({ searchParams }: { searchParams: Promise
   const selId = sp.new || oth ? null : sp.t ?? threads[0]?.id ?? null;
   const sel = selId ? await parentThread(f.id, selId, !f.viewer) : null;
   return <>
-    <Head title="Messages" sub={teachersOn ? "Message your children’s teachers or the office. The office can read conversations with teachers." : "Message the office: they’ll reply here, and pass anything on to the teachers."}><a className="abtn pri" href="/parent/messages?new=1">New message</a></Head>
+    <Head title="Messages" sub={teachersOn ? "Message your children’s teachers or the office. The office can read conversations with teachers." : "Message the office: they’ll reply here, and pass anything on to the teachers."}><GuideSlides slides={[...FAMILY_GUIDES["p-messages"].slides]} title={FAMILY_GUIDES["p-messages"].title} /><a className="abtn pri" href="/parent/messages?new=1">New message</a></Head>
     <Flash sp={sp} />
     <div className="dgrid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1.6fr)" }}>
       <section className="card" style={{ margin: 0 }}>{rows.length === 0 ? <p className="empty">No messages yet.</p> : rows.map((t) => <a key={t.id} href={`/parent/messages?${t.o ? "o" : "t"}=${t.id}`} className="li" style={{ textDecoration: "none", color: "inherit", ...(t.id === (sel?.th.id ?? oth?.th.id) ? { background: "var(--hover)", borderRadius: 10, paddingInline: 8 } : {}) }}>

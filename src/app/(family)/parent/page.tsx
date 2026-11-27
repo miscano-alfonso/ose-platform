@@ -1,3 +1,5 @@
+import { GuideSlides } from "../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../admin/guides";
 import { NotifyBell } from "../../NotifyBell";
 import Link from "next/link";
 import { LessonClock, LessonCountdown } from "../../LessonClock";
@@ -27,7 +29,7 @@ export default async function ParentHome() {
   const later = a.upcoming.filter((u) => u.date > sunday);
   const modules: BoardModule[] = [
     { id: "hero", title: "Next lesson", node: <section className={`dx-hero c8${next ? " has-clock" : ""}`}><div className="fx-main">
-        <p className="fx-live">{next?.date === today && <i />}{tw && <span className="fx-tw">{tw} ·</span>}{next ? <span className="fx-daytime">{heroWhen(next.date, next.time, today)}</span> : "Your account"} <NotifyBell settingsHref="/parent/notifications" /></p>
+        <p className="fx-live">{next?.date === today && <i />}{tw && <span className="fx-tw">{tw} ·</span>}{next ? <span className="fx-daytime">{heroWhen(next.date, next.time, today)}</span> : "Your account"} <NotifyBell settingsHref="/parent/notifications" /><GuideSlides variant="info" label="How it works" slides={[...FAMILY_GUIDES["p-home"].slides]} title={FAMILY_GUIDES["p-home"].title} /></p>
         <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hello</span> {f.first}</span>{next && <><span className="fx-nextk">Next lesson</span>{who?.first ? `${who.first}: ` : ""}{next.class}</>}</h1>
         <p className="fx-hero-s">{next ? `Starts at ${next.time.slice(0, 5)}` : ks.length ? "No lessons in the next four weeks." : "No children on your account yet."}</p>
         <div className="fx-btns"><Link className="go" href="/parent/attendance">Report an absence</Link><Link href="/parent/messages?new=1">{teachersOn ? "Message a teacher" : "Message the office"}</Link>

@@ -1,3 +1,5 @@
+import { GuideSlides } from "../../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../../admin/guides";
 import { requireStudent } from "@/lib/family-auth";
 import { studentRewards } from "@/lib/family";
 import { Head, dm } from "../../fmt";
@@ -6,7 +8,7 @@ export default async function Rewards() {
   const f = await requireStudent();
   const r = await studentRewards(f.id);
   return <>
-    <Head title="Rewards" sub={`Teachers give points for great work. The top 3 in the school${r.term ? ` at the end of ${r.term.name}` : " each term"} win a prize.`} />
+    <Head title="Rewards" sub={`Teachers give points for great work. The top 3 in the school${r.term ? ` at the end of ${r.term.name}` : " each term"} win a prize.`}><GuideSlides slides={[...FAMILY_GUIDES["s-rewards"].slides]} title={FAMILY_GUIDES["s-rewards"].title} /></Head>
     <div className="dgrid">
       <section className="card" style={{ margin: 0 }}><h2>Leaderboard</h2>{r.board.length === 0 ? <p className="empty">No points yet this term.</p> : r.board.map((b) => <div className="li" key={b.rank + b.name} style={b.me ? { background: "var(--soft)", borderRadius: 10, paddingInline: 8 } : undefined}>
         <span className="mono" style={{ width: 36 }}>{b.rank <= 3 ? ["🥇", "🥈", "🥉"][b.rank - 1] : b.rank}</span><div className="t"><b>{b.me ? "You" : b.name}</b></div><b>{b.points}</b></div>)}

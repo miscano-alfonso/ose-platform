@@ -1,3 +1,5 @@
+import { GuideSlides } from "../../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../../admin/guides";
 import { requireStudent } from "@/lib/family-auth";
 import { studentChats, chatFor } from "@/lib/family";
 import { studentPostAction, startDirectAction, reportMessageAction } from "../../actions";
@@ -20,7 +22,7 @@ export default async function Chat({ searchParams }: { searchParams: Promise<{ c
   const tmsgs = open ? await threadMessages(sel!.id, open.id, f.id) : [];
   const { betaOn, BETA } = await import("@/lib/test-mode"), paused = await betaOn();   // Beta (26 Nov): read-only chats
   return <>
-    <Head title="Chat" sub="Your class chats. Be kind: teachers and the office can see every chat, and you can report anything that worries you." />
+    <Head title="Chat" sub="Your class chats. Be kind: teachers and the office can see every chat, and you can report anything that worries you."><GuideSlides slides={[...FAMILY_GUIDES["s-chat"].slides]} title={FAMILY_GUIDES["s-chat"].title} /></Head>
     <Flash sp={sp} />
     <details className="card" style={{ marginTop: 0 }}><summary style={{ cursor: "pointer", fontWeight: 600 }}>Chat rules</summary><ol style={{ margin: "8px 0 0", paddingLeft: 20, lineHeight: 1.5 }}>{safe.rules.map((r, i) => <li key={i}>{r}</li>)}</ol></details>
     <div className="dgrid" style={{ gridTemplateColumns: "minmax(0,1fr) minmax(0,1.8fr)" }}>

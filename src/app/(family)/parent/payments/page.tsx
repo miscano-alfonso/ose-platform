@@ -1,3 +1,5 @@
+import { GuideSlides } from "../../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../../admin/guides";
 import { requireParent } from "@/lib/family-auth";
 import { familyDetail, cancelPreview, swapOptions } from "@/lib/families";
 import { parentCancelAction, parentSwapAction, startPayMethodAction } from "../../actions";
@@ -32,7 +34,7 @@ export default async function Payments({ searchParams }: { searchParams: Promise
   const laterOf = (c: { later_list?: number; list: number; discount: number; status: string }) => c.status === "active" && c.later_list ? Math.round(c.later_list * (c.list > 0 ? 1 - c.discount / c.list : 1)) : 0;
   const courseTotal = (c: { net: number; later_list?: number; list: number; discount: number; status: string }) => c.net + laterOf(c);
   return <>
-    <Head title="Payments" sub={online ? "Each term’s payment for all your children’s courses is collected automatically, by Direct Debit" : "Each course is paid in one payment per term, taken from your saved card"} />
+    <Head title="Payments" sub={online ? "Each term’s payment for all your children’s courses is collected automatically, by Direct Debit" : "Each course is paid in one payment per term, taken from your saved card"}><GuideSlides slides={[...FAMILY_GUIDES["p-payments"].slides]} title={FAMILY_GUIDES["p-payments"].title} /></Head>
     <Flash sp={sp} />
     {pm && <section className="card pm-how" id="how">
       <div><h3 style={{ margin: "0 0 4px", font: "600 18px Jost, sans-serif" }}>How you pay each term</h3>

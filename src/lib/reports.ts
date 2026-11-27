@@ -4,7 +4,7 @@ import { withSchool } from "./db";
 
 // Termly reports: one entry per student per class. Teachers write them; an admin approves and publishes.
 const YEAR_SQL = `(select id from academic_years where ends_on >= current_date order by starts_on limit 1)`;
-export type Cycle = { id: string; name: string; term: string | null; assess_prev: boolean; assess_this: boolean; term_no: number | null; marks_from: string; marks_to: string; comments_due: string; publish_on: string; status: string;
+export type Cycle = { id: string; name: string; term: string | null; assess_prev: boolean; assess_this: boolean; term_no: number | null; marks_from: string; marks_to: string; comments_due: string; publish_on: string; status: string; opens_on?: string; submit_opens?: string | null; due_set?: string;
   total: number; todo: number; draft: number; submitted: number; returned: number; approved: number };
 export type ClassProgress = { group_id: string; code: string; name: string; teacher: string | null; total: number; done: number; submitted: number; approved: number };
 export type ReviewEntry = { id: string; student: string; class: string; teacher: string | null; progress: number | null; avg_pct: string | null; effort: number | null;
@@ -59,7 +59,7 @@ export async function createEntries(actorId: string, cycleId: string): Promise<{
 
 export async function getCycle(cycleId: string) {
   return withSchool(async (q) => {
-    const cycle = (await q<Cycle>(`select c.id, c.name, null as term, c.marks_from::text, c.marks_to::text, (${DEADLINE_SQL})::text as comments_due, c.publish_on::text, c.assess_prev, c.assess_this, (select tn.number from terms tn where tn.id = c.term_id) as term_no, c.status::text, ${counts}
+    const cycle = (await q<Cycle>(`select c.id, c.name, null as term, c.marks_from::text, c.marks_to::text, (${DEADLINE_SQL})::text as comments_due, c.publish_on::text, c.assess_prev, c.assess_this, (select tn.number from terms tn where tn.id = c.term_id) as term_no, c.status::text, (${OPENS_SQL})::text as opens_on, c.submit_opens::text as submit_opens, c.comments_due::text as due_set, ${counts}
       from report_cycles c left join report_entries e on e.cycle_id = c.id where c.id = $1 group by c.id`, [cycleId]))[0];
     if (!cycle) return null;
     const classes = await q<ClassProgress>(`select g.id as group_id, g.code, l.name || ' ' || sj.name as name, u.name as teacher, count(e.id)::int as total,
@@ -112,11 +112,11 @@ export type WriteRow = { id: string; student: string; avg_pct: string | null; ma
 
 /** 26 Nov (Alfonso, changed later that day): teachers can write and save drafts any time, but can only submit reports to the
  *  office in the term's last week: from its Monday (Term 2 ends Fri 11 Dec → submitting opens Mon 7 Dec). Uses report_cycles c. */
-export const OPENS_SQL = `date_trunc('week', coalesce((select t.ends_on from terms t where t.id = c.term_id), c.marks_to))::date`;
+export const OPENS_SQL = `coalesce(c.submit_opens, date_trunc('week', coalesce((select t.ends_on from terms t where t.id = c.term_id), c.marks_to))::date)`;   // 27 Nov: or the date the office set
 /** 27 Nov (Alfonso: "why would comments be due with a submit date days after?"): teachers can only submit in the last week,
  *  so the deadline teachers see is never before that week: the round's date if it falls in or after it, otherwise that
  *  week's Friday. */
-export const DEADLINE_SQL = `greatest(c.comments_due, (${OPENS_SQL}) + 4)`;
+export const DEADLINE_SQL = `greatest(c.comments_due, (${OPENS_SQL}) + case when c.submit_opens is null then 4 else 0 end)`;
 export async function getWriteSheet(cycleId: string, groupId: string) {
   return withSchool(async (q) => {
     const head = (await q<{ cycle: string; status: string; comments_due: string; opens_on: string; code: string; name: string; gcse: boolean; teacher_user: string | null }>(`
@@ -239,6 +239,22 @@ export async function remindTeachers(actorId: string, cycleId: string): Promise<
 }
 
 /** 27 Nov (Alfonso): which term's assessment a round uses: the previous term's, this term's, or both (at least one). */
+/** 27 Nov (Alfonso): change a round's dates: marks from / to, when teachers can start submitting (blank = the last week of
+ *  term), the date they submit by, and when reports go to parents. */
+export async function setCycleDates(actorId: string, cycleId: string, d: { from: string; to: string; opens: string; due: string; publish: string }): Promise<string | null> {
+  const ok = (x: string) => /^\d{4}-\d{2}-\d{2}$/.test(x);
+  if (![d.from, d.to, d.due, d.publish].every(ok) || (d.opens && !ok(d.opens))) return "Choose every date.";
+  if (d.from > d.to) return "Marks from must be before marks to.";
+  if (d.opens && d.opens > d.due) return "Submitting can’t open after the submit-by date.";
+  if (d.due > d.publish) return "Reports can’t go to parents before teachers have submitted them.";
+  const r = await withSchool(async (q) => {
+    const u = await q(`update report_cycles set marks_from = $2, marks_to = $3, submit_opens = nullif($4, '')::date, comments_due = $5, publish_on = $6
+      where id = $1 and status <> 'published' returning id`, [cycleId, d.from, d.to, d.opens, d.due, d.publish]);
+    if (u.length) await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'update', 'report_cycle', $2, $3)`, [actorId, cycleId, JSON.stringify(d)]);
+    return u.length;
+  });
+  return r ? null : "That report round can’t be changed now.";
+}
 export async function setAssessTerms(actorId: string, cycleId: string, prev: boolean, cur: boolean): Promise<string | null> {
   if (!prev && !cur) return "Choose at least one assessment.";
   const r = await withSchool(async (q) => {

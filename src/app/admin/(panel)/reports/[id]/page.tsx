@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { assessTermsAction } from "../../../actions";
+import { assessTermsAction, cycleDatesAction } from "../../../actions";
 import { notFound } from "next/navigation";
 import { getCycle, getCycles, gradeBands, cycleStudents, byTeacher } from "@/lib/reports";
 import { createEntriesAction, deleteCycleAction, reviewEntryAction, approveAllAction, publishCycleAction, saveBandAction, remindTeachersAction, emailReportsAction } from "../../../actions";
@@ -22,7 +22,7 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
   const st = c.status === "published" ? await reportEmailStatus(id) : null;
   const TABS: [string, string][] = [["review", `To review (${c.submitted})`], ["classes", "Classes and teachers"], ["students", "Preview reports"], ["key", "Grading key"], ["past", "All reports"]];
   return <>
-    <div className="top"><div><h1>Reports</h1><div className="sub">{c.name} · teachers submit by {day(c.comments_due)} · reports go to parents {day(c.publish_on)}</div></div></div>
+    <div className="top"><div><h1>Reports</h1><div className="sub">{c.name} · teachers submit {day(c.opens_on ?? c.comments_due)} – {day(c.comments_due)} · reports go to parents {day(c.publish_on)}</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     {/* 27 Nov (Alfonso): which term's assessment this round uses; teachers can submit once each chosen one is marked */}
     {c.status !== "published" && <form action={assessTermsAction} className="card as-terms"><input type="hidden" name="id" value={c.id} />
@@ -31,6 +31,17 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
       <label><input type="checkbox" name="assess_this" defaultChecked={c.assess_this} /> This term’s{c.term_no ? ` (Term ${c.term_no})` : ""}</label>
       <button className="abtn sm" type="submit">Save</button>
       <span className="muted" style={{ fontSize: 14 }}>Found in Google Classroom by “{"assessment"}” in the title. Teachers can submit once each chosen one is marked, or say why there isn’t one.</span></form>}
+    {/* 27 Nov (Alfonso: "where can i edit dates for each bi-termly report?") */}
+    {c.status !== "published" && <details className="card rp-dates"><summary><b>Dates</b><span className="muted">Marks {day(c.marks_from)} – {day(c.marks_to)} · submitting opens {day(c.opens_on ?? c.comments_due)} · submit by {day(c.comments_due)} · to parents {day(c.publish_on)}</span><span className="lnk">Change</span></summary>
+      <form action={cycleDatesAction} className="rp-dform"><input type="hidden" name="id" value={c.id} />
+        <label className="fld">Marks from<input type="date" name="from" defaultValue={c.marks_from} required /></label>
+        <label className="fld">Marks to<input type="date" name="to" defaultValue={c.marks_to} required /></label>
+        <label className="fld">Submitting opens<input type="date" name="opens" defaultValue={c.submit_opens ?? ""} /><small>Blank: the last week of term ({day(c.opens_on ?? c.comments_due)})</small></label>
+        <label className="fld">Teachers submit by<input type="date" name="due" defaultValue={c.due_set ?? c.comments_due} required /></label>
+        <label className="fld">Reports go to parents<input type="date" name="publish" defaultValue={c.publish_on} required /></label>
+        <button className="abtn pri sm" type="submit">Save dates</button>
+      </form>
+      <p className="muted" style={{ fontSize: 14, margin: "8px 0 0" }}>Marks from / to: the Classroom work that counts towards Progress. Teachers can write drafts any time and press Submit from the day submitting opens.</p></details>}
     <div className="tiles">
       <div className="tile"><span className="k">Comments written</span><span className="v">{done}/{c.total}</span><span className="h">{c.draft} in draft · {c.todo} not started</span></div>
       <div className={`tile${c.submitted ? " alert" : ""}`}><span className="k">Waiting for review</span><span className="v">{c.submitted}</span><span className="h">{c.returned} sent back to teachers</span></div>

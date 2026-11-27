@@ -532,6 +532,14 @@ export async function createCycleAction(f: FormData): Promise<void> {
   redirect(`/admin/reports${err ? "?err=" + encodeURIComponent(err) : ""}`);
 }
 /** 27 Nov: which term's assessment a report round uses (previous term, this term, or both). */
+export async function cycleDatesAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40);
+  const { setCycleDates } = await import("@/lib/reports");
+  const err = await setCycleDates(me.id, id, { from: str(f, "from", 10), to: str(f, "to", 10), opens: str(f, "opens", 10), due: str(f, "due", 10), publish: str(f, "publish", 10) });
+  revalidatePath(`/admin/reports/${id}`);
+  redirect(`/admin/reports/${id}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Dates saved. Teachers see the new dates on their Reports page.")}`);
+}
 export async function assessTermsAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const id = str(f, "id", 40);

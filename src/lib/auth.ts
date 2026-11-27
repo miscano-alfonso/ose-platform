@@ -71,7 +71,7 @@ export async function signIn(email: string, password: string): Promise<string | 
 }
 
 // ---------- teachers sign in with an emailed link (26 Nov, db/098); admin accounts keep their password ----------
-const LINK_MINUTES = 30;
+const LINK_MINUTES = 30, RESET_MINUTES = 60;
 /** Staff sign in → "Email me a sign-in link". A teacher gets a link; an admin gets a note to use their password; anyone
  *  else gets nothing. The page answers the same way every time, so it can't be used to find out who has an account. */
 export async function sendStaffLink(email: string, base: string): Promise<string | null> {
@@ -87,7 +87,10 @@ export async function sendStaffLink(email: string, base: string): Promise<string
       where lower(email::text) = $1 and role in ('school_admin', 'teacher') and disabled_at is null limit 1`, [email]))[0];
     if (!u) return null;
     const school = (await q<{ name: string }>(`select name from schools where id = current_school()`))[0]?.name ?? "OH-SO ED";
-    if (u.role !== "teacher") return { admin: true as const, name: u.name, school };
+    // 27 Nov (Alfonso: Leanne's link only said "use your password"): an admin also gets a link to set a new password
+    if (u.role !== "teacher") { const token = randomBytes(32).toString("base64url");
+      await q(`insert into staff_links (school_id, user_id, token_hash, ip, expires_at, purpose) values (current_school(), $1, $2, $3, now() + make_interval(mins => $4), 'reset')`, [u.id, sha256(token), ip, RESET_MINUTES]);
+      return { admin: true as const, name: u.name, school, token }; }
     const token = randomBytes(32).toString("base64url");
     await q(`insert into staff_links (school_id, user_id, token_hash, ip, expires_at) values (current_school(), $1, $2, $3, now() + make_interval(mins => $4))`,
       [u.id, sha256(token), ip, LINK_MINUTES]);
@@ -98,7 +101,7 @@ export async function sendStaffLink(email: string, base: string): Promise<string
   const first = (r.name || "").split(" ")[0] || "there";
   const { sendOne } = await import("./email");
   const res = r.admin ? await sendOne([{ name: r.name, email }], `Signing in to ${r.school}`,
-    `Hello ${first},\n\nSomeone asked for a sign-in link for your ${r.school} account. Admin accounts sign in with their password instead:\n\n${base}/admin/login?pw=1\n\nIf it wasn’t you, you can ignore this email.\n\n${r.school}`, { tag: "staff-sign-in-link" })
+    `Hello ${first},\n\nSomeone asked for a sign-in link for your ${r.school} account. Admin accounts sign in with a password:\n\n${base}/admin/login?pw=1\n\nDon’t know your password, or never set one? Use this link to choose a new one and sign in. It works once, for the next hour:\n\n${base}/admin/reset/new?t=${r.token}\n\nIf it wasn’t you, you can ignore this email: nothing has changed.\n\n${r.school}`, { tag: "staff-sign-in-link" })
     : await sendOne([{ name: r.name, email }], `Your ${r.school} sign-in link`,
     `Hello ${first},\n\nUse this link to sign in to your ${r.school} teacher dashboard. It works once, for the next ${LINK_MINUTES} minutes:\n\n${base}/admin/login/link?t=${r.token}\n\nIf you didn’t ask for it, you can ignore this email.\n\n${r.school}`, { tag: "staff-sign-in-link" });
   // 27 Nov: what happened to the email, shown on Staff & access (it was invisible before)
@@ -218,7 +221,6 @@ export async function resetAdminWithKey(key: string, email: string, password: st
 }
 
 // ---------- 27 Nov: forgotten password, by email (Alfonso: Leanne's "Forgotten your password?" showed the setup-key page) ----------
-const RESET_MINUTES = 60;
 /** "Forgotten your password?": an admin is emailed a link to set a new password (works once, for an hour); a teacher,
  *  who has no password, gets their usual sign-in link. The page answers the same way whatever the email. */
 export async function sendPasswordReset(email: string, base: string): Promise<string | null> {

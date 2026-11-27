@@ -1,3 +1,5 @@
+import { GuideSlides } from "../../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../../admin/guides";
 import { requireParent } from "@/lib/family-auth";
 import { kids, parentAttendance, REASONS } from "@/lib/family";
 import { reportAbsenceAction, cancelAbsenceAction } from "../../actions";
@@ -9,7 +11,7 @@ export default async function ParentAttendance({ searchParams }: { searchParams:
   const kid = ks.find((k) => k.id === sp.kid) ?? ks[0];
   const up = a.upcoming.filter((l) => l.student_id === kid?.id), days = [...new Set(up.map((l) => l.date))];
   return <>
-    <Head title="Attendance" sub="Your children’s attendance, and absences you’ve told us about" />
+    <Head title="Attendance" sub="Your children’s attendance, and absences you’ve told us about"><GuideSlides slides={[...FAMILY_GUIDES["p-attendance"].slides]} title={FAMILY_GUIDES["p-attendance"].title} /></Head>
     <Flash sp={sp} />
     <div className="dgrid">{ks.map((st) => { const m = a.marks.filter((x) => x.student_id === st.id), held = m.filter((x) => x.mark !== "approved_absence").length,
       att = m.filter((x) => x.mark === "present" || x.mark === "late").length, appr = m.filter((x) => x.mark === "approved_absence").length;

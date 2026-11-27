@@ -1800,3 +1800,12 @@ html[data-tips=off] .adm .gv-btn,html[data-tips=off] .adm .gs-info,html[data-tip
 .adm .dx-amk .dx-item .t>span{font-size:14px}
 .adm .am-tiles a{background:var(--panel);border-color:var(--line)}
 .adm .am-table td:first-child{white-space:nowrap}
+
+/* 27 Nov: a report round's dates */
+.adm .rp-dates{padding:12px 16px;margin-bottom:14px}
+.adm .rp-dates>summary{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;cursor:pointer;list-style:none}.adm .rp-dates>summary::-webkit-details-marker{display:none}
+.adm .rp-dates>summary .muted{font-size:14.5px}.adm .rp-dates>summary .lnk{margin-left:auto;text-decoration:underline;font-size:14.5px}
+.adm .rp-dform{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end;margin-top:12px}
+.adm .rp-dform .fld small{display:block;font-size:12.5px;color:var(--muted);font-weight:400}
+/* 27 Nov: the slideshow fits short screens too (the picture is 16:10, plus the title bar and the Back / Next row) */
+.gs-dlg{width:min(1100px,94vw,calc((100dvh - 150px) * 1.6))}

@@ -1,3 +1,5 @@
+import { GuideSlides } from "../../admin/GuideSlides";
+import { FAMILY_GUIDES } from "../../admin/guides";
 import { NotifyBell } from "../../NotifyBell";
 import Link from "next/link";
 import { LessonClock, LessonCountdown, RefreshAt } from "../../LessonClock";
@@ -31,7 +33,7 @@ export default async function StudentHome() {
   const today = ldate(new Date(now).toISOString());
   const heroAt = oneFirst && one ? one.at : next?.next ?? null;
   const tw = heroAt ? await termWeekFor(ldate(heroAt)) : "";
-  const eyebrow = (at: string) => <p className="fx-live">{ldate(at) === today && <i />}{tw && <span className="fx-tw">{tw} ·</span>}<span className="fx-daytime">{heroWhen(ldate(at), hm(at), today)}</span> <NotifyBell settingsHref="/student/notifications" /></p>;
+  const eyebrow = (at: string) => <p className="fx-live">{ldate(at) === today && <i />}{tw && <span className="fx-tw">{tw} ·</span>}<span className="fx-daytime">{heroWhen(ldate(at), hm(at), today)}</span> <NotifyBell settingsHref="/student/notifications" /><GuideSlides variant="info" label="How it works" slides={[...FAMILY_GUIDES["s-home"].slides]} title={FAMILY_GUIDES["s-home"].title} /></p>;
   const oneHero = one && <section className="dx-hero c8 has-clock" data-lesson={`1:1 ${one.subject}, ${hm(one.at)}`}><div className="fx-main">
       {eyebrow(one.at)}
       <h1 className="fx-hero-t"><span className="fx-hi"><span className="fx-hello">Hi</span> {h.me.first} ✦</span><span className="fx-nextk">Next lesson</span>1:1 · {one.subject}</h1>
