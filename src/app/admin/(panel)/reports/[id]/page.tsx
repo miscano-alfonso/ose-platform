@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { assessTermsAction } from "../../../actions";
 import { notFound } from "next/navigation";
 import { getCycle, getCycles, gradeBands, cycleStudents, byTeacher } from "@/lib/reports";
 import { createEntriesAction, deleteCycleAction, reviewEntryAction, approveAllAction, publishCycleAction, saveBandAction, remindTeachersAction, emailReportsAction } from "../../../actions";
@@ -21,8 +22,15 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
   const st = c.status === "published" ? await reportEmailStatus(id) : null;
   const TABS: [string, string][] = [["review", `To review (${c.submitted})`], ["classes", "Classes and teachers"], ["students", "Preview reports"], ["key", "Grading key"], ["past", "All reports"]];
   return <>
-    <div className="top"><div><h1>Reports</h1><div className="sub">{c.name} · comments due {day(c.comments_due)} · reports go to parents {day(c.publish_on)}</div></div></div>
+    <div className="top"><div><h1>Reports</h1><div className="sub">{c.name} · teachers submit by {day(c.comments_due)} · reports go to parents {day(c.publish_on)}</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+    {/* 27 Nov (Alfonso): which term's assessment this round uses; teachers can submit once each chosen one is marked */}
+    {c.status !== "published" && <form action={assessTermsAction} className="card as-terms"><input type="hidden" name="id" value={c.id} />
+      <b>Assessments to use</b>
+      <label><input type="checkbox" name="assess_prev" defaultChecked={c.assess_prev} disabled={c.term_no === 1} /> Previous term’s{c.term_no && c.term_no > 1 ? ` (Term ${c.term_no - 1})` : ""}</label>
+      <label><input type="checkbox" name="assess_this" defaultChecked={c.assess_this} /> This term’s{c.term_no ? ` (Term ${c.term_no})` : ""}</label>
+      <button className="abtn sm" type="submit">Save</button>
+      <span className="muted" style={{ fontSize: 14 }}>Found in Google Classroom by “{"assessment"}” in the title. Teachers can submit once each chosen one is marked, or say why there isn’t one.</span></form>}
     <div className="tiles">
       <div className="tile"><span className="k">Comments written</span><span className="v">{done}/{c.total}</span><span className="h">{c.draft} in draft · {c.todo} not started</span></div>
       <div className={`tile${c.submitted ? " alert" : ""}`}><span className="k">Waiting for review</span><span className="v">{c.submitted}</span><span className="h">{c.returned} sent back to teachers</span></div>
@@ -69,7 +77,7 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
           <td>{k.teacher ?? <span className="muted">Not set</span>}</td><td className="n">{k.done}/{k.total}</td><td className="n">{k.approved}</td>
           <td><div className="track" style={{ minWidth: 80 }}><i style={{ width: `${k.total ? k.done / k.total * 100 : 0}%` }} /></div></td>
           <td><Link className="abtn sm" href={`/admin/write/${c.id}/${k.group_id}`}>Open</Link></td></tr>)}</tbody></table></div>
-      <section className="card" style={{ margin: 0 }}><h2>By teacher</h2><p className="cs">Comments due {day(c.comments_due)}.</p>
+      <section className="card" style={{ margin: 0 }}><h2>By teacher</h2><p className="cs">Teachers submit by {day(c.comments_due)}.</p>
         <div className="bars">{teachers.map((t) => <div className="brow" key={t.teacher}><span className="lbl">{t.teacher}</span><div className="track"><i style={{ width: `${t.total ? t.done / t.total * 100 : 0}%` }} /></div><span className="num">{t.done}/{t.total}</span></div>)}</div>
         {c.status !== "published" && <form action={remindTeachersAction} style={{ marginTop: 12 }}><input type="hidden" name="cycle" value={c.id} /><button className="abtn sm" type="submit">Remind teachers with comments to write</button></form>}</section>
     </div>}
@@ -88,7 +96,7 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
 
     {tab === "past" && <section className="card"><h2>All reports this year</h2>
       {all.cycles.map((x) => <div className="li" key={x.id}><span className={`pill ${x.status === "published" ? "good" : x.status === "review" ? "info" : "warn"}`}>{x.status === "published" ? "Published" : x.status === "review" ? "Review" : "Writing"}</span>
-        <div className="t"><b>{x.name}</b><span>Comments due {day(x.comments_due)} · publish {day(x.publish_on)} · {x.approved}/{x.total} approved</span></div>
+        <div className="t"><b>{x.name}</b><span>Submit by {day(x.comments_due)} · publish {day(x.publish_on)} · {x.approved}/{x.total} approved</span></div>
         <Link className="abtn sm" href={`/admin/reports/${x.id}`}>Open</Link></div>)}
       <p style={{ marginTop: 12 }}><Link className="abtn sm" href="/admin/reports?all=1">Set up a new report</Link></p></section>}
   </>;

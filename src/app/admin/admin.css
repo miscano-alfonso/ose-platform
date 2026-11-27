@@ -1679,3 +1679,23 @@
 .adm .ls-h{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:8px}
 .adm .ls-form{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .adm .ls-form input[name=folder]{flex:1 1 320px;min-width:0;padding:8px 12px;border-radius:10px;border:1.5px solid var(--line);background:var(--panel);color:var(--ink);font:inherit}
+/* 27 Nov: the payment history row a Paid pill jumps to is highlighted for a moment */
+.adm .pay-hist tr:target td{background:color-mix(in srgb,var(--brand-accent,#e3cd4b) 30%,transparent);transition:background 1s}
+.adm a.pill:hover{filter:brightness(.96);text-decoration:underline}
+@media print{.adm .side,.adm .side-toggle,.adm .side-edge,.adm .side-home,.adm .beta-strip,.adm .viewbar{display:none!important}.adm .app{grid-template-columns:1fr!important}}
+/* 27 Nov: parents' Assignments: each piece of work opens to show the teacher's post */
+.adm details.as-item{display:block;padding:0}
+.adm details.as-item>summary{display:flex;align-items:center;gap:12px;padding:12px 4px;cursor:pointer;list-style:none}
+.adm details.as-item>summary::-webkit-details-marker{display:none}
+.adm details.as-item>summary .t{flex:1;min-width:0}
+.adm details.as-item>summary:hover b{text-decoration:underline}
+.adm details.as-item .as-chev{flex:none;color:var(--muted);transition:transform .2s}
+.adm details.as-item[open] .as-chev{transform:rotate(180deg)}
+.adm .as-post{margin:0 4px 14px 26px;padding:14px 16px;border-radius:14px;background:var(--soft);display:grid;gap:10px}
+.adm .as-meta{margin:0;font-size:14px;color:var(--muted)}.adm .as-meta b{color:var(--ink)}
+.adm .as-text{white-space:pre-wrap;line-height:1.55;overflow-wrap:anywhere}
+.adm .as-mats{margin:0;padding:0;list-style:none;display:grid;gap:6px}.adm .as-mats li{display:flex;gap:8px;align-items:center}
+/* 27 Nov: Reports → a round → Assessments to use */
+.adm .as-terms{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px;padding:12px 16px;margin-bottom:14px}
+.adm .as-terms label{display:inline-flex;gap:6px;align-items:center}
+.adm .pay-hist .tw{margin-top:12px}

@@ -19,7 +19,7 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
     {sp.ok && <p className="note msg">{sp.ok}</p>}
     {sp.err && <p className="note msg bad">{sp.err}</p>}
     {cycles.length === 0 ? <p className="empty">No reports set up for this year yet.</p> :
-      <div className="tw"><table><thead><tr><th>Report</th><th>Comments due</th><th>Publish</th><th>Written</th><th>Approved</th><th>Status</th><th></th></tr></thead>
+      <div className="tw"><table><thead><tr><th>Report</th><th>Submit by</th><th>Publish</th><th>Written</th><th>Approved</th><th>Status</th><th></th></tr></thead>
         <tbody>{cycles.map((c) => <tr key={c.id}><td><b>{c.name}</b><div className="muted" style={{ fontSize: 15.5 }}>Marks {day(c.marks_from)} – {day(c.marks_to)}</div></td>
           <td>{day(c.comments_due)}</td><td>{day(c.publish_on)}</td><td>{c.total ? `${c.submitted + c.approved}/${c.total}` : <span className="muted">Not started</span>}</td>
           <td>{c.total ? `${c.approved}/${c.total}` : "—"}</td><td><span className={`pill ${STATUS[c.status][1]}`}>{STATUS[c.status][0]}</span></td>
@@ -31,10 +31,13 @@ export default async function Reports({ searchParams }: { searchParams: Promise<
         <label className="fld">Term<select name="term" defaultValue=""><option value="">None (e.g. end of year)</option>{terms.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</select></label>
         <label className="fld">Marks from<input type="date" name="from" required /></label>
         <label className="fld">Marks to<input type="date" name="to" required /></label>
-        <label className="fld">Comments due<input type="date" name="due" required /></label>
+        <label className="fld">Teachers submit by<input type="date" name="due" required /></label>
         <label className="fld">Publish on<input type="date" name="publish" required /></label>
+        <fieldset className="fld" style={{ border: 0, padding: 0, margin: 0 }}><legend>Assessments to use</legend>
+          <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="assess_prev" /> Previous term’s</label>
+          <label style={{ display: "flex", gap: 6, alignItems: "center" }}><input type="checkbox" name="assess_this" defaultChecked /> This term’s</label></fieldset>
         <button className="abtn pri" type="submit">Create</button>
       </form>
-      <p className="cs" style={{ marginTop: 8 }}>Reports go out every two terms: Term 2 (covering Terms 1 and 2), Term 4 (Terms 3 and 4) and Term 6 (Terms 5 and 6). Set “Marks from” to the start of the first of the two terms. Google Classroom marks returned between the two “marks” dates set each student’s Progress score (work titled with another term is left out); the end-of-term assessment is the report term’s own. Teachers can overrule the score.</p></section>
+      <p className="cs" style={{ marginTop: 8 }}>Teachers write and save drafts any time, but can submit only in the term’s last week (from its Monday), so choose a “submit by” date in that week: an earlier one is moved to that week’s Friday. Reports go out every two terms: Term 2 (covering Terms 1 and 2), Term 4 (Terms 3 and 4) and Term 6 (Terms 5 and 6). Set “Marks from” to the start of the first of the two terms. Google Classroom marks returned between the two “marks” dates set each student’s Progress score (work titled with another term is left out); the end-of-term assessment is the report term’s own. Teachers can overrule the score.</p></section>
   </>;
 }

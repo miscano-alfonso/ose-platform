@@ -28,12 +28,12 @@ export default async function Write({ params, searchParams }: { params: Promise<
     {/* 31 Oct: the page heading stays at the top while scrolling, with Submit all */}
     <div className="wr-head">
     <p className="backlink"><a className="abtn sm" href={me.role === "school_admin" ? `/admin/reports/${cycle}` : "/admin/teacher/reports"}>← Back</a></p>
-      <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · comments due {day(h.comments_due)}</div></div>
+      <div className="top"><div><h1>{h.name}<span className="h1-code">{h.code}</span></h1><div className="sub">{h.cycle} · submit between {day(h.opens_on)} and {day(h.comments_due)} (the last week of term)</div></div>
         <span className="grow" /><GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How it works" />{!locked && rows.some((r) => r.status !== "approved") && <div className="acts">
           {wait && <span className="muted wr-wait">{wait}</span>}<AiDraftAll /><SubmitAll off={wait} /></div>}</div>
       {notYet && <p className="note msg">You can write and save drafts now. <b>Submit</b> opens on <b>{new Date(h.opens_on + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })}</b>, the last week of term.</p>}
       {!sp.r && sp.ok && <p className="note msg">{sp.ok}</p>}{!sp.r && sp.err && <p className="note msg bad">{sp.err}</p>}
-      <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters. A report can be submitted once the term’s assessment is marked in Classroom, or once you’ve said why there isn’t one.</p>
+      <p className="note">Effort and Progress are 1–5 (5 = Exceeding). Progress comes from Classroom marks when there are any; choose a score to overrule it. Each comment needs at least 20 characters. A report can be submitted once its assessment is marked in Classroom (the office chooses which term’s), or once you’ve said why there isn’t one.</p>
     </div>
     {rows.length === 0 ? <p className="empty">No reports for this class yet.</p> :
     <form action={saveWriteSheetAction} id="wr-form">
@@ -44,8 +44,10 @@ export default async function Write({ params, searchParams }: { params: Promise<
         <div style={{ display: "flex", gap: 10, alignItems: "baseline", flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>{r.student}</h2><span className={`pill ${PILL[r.status][1]}`}>{PILL[r.status][0]}</span>
           {r.avg_pct && <span className="muted">Marks average {r.avg_pct}% ({r.marked} pieces)</span>}</div>
         <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
-          <span className="muted">{r.assess_title ?? "End-of-term assessment"}:</span>
-          <span className={`pill ${AS[r.assess]?.[0] ?? "mute"}`}>{AS[r.assess]?.[1] ?? r.assess}{r.assess === "marked" && r.assess_pct != null ? ` · ${r.assess_pct}%` : ""}</span>
+          {/* 27 Nov (Alfonso): each assessment the round uses (previous term's and/or this term's, set by the office), named by its term */}
+          {(r.assess_parts.length ? r.assess_parts : [{ label: "Assessment", state: r.assess, pct: r.assess_pct, title: r.assess_title }]).map((p, k) => <span key={k} style={{ display: "inline-flex", gap: 6, alignItems: "center" }} title={p.title ?? undefined}>
+            <span className="muted">{p.label}:</span>
+            <span className={`pill ${AS[p.state]?.[0] ?? "mute"}`}>{AS[p.state]?.[1] ?? p.state}{p.state === "marked" && p.pct != null ? ` · ${p.pct}%` : ""}</span></span>)}
           {r.assess !== "marked" && r.assess !== "unknown" && <label className="fld" style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>No assessment because
             <NoAssessPick name={`noassess_${r.id}`} value={r.no_assessment ?? ""} disabled={ro} /></label>}</div>
         {r.status === "returned" && r.review_note && <p className="note msg bad">Sent back: {r.review_note}</p>}

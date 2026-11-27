@@ -505,11 +505,21 @@ export async function setRunStatusAction(f: FormData): Promise<void> {
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
 export async function createCycleAction(f: FormData): Promise<void> {
   const me = await requireStaff();
-  const d = { name: str(f, "name", 80), termId: str(f, "term", 40) || null, from: str(f, "from", 10), to: str(f, "to", 10), due: str(f, "due", 10), publish: str(f, "publish", 10) };
+  const d = { name: str(f, "name", 80), termId: str(f, "term", 40) || null, from: str(f, "from", 10), to: str(f, "to", 10), due: str(f, "due", 10), publish: str(f, "publish", 10), prev: f.get("assess_prev") === "on", cur: f.get("assess_this") === "on" };
+  if (!d.prev && !d.cur) d.cur = true;
   if (!d.name || ![d.from, d.to, d.due, d.publish].every((x) => DATE.test(x)) || d.from > d.to) redirect(`/admin/reports?err=${encodeURIComponent("Give the report a name and all four dates (marks from must be before marks to).")}`);
   const err = await createCycle(me.id, d);
   revalidatePath("/admin/reports");
   redirect(`/admin/reports${err ? "?err=" + encodeURIComponent(err) : ""}`);
+}
+/** 27 Nov: which term's assessment a report round uses (previous term, this term, or both). */
+export async function assessTermsAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const id = str(f, "id", 40);
+  const { setAssessTerms } = await import("@/lib/reports");
+  const err = await setAssessTerms(me.id, id, f.get("assess_prev") === "on", f.get("assess_this") === "on");
+  revalidatePath(`/admin/reports/${id}`);
+  redirect(`/admin/reports/${id}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Saved. Teachers now see the chosen assessments on their reports.")}`);
 }
 export async function createEntriesAction(f: FormData): Promise<void> {
   const me = await requireStaff();

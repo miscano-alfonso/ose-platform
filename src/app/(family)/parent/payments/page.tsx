@@ -3,12 +3,15 @@ import { familyDetail, cancelPreview, swapOptions } from "@/lib/families";
 import { parentCancelAction, parentSwapAction, startPayMethodAction } from "../../actions";
 import { payAccess, payMethod } from "@/lib/stripe-pay";
 import { Head, Flash, gbp, dm } from "../../fmt";
+import { paymentHistory } from "@/lib/family";
+import { PrintButton } from "../../PrintButton";
 
+const PAID = new Set(["paid", "refunded", "part_refunded"]);
 const CELL: Record<string, [string, string]> = { paid: ["good", "Paid"], scheduled: ["mute", "Due"], processing: ["info", "Processing"], failed: ["bad", "Failed"], refunded: ["info", "Refunded"],
   part_refunded: ["info", "Part refund"], cancelled: ["mute", "Not charged"], waived: ["mute", "Waived"] };
 export default async function Payments({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
   const [sp, f] = await Promise.all([searchParams, requireParent()]);
-  const d = await familyDetail(f.id);
+  const [d, hist] = await Promise.all([familyDetail(f.id), paymentHistory(f.id)]);
   if (!d) return null;
   const live = d.children.flatMap((c) => c.courses).filter((c) => c.status === "active" && !c.notice_given_on);
   const [pre, sw] = await Promise.all([Promise.all(live.map((c) => cancelPreview(c.id))), Promise.all(live.map((c) => swapOptions(c.id)))]);
@@ -52,8 +55,18 @@ export default async function Payments({ searchParams }: { searchParams: Promise
                   <div><button className="abtn sm danger" type="submit">{x.pre.cooling ? "Cancel and refund" : "Cancel with notice"}</button></div></form>}
               </div></details>}</td>
           <td className="n">{gbp(c.net)}</td>
-          {c.cells.map((cell, i) => <td key={i} className="n">{cell ? <div style={{ display: "grid", gap: 2, justifyItems: "end" }}><span>{gbp(cell.amount)}</span><span className={`pill ${CELL[cell.status]?.[0] ?? "mute"}`} style={{ fontSize: 12.5 }}>{CELL[cell.status]?.[1] ?? cell.status}</span></div> : <span className="muted">—</span>}</td>)}</tr>; })}
+          {c.cells.map((cell, i) => <td key={i} className="n">{cell ? <div style={{ display: "grid", gap: 2, justifyItems: "end" }}><span>{gbp(cell.amount)}</span>{/* 27 Nov (Alfonso): the date under each payment; a paid one opens the payment history */}
+            {PAID.has(cell.status) ? <a href={`#pay-i${cell.id}`} className={`pill ${CELL[cell.status]?.[0] ?? "mute"}`} style={{ fontSize: 12.5, textDecoration: "none" }} title="See it in your payment history">{CELL[cell.status]?.[1] ?? cell.status} ›</a>
+              : <span className={`pill ${CELL[cell.status]?.[0] ?? "mute"}`} style={{ fontSize: 12.5 }}>{CELL[cell.status]?.[1] ?? cell.status}</span>}
+            {cell.status !== "cancelled" && cell.status !== "waived" && <span className="muted" style={{ fontSize: 12.5, whiteSpace: "nowrap" }}>{PAID.has(cell.status) && cell.paid_on ? dm(cell.paid_on) : dm(cell.due_on)}</span>}</div> : <span className="muted">—</span>}</td>)}</tr>; })}
       </tbody></table></div></section>)}
+    <section className="card pay-hist" id="history"><div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}><h2 style={{ margin: 0 }}>Payment history</h2><span className="grow" style={{ flex: 1 }} /><PrintButton /></div>
+      {hist.length === 0 ? <p className="empty">No payments yet.</p> : <div className="tw"><table><thead><tr><th>Date</th><th>For</th><th>Child</th><th className="n">Amount</th><th>Status</th></tr></thead><tbody>
+        {hist.map((h) => <tr key={h.key} id={`pay-${h.key}`}><td style={{ whiteSpace: "nowrap" }}>{dm(h.day)} {h.day.slice(0, 4)}</td><td>{h.what}</td><td>{h.who ?? "—"}</td>
+          <td className="n">{gbp(h.amount)}{h.refunded > 0 && <div className="muted" style={{ fontSize: 13 }}>−{gbp(h.refunded)} refunded</div>}</td>
+          <td><span className={`pill ${CELL[h.status]?.[0] ?? "mute"}`}>{CELL[h.status]?.[1] ?? h.status}</span></td></tr>)}
+      </tbody></table></div>}
+      <p className="cs" style={{ marginTop: 8 }}>Need a receipt for something here? Print this list or save it as a PDF, or message us and we’ll send one.</p></section>
     <p className="note">Each course costs its lessons × its price per lesson, paid in equal termly payments. Swapping charges the new course for its lessons from the start of the term you move in, less what you’ve already paid for that term. Cancelling needs one full term’s notice for KS3 and Pre-GCSE courses and two full terms’ notice for GCSE courses, as agreed when you booked. Within 14 days of the first lesson, before the Classroom is used, you can cancel for a full refund.{online ? null : " To update your card, message us for now: card payments online are coming."}</p>
   </>;
 }

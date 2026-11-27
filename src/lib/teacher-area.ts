@@ -34,7 +34,7 @@ export async function myDay(userId: string): Promise<MyDay> {
     const term = (await q<{ id: string; name: string; pay_date: string }>(`select id, name, term_pay_date(id)::text as pay_date from terms where id = ${TERM_NOW.replace("$1", "")}`))[0] ?? null;
     const [{ classes }] = await q<{ classes: number }>(`select count(*)::int as classes from course_groups g where g.teacher_id = ${ME} and g.academic_year_id = ${YEAR_NOW} and g.status <> 'hidden'`, [userId]);
     const reports = await q<{ group_id: string; cycle_id: string; cycle: string; due: string; name: string; done: number; total: number; left: number }>(`
-      select g.id as group_id, c.id as cycle_id, c.name as cycle, c.comments_due::text as due, l.name || ' ' || coalesce(sj.short_name, sj.name) as name,
+      select g.id as group_id, c.id as cycle_id, c.name as cycle, greatest(c.comments_due, date_trunc('week', coalesce((select t.ends_on from terms t where t.id = c.term_id), c.marks_to))::date + 4)::text as due, l.name || ' ' || coalesce(sj.short_name, sj.name) as name,
         count(*) filter (where e.status in ('submitted','approved'))::int as done, count(*)::int as total,
         count(*) filter (where e.status in ('todo','draft','returned'))::int as left
       from report_entries e join report_cycles c on c.id = e.cycle_id join course_groups g on g.id = e.group_id

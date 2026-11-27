@@ -3,7 +3,7 @@ import { withSchool } from "./db";
 
 // Termly reports: one entry per student per class. Teachers write them; an admin approves and publishes.
 const YEAR_SQL = `(select id from academic_years where ends_on >= current_date order by starts_on limit 1)`;
-export type Cycle = { id: string; name: string; term: string | null; marks_from: string; marks_to: string; comments_due: string; publish_on: string; status: string;
+export type Cycle = { id: string; name: string; term: string | null; assess_prev: boolean; assess_this: boolean; term_no: number | null; marks_from: string; marks_to: string; comments_due: string; publish_on: string; status: string;
   total: number; todo: number; draft: number; submitted: number; returned: number; approved: number };
 export type ClassProgress = { group_id: string; code: string; name: string; teacher: string | null; total: number; done: number; submitted: number; approved: number };
 export type ReviewEntry = { id: string; student: string; class: string; teacher: string | null; progress: number | null; avg_pct: string | null; effort: number | null;
@@ -15,18 +15,18 @@ const counts = `count(e.id)::int as total, count(e.id) filter (where e.status = 
 
 export async function getCycles(): Promise<{ cycles: Cycle[]; terms: { id: string; name: string; starts_on: string; ends_on: string }[] }> {
   return withSchool(async (q) => ({
-    cycles: await q<Cycle>(`select c.id, c.name, t.name as term, c.marks_from::text, c.marks_to::text, c.comments_due::text, c.publish_on::text, c.status::text, ${counts}
+    cycles: await q<Cycle>(`select c.id, c.name, t.name as term, c.marks_from::text, c.marks_to::text, (${DEADLINE_SQL})::text as comments_due, c.publish_on::text, c.assess_prev, c.assess_this, (select tn.number from terms tn where tn.id = c.term_id) as term_no, c.status::text, ${counts}
       from report_cycles c left join terms t on t.id = c.term_id left join report_entries e on e.cycle_id = c.id
       where c.academic_year_id = ${YEAR_SQL} group by c.id, t.name order by c.publish_on`),
     terms: await q(`select id, name, starts_on::text, ends_on::text from terms where academic_year_id = ${YEAR_SQL} order by number`),
   }));
 }
 
-export async function createCycle(actorId: string, d: { name: string; termId: string | null; from: string; to: string; due: string; publish: string }): Promise<string | null> {
+export async function createCycle(actorId: string, d: { name: string; termId: string | null; from: string; to: string; due: string; publish: string; prev?: boolean; cur?: boolean }): Promise<string | null> {
   try {
     await withSchool(async (q) => {
-      await q(`insert into report_cycles (school_id, academic_year_id, term_id, name, marks_from, marks_to, comments_due, publish_on)
-        values (current_school(), ${YEAR_SQL}, $1::uuid, $2, $3::date, $4::date, $5::date, $6::date)`, [d.termId, d.name, d.from, d.to, d.due, d.publish]);
+      await q(`insert into report_cycles (school_id, academic_year_id, term_id, name, marks_from, marks_to, comments_due, publish_on, assess_prev, assess_this)
+        values (current_school(), ${YEAR_SQL}, $1::uuid, $2, $3::date, $4::date, $5::date, $6::date, $7, $8)`, [d.termId, d.name, d.from, d.to, d.due, d.publish, !!d.prev, d.cur ?? !d.prev]);
       await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'create', 'report_cycle', $2)`, [actorId, JSON.stringify(d)]);
     });
     return null;
@@ -58,7 +58,7 @@ export async function createEntries(actorId: string, cycleId: string): Promise<{
 
 export async function getCycle(cycleId: string) {
   return withSchool(async (q) => {
-    const cycle = (await q<Cycle>(`select c.id, c.name, null as term, c.marks_from::text, c.marks_to::text, c.comments_due::text, c.publish_on::text, c.status::text, ${counts}
+    const cycle = (await q<Cycle>(`select c.id, c.name, null as term, c.marks_from::text, c.marks_to::text, (${DEADLINE_SQL})::text as comments_due, c.publish_on::text, c.assess_prev, c.assess_this, (select tn.number from terms tn where tn.id = c.term_id) as term_no, c.status::text, ${counts}
       from report_cycles c left join report_entries e on e.cycle_id = c.id where c.id = $1 group by c.id`, [cycleId]))[0];
     if (!cycle) return null;
     const classes = await q<ClassProgress>(`select g.id as group_id, g.code, l.name || ' ' || sj.name as name, u.name as teacher, count(e.id)::int as total,
@@ -106,16 +106,20 @@ export async function publishCycle(actorId: string, cycleId: string): Promise<st
 // ---------- writing (teachers, or an admin for any class) ----------
 export type WriteRow = { id: string; student: string; avg_pct: string | null; marked: number | null; auto_progress: number | null; progress_override: number | null;
   effort: number | null; working_grade: number | null; predicted_grade: number | null; comment: string | null; status: string; review_note: string | null;
-  assess: string; assess_pct: number | null; assess_title: string | null; no_assessment: string | null;
+  assess: string; assess_pct: number | null; assess_title: string | null; no_assessment: string | null; assess_parts: { label: string; state: string; pct: number | null; title: string | null }[];
   marks?: { pct: number; at: string; term: boolean; assess: boolean }[] };
 
 /** 26 Nov (Alfonso, changed later that day): teachers can write and save drafts any time, but can only submit reports to the
  *  office in the term's last week: from its Monday (Term 2 ends Fri 11 Dec → submitting opens Mon 7 Dec). Uses report_cycles c. */
 export const OPENS_SQL = `date_trunc('week', coalesce((select t.ends_on from terms t where t.id = c.term_id), c.marks_to))::date`;
+/** 27 Nov (Alfonso: "why would comments be due with a submit date days after?"): teachers can only submit in the last week,
+ *  so the deadline teachers see is never before that week: the round's date if it falls in or after it, otherwise that
+ *  week's Friday. */
+export const DEADLINE_SQL = `greatest(c.comments_due, (${OPENS_SQL}) + 4)`;
 export async function getWriteSheet(cycleId: string, groupId: string) {
   return withSchool(async (q) => {
     const head = (await q<{ cycle: string; status: string; comments_due: string; opens_on: string; code: string; name: string; gcse: boolean; teacher_user: string | null }>(`
-      select c.name as cycle, c.status::text, c.comments_due::text, (${OPENS_SQL})::text as opens_on, g.code, l.name || ' ' || sj.name as name,
+      select c.name as cycle, c.status::text, (${DEADLINE_SQL})::text as comments_due, (${OPENS_SQL})::text as opens_on, g.code, l.name || ' ' || sj.name as name,
         (l.name ilike '%GCSE%' and l.name not ilike 'Pre-%' and pp.year_of_course >= pp.course_years) as gcse, t.user_id as teacher_user
       from report_cycles c, course_groups g join price_plans pp on pp.id = g.price_plan_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id left join teachers t on t.id = g.teacher_id
       where c.id = $1 and g.id = $2`, [cycleId, groupId]))[0];
@@ -123,9 +127,10 @@ export async function getWriteSheet(cycleId: string, groupId: string) {
     const rows = await q<WriteRow>(`select e.id, s.first_name || ' ' || s.last_name as student, rl.avg_pct::text, rl.marked,
         progress_score(e.school_id, rl.avg_pct) as auto_progress, e.progress_override, e.effort, e.working_grade, e.predicted_grade, e.comment, e.status::text, e.review_note,
         a.state as assess, a.pct::float as assess_pct, a.title as assess_title, e.no_assessment,
+        coalesce((select json_agg(json_build_object('label', p.label, 'state', p.state, 'pct', p.pct::float, 'title', p.title) order by p.term_no) from report_assessment_parts(e.id) p), '[]') as assess_parts,
         -- every marked piece in this class this school year up to the report window's end, for suggested grades
         coalesce((select json_agg(json_build_object('pct', round(cs.points / cw.max_points * 100, 1), 'at', coalesce(cw.due_at, cs.graded_at)::date::text,
-            'term', cs.graded_at::date between c.marks_from and c.marks_to and not outside_round(cw.title, (select t.number from terms t where t.id = c.term_id)), 'assess', a.title is not null and cw.title = a.title) order by coalesce(cw.due_at, cs.graded_at))
+            'term', cs.graded_at::date between c.marks_from and c.marks_to and not outside_round(cw.title, (select t.number from terms t where t.id = c.term_id)), 'assess', exists (select 1 from report_assessment_parts(e.id) p where p.title = cw.title)) order by coalesce(cw.due_at, cs.graded_at))
           from classroom_submissions cs join classroom_coursework cw on cw.id = cs.coursework_id
           where cw.group_id = e.group_id and cs.student_id = e.student_id and cs.state = 'returned' and cs.points is not null and cw.max_points is not null
             and cs.graded_at::date <= c.marks_to and cs.graded_at::date >= c.marks_to - 330), '[]') as marks
@@ -170,7 +175,7 @@ export async function saveWriteSheet(actor: { id: string; role: string }, cycleI
 
 export async function teacherReportClasses(userId: string) {
   return withSchool((q) => q<{ cycle_id: string; cycle: string; comments_due: string; opens_on: string; group_id: string; name: string; code: string; total: number; done: number }>(`
-    select c.id as cycle_id, c.name as cycle, c.comments_due::text, (${OPENS_SQL})::text as opens_on, g.id as group_id, l.name || ' ' || sj.name as name, g.code,
+    select c.id as cycle_id, c.name as cycle, (${DEADLINE_SQL})::text as comments_due, (${OPENS_SQL})::text as opens_on, g.id as group_id, l.name || ' ' || sj.name as name, g.code,
       count(e.id)::int as total, count(e.id) filter (where e.status in ('submitted','approved'))::int as done
     from report_entries e join report_cycles c on c.id = e.cycle_id join course_groups g on g.id = e.group_id join teachers t on t.id = g.teacher_id
     join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
@@ -220,8 +225,8 @@ export async function studentReport(cycleId: string, studentId: string) {
 export async function remindTeachers(actorId: string, cycleId: string): Promise<{ sent: number; error?: string }> {
   const { sendHtml } = await import("./email");
   const rows = await withSchool((q) => q<{ name: string; email: string; left: number; due: string; cycle: string }>(`select u.name, u.email::text, count(*)::int as left,
-      c.comments_due::text as due, c.name as cycle from report_entries e join report_cycles c on c.id = e.cycle_id join teachers t on t.id = e.teacher_id join users u on u.id = t.user_id
-    where e.cycle_id = $1 and e.status in ('todo','draft','returned') group by u.name, u.email, c.comments_due, c.name`, [cycleId]));
+      (${DEADLINE_SQL})::text as due, c.name as cycle from report_entries e join report_cycles c on c.id = e.cycle_id join teachers t on t.id = e.teacher_id join users u on u.id = t.user_id
+    where e.cycle_id = $1 and e.status in ('todo','draft','returned') group by u.name, u.email, c.comments_due, c.term_id, c.marks_to, c.name`, [cycleId]));
   let sent = 0, error: string | undefined;
   for (const r of rows) {
     const due = new Date(r.due + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -230,4 +235,15 @@ export async function remindTeachers(actorId: string, cycleId: string): Promise<
   }
   await withSchool((q) => q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'remind', 'report_cycle', $2, $3)`, [actorId, cycleId, JSON.stringify({ sent })]));
   return { sent, error };
+}
+
+/** 27 Nov (Alfonso): which term's assessment a round uses: the previous term's, this term's, or both (at least one). */
+export async function setAssessTerms(actorId: string, cycleId: string, prev: boolean, cur: boolean): Promise<string | null> {
+  if (!prev && !cur) return "Choose at least one assessment.";
+  const r = await withSchool(async (q) => {
+    const u = await q(`update report_cycles set assess_prev = $2, assess_this = $3 where id = $1 and status <> 'published' returning id`, [cycleId, prev, cur]);
+    if (u.length) await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'update', 'report_cycle', $2, $3)`, [actorId, cycleId, JSON.stringify({ assess_prev: prev, assess_this: cur })]);
+    return u.length;
+  });
+  return r ? null : "That report round can’t be changed now.";
 }

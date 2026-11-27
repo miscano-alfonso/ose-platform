@@ -12,7 +12,8 @@ export default async function ReportsToWrite() {
   const rows = await teacherReportClasses(me.id);
   const cycles = [...new Map(rows.map((r) => [r.cycle_id, r])).values()];
   const today = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
-  const line = (c: (typeof cycles)[number]) => today < c.opens_on ? <>Comments due {dm(c.comments_due)} · write and save drafts now; <b>Submit</b> opens {dm(c.opens_on)} (the last week of term)</> : <>Comments due {dm(c.comments_due)}</>;
+  // 27 Nov: drafts any time; submitting is the last week of term, so the deadline is never before it opens
+  const line = (c: (typeof cycles)[number]) => today < c.opens_on ? <>Write and save drafts now · <b>Submit</b> between {dm(c.opens_on)} and {dm(c.comments_due)} (the last week of term)</> : <><b>Submit</b> by {dm(c.comments_due)}</>;
   return <>
     {/* 27 Nov (Alfonso): the round itself is the page heading, with its dates under it */}
     <div className="top"><div><h1>{cycles[0]?.cycle ?? "Reports"}</h1><div className="sub">{cycles[0] ? line(cycles[0]) : "Termly progress reports for your classes"}</div></div><span className="grow" /><GuideSlides slides={REPORT_SLIDES} title="Writing reports: how it works" label="How reports work" /></div>

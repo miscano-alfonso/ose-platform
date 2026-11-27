@@ -23,7 +23,14 @@ async function all<T>(token: string, path: string, key: string): Promise<{ ok: t
 }
 
 type Student = { userId: string; profile?: { emailAddress?: string; name?: { fullName?: string; givenName?: string; familyName?: string } } };
-type Work = { id: string; title?: string; dueDate?: { year: number; month: number; day: number }; dueTime?: { hours?: number; minutes?: number }; maxPoints?: number; alternateLink?: string; state?: string };
+type Work = { id: string; title?: string; description?: string; creationTime?: string;
+  materials?: { driveFile?: { driveFile?: { title?: string; alternateLink?: string } }; link?: { title?: string; url?: string }; youtubeVideo?: { title?: string; alternateLink?: string }; form?: { title?: string; formUrl?: string } }[]; dueDate?: { year: number; month: number; day: number }; dueTime?: { hours?: number; minutes?: number }; maxPoints?: number; alternateLink?: string; state?: string };
+/** 27 Nov: what's attached to a piece of work, for the parents' Assignments page (names; web links and videos open). */
+const materialsOf = (w: Work) => JSON.stringify((w.materials ?? []).slice(0, 20).map((m) =>
+  m.link ? { kind: "link", title: (m.link.title || m.link.url || "Link").slice(0, 200), url: m.link.url ?? null }
+  : m.youtubeVideo ? { kind: "video", title: (m.youtubeVideo.title || "Video").slice(0, 200), url: m.youtubeVideo.alternateLink ?? null }
+  : m.form ? { kind: "form", title: (m.form.title || "Form").slice(0, 200), url: null }
+  : m.driveFile ? { kind: "file", title: (m.driveFile.driveFile?.title || "File").slice(0, 200), url: null } : null).filter(Boolean));
 type Sub = { courseWorkId: string; userId: string; alternateLink?: string; state?: string; late?: boolean; assignedGrade?: number; updateTime?: string;
   submissionHistory?: { stateHistory?: { state?: string; stateTimestamp?: string } }[] };
 
@@ -123,9 +130,10 @@ export async function syncClassroom(by: string): Promise<ClassroomInfo> {
       // the work set
       const wid = new Map<string, string>();
       for (const w of work.items) {
-        const [row] = await q<{ id: string }>(`insert into classroom_coursework (school_id, group_id, coursework_id, title, due_at, max_points, link) values (current_school(), $1, $2, $3, $4, $5, $6)
-          on conflict (coursework_id) do update set group_id = excluded.group_id, title = excluded.title, due_at = excluded.due_at, max_points = excluded.max_points, link = excluded.link returning id`,
-          [g.id, w.id, (w.title ?? "Untitled").slice(0, 300), dueOf(w), w.maxPoints && w.maxPoints > 0 ? w.maxPoints : null, w.alternateLink ?? null]);
+        const [row] = await q<{ id: string }>(`insert into classroom_coursework (school_id, group_id, coursework_id, title, due_at, max_points, link, description, materials, posted_at) values (current_school(), $1, $2, $3, $4, $5, $6, $7, $8, $9)
+          on conflict (coursework_id) do update set group_id = excluded.group_id, title = excluded.title, due_at = excluded.due_at, max_points = excluded.max_points, link = excluded.link,
+            description = excluded.description, materials = excluded.materials, posted_at = excluded.posted_at returning id`,
+          [g.id, w.id, (w.title ?? "Untitled").slice(0, 300), dueOf(w), w.maxPoints && w.maxPoints > 0 ? w.maxPoints : null, w.alternateLink ?? null, w.description?.slice(0, 8000) ?? null, materialsOf(w), w.creationTime ?? null]);
         wid.set(w.id, row.id); info.work!++;
       }
       // work Classroom no longer has (deleted or unpublished) goes too
@@ -175,9 +183,10 @@ async function syncOneCourses(token: string, info: ClassroomInfo) {
     await withSchool(async (q) => {
       const wid = new Map<string, string>();
       for (const w of work.items) {
-        const [row] = await q<{ id: string }>(`insert into classroom_coursework (school_id, group_id, one_course_id, coursework_id, title, due_at, max_points, link) values (current_school(), null, $1, $2, $3, $4, $5, $6)
-          on conflict (coursework_id) do update set group_id = null, one_course_id = excluded.one_course_id, title = excluded.title, due_at = excluded.due_at, max_points = excluded.max_points, link = excluded.link returning id`,
-          [o.id, w.id, (w.title ?? "Untitled").slice(0, 300), dueOf(w), w.maxPoints && w.maxPoints > 0 ? w.maxPoints : null, w.alternateLink ?? null]);
+        const [row] = await q<{ id: string }>(`insert into classroom_coursework (school_id, group_id, one_course_id, coursework_id, title, due_at, max_points, link, description, materials, posted_at) values (current_school(), null, $1, $2, $3, $4, $5, $6, $7, $8, $9)
+          on conflict (coursework_id) do update set group_id = null, one_course_id = excluded.one_course_id, title = excluded.title, due_at = excluded.due_at, max_points = excluded.max_points, link = excluded.link,
+            description = excluded.description, materials = excluded.materials, posted_at = excluded.posted_at returning id`,
+          [o.id, w.id, (w.title ?? "Untitled").slice(0, 300), dueOf(w), w.maxPoints && w.maxPoints > 0 ? w.maxPoints : null, w.alternateLink ?? null, w.description?.slice(0, 8000) ?? null, materialsOf(w), w.creationTime ?? null]);
         wid.set(w.id, row.id); info.work!++;
       }
       await q(`delete from classroom_coursework where one_course_id = $1 and not (coursework_id = any($2::text[]))`, [o.id, work.items.map((w) => w.id)]);

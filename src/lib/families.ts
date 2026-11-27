@@ -42,7 +42,7 @@ export async function familyList(): Promise<FamilyListRow[]> {
     order by p.last_name, p.first_name`));
 }
 
-export type Cell = { id: string; status: string; amount: number; refunded: number; due_on: string } | null;
+export type Cell = { id: string; status: string; amount: number; refunded: number; due_on: string; paid_on?: string | null } | null;
 export type Course = { id: string; group_id: string; subject: string; level: string; code: string; colour: string; status: string; needs_check: boolean; note: string | null;
   enrolled_on: string; notice_terms: number | null; notice_given_on: string | null; end_reason: string | null; list: number; discount: number; net: number; cpl: number | null; cells: Cell[] };
 export type Child = { id: string; first: string; last: string; email: string | null; dob: string | null; year_group: number | null; level: string;
@@ -84,7 +84,7 @@ export async function familyDetail(id: string): Promise<FamilyDetail | null> {
         coalesce(e.notice_terms, l.notice_terms) as notice_terms, e.notice_given_on::text, e.end_reason, e.list_price_pence as list, e.discount_pence as discount,
         (select pp.cost_per_lesson_pence from price_plans pp where pp.id = g.price_plan_id) as cpl,
         coalesce((select sum(i.amount_pence) from instalments i where i.enrolment_id = e.id and i.status not in ('cancelled','waived')), 0)::int as net,
-        coalesce((select json_object_agg(i.term_id, json_build_object('id', i.id, 'status', i.status, 'amount', i.amount_pence, 'refunded', i.refunded_pence, 'due_on', i.due_on))
+        coalesce((select json_object_agg(i.term_id, json_build_object('id', i.id, 'status', i.status, 'amount', i.amount_pence, 'refunded', i.refunded_pence, 'due_on', i.due_on, 'paid_on', (i.paid_at at time zone 'Europe/London')::date))
           from instalments i where i.enrolment_id = e.id), '{}') as cells
       from enrolments e join students s on s.id = e.student_id join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       where s.parent_id = $1 and not e.is_taster and g.academic_year_id = ${YEAR_SQL}

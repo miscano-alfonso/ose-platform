@@ -82,8 +82,10 @@ export async function cancelAbsence(parentId: string, id: string) {
 
 // ---------- assignments (from Google Classroom) ----------
 export async function assignments(studentIds: string[]) {
-  return withSchool((q) => q<{ student_id: string; title: string; due_at: string | null; link: string | null; class: string; colour: string; status: string; points: number | null; max: number | null; late: boolean }>(`
-    select a.student_id, a.title, a.due_at::text, a.link, coalesce(l.name || ' ' || coalesce(sj.short_name, sj.name), '1:1 ' || coalesce(osj.name, oc.name, '')) as class,
+  return withSchool((q) => q<{ student_id: string; title: string; due_at: string | null; link: string | null; class: string; colour: string; status: string; points: number | null; max: number | null; late: boolean;
+    description: string | null; materials: { kind: string; title: string; url: string | null }[]; posted_at: string | null; teacher: string | null }>(`
+    select a.student_id, a.title, a.due_at::text, a.link, a.description, a.materials, a.posted_at::text,
+      (select u.name from teachers t join users u on u.id = t.user_id where t.id = coalesce(g.teacher_id, oc.teacher_id)) as teacher, coalesce(l.name || ' ' || coalesce(sj.short_name, sj.name), '1:1 ' || coalesce(osj.name, oc.name, '')) as class,
       coalesce(sj.colour, osj.colour, '#8494c2') as colour, a.parent_status as status, a.points::float as points, a.max_points::float as max, a.late
     from student_assignments a left join course_groups g on g.id = a.group_id left join levels l on l.id = g.level_id left join subjects sj on sj.id = g.subject_id
       left join one_courses oc on oc.id = a.one_course_id left join subjects osj on osj.id = oc.subject_id   -- 2 Nov: 1:1 work too
@@ -497,4 +499,32 @@ export async function weekOrNext(who: { student: string } | { parent: string }):
   if (rows.some((r) => r.status === "on" || r.status === "moved")) return { rows, next: false };
   const nx = await weekLessons(who, 1);
   return nx.length ? { rows: nx, next: true } : { rows, next: false };
+}
+
+// 27 Nov (Alfonso): the parent's payment history (Payments → Payment history): every payment taken or due back, newest first.
+export type PaidRow = { key: string; day: string; what: string; who: string | null; amount: number; refunded: number; status: string };
+export async function paymentHistory(parentId: string): Promise<PaidRow[]> {
+  return withSchool((q) => q<PaidRow>(`
+    select * from (
+      select 'i' || i.id as key, coalesce((i.paid_at at time zone 'Europe/London')::date, i.due_on)::text as day,
+        l.name || ' ' || sj.name || coalesce(' · ' || t.name, '') as what, coalesce(nullif(s.known_as, ''), s.first_name) as who,
+        i.amount_pence as amount, i.refunded_pence as refunded, i.status::text as status
+      from instalments i join enrolments e on e.id = i.enrolment_id join students s on s.id = e.student_id join course_groups g on g.id = e.group_id
+        join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id left join terms t on t.id = i.term_id
+      where s.parent_id = $1 and i.status in ('paid', 'processing', 'failed', 'refunded', 'part_refunded')
+      union all
+      select 'o' || o.id, (o.paid_at at time zone 'Europe/London')::date::text, 'Registration fee', null, o.registration_fee_pence, 0, 'paid'
+      from orders o where o.parent_id = $1 and o.status = 'paid' and o.registration_fee_pence > 0 and o.paid_at is not null
+      union all
+      select 'b' || b.id, (b.created_at at time zone 'Europe/London')::date::text,
+        '1:1 ' || sj.name || ' · ' || to_char(b.starts_at at time zone 'Europe/London', 'FMDy FMDD Mon HH24:MI'), coalesce(s.first_name, b.student_name), b.price_pence, 0,
+        case when b.status = 'cancelled' then 'refunded' else 'paid' end
+      from tutoring_bookings b join subjects sj on sj.id = b.subject_id left join students s on s.id = b.student_id
+      where b.parent_id = $1 and b.price_pence > 0 and b.status in ('booked', 'completed', 'no_show', 'cancelled') and b.stripe_payment_intent_id is not null
+      union all
+      select 'w' || wb.id, (wb.created_at at time zone 'Europe/London')::date::text, 'Workshop: ' || w.title, coalesce(s.first_name, wb.student_name), wb.price_pence, 0,
+        case when wb.status = 'cancelled' then 'refunded' else 'paid' end
+      from workshop_bookings wb join workshops w on w.id = wb.workshop_id left join students s on s.id = wb.student_id
+      where wb.parent_id = $1 and wb.price_pence > 0 and wb.status in ('booked', 'attended', 'absent', 'cancelled') and wb.stripe_payment_intent_id is not null
+    ) h order by day desc, what`, [parentId])).catch((e) => { console.error("paymentHistory", e); return []; });
 }
