@@ -91,6 +91,12 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "week", "summary", "attendance_link", "school"],
     subject: "Attendance this week: {{week}}",
     body: "Dear {{parent}},\n\nHere’s how this week’s lessons went:\n\n{{summary}}\n\nIf a lesson is marked absent and you think that’s wrong, just reply to this email. [See all attendance]({{attendance_link}})\n\nHave a lovely weekend,\n{{school}}" },
+  // 27 Nov (Alfonso): remind parents to book exams with the exam partner (Tutors & Exams), with the partner code, before each
+  // booking deadline in Admin → Website → Resources → Important dates that's ticked "Remind parents"
+  { key: "exam_booking", name: "Exam booking reminder", parent_only: true, default_on: true, when: "Before each exam booking deadline ticked “Remind parents” under Important dates (Admin → Website → Resources), to parents of students on a GCSE or iGCSE course: once the set number of days before, and again a week before.", timing: { label: "days before the deadline", unit: "days", default: 28 }, to_parent: true, to_student: false,
+    fields: ["parent", "child", "deadline", "date", "days", "partner", "booking_link", "code_line", "dates_link", "school"],
+    subject: "Booking exams: {{deadline}} is on {{date}}",
+    body: "Dear {{parent}},\n\nA reminder that **{{deadline}}** is on **{{date}}**, in {{days}} days.\n\nIf {{child}} is sitting exams this summer, please book them with our exam partner, {{partner}}:\n\n👉 [Book exams with {{partner}}]({{booking_link}})\n\n{{code_line}}\n\nAll the dates (booking deadlines, exams and results) are on your dashboard: [Important dates]({{dates_link}})\n\nIf you have any questions, just reply to this email.\n\n{{school}}" },
   { key: "reward_points", name: "Reward points given", when: "Soon after a teacher gives reward points (several at once go in one email).", timing: null, to_parent: true, to_student: true,
     fields: ["name", "child", "list", "points", "total", "rewards_link", "school"],
     subject: "{{child}} earned {{points}} reward points",
@@ -440,6 +446,32 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
             return `**${child}**: ${there} of ${ls.length} lesson${ls.length === 1 ? "" : "s"} attended\n${ls.map((r) => `• ${r.day} ${r.time} · ${r.class} · ${label(r)}`).join("\n")}`; }).join("\n\n");
           await deliver(q, "attendance_week", c, { ref: `${pid}:${w.monday}`, to: [{ name: list[0].parent, email: list[0].email }], vars: { parent: list[0].parent, week: `w/c ${fmtDate(w.monday)}`,
             summary, attendance_link: kidsLink("parent", "/attendance"), school } }, budget);
+        }
+      }
+    }
+
+    // 27 Nov (Alfonso): exam booking reminders: before each "Remind parents" booking deadline, to parents of GCSE / iGCSE students
+    // (not Pre-GCSE), the set number of days before and again 7 days before (each parent once per deadline and stage)
+    c = cfg("exam_booking");
+    if (c) {
+      const early = Math.max(8, Math.min(120, c.minutes ?? 28));
+      const due = await q<{ id: string; title: string; starts_on: string; days: number }>(`select id, title, starts_on::text, (starts_on - (now() at time zone 'Europe/London')::date) as days
+        from important_dates where published and remind and kind = 'book' and starts_on is not null
+          and starts_on - (now() at time zone 'Europe/London')::date between 1 and $1`, [early]);
+      if (due.length) {
+        const { examPartner } = await import("./important-dates");
+        const p = await examPartner();
+        const fams = await q<{ pid: string; parent: string; email: string; kids: string }>(`select p.id as pid, p.first_name as parent, p.email::text as email,
+            string_agg(distinct coalesce(nullif(st.known_as, ''), st.first_name), ' and ') as kids
+          from enrolments x join course_groups g on g.id = x.group_id join levels l on l.id = g.level_id join students st on st.id = x.student_id join parents p on p.id = st.parent_id
+          where x.status = 'active' and not x.is_taster and l.name ~* 'gcse' and l.name !~* 'pre' and p.email is not null group by p.id, p.first_name, p.email`);
+        for (const d of due) {
+          const stage = d.days <= 7 ? "week" : "early";
+          const date = new Date(d.starts_on + "T12:00:00Z").toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+          for (const f of fams) await deliver(q, "exam_booking", c, { ref: `${d.id}:${stage}:${f.pid}`, to: [{ name: f.parent, email: f.email }], vars: { parent: f.parent, child: f.kids,
+            deadline: d.title, date, days: String(d.days), partner: p.name, booking_link: p.booking || "https://www.tutorsandexams.uk/apply/",
+            code_line: p.code ? `When you book, please use our partner code **${p.code}**${p.note ? ` (${p.note})` : ""} so they know ${f.kids} studies with us.` : "",
+            dates_link: kidsLink("parent", "/resources?tab=dates"), school } }, budget);
         }
       }
     }

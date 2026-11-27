@@ -2129,3 +2129,28 @@ async function decideSuggestionAction(f: FormData, add: boolean): Promise<void> 
   revalidatePath("/admin/resources");
   redirect(`/admin/resources?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(add ? "Added to the Resources page. The teacher can see it’s been added." : "Saved. The teacher sees “Not for now” with your note.")}#suggested`);
 }
+
+// ---------- 27 Nov (Alfonso): Important dates and the exam partner (Admin → Website → Resources) ----------
+export async function saveImportantDateAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { saveImportantDate } = await import("@/lib/important-dates");
+  const id = str(f, "id", 40);
+  const err = await saveImportantDate(me.id, { id: /^[0-9a-f-]{36}$/.test(id) ? id : undefined, title: str(f, "title", 160), when_text: str(f, "when_text", 60), starts_on: str(f, "starts_on", 10),
+    ends_on: str(f, "ends_on", 10), details: str(f, "details", 600), link: str(f, "link", 600), kind: str(f, "kind", 10), remind: f.get("remind") === "on", published: f.get("hidden") !== "on" });
+  revalidatePath("/admin/resources");
+  redirect(`/admin/resources?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Saved. Parents and students see it under Resources → Important dates.")}#dates`);
+}
+export async function deleteImportantDateAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { deleteImportantDate } = await import("@/lib/important-dates");
+  await deleteImportantDate(me.id, str(f, "id", 40));
+  revalidatePath("/admin/resources");
+  redirect(`/admin/resources?ok=${encodeURIComponent("Date removed.")}#dates`);
+}
+export async function saveExamPartnerAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const { saveExamPartner } = await import("@/lib/important-dates");
+  const err = await saveExamPartner(me.id, { name: str(f, "name", 80), booking: str(f, "booking", 600), code: str(f, "code", 60), note: str(f, "note", 300) });
+  revalidatePath("/admin/resources");
+  redirect(`/admin/resources?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent("Exam partner saved.")}#dates`);
+}

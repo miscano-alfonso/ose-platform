@@ -96,7 +96,7 @@ export const PAGES: Record<Role, Page> = {
         points: [] },
       { id: "messages", title: "Messages", shot: "messages", alt: "Messages: start a conversation with the school office about one of your children",
         text: "Write to us, or your children’s teachers, about any of your children, and keep the whole conversation in one place.",
-        points: ["Our messages come to your email too, so you won’t miss them", "Reply to that email from any email address (Gmail, Hotmail, Outlook…) and your answer goes into the conversation here", "Resources: ideas from the teachers for learning at home, for your children’s subjects"] },
+        points: ["Our messages come to your email too, so you won’t miss them", "Reply to that email from any email address (Gmail, Hotmail, Outlook…) and your answer goes into the conversation here", "Resources: ideas from the teachers for learning at home, information for home-educating families, and important dates such as when to book exams (with a reminder email before each booking deadline)"] },
       { id: "book", title: "Book a 1:1", shot: "book", alt: "Book a 1:1: choose a subject and teacher, then a time in the next two weeks",
         text: "Book a one-to-one lesson with your child’s teacher: choose the subject, then a time that suits you.",
         points: ["See your booked and past 1:1s", "Workshops are listed on the Workshops page"] },

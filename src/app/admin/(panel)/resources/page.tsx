@@ -1,13 +1,14 @@
 import { getResources, groupBySubject, officeSuggestions, RES_KINDS, ALL_SUBJECTS, SUGG_STATUS, type Resource, type Suggestion } from "@/lib/resources";
 import { withSchool } from "@/lib/db";
-import { saveResourceAction, deleteResourceAction, addSuggestionAction, notNowSuggestionAction } from "../../actions";
+import { importantDates, examPartner, whenOf, DATE_KINDS, type ImportantDate } from "@/lib/important-dates";
+import { saveResourceAction, deleteResourceAction, addSuggestionAction, notNowSuggestionAction, saveImportantDateAction, deleteImportantDateAction, saveExamPartnerAction } from "../../actions";
 
 export const dynamic = "force-dynamic";
 
 // Admin → Website → Resources (21 Nov): the website's public Resources page: useful resources for each subject
 // (websites, things to watch or listen to, books, tips), suggested by the teachers for learning at home.
 export default async function ResourcesAdmin({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string }> }) {
-  const [sp, list, sugg, subjects] = await Promise.all([searchParams, getResources(true), officeSuggestions(),
+  const [sp, list, sugg, dates, partner, subjects] = await Promise.all([searchParams, getResources(true), officeSuggestions(), importantDates(true), examPartner(),
     withSchool((q) => q<{ name: string }>(`select distinct name from subjects order by name`)).catch(() => [] as { name: string }[])]);
   const groups = groupBySubject(list);
   const waiting = sugg.filter((x) => x.status === "new"), decided = sugg.filter((x) => x.status !== "new");
@@ -33,6 +34,18 @@ export default async function ResourcesAdmin({ searchParams }: { searchParams: P
       <details className="gd-add"><summary className="abtn sm">Add one for {subject}</summary><ResourceForm subject={subject} /></details>
     </section>)}
     {groups.length === 0 && <p className="empty">Nothing yet. The page says resources are coming soon.</p>}
+    {/* 27 Nov (Alfonso): Important dates and the exam partner, shown to parents and students under Resources → Important dates */}
+    <section className="card" id="dates"><h2>Important dates</h2>
+      <p className="cs">When to book exams, when the exams are, and results. Parents and students see these under <b>Resources → Important dates</b>. Tick <b>Remind parents</b> on a booking deadline and the <b>Exam booking reminder</b> automation emails the parents of GCSE and iGCSE students before it (switch it on, and choose how many days before, in Automations).</p>
+      <form action={saveExamPartnerAction} className="gd-row"><div className="gd-fields">
+        <label className="fld">Exam partner<input name="name" required maxLength={80} defaultValue={partner.name} /></label>
+        <label className="fld">Partner code<input name="code" maxLength={60} defaultValue={partner.code} placeholder="The code families enter when they book" /></label>
+        <label className="fld gd-wide">Booking link<input name="booking" type="url" maxLength={600} defaultValue={partner.booking} /></label>
+        <label className="fld gd-wide">Note for families (optional)<input name="note" maxLength={300} defaultValue={partner.note} placeholder="e.g. Enter the code on the application form, under ‘How did you hear about us?’" /></label>
+      </div><div className="gd-acts">{!partner.code && <span className="pill warn">No partner code yet: the reminder emails leave it out</span>}<button className="abtn pri sm" type="submit">Save</button></div></form>
+      <div className="gd-list" style={{ marginTop: 12 }}>{dates.map((d) => <DateForm key={d.id} d={d} />)}</div>
+      <details className="gd-add"><summary className="abtn sm">Add a date</summary><DateForm /></details>
+    </section>
   </>;
 }
 
@@ -73,6 +86,28 @@ function SuggestionForm({ x }: { x: Suggestion }) {
       <button className="abtn pri sm" type="submit">Add to the page</button>
       {x.url && <a className="abtn sm" href={x.url} target="_blank" rel="noopener">Open the link</a>}
       <button className="abtn sm" type="submit" formAction={notNowSuggestionAction} formNoValidate>Not for now</button>
+    </div>
+  </form>;
+}
+
+function DateForm({ d }: { d?: ImportantDate }) {
+  return <form action={saveImportantDateAction} className={`gd-row${d && !d.published ? " is-hidden" : ""}`}>
+    {d && <input type="hidden" name="id" value={d.id} />}
+    {d && <p className="rs-from"><b>{whenOf(d)}</b></p>}
+    <div className="gd-fields">
+      <label className="fld gd-wide">Title<input name="title" required maxLength={160} defaultValue={d?.title} /></label>
+      <label className="fld">Date<input name="starts_on" type="date" defaultValue={d?.starts_on ?? ""} /></label>
+      <label className="fld">Until (optional)<input name="ends_on" type="date" defaultValue={d?.ends_on ?? ""} /></label>
+      <label className="fld">Show as (optional)<input name="when_text" maxLength={60} defaultValue={d?.when_text ?? ""} placeholder="e.g. May to June 2027" /></label>
+      <label className="fld">Kind<select name="kind" defaultValue={d?.kind ?? "book"}>{DATE_KINDS.map((k) => <option key={k.id} value={k.id}>{k.label}</option>)}</select></label>
+      <label className="fld gd-wide">Details<input name="details" maxLength={600} defaultValue={d?.details ?? ""} /></label>
+      <label className="fld gd-wide">Link (https://…)<input name="link" type="url" maxLength={600} defaultValue={d?.link ?? ""} /></label>
+    </div>
+    <div className="gd-acts">
+      <label className="chk"><input type="checkbox" name="remind" defaultChecked={d?.remind} /> Remind parents</label>
+      {d && <label className="chk"><input type="checkbox" name="hidden" defaultChecked={!d.published} /> Hide</label>}
+      <button className="abtn pri sm" type="submit">{d ? "Save" : "Add"}</button>
+      {d && <button className="abtn sm" type="submit" formAction={deleteImportantDateAction} formNoValidate>Remove</button>}
     </div>
   </form>;
 }

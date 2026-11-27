@@ -1960,3 +1960,17 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 .adm .tt-sum b{display:inline}
 .adm .tt-l b{flex:none}.adm .tt-fut{padding:3px 6px;gap:5px}
 .adm .tt-bar select{width:auto;max-width:240px}
+/* 27 Nov: Resources → Information and Important dates (parents and students) */
+.adm .rs-tabs{flex-wrap:wrap}
+.adm .rs-igrp{margin-top:14px}.adm .rs-igrp h3{margin:0 0 8px;font-size:16px}
+.adm .rs-exam{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.adm .rs-exam>div{flex:1 1 420px;min-width:0}
+.adm .rs-code{margin:10px 0 0;font-size:15px}.adm .rs-code b{font:700 16px ui-monospace,SFMono-Regular,Menlo,monospace;background:var(--pop,#e9f56a);color:var(--pop-ink,#0d0f1c);padding:2px 8px;border-radius:6px;user-select:all}
+.adm .rs-dates{list-style:none;margin:0;padding:0}
+.adm .rs-dates li{display:grid;grid-template-columns:210px minmax(0,1fr);gap:14px;padding:14px 0;border-top:1px solid var(--line)}
+.adm .rs-dates li:first-child{border-top:0;padding-top:4px}
+.adm .rs-dates li.past{opacity:.6}
+.adm .rs-when{font-weight:700}
+.adm .rs-dates p{margin:6px 0 4px;color:var(--muted);font-size:14.5px}
+.adm .rs-dates .pill{font-size:12px;margin-left:4px;vertical-align:2px}
+@media (max-width:700px){.adm .rs-dates li{grid-template-columns:1fr;gap:4px}}
