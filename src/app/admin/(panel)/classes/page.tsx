@@ -1,5 +1,6 @@
 import { labelWords } from "@/lib/course-labels";
 import { ClassroomPicker } from "../../ClassroomPicker";
+import { ExpandRow } from "../../ExpandRow";
 import Link from "next/link";
 import { getGroups, pendingInvites, classDefaults } from "@/lib/admin-data";
 import { classFormOptions } from "@/lib/rules";
@@ -80,7 +81,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
         {groups.filter((g) => g.year_label === y).map((g) => {
           const pct = g.capacity ? Math.min(100, Math.round((g.taken / g.capacity) * 100)) : 0;
           return <tbody key={g.id} id={`g-${g.id}`} className="cls-row">
-            <tr>
+            <ExpandRow target={`ed-${g.id}`} label={`Edit ${g.code}`}>
               <td><span className="dot" style={{ background: g.colour }} /><b>{g.level} {g.subject}</b>{g.trial && <> <span className="pill info" title="Opens for booking by itself once this many families join its waiting list">Trial · {g.waiting} of {g.waitlist_threshold} signed up</span></>}<div className="muted" style={{ fontSize: 15.5, marginLeft: 18 }}>{g.code}</div></td>
               <td>{g.teacher ?? <span className="muted">Not set</span>}</td>
               <td>{g.slots ?? <span className="muted">No lessons yet</span>}</td>
@@ -92,9 +93,9 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
               <td>{onHome(g) ? <span className="pill good">Space Available</span> : <span className="muted">Not shown</span>}
                 {g.homepage !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand{g.homepage_order ? ` · position ${g.homepage_order}` : ""}</div>}</td>
               <td>{g.classroom ? <span className="pill good">Linked</span> : <span className="pill mute">Not linked</span>} <ClassroomPicker groupId={g.id} cls={`${g.level} ${g.subject}`} level={g.level} code={g.code} linked={g.classroom} />{g.meet_url ? <div className="muted" style={{ fontSize: 13.5 }}>{toolOf(g.meet_url).id === "other" ? "Lesson link set" : `${toolOf(g.meet_url).name} link set`}</div> : <div className="muted" style={{ fontSize: 13.5 }}>No lesson link</div>}</td>
-            </tr>
-            <tr className="editrow"><td colSpan={8} style={{ paddingTop: 6, paddingBottom: 8 }}>
-              <details className="edit"><summary className="abtn sm">Edit {g.code}</summary>
+            </ExpandRow>
+            <tr className="editrow"><td colSpan={8}>
+              <details className="edit" id={`ed-${g.id}`}><summary className="sr-only">Edit {g.code}</summary>
                 <form action={updateGroupAction} className="eform" style={{ marginTop: 10 }}>
                   <input type="hidden" name="id" value={g.id} />
                   <label className="fld">Capacity<input type="number" name="capacity" min={1} max={200} placeholder={`${def.capacity}`} defaultValue={g.capacity_custom ? g.capacity ?? "" : ""} style={{ width: 90 }} /><small>{g.capacity_custom ? `Own number (default ${def.capacity}). Empty: use the default` : `Default (${def.capacity})`}</small></label>

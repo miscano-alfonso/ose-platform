@@ -2099,3 +2099,8 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 .adm .crp-ok{font-size:17px;margin:0}.adm .crp-acts{display:flex;justify-content:flex-end}
 .adm .tsx-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.adm .tsx-teachers{flex-wrap:wrap}
 .adm .tsx-pop .tsx-sub{font-size:12.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
+/* 28 Nov: Admin → Classes: the whole row tints on hover and opens its edit form on click (no Edit button) */
+.adm tr.xrow{cursor:pointer}.adm tr.xrow:hover>td{background:var(--hover)}
+.adm .cls-row .editrow>td{padding:0;border:0;background:transparent}
+.adm .cls-row:has(details.edit[open]) .xrow>td{background:var(--soft);border-bottom-color:transparent}
+.adm .cls-row .editrow:has(details[open])>td{padding:2px 14px 14px;background:var(--soft)}
