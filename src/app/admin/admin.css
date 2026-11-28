@@ -2036,3 +2036,47 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 .adm .cls-defs{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:flex-end}.adm .cls-defs>b{align-self:center;font-size:16px}
 .adm .cls-defs .muted{font-size:14px;align-self:center;flex:1 1 260px}
 .adm .eform .fld small{display:block;font-size:12.5px;color:var(--muted);margin-top:3px;font-weight:400}
+
+/* 28 Nov: Timetable setup: three layouts to try */
+.adm .tsx-switch{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 16px}
+.adm .tsx-switch a{display:flex;flex-direction:column;padding:9px 14px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);text-decoration:none;min-width:170px}
+.adm .tsx-switch a span{font-size:13px;color:var(--muted)}.adm .tsx-switch a[aria-current]{background:var(--brand);border-color:var(--brand);color:#fff}.adm .tsx-switch a[aria-current] span{color:#fff;opacity:.85}
+.adm .tsx-add{display:flex;gap:6px;flex-wrap:wrap;align-items:center}.adm .tsx-add select,.adm .tsx-add input{padding:6px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;font-size:14px;background:var(--panel);color:var(--ink)}
+.adm .tsx-chips{display:flex;gap:6px;flex-wrap:wrap}
+.adm .tsx-chip{display:inline-flex;align-items:center;gap:4px;padding:3px 4px 3px 10px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:14px}
+.adm .tsx-chip button{border:0;background:transparent;cursor:pointer;font-size:17px;line-height:1;padding:0 6px;color:var(--muted);border-radius:50%}.adm .tsx-chip button:hover{background:var(--bad-bg);color:var(--bad)}
+.adm .tsx-chip.bad{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}.adm .tsx-chip.warn{background:var(--warn-bg);border-color:var(--warn);color:var(--warn)}
+.adm .tsx-a td{vertical-align:top}.adm .tsx-a td .muted{font-size:13px;margin:2px 0 6px}.adm .tsx-a .dot{margin-right:6px}
+/* B: week grid */
+.adm .tsx-tray{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:12px 16px}
+.adm .tsx-tag{border-left:4px solid var(--c);background:var(--soft);padding:4px 10px;border-radius:8px;font-size:14px}
+.adm .tsx-b table{table-layout:fixed}.adm .tsx-b th:first-child,.adm .tsx-b td:first-child{width:70px}
+.adm .tsx-b td{vertical-align:top;padding:4px;position:relative}
+.adm .tsx-l,.adm .tsx-plus{position:relative;margin-bottom:4px}
+.adm .tsx-l>summary{list-style:none;cursor:pointer;border-left:4px solid var(--c);background:var(--soft);border-radius:8px;padding:5px 8px;font-size:13.5px;line-height:1.25}
+.adm .tsx-l>summary span{display:block;color:var(--muted);font-size:12.5px}
+.adm .tsx-l.bad>summary{background:var(--bad-bg);outline:1.5px solid var(--bad)}.adm .tsx-l.warn>summary{background:var(--warn-bg)}
+.adm .tsx-plus>summary{list-style:none;cursor:pointer;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:8px;padding:2px;opacity:.55;font-size:15px}
+.adm .tsx-plus>summary:hover,.adm .tsx-plus[open]>summary{opacity:1;border-color:var(--accent);color:var(--ink)}
+.adm .tsx-l>summary::-webkit-details-marker,.adm .tsx-plus>summary::-webkit-details-marker{display:none}
+.adm .tsx-pop{position:absolute;z-index:40;top:calc(100% + 4px);left:0;width:300px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;box-shadow:0 12px 30px rgba(0,0,0,.18);display:grid;gap:8px;font-size:14px}
+.adm .tsx-pop p{margin:0}.adm .tsx-pop p.bad{color:var(--bad)}.adm .tsx-pop p.warn{color:var(--warn)}.adm .tsx-pop select{max-width:100%}
+.adm .tsx-b td:nth-child(n+5) .tsx-pop{left:auto;right:0}
+/* C: one class at a time */
+.adm .tsx-c{display:grid;grid-template-columns:minmax(220px,280px) 1fr;gap:16px;align-items:start}
+.adm .tsx-side{padding:12px;position:sticky;top:12px;max-height:calc(100vh - 40px);overflow:auto}
+.adm .tsx-side h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 6px 4px}
+.adm .tsx-side a{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:8px;color:var(--ink);text-decoration:none;font-size:14.5px}
+.adm .tsx-side a:hover{background:var(--hover)}.adm .tsx-side a[aria-current]{background:var(--brand);color:#fff}.adm .tsx-side a[aria-current] .muted{color:#fff;opacity:.8}
+.adm .tsx-head{display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}.adm .tsx-head h2{margin:0}
+.adm .tsx-row{display:flex;gap:14px;align-items:center;flex-wrap:wrap;margin-top:12px}.adm .tsx-row .k{min-width:190px;font-weight:600;font-size:14.5px}
+.adm .tsx-legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;margin-bottom:8px}.adm .tsx-legend span::before{content:"";display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:5px;vertical-align:-1px;border:1px solid var(--line)}
+.adm .tsx-legend .free::before{background:var(--good-bg);border-color:var(--good)}.adm .tsx-legend .warn::before{background:var(--warn-bg)}.adm .tsx-legend .bad::before{background:var(--soft)}.adm .tsx-legend .mine::before{background:var(--brand)}
+.adm .tsx-pick table{table-layout:fixed}.adm .tsx-pick th:first-child,.adm .tsx-pick td:first-child{width:70px}
+.adm .tsx-pick td{padding:2px 3px;height:34px}.adm .tsx-pick td form{height:100%}
+.adm .tsx-pick td button{width:100%;height:100%;min-height:30px;border:1px solid transparent;border-radius:6px;cursor:pointer;font:inherit;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.adm .tsx-pick td.free button{background:var(--good-bg);color:var(--good)}.adm .tsx-pick td.free button:hover{border-color:var(--good);font-weight:700}
+.adm .tsx-pick td.warn button{background:var(--warn-bg);color:var(--warn)}.adm .tsx-pick td.warn button:hover{border-color:var(--warn)}
+.adm .tsx-pick td.bad span,.adm .tsx-pick td.mine span{display:block;border-radius:6px;padding:7px 6px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.adm .tsx-pick td.bad span{background:var(--soft);color:var(--muted)}.adm .tsx-pick td.mine span{background:var(--brand);color:#fff;font-weight:600}
+@media (max-width:900px){.adm .tsx-c{grid-template-columns:1fr}.adm .tsx-side{position:static;max-height:none}}

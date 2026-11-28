@@ -6,7 +6,7 @@ export const DAY = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const YEAR_SQL = `(select id from academic_years where ends_on >= current_date order by starts_on limit 1)`;
 
 export type Slot = { id: string; group_id: string; code: string; name: string; level: string; subject: string; colour: string; status: string; weekday: number; starts_at: string; ends_at: string; teacher: string | null; teacher_id: string | null };
-export type TClass = { id: string; code: string; name: string; colour: string; status: string; minutes: number; teacher_id: string | null; teacher: string | null; students: number; slots: number };
+export type TClass = { id: string; code: string; name: string; level: string; colour: string; status: string; minutes: number; teacher_id: string | null; teacher: string | null; students: number; slots: number };
 export type TeacherOpt = { id: string; name: string };
 
 export async function getTimetable(): Promise<{ year: string | null; slots: Slot[]; classes: TClass[]; teachers: TeacherOpt[] }> {
@@ -17,7 +17,7 @@ export async function getTimetable(): Promise<{ year: string | null; slots: Slot
       from lesson_slots s join course_groups g on g.id = s.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
       left join teachers t on t.id = s.teacher_id left join users u on u.id = t.user_id
       where s.academic_year_id = ${YEAR_SQL} and s.one_off_on is null order by s.weekday, s.starts_at, l.sort_order, g.code`);
-    const classes = await q<TClass>(`select g.id, g.code, l.name || ' ' || sj.name as name, coalesce(sj.colour,'#8494c2') as colour, g.status::text, g.lesson_minutes as minutes,
+    const classes = await q<TClass>(`select g.id, g.code, l.name || ' ' || sj.name as name, l.name as level, coalesce(sj.colour,'#8494c2') as colour, g.status::text, g.lesson_minutes as minutes,
         g.teacher_id, u.name as teacher,
         (select count(*)::int from enrolments e where e.group_id = g.id and e.status in ('pending','active') and not e.is_taster) as students,
         (select count(*)::int from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as slots
@@ -70,8 +70,12 @@ export async function addSlot(actorId: string, groupId: string, weekday: number,
 
 export async function removeSlot(actorId: string, slotId: string): Promise<string | null> {
   return withSchool(async (q) => {
-    const used = (await q<{ n: number }>(`select count(*)::int as n from lesson_events e where e.slot_id = $1 and (e.lesson_date < current_date or e.status = 'taught'
-      or exists (select 1 from attendance_marks m where m.lesson_event_id = e.id) or exists (select 1 from taster_bookings b where b.lesson_event_id = e.id and b.status <> 'cancelled'))`, [slotId]))[0].n;
+    // 28 Nov: "taught" means something happened in it (a register, Meet attendance, a taster, an absence note), not just a
+    // past date: a lesson time added by mistake can still be removed, even though its dates earlier in the term exist
+    const used = (await q<{ n: number }>(`select count(*)::int as n from lesson_events e where e.slot_id = $1 and (e.status = 'taught'
+      or exists (select 1 from attendance_marks m where m.lesson_event_id = e.id) or exists (select 1 from meet_sessions ms where ms.lesson_event_id = e.id)
+      or exists (select 1 from absence_notices a where a.lesson_event_id = e.id)
+      or exists (select 1 from taster_bookings b where b.lesson_event_id = e.id and b.status <> 'cancelled'))`, [slotId]))[0].n;
     if (used) {
       // keep the history: stop future lessons instead of deleting a slot that has been taught
       await q(`delete from lesson_events where slot_id = $1 and lesson_date >= current_date and status = 'scheduled'

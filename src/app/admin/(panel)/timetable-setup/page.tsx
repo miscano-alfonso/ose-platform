@@ -2,13 +2,14 @@ import Link from "next/link";
 import { getTimetable, classRosters, studentsForClashes, DAY, type Slot } from "@/lib/ops";
 import { addSlotAction, removeSlotAction, setClassTeacherAction } from "../../actions";
 import { yearLabel } from "@/lib/format";
+import { LayoutA, LayoutB, LayoutC } from "./layouts";
 
 const mins = (t: string) => +t.slice(0, 2) * 60 + +t.slice(3, 5);
 const overlap = (a: Slot, b: Slot) => a.weekday === b.weekday && mins(a.starts_at) < mins(b.ends_at) && mins(b.starts_at) < mins(a.ends_at);
-type Clash = { kind: "teacher" | "student" | "level"; a: Slot; b: Slot; shared: number; ids: string[] };
+import type { Clash } from "./layouts";
 const KIND = { teacher: "Teacher double-booked", student: "Student clash", level: "Same level" };
 
-export default async function TimetableSetup({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; level?: string; teacher?: string }> }) {
+export default async function TimetableSetup({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; level?: string; teacher?: string; layout?: string; cls?: string }> }) {
   const sp = await searchParams;
   const [{ year, slots, classes, teachers }, rosters] = await Promise.all([getTimetable(), classRosters()]);
   const days = [1, 2, 3, 4, 5, 6, 7].filter((d) => d <= 5 || slots.some((s) => s.weekday === d));
@@ -29,8 +30,23 @@ export default async function TimetableSetup({ searchParams }: { searchParams: P
   const times = [...new Set(slots.map((s) => s.starts_at))].sort();
   const bad = (s: Slot) => { const c = clashes.filter((x) => x.a.id === s.id || x.b.id === s.id); return c.some((x) => x.kind !== "level") ? " bad" : c.length ? " warn" : ""; };
   const href = (l: string, t: string) => `/admin/timetable-setup?${new URLSearchParams({ ...(l !== "All" ? { level: l } : {}), ...(t ? { teacher: t } : {}) })}`;
+  // 28 Nov: three other layouts to try (Alfonso), switched with ?layout=a|b|c; the current page is the default
+  const layout = ["a", "b", "c"].includes(sp.layout ?? "") ? sp.layout! : "";
+  const LAYOUTS: [string, string, string][] = [["", "Current", "Grid, then a card per class"], ["a", "A · Class list", "Every class in one table"], ["b", "B · Week grid", "Press + on the grid"], ["c", "C · One class at a time", "Pick from free spots"]];
+  const switcher = <div className="tsx-switch" role="tablist" aria-label="Layout">{LAYOUTS.map(([k, l, d]) => <Link key={k} href={k ? `/admin/timetable-setup?layout=${k}` : "/admin/timetable-setup"} aria-current={layout === k ? "true" : undefined}><b>{l}</b><span>{d}</span></Link>)}</div>;
+  if (layout) {
+    const props = { slots, classes, teachers, clashes, rosters, ret: `/admin/timetable-setup?layout=${layout}`, sel: sp.cls };
+    return <>
+      <div className="top"><div><h1>Timetable setup</h1><div className="sub">Each class’s weekly lesson times and teacher. Times show on the website and make the lesson dates for registers (holidays skipped). The day-to-day view is <Link href="/admin/timetable">Timetable</Link>.</div></div>
+        <span className="grow" />{clashes.length ? <span className="pill bad">{clashes.length} clash{clashes.length > 1 ? "es" : ""}</span> : <span className="pill good">No clashes</span>}</div>
+      {switcher}
+      {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
+      {layout === "a" ? <LayoutA {...props} /> : layout === "b" ? <LayoutB {...props} /> : <LayoutC {...props} />}
+    </>;
+  }
   return <>
     <div className="top"><div><h1>Timetable setup</h1><div className="sub">Each class’s weekly lesson times and teacher, placed so classes don’t clash. The day-to-day view is <Link href="/admin/timetable">Timetable</Link> · {year ? yearLabel(year) : ""} · {slots.length} weekly lessons{missing.length ? ` · ${missing.length} class${missing.length === 1 ? "" : "es"} without lesson times` : ""}</div></div></div>
+    {switcher}
     {sp.ok && <p className="note msg">{sp.ok}</p>}
     {sp.err && <p className="note msg bad">{sp.err}</p>}
 

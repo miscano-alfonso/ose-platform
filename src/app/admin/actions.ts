@@ -349,27 +349,43 @@ export async function setFamilyTermAction(f: FormData): Promise<void> {
 
 // ---------- timetable ----------
 const back = (path: string, err: string | null, ok: string) => redirect(`${path}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok)}`);
+/** 28 Nov: Timetable setup's forms can come back to the layout they were sent from (?layout=…). */
+const ttBackTo = (f: FormData) => { const r = str(f, "ret", 200); return /^\/admin\/timetable-setup(\?[A-Za-z0-9=&%_.-]*)?$/.test(r) ? r : "/admin/timetable-setup"; };
+const ttBack = (f: FormData, err: string | null, ok: string) => { const r = ttBackTo(f), [path, qs] = r.split("?"), p = new URLSearchParams(qs ?? ""); p.delete("ok"); p.delete("err");
+  p.set(err ? "err" : "ok", err ?? ok); redirect(`${path}?${p}`); };
 export async function addSlotAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const day = parseInt(str(f, "weekday", 1), 10), start = str(f, "start", 5), mins = parseInt(str(f, "minutes", 3), 10) || 45;
-  if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(start) || mins < 15 || mins > 180) return back("/admin/timetable-setup", "Pick a day, a start time and a length.", "");
+  if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(start) || mins < 15 || mins > 180) return ttBack(f, "Pick a day, a start time and a length.", "");
   const err = await addSlot(me.id, str(f, "group", 40), day, start, mins, str(f, "teacher", 40) || null);
   if (!err) await ensureLessonDates().catch(() => 0);
   revalidatePath("/admin/timetable"); revalidatePath("/admin/timetable-setup"); revalidatePath("/timetable"); revalidatePath("/courses");
-  back("/admin/timetable-setup", err, "Lesson time added.");
+  ttBack(f, err, "Lesson time added.");
 }
 export async function removeSlotAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const note = await removeSlot(me.id, str(f, "id", 40));
   revalidatePath("/admin/timetable"); revalidatePath("/admin/timetable-setup"); revalidatePath("/timetable"); revalidatePath("/courses");
-  back("/admin/timetable-setup", note, "Lesson time removed.");
+  ttBack(f, note, "Lesson time removed.");
+}
+/** 28 Nov: move a lesson time: the new time is added, then the old one removed (kept in the records if it has been taught). */
+export async function moveSlotAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const day = parseInt(str(f, "weekday", 1), 10), start = str(f, "start", 5), mins = parseInt(str(f, "minutes", 3), 10) || 45;
+  if (!(day >= 1 && day <= 7) || !/^\d{2}:\d{2}$/.test(start) || mins < 15 || mins > 180) return ttBack(f, "Pick a day, a start time and a length.", "");
+  const err = await addSlot(me.id, str(f, "group", 40), day, start, mins, str(f, "teacher", 40) || null);
+  if (err) return ttBack(f, err, "");
+  const note = await removeSlot(me.id, str(f, "id", 40));
+  await ensureLessonDates().catch(() => 0);
+  revalidatePath("/admin/timetable"); revalidatePath("/admin/timetable-setup"); revalidatePath("/timetable"); revalidatePath("/courses");
+  ttBack(f, null, note ? `Moved. ${note}` : "Lesson moved.");
 }
 export async function setClassTeacherAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const mins = Math.max(15, Math.min(180, parseInt(str(f, "minutes", 3), 10) || 45));
   const err = await setClassTeacher(me.id, str(f, "group", 40), str(f, "teacher", 40) || null, mins);
   revalidatePath("/admin/timetable"); revalidatePath("/admin/timetable-setup"); revalidatePath("/teachers"); revalidatePath("/people"); revalidatePath("/courses");
-  back("/admin/timetable-setup", err, "Class updated.");
+  ttBack(f, err, "Class updated.");
 }
 
 // ---------- attendance ----------
