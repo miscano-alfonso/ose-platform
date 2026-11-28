@@ -22,7 +22,7 @@ export async function bookTasterAction(form: FormData) {
   if (kid!.email!.toLowerCase() === fam.email.toLowerCase()) fail(`${kid!.first} needs their own Google account for Classroom, not the parent’s email.`);
   if (form.get("agree") !== "on") fail("Please tick the box to confirm you’ve read how Classroom access works.");
   const f = { parentFirst: fam.first, parentLast: fam.last, parentEmail: fam.email.toLowerCase(), childName: kid!.name, childEmail: kid!.email!.toLowerCase(),
-    message: v("message").slice(0, 2000) || null, lessons, parentId: fam.id, studentId: kid!.id };
+    message: v("message").slice(0, 2000) || null, lessons, parentId: fam.id, studentId: kid!.id, pushId: UUID.test(v("push")) ? v("push") : null };
   const err = await bookTastersFromWebsite(f);
   if (err) fail(err);
   redirect("/taster?booked=1");

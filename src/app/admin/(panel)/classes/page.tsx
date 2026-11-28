@@ -123,7 +123,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
                   <label className="fld">Sign-ups needed to open (waiting list)<input type="number" name="waitlist_threshold" min={1} max={99} placeholder={`${def.threshold}`} defaultValue={g.threshold_custom ? g.waitlist_threshold : ""} style={{ width: 80 }} /><small>{g.threshold_custom ? `Own number (default ${def.threshold}). Empty: use the default` : `Default (${def.threshold})`}</small></label>
                   {g.classroom_code && g.course_id && <label className="fld">Invitation link (class code {g.classroom_code})<input readOnly value={`https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64").replace(/=+$/, "")}?cjc=${g.classroom_code}`} style={{ width: 340 }} /></label>}
                   <label className="fld">Google Classroom (or press Connect above; or paste the Classroom link)<input name="classroom" placeholder="https://classroom.google.com/c/…" defaultValue={g.course_id ? `https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64")}` : ""} style={{ width: 340 }} /></label>
-                  <button className="abtn pri" type="submit">Save</button>
+                  <button className="abtn pri" type="submit">Save</button> <Link className="abtn sm" href={`/admin/fill-classes?g=${g.id}#invite`}>Find families to try it</Link>
                 </form></details></td></tr>
           </tbody>;
         })}

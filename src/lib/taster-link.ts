@@ -8,6 +8,7 @@ export function safeTaster(next: string | null | undefined): string | null {
   if (!next.startsWith("/taster?") || next.length > 300) return null;
   const p = new URLSearchParams(next.slice("/taster?".length)), out = new URLSearchParams();
   for (const k of ["level", "subject"]) { const v = (p.get(k) ?? "").trim(); if (v && v.length <= 60 && /^[\p{L}\p{N} &'’().,/-]+$/u.test(v)) out.set(k, v); }
+  for (const k of ["child", "push"]) { const v = (p.get(k) ?? "").trim(); if (/^[0-9a-f-]{36}$/i.test(v)) out.set(k, v); }   // 28 Nov: from a Fill a class email
   return out.size ? `/taster?${out.toString()}` : "/taster";
 }
 /** The taster address for one course. */

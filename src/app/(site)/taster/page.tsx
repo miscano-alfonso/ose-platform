@@ -10,12 +10,14 @@ import { tasterHref } from "@/lib/taster-link";
 export const metadata: Metadata = { title: "Book a free taster", description: "Try a real lesson for free: pick a class and a date, and join the lesson live in Google Meet." };
 
 
-export default async function Taster({ searchParams }: { searchParams: Promise<{ booked?: string; error?: string; level?: string; subject?: string }> }) {
+export default async function Taster({ searchParams }: { searchParams: Promise<{ booked?: string; error?: string; level?: string; subject?: string; child?: string; push?: string }> }) {
   const sp = await searchParams;
   const [opts, site, fam] = await Promise.all([tasterOptions(), siteInfo(), currentFamily()]);
   // 21 Nov: "Book a taster" on a course page brings the course with it (kept through registering or signing in)
   const start = sp.level && sp.subject && opts.some((o) => o.level === sp.level && o.subject === sp.subject) ? { level: sp.level, subject: sp.subject } : null;
-  const back = start ? tasterHref(start.level, start.subject) : "/taster";
+  // 28 Nov: a Fill a class email brings the child and the invitation it came from, kept through signing in
+  const UUID = /^[0-9a-f-]{36}$/i, push = UUID.test(sp.push ?? "") ? sp.push! : null, childPick = UUID.test(sp.child ?? "") ? sp.child! : null;
+  const back = start ? `${tasterHref(start.level, start.subject)}${childPick ? `&child=${childPick}` : ""}${push ? `&push=${push}` : ""}` : "/taster";
   // 1 Nov: tasters are booked by registered parents, for one of their children
   const parent = fam?.kind === "parent" && !fam.viewer ? fam : null;
   const kids = parent ? await parentKids(parent.id) : [];
@@ -38,10 +40,11 @@ export default async function Taster({ searchParams }: { searchParams: Promise<{
         {start && <p className="note" style={{ margin: 0 }}>A taster for <b>{start.level} {start.subject}</b>: choose a date and a time below. You can add another subject with +.</p>}
         <TasterRows opts={opts.map((o) => ({ level: o.level, subject: o.subject, lessons: o.lessons }))} max={MAX_TASTERS} start={start} />
         <fieldset className="wk-fs"><legend>Which child is it for?</legend><div className="ct-pills">
-          {kids.map((k, i) => <label key={k.id}><input type="radio" name="child" value={k.id} required defaultChecked={kids.length === 1 && i === 0} /><span>{k.first}</span></label>)}</div>
+          {kids.map((k, i) => <label key={k.id}><input type="radio" name="child" value={k.id} required defaultChecked={(kids.length === 1 && i === 0) || k.id === childPick} /><span>{k.first}</span></label>)}</div>
           <p className="note">The Classroom invitation goes to your child’s Google account: {kids.map((k) => `${k.first}: ${k.email ?? "not given yet"}`).join(" · ")}. <Link href={`/register?next=${encodeURIComponent(back)}`}>+ Add a child</Link></p></fieldset>
         <p className="note">Booking as {parent.first} {parent.last} · {parent.email}</p>
         <label>Additional message<textarea name="message" rows={4} maxLength={2000} /></label>
+        {push && <input type="hidden" name="push" value={push} />}
         <label className="hp" aria-hidden="true">Website<input name="website" tabIndex={-1} autoComplete="off" /></label>
         <label className="agree"><input type="checkbox" name="agree" required /> I understand my child will be invited to each class’s Google Classroom and can stay for {TASTER_ACCESS_DAYS} days after the taster lesson, to allow time for us to explore the Classroom together. After that, they’ll be taken out unless we book the course.</label>
         <p className="note">We’ll use these details for the taster and to follow up about it. See our <Link href="/privacy">privacy notice</Link>.{site.demo ? " This is the demo school: nothing is emailed." : ""}</p>

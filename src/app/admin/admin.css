@@ -2109,3 +2109,20 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 .adm .cls-times{display:flex;flex-direction:column;gap:2px}.adm .cls-times span{white-space:nowrap}
 .adm .cls-gc{white-space:nowrap}
 .adm .lbl-rules ol{margin:0 0 12px;padding-left:22px;display:grid;gap:8px}.adm .lbl-rules input{width:64px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;margin:0 4px}
+
+/* 28 Nov: Marketing → Fill a class */
+.adm tr.fc-sel>td{background:var(--soft)}
+.adm .fc-form{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:18px;align-items:start}
+.adm .fc-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:6px}.adm .fc-bar b{margin-right:auto}
+.adm .fc-pick h3{font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:12px 0 6px}
+.adm .fc-pick ul{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:520px;overflow:auto}
+.adm .fc-pick li label{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border:1px solid var(--line);border-radius:10px;cursor:pointer;background:var(--panel)}
+.adm .fc-pick li.on label{border-color:var(--accent);background:var(--soft)}.adm .fc-pick input[type=checkbox]{margin-top:4px}
+.adm .fc-who{display:flex;flex-direction:column;gap:2px;font-size:14.5px}.adm .fc-who .muted{font-size:13px}
+.adm .fc-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:3px}.adm .fc-tags i{font-style:normal;font-size:12px}
+.adm .fc-mail{display:grid;gap:10px;position:sticky;top:12px}.adm .fc-mail textarea{width:100%;font:inherit;font-size:14.5px}
+.adm .fc-fields{font-size:12.5px;margin:0}.adm .fc-fields code{margin-right:4px;background:var(--soft);padding:1px 5px;border-radius:5px}
+.adm .fc-prev{border:1px solid var(--line);border-radius:12px;padding:12px 14px;font-size:14.5px;line-height:1.5;background:var(--panel)}.adm .fc-prev p{margin:0 0 6px}
+.adm .fc-acts{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+@media (max-width:1000px){.adm .fc-form{grid-template-columns:1fr}.adm .fc-mail{position:static}}
+.adm .fc-mail textarea,.adm .fc-mail input{font-weight:400}

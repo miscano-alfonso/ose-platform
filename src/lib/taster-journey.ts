@@ -17,7 +17,7 @@ export type Journey = {
 };
 
 type Row = { id: string; child: string; child_email: string; parent: string; parent_email: string; cls: string; code: string; teacher: string | null; lesson_event_id: string;
-  starts: string; ends: string; status: string; source: string; created: string; classroom: string | null; course: string | null; trial: boolean; was_trial: boolean;
+  starts: string; ends: string; status: string; source: string; pushed: boolean; created: string; classroom: string | null; course: string | null; trial: boolean; was_trial: boolean;
   enrolled_at: string | null; enrolled_in: string | null; rebooked_at: string | null; waitlist_at: string | null; replied_at: string | null };
 type Send = { key: string; ref: string; status: string; at: string };
 
@@ -28,7 +28,7 @@ const D = (iso: string | number) => new Date(iso).toLocaleDateString("en-GB", { 
 export async function tasterJourneys(days = 120): Promise<Journey[]> {
   return withSchool(async (q) => {
     const rows = await q<Row>(`select b.id, r.child_name as child, r.child_email::text, r.parent_first_name || ' ' || r.parent_last_name as parent, r.parent_email::text,
-        l.name || ' ' || sj.name as cls, g.code, u.name as teacher, b.lesson_event_id, tj.starts::text, tj.ends::text, b.status::text, r.source, b.created_at::text as created,
+        l.name || ' ' || sj.name as cls, g.code, u.name as teacher, b.lesson_event_id, tj.starts::text, tj.ends::text, b.status::text, r.source, r.push_id is not null as pushed, b.created_at::text as created,
         b.classroom_state as classroom, g.google_course_id as course, g.trial,
         (g.trial_ended_at is not null and e.lesson_date <= (g.trial_ended_at at time zone sc.timezone)::date) as was_trial,
         tj.enrolled_at::text, tj.enrolled_in, tj.rebooked_at::text, tj.waitlist_at::text, tj.replied_at::text
@@ -61,7 +61,7 @@ export async function tasterJourneys(days = 120): Promise<Journey[]> {
       const came = r.status === "attended" || r.status === "booked_course" ? true : r.status === "no_show" ? false : null;
       const answered = enrolled || !!r.rebooked_at || !!r.waitlist_at || !!r.replied_at;
       const steps: Step[] = [];
-      steps.push({ key: "booked", label: "Booked", state: "done", note: `${D(r.created)} · ${r.source === "website" ? "on the website" : "by the office"}` });
+      steps.push({ key: "booked", label: "Booked", state: "done", note: `${D(r.created)} · ${r.pushed ? "from a Fill a class email" : r.source === "website" ? "on the website" : "by the office"}` });
       steps.push(mail("confirm", "Confirmation", ["taster_booked", "taster_student_welcome"], "Sends within a few minutes"));
       steps.push(r.classroom === "invited" ? { key: "classroom", label: "Classroom", state: "done", note: "Invited to the class" }
         : r.classroom === "removed" ? { key: "classroom", label: "Classroom", state: "done", note: "Invited, then taken out after 3 days" }

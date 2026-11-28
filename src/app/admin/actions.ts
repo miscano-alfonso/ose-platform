@@ -1085,6 +1085,22 @@ export async function toggleCouponAction(f: FormData): Promise<void> {
   priceBack(str(f, "year", 40), "ok", "Coupon updated.");
 }
 
+/** 28 Nov: Marketing → Fill a class: invite the ticked families to a free taster of a class (or send the admin a test). */
+export async function sendPushAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const g = str(f, "group", 40), test = f.get("test") === "1";
+  const back = (k: "ok" | "err", m: string) => redirect(`/admin/fill-classes?g=${encodeURIComponent(g)}&${k}=${encodeURIComponent(m)}`);
+  const subject = str(f, "subject", 200).trim(), body = String(f.get("body") ?? "").slice(0, 5000).trim();
+  if (!subject || !body) back("err", "Write a subject and a message.");
+  const keys = f.getAll("pick").map(String).filter((k) => /^[sw]:[0-9a-f-]{36}$/.test(k));
+  if (!test && f.get("confirm") !== "on") back("err", "Tick the box to confirm you’ve checked the list and the email.");
+  const { sendPush } = await import("@/lib/class-push");
+  const r = await sendPush(me.id, g, keys, subject, body, test ? { email: me.email, name: me.name } : undefined);
+  revalidatePath("/admin/fill-classes");
+  if (r.error) back("err", r.error);
+  back("ok", test ? `Test sent to ${me.email}.` : `Invitations: ${r.sent} sent${r.held ? `, ${r.held} held by test mode` : ""}${r.failed ? `, ${r.failed} didn’t send` : ""}.`);
+}
+
 /** 28 Nov: Admin → Classes → Connect Classroom: the school's Google Classrooms to choose from, then link one and pull its links. */
 export async function classroomCoursesAction() {
   await requireStaff();
