@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CloseOutside } from "../../CloseOutside";
-import { weekLessons, mondayOf, addDays, todayLondon, nextTeachingWeek, classroomUrl, type WeekLesson } from "@/lib/week-timetable";
+import { weekLessons, mondayOf, addDays, todayLondon, nextTeachingWeek, classroomUrl, liveCame, type WeekLesson } from "@/lib/week-timetable";
 import { joinLabel } from "@/lib/video";
 import { JoinOpen } from "../../../LessonClock";
 
@@ -29,9 +29,15 @@ export default async function Timetable({ searchParams }: { searchParams: Promis
   const q = (o: Record<string, string>) => { const p = Object.entries({ w: sp.w ? monday : "", level: level === "All" ? "" : level, teacher, ...o }).filter(([, v]) => v);
     return `/admin/timetable${p.length ? "?" + new URLSearchParams(p) : ""}`; };
   const live = shown.filter((l) => state(l) === "live");
+  // 28 Nov (Alfonso): attendance on each lesson, e.g. 5/8: live from Google Meet during it, then from the register
+  const liveNow = await liveCame(live.filter((l) => l.link));
+  const came = (l: WeekLesson) => Math.max(l.came, liveNow[l.id] ?? 0);
 
   const tile = (l: WeekLesson) => { const s = state(l); return <details key={l.id} name="tt" className={`tt2 ${s}`} style={{ ["--c" as string]: l.colour }}>
-    <summary><span className="tm">{l.starts}–{l.ends}{s === "live" && <i className="pulse" aria-label="Live now" />}</span>
+    <summary><span className="tm">{l.starts}–{l.ends}{s === "live" && <i className="pulse" aria-label="Live now" />}
+      {(s === "live" || s === "done") && l.students > 0 && (s === "live" || l.read || liveNow[l.id] != null
+        ? <b className={`tt-came${s === "live" ? " on" : ""}`} title={`${came(l)} of ${l.students} student${l.students === 1 ? "" : "s"} came${s === "live" ? " (in the Meet now or marked)" : ""}`}>{came(l)}/{l.students}</b>
+        : <b className="tt-came none" title="Attendance hasn’t been read from Google Meet yet">–/{l.students}</b>)}</span>
       <b>{l.subject}</b><span>{l.level} · {l.teacher ? l.teacher.split(" ")[0] : "no teacher"}</span>
       {s === "cancelled" && <em>Cancelled</em>}</summary>
     <div className="pop" role="dialog" aria-label={`${l.name} ${l.starts}`}>

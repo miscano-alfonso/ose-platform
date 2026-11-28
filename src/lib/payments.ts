@@ -2,7 +2,7 @@ import "server-only";
 import { withSchool } from "./db";
 
 // Payment schedules: one instalment per term for each active course place.
-// Price per term = the whole course's price (both years of a 2-year course) less the student's bundle discount,
+// Price per term = the whole course's price (both years of a 2-year course) less the family's course-count discount,
 // split evenly over every term of the course — the same way TechSaga charged, so existing families see no change.
 // Terms already paid in TechSaga (from the import note "TechSaga terms paid: 110000") are marked paid.
 export type ScheduleReport = { places: number; instalments: number; markedPaid: number; skipped: number };
@@ -16,9 +16,9 @@ export async function buildSchedules(actorId: string, onlyEnrolment?: string): P
       where e.status = 'active' and not e.is_taster and not exists (select 1 from instalments i where i.enrolment_id = e.id)
         and ($1::uuid is null or e.id = $1::uuid)`, [onlyEnrolment ?? null]);
     for (const e of rows) {
-      // courses this student takes this year decide the bundle discount (3 = 10%, 5 = 15%)
-      const count = (await q<{ n: number }>(`select count(*)::int as n from enrolments x join course_groups g on g.id = x.group_id
-        where x.student_id = $1 and g.academic_year_id = $2 and x.status in ('pending','active') and not x.is_taster`, [e.student_id, e.year_id]))[0].n;
+      // 28 Nov (Alfonso): the whole family's courses this year decide the discount (3 = 10%, 5 = 15%), every child's added up
+      const count = (await q<{ n: number }>(`select count(*)::int as n from enrolments x join course_groups g on g.id = x.group_id join students s2 on s2.id = x.student_id
+        where s2.parent_id = (select parent_id from students where id = $1) and g.academic_year_id = $2 and x.status in ('pending','active') and not x.is_taster`, [e.student_id, e.year_id]))[0].n;
       const pct = Number((await q<{ p: string | null }>(`select max(percent_off)::text as p from bundle_discounts
         where academic_year_id = $1 and (level_id is null or level_id = $2) and min_courses <= $3::int`, [e.year_id, e.level_id, count]))[0].p ?? 0);
       // the whole course: every year's plan for this level and course length

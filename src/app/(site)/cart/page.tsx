@@ -36,7 +36,7 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
           <p>We’ll check the places and email you a secure link to pay, with everything you need for the first lesson. Any questions, just reply to that email.</p>
           <div className="cd-hbtns"><Link href="/courses">Back to courses</Link><Link href="/term-dates">Term dates</Link></div></div>
       : n === 0 ? <div className="bk-tile bk-done"><p className="ab-k">Basket</p><h2>Your basket is empty</h2>
-          <p>Pick a course, press “Add to cart”, and it lands here. Taking 3 or more courses? The bundle discount is applied automatically.</p>
+          <p>Pick a course, press “Add to cart”, and it lands here. Taking 3 or more courses as a family? The bundle discount is applied automatically.</p>
           <div className="cd-hbtns"><Link href="/courses">Browse courses</Link><Link href="/other-services">Workshops</Link></div></div>
       : <div className="bk-grid">
         <div className="bk-tile bk-list">
@@ -59,7 +59,7 @@ export default async function Cart({ searchParams }: { searchParams: Promise<{ s
                 <button className="bk-x" type="submit" aria-label={`Remove ${l.level} ${l.subject}`} title="Remove">×</button></form>
             </li>; })}</ul>
           <ol className="bk-notes">
-            <li>10% off when you take 3 or 4 courses, 15% off for 5 or more, applied automatically.</li>
+            <li>10% off when your family takes 3 or 4 courses, 15% off for 5 or more: all your children’s courses count together, including ones you already have. Applied automatically.</li>
             <li>Starting part-way through the year? Choose This term or Next term: you pay for the lessons from the start of that term to the end of the course year, at the course’s price per lesson (joining part-way through a term pays for the whole term). A 1-year GCSE starts in Term 1, and a 2-year GCSE in Term 1 or 2.</li>
             <li>Registration fee: {q.lines[0] ? money(q.lines[0].feePence) : "£25"} per course (non-refundable).</li>
             <li>Spread the cost: pay each course in equal termly instalments, collected by Direct Debit on each term’s payment date, two weeks before the term starts (see <Link href="/term-dates">Term dates</Link>). The first is paid when you book.</li>

@@ -62,6 +62,9 @@ export async function cartQuote(): Promise<CartQuote> {
   const codes = await cartCodes();
   const couponCode = ((await cookies()).get(COUPON_COOKIE)?.value ?? "").slice(0, 40);
   const chosen = await cartStarts();
+  // 28 Nov (Alfonso): the course-count discount is for the whole family, so courses the family already has count too
+  const fam = await import("./family-auth").then((m) => m.currentFamily()).catch(() => null);
+  const parentId = fam?.kind === "parent" ? fam.id : null;
   return withSchool(async (q) => {
     const rows = codes.length ? await q<{ id: string; code: string; level: string; subject: string; colour: string; years: number; year_of_course: number; total: number; fee: number; terms: number; total_terms: number; first_year: number; cpl: number; plan_lessons: number; total_lessons: number;
       year_id: string; level_id: string; slots: { d: number; t: string }[] | null; page_slug: string; year_label: string }>(`
@@ -78,6 +81,8 @@ export async function cartQuote(): Promise<CartQuote> {
     // bundle tiers for the year of the first course (all levels, or that course's level)
     const tiers = rows.length ? await q<{ min_courses: number; percent_off: string; level_id: string | null }>(
       `select min_courses, percent_off::text, level_id from bundle_discounts where academic_year_id = $1`, [rows[0].year_id]) : [];
+    const existing = parentId && rows.length ? (await q<{ n: number }>(`select count(*)::int as n from enrolments x join students s on s.id = x.student_id join course_groups g on g.id = x.group_id
+      where s.parent_id = $1 and g.academic_year_id = $2 and x.status in ('pending', 'active') and not x.is_taster and g.code <> all($3::text[])`, [parentId, rows[0].year_id, codes]))[0]?.n ?? 0 : 0;
     // 24 Nov: priced from the chosen start term (This term / Next term), from the lessons still to come
     const starts = await startOptions(q, rows.map((r) => ({ id: r.id, level: r.level, courseYears: r.years, yearOfCourse: r.year_of_course, firstYearPence: r.first_year,
       laterPence: Math.max(0, r.total - r.first_year), yearTerms: r.terms, laterTerms: Math.max(0, (r.total_terms ?? r.terms) - r.terms),
@@ -87,7 +92,7 @@ export async function cartQuote(): Promise<CartQuote> {
       const opts = starts.get(r.id) ?? [], start = opts.find((o) => o.key === chosen[r.code]) ?? opts[0] ?? null;
       const price = start ? start.pence : 0, terms = start ? start.terms : r.terms;
       const joinable = rows.filter((x) => (starts.get(x.id) ?? []).length).length;   // courses that can't be joined now don't count towards the bundle
-      const pct = bundlePercent(joinable, t), disc = percentOf(price, pct), net = price - disc;
+      const pct = bundlePercent(joinable + existing, t), disc = percentOf(price, pct), net = price - disc;
       return { code: r.code, level: r.level, subject: r.subject, colour: r.colour, years: r.years, slots: r.slots, page_slug: r.page_slug, year_label: r.year_label,
         listPence: price, discountPence: disc, netPence: net, feePence: start ? r.fee : 0, terms, perTermPence: Math.round(net / Math.max(1, terms)),
         start, starts: opts, fullPence: r.total, yearTerms: r.terms };
