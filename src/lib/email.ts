@@ -65,7 +65,7 @@ export async function audiences(): Promise<Audience[]> {
       ...levels.map((l) => ({ value: `level:${l.id}`, label: `${l.name} parents`, group: "By level" })),
       ...groups.map((g) => ({ value: `class:${g.id}`, label: `${g.label} · parents`, group: "A class: parents" })),
       ...groups.map((g) => ({ value: `classstu:${g.id}`, label: `${g.label} · students`, group: "A class: students" })),
-      { value: "waiting", label: "Waiting list" }, { value: "enquiries", label: "Enquired, not booked" }, { value: "lowatt", label: "Parents: attendance below 50% this term" }, { value: "twocourses", label: "Parents: a child on 2 courses (a third gives 10% off)" },
+      { value: "waiting", label: "Waiting list" }, { value: "enquiries", label: "Enquired, not booked" }, { value: "lowatt", label: "Parents: attendance below 50% this term" }, { value: "twocourses", label: "Families one course away from a family discount" },
       { value: "oneoff", label: "1:1 and workshop families, no course" }, { value: "teachers", label: "All teachers" }];
   });
 }
@@ -87,9 +87,10 @@ export async function recipients(audience: string): Promise<Recipient[]> {
     if (audience === "waiting") return q<Recipient>(`select distinct on (lower(email)) parent_name as name, email::text from waitlist_entries where enrolled_at is null order by lower(email)`);
     if (audience === "enquiries") return q<Recipient>(`select distinct on (lower(q.email)) q.name, q.email::text from enquiries q where q.created_at > now() - interval '12 months'
       and not exists (select 1 from parents p join students s on s.parent_id = p.id join enrolments e on e.student_id = s.id where p.email = q.email and e.status = 'active') order by lower(q.email)`);
-    if (audience === "twocourses") return q<Recipient>(`select distinct on (lower(p.email)) p.first_name || ' ' || p.last_name as name, p.email::text from parents p join students s on s.parent_id = p.id
-      where (select count(*) from enrolments e join course_groups g on g.id = e.group_id join academic_years y on y.id = g.academic_year_id
-        where e.student_id = s.id and e.status = 'active' and not e.is_taster and y.ends_on >= current_date) = 2 order by lower(p.email)`);
+    // 28 Nov: the discount counts the whole family's courses, so this is families one course short of a discount tier
+    if (audience === "twocourses") { const { NEAR_DISCOUNT } = await import("./funnel");
+      return q<Recipient>(`select distinct on (lower(p.email)) p.first_name || ' ' || p.last_name as name, p.email::text from parents p
+        where p.id in (${NEAR_DISCOUNT}) and p.email is not null order by lower(p.email)`); }
     if (audience === "lowatt") return q<Recipient>(`select distinct on (lower(p.email)) p.first_name || ' ' || p.last_name as name, p.email::text from student_term_attendance a join students s on s.id = a.student_id
       join parents p on p.id = s.parent_id where a.term_id = (select id from terms where current_date between starts_on and ends_on limit 1) and a.attendance_pct < 50 order by lower(p.email)`);
     if (audience === "oneoff") return q<Recipient>(`select distinct on (lower(p.email)) p.first_name || ' ' || p.last_name as name, p.email::text from parents p

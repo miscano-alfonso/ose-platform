@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { marketingOverview } from "@/lib/funnel";
+import { marketingOverview, discountTiers } from "@/lib/funnel";
 import { requireStaff } from "@/lib/auth";
 import { getLayout, mirrorOf } from "@/lib/dashboard-layout";
 import { PAGE_MODULES, PAGE_DEFAULTS } from "@/lib/dash-pages";
@@ -12,7 +12,8 @@ const pc = (a: number, b: number) => (b ? Math.round((a / b) * 100) : 0);
 export default async function Marketing() {
   const me = await requireStaff();
   const PAGE = "admin-marketing";
-  const [m, saved, mirror] = await Promise.all([marketingOverview(), getLayout(me.id, PAGE, PAGE_MODULES[PAGE]), mirrorOf()]);
+  const [m, saved, mirror, tiers] = await Promise.all([marketingOverview(), getLayout(me.id, PAGE, PAGE_MODULES[PAGE]), mirrorOf(), discountTiers()]);
+  const ord = (n: number) => `${n}${n % 10 === 1 && n % 100 !== 11 ? "st" : n % 10 === 2 && n % 100 !== 12 ? "nd" : n % 10 === 3 && n % 100 !== 13 ? "rd" : "th"}`;
   const f0 = m.stages[0].n || 1, hmax = Math.max(1, ...m.heard.map((h) => h.n));
   const worst = m.stages.slice(1).map((s, i) => ({ from: m.stages[i], to: s, rate: pc(s.n, m.stages[i].n) })).filter((x) => x.from.n > 0).sort((a, b) => a.rate - b.rate)[0];
   const tip = !worst ? null : worst.to.k === "Taster booked" ? "The biggest drop is between enquiring and booking a taster: a friendly follow-up two days after an enquiry is the quickest win."
@@ -21,7 +22,7 @@ export default async function Marketing() {
   const auds: [string, string, number, string][] = [
     ["enquiries", "Enquired, not booked", m.enquiries - m.courses, "Contact and taster enquiries this school year"],
     ["waiting", "Waiting list", m.waiting, "Ready for an offer when a place opens"],
-    ["twocourses", "One course away from 10% off", m.two, "Students taking 2 courses: a third gives 10% off each"],
+    ["twocourses", "One course away from a family discount", m.two, tiers.length ? `Families (all their children together) on ${tiers.map((t) => `${t.min - 1} courses (a ${ord(t.min)} gives ${t.pct}% off)`).join(" or ")}` : "Families one course short of a discount"],
     ["families", "All enrolled families", m.families, "For term news and re-booking for next year"]];
   const modules: BoardModule[] = [
     { id: "m-enquiries", title: "Enquiries this year", size: "q", node: <div className="tile"><span className="k">Enquiries this year</span><span className="v">{m.enquiries}</span><span className="h">contact and taster forms</span></div> },

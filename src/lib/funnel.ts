@@ -5,6 +5,19 @@ import { withSchool } from "./db";
 const YEAR = `(select starts_on from academic_years where ends_on >= current_date order by starts_on limit 1)`;
 
 export type Stage = { k: string; n: number };
+/** 28 Nov (Alfonso): the course-count discount is for the whole family (every child's courses added up), so "one course
+ *  away" means families whose total is one short of a discount tier (e.g. 2 → a 3rd gives 10%, 4 → a 5th gives 15%). */
+export const NEAR_DISCOUNT = `with fam as (select s.parent_id, count(*)::int as n from enrolments e join students s on s.id = e.student_id
+    join course_groups g on g.id = e.group_id join academic_years y on y.id = g.academic_year_id
+    where e.status = 'active' and not e.is_taster and y.ends_on >= current_date group by s.parent_id)
+  select fam.parent_id from fam where fam.n + 1 in (select b.min_courses from bundle_discounts b join academic_years y on y.id = b.academic_year_id
+    where b.level_id is null and y.ends_on >= current_date)`;
+/** The family discount tiers for this year, lowest first: "a 3rd gives 10%, a 5th gives 15%". */
+export async function discountTiers(): Promise<{ min: number; pct: number }[]> {
+  return withSchool((q) => q<{ min: number; pct: number }>(`select distinct b.min_courses as min, b.percent_off::float as pct from bundle_discounts b join academic_years y on y.id = b.academic_year_id
+    where b.level_id is null and y.ends_on >= current_date order by 1`)).catch(() => []);
+}
+
 export async function marketingOverview() {
   return withSchool(async (q) => {
     // everyone who got in touch this school year (contact form, taster form or taster booking), once per email
@@ -20,8 +33,7 @@ export async function marketingOverview() {
       select (select count(*)::int from c) as enquiries, (select count(*)::int from tb) as booked, (select count(*)::int from tb where came) as attended,
         (select count(*)::int from bk) as courses,
         (select count(distinct lower(email::text))::int from waitlist_entries where enrolled_at is null) as waiting,
-        (select count(*)::int from (select e.student_id from enrolments e join course_groups g on g.id = e.group_id join academic_years y on y.id = g.academic_year_id
-           where e.status = 'active' and not e.is_taster and y.ends_on >= current_date group by e.student_id having count(*) = 2) t) as two,
+        (select count(*)::int from (${NEAR_DISCOUNT}) t) as two,
         (select count(distinct s.parent_id)::int from enrolments e join students s on s.id = e.student_id join course_groups g on g.id = e.group_id join academic_years y on y.id = g.academic_year_id
            where e.status = 'active' and not e.is_taster and y.ends_on >= current_date) as families,
         ${YEAR}::text as start`);
