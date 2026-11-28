@@ -38,6 +38,13 @@ export async function createCycle(actorId: string, d: { name: string; termId: st
  *  reports for children who have left a class). */
 export async function createEntries(actorId: string | null, cycleId: string): Promise<{ added: number; removed: number }> {
   return withSchool(async (q) => {
+    // 28 Nov: a child who has rejoined a class while the round is open gets back the report that was archived when they left
+    const back = await q(`with b as (delete from report_entries_archive a using report_cycles c where a.cycle_id = c.id and c.id = $1 and c.status <> 'published'
+        and exists (select 1 from enrolments e where e.student_id = a.student_id and e.group_id = a.group_id and e.status = 'active' and not e.is_taster)
+        and not exists (select 1 from report_entries r where r.cycle_id = a.cycle_id and r.student_id = a.student_id and r.group_id = a.group_id) returning a.*)
+      insert into report_entries (id, school_id, cycle_id, student_id, group_id, teacher_id, progress_override, effort, working_grade, predicted_grade, comment, status, review_note, submitted_at, approved_at, approved_by, no_assessment)
+        select id, school_id, cycle_id, student_id, group_id, teacher_id, progress_override, effort, working_grade, predicted_grade, comment, status, review_note, submitted_at, approved_at, approved_by, no_assessment from b
+      on conflict do nothing returning id`, [cycleId]);
     const r = await q(`insert into report_entries (school_id, cycle_id, student_id, group_id, teacher_id)
       select current_school(), c.id, e.student_id, g.id, g.teacher_id from report_cycles c
       join course_groups g on g.academic_year_id = c.academic_year_id join enrolments e on e.group_id = g.id
@@ -51,15 +58,20 @@ export async function createEntries(actorId: string | null, cycleId: string): Pr
     const gone = await q(`delete from report_entries r using report_cycles c where r.cycle_id = c.id and c.id = $1 and c.status <> 'published'
         and r.status = 'todo' and r.comment is null and r.effort is null
         and not exists (select 1 from enrolments e where e.student_id = r.student_id and e.group_id = r.group_id and e.status = 'active' and not e.is_taster) returning r.id`, [cycleId]);
-    if (actorId || r.length || gone.length) await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'entries', 'report_cycle', $2, $3)`,
-      [actorId, cycleId, JSON.stringify({ added: r.length, removed: gone.length, auto: !actorId })]);
+    // 28 Nov (Alfonso): one the teacher had started is archived instead (kept, out of the round), and comes back if they rejoin
+    const archived = await q(`with a as (delete from report_entries r using report_cycles c where r.cycle_id = c.id and c.id = $1 and c.status <> 'published'
+        and not exists (select 1 from enrolments e where e.student_id = r.student_id and e.group_id = r.group_id and e.status = 'active' and not e.is_taster) returning r.*)
+      insert into report_entries_archive (id, school_id, cycle_id, student_id, group_id, teacher_id, progress_override, effort, working_grade, predicted_grade, comment, status, review_note, submitted_at, approved_at, approved_by, no_assessment)
+        select id, school_id, cycle_id, student_id, group_id, teacher_id, progress_override, effort, working_grade, predicted_grade, comment, status, review_note, submitted_at, approved_at, approved_by, no_assessment from a returning id`, [cycleId]);
+    if (actorId || r.length || gone.length || archived.length || back.length) await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'entries', 'report_cycle', $2, $3)`,
+      [actorId, cycleId, JSON.stringify({ added: r.length, removed: gone.length, archived: archived.length, restored: back.length, auto: !actorId })]);
     return { added: r.length, removed: gone.length };
   });
 }
 
 /** 28 Nov (Alfonso): report rounds keep up with the classes by themselves. For every round that has started and isn't
  *  published: a child who has joined a class since gets a report for their teacher to write, and a child who has left
- *  loses theirs (if nothing has been written yet). Runs when the Reports page or a teacher's dashboard opens, and from
+ *  loses theirs (deleted if nothing was written yet, otherwise archived, and brought back if they rejoin). Runs when the Reports page or a teacher's dashboard opens, and from
  *  the regular job. */
 export async function syncReportEntries(): Promise<void> {
   const open = await withSchool((q) => q<{ id: string }>(`select c.id from report_cycles c where c.status <> 'published' and exists (select 1 from report_entries e where e.cycle_id = c.id)`)).catch(() => []);
