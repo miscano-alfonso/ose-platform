@@ -8,6 +8,7 @@ import { listThreads } from "@/lib/community";
 import { officeThreads } from "@/lib/office-messages";
 import { linkOptions, myLinks, DEFAULT_LINKS } from "@/lib/hero-links";
 import { QuickLinks } from "./QuickLinks";
+import { JoinOpen } from "../../LessonClock";
 import { studentOverview } from "@/lib/student-overview";
 import { readClassroomAction } from "../actions";
 import { money, dayMonth, yearLabel } from "@/lib/format";
@@ -140,7 +141,7 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
           <span className="tm">{l.starts}<small>{l.ends}</small></span>
           <span className="bd"><b>{l.name}</b><span>{l.teacher ?? "No teacher set"}</span><span>{l.students} student{l.students === 1 ? "" : "s"} · {l.code}</span></span>
           <span className="ac">{s === "live" ? <span className="dx-live">Live now</span> : s === "done" ? <span className="pill mute">Done</span> : s === "cancelled" ? <span className="pill bad">Cancelled</span> : i === nextIdx ? <span className="pill info">Next</span> : null}
-            {l.meet && (s === "live" || i === nextIdx) && <a className="abtn sm" href={l.meet} target="_blank" rel="noopener">Join</a>}</span>
+            {l.meet && s !== "cancelled" && s !== "done" && <JoinOpen date={m.day.date} time={l.starts} endTime={l.ends}><a className="abtn sm" href={l.meet} target="_blank" rel="noopener">Join</a></JoinOpen>}</span>
         </li>; })}</ol></div>}
     </section> },
     { id: "attention", title: "Needs attention", node: <section className="dx-card">
@@ -202,11 +203,12 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
           <Link href="/admin/marking" className={mkOver ? "bad" : undefined}><b>{mkOver}</b><span>piece{mkOver === 1 ? "" : "s"} of work past the 7-day marking deadline</span></Link>
           <Link href="/admin/marking"><b>{mkMarked ? `${Math.round((mkOnTime / mkMarked) * 100)}%` : "–"}</b><span>of hand-ins marked within 7 days (last 30 days)</span></Link>
         </div>
-        {mk.teachers.every((x) => !x.items.length) ? <div className="dx-clear"><Ico d={I.check} /><b>All marked</b><span>No handed-in work is waiting for a teacher.</span></div>
-          : <MoreList className="dx-list" limit={4}>{mk.teachers.filter((x) => x.items.length).map((x) => { const next = x.items[0];
-            return <Link key={x.userId || "none"} className={`dx-item ${x.overdue ? "bad" : x.soon ? "warn" : "info"}`} href={`/admin/marking?t=${x.userId}#work`}>
-              <span className="t"><b>{x.name}</b><span>{x.toMark} hand-in{x.toMark === 1 ? "" : "s"} to mark, from {x.pieces} piece{x.pieces === 1 ? "" : "s"} of work{x.overdue ? ` · ${x.overdue} overdue to mark` : x.soon ? ` · ${x.soon} due to mark soon` : ""}</span>
-                {next && <span style={{ fontSize: 13 }}>{next.daysLeft < 0 ? "Oldest" : "Next"}: {next.title} · {next.cls} · {next.daysLeft < 0 ? `${-next.daysLeft} day${next.daysLeft === -1 ? "" : "s"} overdue` : next.daysLeft === 0 ? "due today" : `${next.daysLeft} day${next.daysLeft === 1 ? "" : "s"} left`}</span>}</span>
+        {/* 28 Nov: only teachers with work past the 7-day window; work still within it isn't listed */}
+        {!mk.teachers.some((x) => x.overdue) ? <div className="dx-clear"><Ico d={I.check} /><b>Nothing overdue</b><span>All marking is within the 7 days.</span></div>
+          : <MoreList className="dx-list" limit={4}>{mk.teachers.filter((x) => x.overdue).map((x) => { const next = x.items[0];
+            return <Link key={x.userId || "none"} className="dx-item bad" href={`/admin/marking?t=${x.userId}#work`}>
+              <span className="t"><b>{x.name}</b><span>{x.overdue} overdue to mark</span>
+                {next && next.daysLeft < 0 && <span style={{ fontSize: 13 }}>Oldest: {next.title} · {next.cls} · {-next.daysLeft} day{next.daysLeft === -1 ? "" : "s"} overdue</span>}</span>
               <span className="go" aria-hidden="true">→</span></Link>; })}</MoreList>}
       </>}
     </section> },

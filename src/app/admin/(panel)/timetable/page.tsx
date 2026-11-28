@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CloseOutside } from "../../CloseOutside";
 import { weekLessons, mondayOf, addDays, todayLondon, nextTeachingWeek, classroomUrl, type WeekLesson } from "@/lib/week-timetable";
 import { joinLabel } from "@/lib/video";
+import { JoinOpen } from "../../../LessonClock";
 
 export const dynamic = "force-dynamic";
 const DAYS = ["", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -38,7 +39,7 @@ export default async function Timetable({ searchParams }: { searchParams: Promis
       <p className="ps">{nice(l.date, { weekday: "long", day: "numeric", month: "long" })} · {l.starts}–{l.ends}{s === "live" ? " · live now" : s === "done" ? " · finished" : ""}</p>
       <p className="ps">{l.teacher ?? "No teacher set"} · {l.students} student{l.students === 1 ? "" : "s"}{l.away ? ` · ${l.away} away` : ""}</p>
       <div className="pa" data-lesson={`${l.name}, ${l.starts}–${l.ends}`}>
-        {l.link && s !== "cancelled" ? <a className={`abtn sm${s === "live" || s === "soon" ? " pri" : ""}`} href={l.link} target="_blank" rel="noopener">{joinLabel(l.link)}</a> : !l.link ? <span className="pill mute">No lesson link</span> : null}
+        {l.link && s !== "cancelled" ? <JoinOpen at={l.start_at} end={l.end_at}><a className="abtn sm pri" href={l.link} target="_blank" rel="noopener">{joinLabel(l.link)}</a></JoinOpen> : !l.link ? <span className="pill mute">No lesson link</span> : null}
         <Link className="abtn sm" href={`/admin/register/${l.id}?back=${encodeURIComponent(q({}))}`}>Attendance</Link>
         {l.course && <a className="abtn sm" href={classroomUrl(l.course)} target="_blank" rel="noopener">Classroom</a>}
         <Link className="abtn sm" href={`/admin/timetable-setup#c-${l.group_id}`}>Lesson times</Link>

@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 // The My day panel's clock (a classic dial with the time now) and, beside the Join button, how long until the next lesson starts. Times are the
@@ -86,4 +86,17 @@ export function RefreshAt({ at }: { at: string | null | undefined }) {
     return () => clearTimeout(t);
   }, [at, router]);
   return null;
+}
+
+/** 28 Nov: a Join button shows only from 5 minutes before the lesson until it ends; outside that it isn't there at all.
+ *  Give the start as a timestamp (`at`) or a UK date and time (`date` + `time`, read in the viewer's clock), and the end
+ *  as a timestamp (`end`), a time on the same day (`endTime`) or a length (`minutes`, default 60). Checks every 15 seconds. */
+export function JoinOpen({ at: startAt, date, time, end, endTime, minutes = 60, children }: { at?: string | null; date?: string; time?: string;
+  end?: string | null; endTime?: string | null; minutes?: number; children: ReactNode }) {
+  const now = useNow(15000);
+  if (now == null) return null;
+  const s = startAt ? Date.parse(startAt.replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00")) : date && time ? at(date, time) : NaN;
+  if (!Number.isFinite(s)) return null;
+  const e = end ? Date.parse(end.replace(" ", "T").replace(/([+-]\d\d)$/, "$1:00")) : endTime && date ? at(date, endTime) : s + minutes * 60e3;
+  return now >= s - 5 * 60e3 && now < (Number.isFinite(e) && e > s ? e : s + minutes * 60e3) ? <>{children}</> : null;
 }

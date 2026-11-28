@@ -4,6 +4,8 @@ import { getRegister, lessonJoins } from "@/lib/ops";
 import { classroomUrl } from "@/lib/week-timetable";
 import { correctMarksAction, refreshJoinsAction } from "../../../actions";
 import { ChangeLesson } from "./ChangeLesson";
+import { JoinOpen } from "../../../../LessonClock";
+import { joinLabel } from "@/lib/video";
 import { AutoRefresh } from "../../../AutoRefresh";
 import { sendLabels } from "@/lib/send";
 import { liveArrivals, studentFirsts } from "@/lib/meet-live";
@@ -50,7 +52,7 @@ export default async function RegisterPage({ params, searchParams }: { params: P
     <p className="backlink"><a className="abtn sm" href={backHref}>← Back</a></p>
     <div className="top"><div><h1>{r.name}<span className="h1-code">{r.code}</span></h1>
       <div className="sub">{longDay(r.lesson_date)}, {r.starts_at}–{r.ends_at}{r.teacher ? ` · ${r.teacher}` : ""}</div></div>
-      <span className="grow" />{r.link && r.status !== "cancelled" && <a className="abtn sm pri" href={r.link} target="_blank" rel="noopener">Join Meet</a>}
+      <span className="grow" />{r.link && r.status !== "cancelled" && <JoinOpen at={r.start_at} end={r.end_at}><a className="abtn sm pri" href={r.link} target="_blank" rel="noopener">{joinLabel(r.link)}</a></JoinOpen>}
       {r.course && <a className="abtn sm" href={classroomUrl(r.course)} target="_blank" rel="noopener">Classroom</a>}
       {r.status === "cancelled" ? <span className="pill bad">Cancelled</span> : now >= st && now <= en ? <span className="pill good">Live now</span>
         : now > en ? <span className="pill warn">Finished</span> : <span className="pill info">Scheduled</span>}</div>

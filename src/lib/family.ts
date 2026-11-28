@@ -353,7 +353,7 @@ export async function studentClass(studentId: string, groupId: string) {
     if (!g) return null;
     return {
       g,
-      lessons: await q<{ date: string; time: string; status: string; mark: string | null }>(`select e.lesson_date::text as date, to_char(s.starts_at,'HH24:MI') as time, e.status::text,
+      lessons: await q<{ date: string; time: string; ends: string; status: string; mark: string | null }>(`select e.lesson_date::text as date, to_char(s.starts_at,'HH24:MI') as time, to_char(s.ends_at,'HH24:MI') as ends, e.status::text,
           (select m.mark::text from attendance_marks m where m.lesson_event_id = e.id and m.student_id = $1) as mark
         from lesson_events e join lesson_slots s on s.id = e.slot_id where e.group_id = $2 and e.term_id = ${TERM_NOW} and e.status <> 'cancelled' order by e.lesson_date, s.starts_at`, [studentId, groupId]),
       work: await q<{ title: string; due_at: string | null; link: string | null; status: string; points: number | null; max: number | null; content: string | null; photo_check: string | null }>(`select title, due_at::text, link, parent_status as status, points::float, max_points::float as max, content, photo_check
