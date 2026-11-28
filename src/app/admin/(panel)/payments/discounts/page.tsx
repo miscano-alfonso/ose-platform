@@ -20,12 +20,13 @@ export default async function FamilyDiscounts({ searchParams }: { searchParams: 
         <div className="tile"><span className="k">Families to update</span><span className="v">{fams.length}</span><span className="h">{(() => { const n = fams.reduce((a, f) => a + f.lines.length, 0); return `${n} course place${n === 1 ? "" : "s"}`; })()}</span></div>
         <div className="tile"><span className="k">Lower by, in total</span><span className="v">{money(save)}</span><span className="h">across the payments still to come</span></div>
       </div>
-      <div className="tw"><table><thead><tr><th>Family</th><th>Courses</th><th className="n">Per term now</th><th className="n">With the family discount</th><th className="n">Still to come</th><th /></tr></thead><tbody>
+      <div className="tw"><table><thead><tr><th>Family</th><th>Courses</th><th className="n">Per term now</th><th className="n">With the family discount</th><th className="n">Still to come</th><th>Why</th><th /></tr></thead><tbody>
         {fams.map((f) => <tr key={f.parent_id}>
           <td><b>{f.name}</b><div className="muted" style={{ fontSize: 13 }}>{f.email} · {f.familyCourses} courses as a family</div></td>
           <td style={{ fontSize: 14 }}>{f.lines.map((l) => <div key={l.enrolment_id}>{l.child.split(" ")[0]} · {l.cls}: <b>{l.oldPct}% → {l.newPct}%</b> <span className="muted">({money(l.nowPerTerm)} → {money(l.newPerTerm)} a term, {l.upcoming} term{l.upcoming === 1 ? "" : "s"} to come)</span></div>)}</td>
           <td className="n">{money(f.nowPerTerm)}</td><td className="n"><b>{money(f.newPerTerm)}</b></td>
           <td className="n">{money(f.upcomingTotalNow)} → <b>{money(f.upcomingTotalNew)}</b></td>
+          <td style={{ fontSize: 13.5, maxWidth: 300 }}>The family has <b>{f.familyCourses} courses</b>{f.kids.length > 1 ? ` (${f.kids.map((k) => `${k.first} ${k.n}`).join(", ")})` : ""}, which gives {Math.max(...f.lines.map((l) => l.newPct))}% off. {[...new Set(f.lines.map((l) => l.child.split(" ")[0]))].map((c) => { const l = f.lines.find((x) => x.child.split(" ")[0] === c)!; return `${c}’s places were priced on ${c}’s own ${l.own} course${l.own === 1 ? "" : "s"} (${l.oldPct ? `${l.oldPct}% off` : "no discount"}).`; }).join(" ")}</td>
           <td><form action={applyFamilyDiscountAction} className="fd-one"><input type="hidden" name="parent" value={f.parent_id} />
             <label className="chk"><input type="checkbox" name="confirm" /> Confirm</label><button className="abtn sm pri" type="submit">Update</button></form></td></tr>)}
       </tbody></table></div>

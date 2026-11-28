@@ -158,8 +158,8 @@ export async function getPaymentLists(): Promise<{ failed: InstRow[]; upcoming: 
 // were priced on each child's own count. This finds places whose discount changes when the family's courses are added
 // up, and the payments still to come for them. Updating changes only scheduled payments not yet due; paid, failed and
 // processing ones are left alone. The new amount keeps any agreed price: current × (1 − new%) ÷ (1 − old%).
-export type DiscountLine = { enrolment_id: string; child: string; cls: string; oldPct: number; newPct: number; upcoming: number; nowPerTerm: number; newPerTerm: number };
-export type DiscountFamily = { parent_id: string; name: string; email: string; familyCourses: number; lines: DiscountLine[]; nowPerTerm: number; newPerTerm: number; upcomingTotalNow: number; upcomingTotalNew: number };
+export type DiscountLine = { enrolment_id: string; child: string; cls: string; oldPct: number; newPct: number; upcoming: number; nowPerTerm: number; newPerTerm: number; own: number };
+export type DiscountFamily = { parent_id: string; name: string; email: string; familyCourses: number; kids: { first: string; n: number }[]; lines: DiscountLine[]; nowPerTerm: number; newPerTerm: number; upcomingTotalNow: number; upcomingTotalNew: number };
 
 export async function familyDiscountCheck(onlyParent?: string): Promise<DiscountFamily[]> {
   return withSchool(async (q) => {
@@ -183,11 +183,18 @@ export async function familyDiscountCheck(onlyParent?: string): Promise<Discount
       const oldPct = pctFor(r.year_id, r.level_id, r.own), newPct = pctFor(r.year_id, r.level_id, r.fam);
       if (oldPct === newPct || !r.upcoming) continue;
       const nowPer = Math.round(r.now_total / r.upcoming), newPer = Math.round(nowPer * (1 - newPct / 100) / (1 - oldPct / 100));
-      const f = fams.get(r.parent_id) ?? { parent_id: r.parent_id, name: r.name, email: r.email, familyCourses: r.fam, lines: [], nowPerTerm: 0, newPerTerm: 0, upcomingTotalNow: 0, upcomingTotalNew: 0 };
-      f.lines.push({ enrolment_id: r.enrolment_id, child: r.child, cls: r.cls, oldPct, newPct, upcoming: r.upcoming, nowPerTerm: nowPer, newPerTerm: newPer });
+      const f = fams.get(r.parent_id) ?? { parent_id: r.parent_id, name: r.name, email: r.email, familyCourses: r.fam, kids: [], lines: [], nowPerTerm: 0, newPerTerm: 0, upcomingTotalNow: 0, upcomingTotalNew: 0 };
+      f.lines.push({ enrolment_id: r.enrolment_id, child: r.child, cls: r.cls, oldPct, newPct, upcoming: r.upcoming, nowPerTerm: nowPer, newPerTerm: newPer, own: r.own });
       f.nowPerTerm += nowPer; f.newPerTerm += newPer; f.upcomingTotalNow += r.now_total; f.upcomingTotalNew += newPer * r.upcoming;
       f.familyCourses = Math.max(f.familyCourses, r.fam);
       fams.set(r.parent_id, f);
+    }
+    // each child's courses this year, for the "why"
+    if (fams.size) {
+      const kids = await q<{ parent_id: string; first: string; n: number }>(`select s.parent_id, s.first_name as first, count(*)::int as n from enrolments x join students s on s.id = x.student_id
+        join course_groups g on g.id = x.group_id join academic_years y on y.id = g.academic_year_id
+        where s.parent_id = any($1::uuid[]) and x.status in ('pending', 'active') and not x.is_taster and y.ends_on >= current_date group by s.parent_id, s.id, s.first_name order by s.first_name`, [[...fams.keys()]]);
+      for (const k of kids) fams.get(k.parent_id)?.kids.push({ first: k.first, n: k.n });
     }
     return [...fams.values()].sort((a, b) => (a.upcomingTotalNew - a.upcomingTotalNow) - (b.upcomingTotalNew - b.upcomingTotalNow) || a.name.localeCompare(b.name));
   });
