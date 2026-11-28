@@ -121,8 +121,10 @@ export async function addClass(actorId: string, d: { yearId: string; levelId: st
     while ((await q(`select 1 from course_groups where code = $1`, [code])).length) code = `${base}/${++n}`;
     const teacher = (await q<{ id: string }>(`select ts.teacher_id as id from teacher_subjects ts join teachers t on t.id = ts.teacher_id
       where ts.level_id = $1 and ts.subject_id = $2 and t.archived_at is null limit 1`, [d.levelId, d.subjectId]))[0]?.id ?? null;
-    const g = (await q<{ id: string }>(`insert into course_groups (school_id, academic_year_id, level_id, subject_id, price_plan_id, teacher_id, code, capacity, status, lesson_minutes)
-      values (current_school(), $1, $2, $3, $4, $5::uuid, $6, $7::int, $8::text::group_status, 45) returning id`, [d.yearId, d.levelId, d.subjectId, plan.id, teacher, code, d.capacity, d.status]))[0];
+    // 28 Nov: a new class takes the school's default sign-ups; its capacity is its own only if it differs from the default
+    const g = (await q<{ id: string }>(`insert into course_groups (school_id, academic_year_id, level_id, subject_id, price_plan_id, teacher_id, code, capacity, status, lesson_minutes, capacity_custom, waitlist_threshold)
+      select current_school(), $1, $2, $3, $4, $5::uuid, $6, $7::int, $8::text::group_status, 45, $7::int <> sc.default_class_capacity, sc.default_waitlist_threshold
+      from schools sc where sc.id = current_school() returning id`, [d.yearId, d.levelId, d.subjectId, plan.id, teacher, code, d.capacity, d.status]))[0];
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'create', 'course_group', $2, $3)`, [actorId, g.id, JSON.stringify({ code })]);
     return { code };
   });

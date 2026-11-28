@@ -63,12 +63,12 @@ export async function getDashboard(): Promise<{ t: DashTiles; attention: Attenti
 export type AdminGroup = { homepage: string; homepage_order: number | null; bookable: boolean; meet_url: string | null; classroom: boolean; course_id: string | null; trial: boolean;
   id: string; code: string; level: string; subject: string; colour: string; teacher: string | null; year_label: string;
   status: string; capacity: number | null; capacity_mode: string; sticky_label: string; taken: number; places_left: number | null;
-  is_full: boolean; waiting: number; label: string | null; slots: string | null; waitlist_threshold: number;
+  is_full: boolean; waiting: number; label: string | null; slots: string | null; waitlist_threshold: number; capacity_custom: boolean; threshold_custom: boolean;
 };
 export async function getGroups(): Promise<AdminGroup[]> {
   return withSchool((q) => q<AdminGroup>(`
     select g.id, g.code, l.name as level, sj.name as subject, coalesce(sj.colour,'#8494c2') as colour, u.name as teacher, y.label as year_label,
-           g.status::text, g.capacity, g.capacity_mode::text, g.sticky_label::text, g.homepage, g.homepage_order, g.meet_url, g.google_course_id is not null as classroom, g.google_course_id as course_id, g.trial, a.bookable, a.taken, a.places_left, a.is_full, a.waiting, a.label, g.waitlist_threshold,
+           g.status::text, g.capacity, g.capacity_mode::text, g.sticky_label::text, g.homepage, g.homepage_order, g.meet_url, g.google_course_id is not null as classroom, g.google_course_id as course_id, g.trial, a.bookable, a.taken, a.places_left, a.is_full, a.waiting, a.label, g.waitlist_threshold, g.capacity_custom, g.threshold_custom,
            (select string_agg(case s.weekday when 1 then 'Mon' when 2 then 'Tue' when 3 then 'Wed' when 4 then 'Thu' when 5 then 'Fri' when 6 then 'Sat' else 'Sun' end
               || ' ' || to_char(s.starts_at,'HH24:MI'), ', ' order by s.weekday, s.starts_at) from lesson_slots s where s.group_id = g.id and s.one_off_on is null) as slots
     from course_groups g join course_group_availability a on a.group_id = g.id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
@@ -284,5 +284,22 @@ export async function waitingGroups(): Promise<WaitGroup[]> {
         ${ent.replace("%W", "w.group_id is null and w.level_id is not distinct from x.level_id and w.subject_id is not distinct from x.subject_id")} as entries
       from (select distinct level_id, subject_id from waitlist_entries where group_id is null and enrolled_at is null) x left join levels l on l.id = x.level_id left join subjects sj on sj.id = x.subject_id`);
     return [...groups, ...loose];
+  });
+}
+
+/** 28 Nov (Alfonso): the school's Capacity and "Sign-ups needed to open" for every class (a class can have its own). */
+export async function classDefaults(): Promise<{ capacity: number; threshold: number }> {
+  return withSchool(async (q) => (await q<{ capacity: number; threshold: number }>(`select default_class_capacity::int as capacity, default_waitlist_threshold::int as threshold from schools where id = current_school()`))[0] ?? { capacity: 12, threshold: 5 });
+}
+/** Saves the defaults and moves every class that follows them (not one with its own number). */
+export async function saveClassDefaults(actorId: string, capacity: number, threshold: number): Promise<{ moved: number }> {
+  return withSchool(async (q) => {
+    await q(`update schools set default_class_capacity = $1, default_waitlist_threshold = $2 where id = current_school()`, [capacity, threshold]);
+    const a = await q(`update course_groups set capacity = $1 where not capacity_custom and capacity is distinct from $1 returning id`, [capacity]);
+    const b = await q<{ id: string }>(`update course_groups set waitlist_threshold = $1 where not threshold_custom and waitlist_threshold <> $1 returning id`, [threshold]);
+    for (const g of b) await q(`select waitlist_recheck($1)`, [g.id]);   // a lower target can open a trial class now
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'defaults', 'course_group', null, $2)`,
+      [actorId, JSON.stringify({ capacity, threshold, classes: a.length + b.length })]);
+    return { moved: new Set([...a.map((x) => (x as { id: string }).id), ...b.map((x) => x.id)]).size };
   });
 }

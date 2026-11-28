@@ -59,7 +59,10 @@ export function MenuNav({ id, label, groups, counts = {}, root, alias = {}, tabb
 }) {
   const path0 = usePathname(), path = alias[path0] ?? path0;
   const [open, setOpen] = useState(false);
-  const here = (h: string) => h === root ? path === h : path === h || path.startsWith(h + "/");
+  const under = (h: string) => h === root ? path === h : path === h || path.startsWith(h + "/");
+  // 28 Nov: only the closest match is lit (Course pages, not Website as well, on /admin/website/courses)
+  const best = groups.flatMap((g) => g.items.map((x) => x.href)).filter(under).sort((a, b) => b.length - a.length)[0];
+  const here = (h: string) => h === best;
   const { section, pick: setSection, start } = useSection(groups, path, root);
   const list = (g: ResolvedGroup) => <div className="ngrp-list">{g.items.filter((x) => !(tabbed && x.href === root)).map((x) => <Link key={x.href} href={x.href} aria-current={here(x.href) ? "page" : undefined} onClick={() => setOpen(false)} className={x.off ? "off" : undefined} title={x.off ? "Switched off for now" : undefined}>
     <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d={ICONS[x.icon] ?? ICONS.home} /></svg>

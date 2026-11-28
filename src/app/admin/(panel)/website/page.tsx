@@ -58,10 +58,7 @@ export default async function Website({ searchParams }: { searchParams: Promise<
       <input type="hidden" name="keys" value={Object.keys(DEFAULTS).join(",")} />
     </form>
 
-    <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>Course pages ({pages.length})</h2>
-    <div className="tw"><table><thead><tr><th>Course</th><th>Topics</th><th>Exam board</th><th>Sample lesson</th><th></th></tr></thead>
-      <tbody>{pages.map((c) => <tr key={c.id}><td><b>{c.level} {c.subject}</b>{!c.published && <> <span className="pill mute">Hidden</span></>}</td><td>{c.topics.length}</td><td>{c.exam_board ?? "—"}</td><td>{!c.video ? <span className="muted">None</span> : c.video.includes("ohsoed.co.uk/uploads") ? <span className="pill warn">On the old site</span> : <span className="pill good">Yes</span>}</td>
-        <td><div className="acts"><Link className="abtn sm" href={`/admin/website/courses/${c.id}`}>Edit</Link><a className="abtn sm" href={`/courses/${c.slug}`} target="_blank" rel="noreferrer">View</a></div></td></tr>)}</tbody></table></div>
+    <section className="card"><h2>Course pages ({pages.length})</h2><p className="cs" style={{ margin: 0 }}>Each course’s introduction, topics, exam board and sample lesson now have their own page in the menu: <Link href="/admin/website/courses">Course pages</Link>.</p></section>
 
     <h2 style={{ font: "600 20px Jost", margin: "22px 0 10px" }}>FAQs ({faqs.length})</h2>
     <p className="note" style={{ marginTop: -4 }}>Lines starting with “- ” show as bullet points. Lower numbers come first.</p>

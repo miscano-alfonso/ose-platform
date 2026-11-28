@@ -1,8 +1,8 @@
 import { labelWords } from "@/lib/course-labels";
 import Link from "next/link";
-import { getGroups, pendingInvites } from "@/lib/admin-data";
+import { getGroups, pendingInvites, classDefaults } from "@/lib/admin-data";
 import { classFormOptions } from "@/lib/rules";
-import { updateGroupAction, addClassAction, remindInviteAction, runInvitesAction, saveInviteCfgAction } from "../../actions";
+import { updateGroupAction, addClassAction, remindInviteAction, runInvitesAction, saveInviteCfgAction, saveClassDefaultsAction } from "../../actions";
 import { invitePlan, inviteStatus } from "@/lib/classroom-invites";
 import { yearLabel } from "@/lib/format";
 import { videoSettings } from "@/lib/checkins";
@@ -18,7 +18,7 @@ const statusPill = (s: string, full: boolean) => full && (s === "open" || s === 
 
 export default async function Classes({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; level?: string }> }) {
   const sp = await searchParams;
-  const [all, opts, pend, plan, inv, vid] = await Promise.all([getGroups(), classFormOptions(), pendingInvites(), invitePlan(), inviteStatus(), videoSettings()]);
+  const [all, opts, pend, plan, inv, vid, def] = await Promise.all([getGroups(), classFormOptions(), pendingInvites(), invitePlan(), inviteStatus(), videoSettings(), classDefaults()]);
   const words = await labelWords();
   const tool = toolById(vid.tool);
   const nIn = plan.invite.length + plan.tasterInvite.length, nOut = plan.remove.length + plan.tasterRemove.length;
@@ -56,11 +56,19 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
           <td>{p.next ?? "—"}</td><td><form action={remindInviteAction}><input type="hidden" name="id" value={p.id} /><button className="abtn sm" type="submit">Send a reminder</button></form></td></tr>)}
       </tbody></table></div></section>}
     <div className="segl" role="group" aria-label="Level" style={{ marginBottom: 12 }}>{["All", ...levels].map((l) => <Link key={l} href={l === "All" ? "/admin/classes" : `/admin/classes?level=${encodeURIComponent(l)}`} aria-current={l === level ? "true" : undefined}>{l}</Link>)}</div>
+    {/* 28 Nov (Alfonso): one Capacity and Sign-ups for every class, which a class can override under Edit */}
+    <form action={saveClassDefaultsAction} className="card cls-defs">
+      <b>Defaults for every class</b>
+      <label className="fld">Capacity<input type="number" name="capacity" min={1} max={200} defaultValue={def.capacity} required style={{ width: 90 }} /></label>
+      <label className="fld">Sign-ups needed to open (waiting list)<input type="number" name="threshold" min={1} max={99} defaultValue={def.threshold} required style={{ width: 90 }} /></label>
+      <button className="abtn sm" type="submit">Save</button>
+      <span className="muted">Every class uses these unless you give it its own number under Edit. {all.filter((g) => g.capacity_custom || g.threshold_custom).length ? `${all.filter((g) => g.capacity_custom || g.threshold_custom).length} class${all.filter((g) => g.capacity_custom || g.threshold_custom).length === 1 ? " has" : "es have"} their own.` : ""}</span>
+    </form>
     <details className="card" open={!!sp.err}><summary style={{ cursor: "pointer", fontWeight: 600 }}>Add a class</summary>
       <form action={addClassAction} className="eform" style={{ marginTop: 12 }}>
         <label className="fld">Course<select name="course" required defaultValue=""><option value="" disabled>Choose</option>
           {opts.years.map((y) => <optgroup key={y.id} label={y.label}>{opts.rules.filter((r) => r.year_id === y.id).map((r) => <option key={r.level_id + r.subject_id} value={`${y.id}|${r.level_id}|${r.subject_id}`}>{r.level} {r.subject}</option>)}</optgroup>)}</select></label>
-        <label className="fld">Places<input name="capacity" type="number" min={1} max={200} defaultValue={12} style={{ width: 90 }} /></label>
+        <label className="fld">Places<input name="capacity" type="number" min={1} max={200} defaultValue={def.capacity} style={{ width: 90 }} /></label>
         <label className="fld">Status<select name="status" defaultValue="hidden"><option value="hidden">Hidden (add times first)</option><option value="open">Open</option><option value="waitlist">Waiting list</option></select></label>
         <button className="abtn pri" type="submit">Add class</button></form>
       <p className="cs" style={{ marginTop: 8 }}>The list shows the subjects set up in Prices &amp; rules, which also sets the price. Then add lesson times and the teacher under Timetable.</p></details>
@@ -75,7 +83,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
               <td><span className="dot" style={{ background: g.colour }} /><b>{g.level} {g.subject}</b>{g.trial && <> <span className="pill info" title="Opens for booking by itself once this many families join its waiting list">Trial · {g.waiting} of {g.waitlist_threshold} signed up</span></>}<div className="muted" style={{ fontSize: 15.5, marginLeft: 18 }}>{g.code}</div></td>
               <td>{g.teacher ?? <span className="muted">Not set</span>}</td>
               <td>{g.slots ?? <span className="muted">No lessons yet</span>}</td>
-              <td><div className="fill"><div className="track"><i className={g.is_full ? "full" : ""} style={{ width: `${pct}%` }} /></div><span>{g.taken}/{g.capacity ?? "∞"}</span></div>
+              <td><div className="fill"><div className="track"><i className={g.is_full ? "full" : ""} style={{ width: `${pct}%` }} /></div><span>{g.taken}/{g.capacity ?? "∞"}</span></div>{g.capacity_custom && <div className="muted" style={{ fontSize: 13 }}>own capacity</div>}
                 {g.capacity_mode !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>{MODE[g.capacity_mode]}</div>}
                 {g.waiting > 0 && <div className="muted" style={{ fontSize: 13.5 }}>{g.waiting} waiting</div>}</td>
               <td>{statusPill(g.status, g.is_full)}</td>
@@ -88,7 +96,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
               <details className="edit"><summary className="abtn sm">Edit {g.code}</summary>
                 <form action={updateGroupAction} className="eform" style={{ marginTop: 10 }}>
                   <input type="hidden" name="id" value={g.id} />
-                  <label className="fld">Capacity<input type="number" name="capacity" min={1} max={200} defaultValue={g.capacity ?? ""} style={{ width: 90 }} /></label>
+                  <label className="fld">Capacity<input type="number" name="capacity" min={1} max={200} placeholder={`${def.capacity}`} defaultValue={g.capacity_custom ? g.capacity ?? "" : ""} style={{ width: 90 }} /><small>{g.capacity_custom ? `Own number (default ${def.capacity}). Empty: use the default` : `Default (${def.capacity})`}</small></label>
                   <label className="fld">When full<select name="capacity_mode" defaultValue={g.capacity_mode}>{Object.entries(MODE).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
                   <label className="fld">Website label<select name="sticky_label" defaultValue={g.sticky_label}>{Object.entries(LABEL).map(([k, v]) => <option key={k} value={k}>{(words as Record<string, string>)[k] ?? v}</option>)}</select></label>
                   <label className="fld">Status<select name="status" defaultValue={g.status}>{Object.entries(STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select></label>
@@ -96,7 +104,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
                   <label className="fld">Position<input type="number" name="homepage_order" min={1} max={99} placeholder="Auto" defaultValue={g.homepage_order ?? ""} style={{ width: 80 }} /></label>
                   <label className="fld">Lesson link ({tool.id === "other" ? "any video tool" : tool.name}, or any https link)<input type="url" name="meet_url" placeholder={tool.example} defaultValue={g.meet_url ?? ""} style={{ width: 340 }} /></label>
                   <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="hidden" name="trial_on_form" value="1" /><input type="checkbox" name="trial" value="1" defaultChecked={g.trial} /> Trial / taster class (everyone in its Classroom is trying it: never counted as a student or listed to match)</label>
-                  <label className="fld">Sign-ups needed to open (waiting list)<input type="number" name="waitlist_threshold" min={1} max={99} defaultValue={g.waitlist_threshold} style={{ width: 80 }} /></label>
+                  <label className="fld">Sign-ups needed to open (waiting list)<input type="number" name="waitlist_threshold" min={1} max={99} placeholder={`${def.threshold}`} defaultValue={g.threshold_custom ? g.waitlist_threshold : ""} style={{ width: 80 }} /><small>{g.threshold_custom ? `Own number (default ${def.threshold}). Empty: use the default` : `Default (${def.threshold})`}</small></label>
                   <label className="fld">Google Classroom (paste the class’s Classroom link)<input name="classroom" placeholder="https://classroom.google.com/c/…" defaultValue={g.course_id ? `https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64")}` : ""} style={{ width: 340 }} /></label>
                   <button className="abtn pri" type="submit">Save</button>
                 </form></details></td></tr>

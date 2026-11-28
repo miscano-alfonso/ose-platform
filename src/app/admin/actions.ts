@@ -142,7 +142,10 @@ const MODES = ["auto", "keep_open", "full"], LABELS = ["auto", "off", "few_space
 export async function updateGroupAction(f: FormData) {
   const me = await requireStaff();
   const id = str(f, "id", 40), capRaw = str(f, "capacity", 4);
-  const capacity = capRaw === "" ? null : Math.max(1, Math.min(200, parseInt(capRaw, 10) || 0));
+  // 28 Nov: an empty Capacity / Sign-ups box follows the school's default; a number different from it is the class's own
+  const def = await import("@/lib/admin-data").then((m) => m.classDefaults());
+  const capTyped = capRaw === "" ? null : Math.max(1, Math.min(200, parseInt(capRaw, 10) || 0));
+  const capacity = capTyped ?? def.capacity, capCustom = capTyped != null && capTyped !== def.capacity;
   const mode = str(f, "capacity_mode"), label = str(f, "sticky_label"), status = str(f, "status"), homepage = str(f, "homepage") || "auto";
   const orderRaw = str(f, "homepage_order", 3), homepageOrder = orderRaw === "" ? null : Math.max(1, Math.min(99, parseInt(orderRaw, 10) || 1));
   if (!MODES.includes(mode) || !LABELS.includes(label) || !STATUSES.includes(status) || !HOMEPAGE.includes(homepage)) return;
@@ -151,7 +154,8 @@ export async function updateGroupAction(f: FormData) {
   await withSchool(async (q) => {
     if (meet !== undefined) await q(`update course_groups set meet_url = $2 where id = $1`, [id, meet]);
     // 26 Nov: a trial / taster class (everyone in its Classroom is trying it)
-    { const n = Number(f.get("waitlist_threshold")); if (f.has("waitlist_threshold") && Number.isInteger(n) && n >= 1 && n <= 99) { await q(`update course_groups set waitlist_threshold = $2 where id = $1`, [id, n]); await q(`select waitlist_recheck($1)`, [id]); } }
+    if (f.has("waitlist_threshold")) { const raw = str(f, "waitlist_threshold", 3), n = raw === "" ? def.threshold : Number(raw);
+      if (Number.isInteger(n) && n >= 1 && n <= 99) { await q(`update course_groups set waitlist_threshold = $2, threshold_custom = $3 where id = $1`, [id, n, raw !== "" && n !== def.threshold]); await q(`select waitlist_recheck($1)`, [id]); } }
     if (f.has("trial_on_form") && f.get("trial") !== "1") await q(`select waitlist_recheck($1, true)`, [id]);   // unticking Trial opens it now: the waiting list gets its head start first
     if (f.has("trial_on_form")) await q(`update course_groups set trial = $2, trial_ended_at = case when trial and not $2 then now() when $2 then null else trial_ended_at end where id = $1`, [id, f.get("trial") === "1"]);
     // 26 Nov: the class's Google Classroom: a classroom.google.com link (its /c/<id> part is the course id in base64) or the number
@@ -165,8 +169,8 @@ export async function updateGroupAction(f: FormData) {
     }
     const before = await q(`select capacity, capacity_mode, sticky_label, status, homepage, homepage_order from course_groups where id = $1`, [id]);
     if (!before[0]) return;
-    await q(`update course_groups set capacity = $2, capacity_mode = $3::capacity_mode, sticky_label = $4::sticky_label, status = $5::group_status, homepage = $6, homepage_order = $7 where id = $1`,
-      [id, capacity, mode, label, status, homepage, homepageOrder]);
+    await q(`update course_groups set capacity = $2, capacity_mode = $3::capacity_mode, sticky_label = $4::sticky_label, status = $5::group_status, homepage = $6, homepage_order = $7, capacity_custom = $8 where id = $1`,
+      [id, capacity, mode, label, status, homepage, homepageOrder, capCustom]);
     await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'update', 'course_group', $2, $3)`,
       [me.id, id, JSON.stringify({ before: before[0], after: { capacity, capacity_mode: mode, sticky_label: label, status, homepage, homepage_order: homepageOrder } })]);
   });
@@ -998,7 +1002,7 @@ export async function saveCoursePageAction(f: FormData): Promise<void> {
   const video = str(f, "video", 500);
   await saveCoursePage(me.id, id, { board: str(f, "board", 60) || null, intro: str(f, "intro", 2000) || null, topics: topics.slice(0, 30), published: f.get("published") === "on",
     video: /^https:\/\/\S+$/.test(video) ? video : null, videoTitle: str(f, "video_title", 120) || null });
-  revalidatePath("/courses", "layout"); revalidatePath("/admin/website");
+  revalidatePath("/courses", "layout"); revalidatePath("/admin/website"); revalidatePath("/admin/website/courses");
   redirect(`/admin/website/courses/${id}?ok=${encodeURIComponent("Saved.")}`);
 }
 
@@ -1065,11 +1069,21 @@ export async function toggleCouponAction(f: FormData): Promise<void> {
   priceBack(str(f, "year", 40), "ok", "Coupon updated.");
 }
 
+/** 28 Nov (Alfonso): Admin → Classes → Defaults: Capacity and Sign-ups needed for every class that doesn't have its own. */
+export async function saveClassDefaultsAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const cap = parseInt(str(f, "capacity", 3), 10), thr = parseInt(str(f, "threshold", 2), 10);
+  if (!(cap >= 1 && cap <= 200) || !(thr >= 1 && thr <= 99)) redirect(`/admin/classes?err=${encodeURIComponent("Capacity is 1–200 and sign-ups 1–99.")}`);
+  const { moved } = await import("@/lib/admin-data").then((m) => m.saveClassDefaults(me.id, cap, thr));
+  revalidatePath("/admin/classes"); revalidatePath("/courses", "layout"); revalidatePath("/");
+  redirect(`/admin/classes?ok=${encodeURIComponent(`Defaults saved: ${cap} places, ${thr} sign-ups to open. ${moved} class${moved === 1 ? "" : "es"} updated; classes with their own numbers kept them.`)}`);
+}
+
 export async function addClassAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   const [yearId, levelId, subjectId] = str(f, "course", 120).split("|");
   const status = ["hidden", "open", "waitlist"].includes(str(f, "status", 10)) ? str(f, "status", 10) : "hidden";
-  const capacity = Math.max(1, Math.min(200, parseInt(str(f, "capacity", 3), 10) || 12));
+  const capacity = Math.max(1, Math.min(200, parseInt(str(f, "capacity", 3), 10) || (await import("@/lib/admin-data").then((m) => m.classDefaults())).capacity));
   if (!yearId || !levelId || !subjectId) redirect(`/admin/classes?err=${encodeURIComponent("Choose a course.")}`);
   const r = await addClass(me.id, { yearId, levelId, subjectId, capacity, status });
   revalidatePath("/admin/classes"); revalidatePath("/courses", "layout");
