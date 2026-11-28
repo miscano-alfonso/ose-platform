@@ -152,3 +152,62 @@ export async function getPaymentLists(): Promise<{ failed: InstRow[]; upcoming: 
     return { failed, upcoming: upcoming.slice(0, 12), upcomingCount: upcoming.length };
   });
 }
+
+// ---------- 28 Nov (Alfonso): family discount check ----------
+// The course-count discount (3 courses 10%, 5 courses 15%) is for the whole family, but places set up before 28 Nov
+// were priced on each child's own count. This finds places whose discount changes when the family's courses are added
+// up, and the payments still to come for them. Updating changes only scheduled payments not yet due; paid, failed and
+// processing ones are left alone. The new amount keeps any agreed price: current × (1 − new%) ÷ (1 − old%).
+export type DiscountLine = { enrolment_id: string; child: string; cls: string; oldPct: number; newPct: number; upcoming: number; nowPerTerm: number; newPerTerm: number };
+export type DiscountFamily = { parent_id: string; name: string; email: string; familyCourses: number; lines: DiscountLine[]; nowPerTerm: number; newPerTerm: number; upcomingTotalNow: number; upcomingTotalNew: number };
+
+export async function familyDiscountCheck(onlyParent?: string): Promise<DiscountFamily[]> {
+  return withSchool(async (q) => {
+    const rows = await q<{ enrolment_id: string; parent_id: string; name: string; email: string; child: string; cls: string; own: number; fam: number; year_id: string; level_id: string;
+      upcoming: number; now_total: number }>(`
+      with live as (select x.id, x.student_id, g.academic_year_id from enrolments x join course_groups g on g.id = x.group_id where x.status in ('pending', 'active') and not x.is_taster)
+      select e.id as enrolment_id, p.id as parent_id, p.first_name || ' ' || p.last_name as name, p.email::text as email, s.first_name || ' ' || s.last_name as child,
+        l.name || ' ' || sj.name as cls, g.academic_year_id as year_id, g.level_id,
+        (select count(*) from live where live.student_id = s.id and live.academic_year_id = g.academic_year_id)::int as own,
+        (select count(*) from live join students s2 on s2.id = live.student_id where s2.parent_id = p.id and live.academic_year_id = g.academic_year_id)::int as fam,
+        count(i.id)::int as upcoming, sum(i.amount_pence)::int as now_total
+      from enrolments e join students s on s.id = e.student_id join parents p on p.id = s.parent_id join course_groups g on g.id = e.group_id
+        join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id
+        join instalments i on i.enrolment_id = e.id and i.status = 'scheduled' and i.due_on >= current_date
+      where e.status = 'active' and not e.is_taster and ($1::uuid is null or p.id = $1::uuid)
+      group by e.id, p.id, s.id, l.name, sj.name, g.academic_year_id, g.level_id`, [onlyParent ?? null]);
+    const tiers = await q<{ year: string; level: string | null; min: number; pct: number }>(`select academic_year_id as year, level_id as level, min_courses as min, percent_off::float as pct from bundle_discounts`);
+    const pctFor = (year: string, level: string, n: number) => Math.max(0, ...tiers.filter((t) => t.year === year && (!t.level || t.level === level) && t.min <= n).map((t) => t.pct));
+    const fams = new Map<string, DiscountFamily>();
+    for (const r of rows) {
+      const oldPct = pctFor(r.year_id, r.level_id, r.own), newPct = pctFor(r.year_id, r.level_id, r.fam);
+      if (oldPct === newPct || !r.upcoming) continue;
+      const nowPer = Math.round(r.now_total / r.upcoming), newPer = Math.round(nowPer * (1 - newPct / 100) / (1 - oldPct / 100));
+      const f = fams.get(r.parent_id) ?? { parent_id: r.parent_id, name: r.name, email: r.email, familyCourses: r.fam, lines: [], nowPerTerm: 0, newPerTerm: 0, upcomingTotalNow: 0, upcomingTotalNew: 0 };
+      f.lines.push({ enrolment_id: r.enrolment_id, child: r.child, cls: r.cls, oldPct, newPct, upcoming: r.upcoming, nowPerTerm: nowPer, newPerTerm: newPer });
+      f.nowPerTerm += nowPer; f.newPerTerm += newPer; f.upcomingTotalNow += r.now_total; f.upcomingTotalNew += newPer * r.upcoming;
+      f.familyCourses = Math.max(f.familyCourses, r.fam);
+      fams.set(r.parent_id, f);
+    }
+    return [...fams.values()].sort((a, b) => (a.upcomingTotalNew - a.upcomingTotalNow) - (b.upcomingTotalNew - b.upcomingTotalNow) || a.name.localeCompare(b.name));
+  });
+}
+
+/** Moves a family's scheduled, not-yet-due payments to the family discount. Returns how many payments changed. */
+export async function applyFamilyDiscount(actorId: string, parentId: string): Promise<number> {
+  const [fam] = await familyDiscountCheck(parentId);
+  if (!fam) return 0;
+  return withSchool(async (q) => {
+    let n = 0;
+    for (const l of fam.lines) {
+      const r = await q(`update instalments set amount_pence = round(amount_pence * (1 - $2::numeric / 100) / (1 - $3::numeric / 100))::int
+        where enrolment_id = $1 and status = 'scheduled' and due_on >= current_date returning id`, [l.enrolment_id, l.newPct, l.oldPct]);
+      n += r.length;
+      await q(`update enrolments e set discount_pence = greatest(0, e.list_price_pence - (select coalesce(sum(amount_pence), 0) from instalments i where i.enrolment_id = e.id
+        and i.status not in ('cancelled', 'waived'))) where e.id = $1`, [l.enrolment_id]);
+    }
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'family_discount', 'parent', $2, $3)`,
+      [actorId, parentId, JSON.stringify({ lines: fam.lines.map((l) => ({ e: l.enrolment_id, from: l.oldPct, to: l.newPct, per: [l.nowPerTerm, l.newPerTerm], terms: l.upcoming })) })]);
+    return n;
+  });
+}

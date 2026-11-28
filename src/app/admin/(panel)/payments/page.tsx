@@ -1,6 +1,6 @@
 import Link from "next/link";
 import LiveSearch from "../../LiveSearch";
-import { getPayments, getPaymentLists } from "@/lib/payments";
+import { getPayments, getPaymentLists, familyDiscountCheck } from "@/lib/payments";
 import { buildSchedulesAction, setFamilyTermAction } from "../../actions";
 import { money } from "@/lib/format";
 import { yearLabel } from "@/lib/format";
@@ -86,9 +86,11 @@ export default async function Payments({ searchParams }: { searchParams: Promise
     </table></div>}
     <p className="note">The Check column looks back, not forward: it’s about a term whose payment date has <b>already passed</b> (for example Term 2, 19 Oct), never the next payment. Invoices for the next payment aren’t involved. “Paid in Stripe, confirm it” means the family’s card payment is in <Link href="/admin/payments/stripe">Stripe payments</Link> waiting for you to press Confirm. “No payment recorded” means no Stripe payment from them matches yet (they may have paid another way, or it’s in Stripe under a different email). Open “Terms” on a family to mark a term paid or waive it.</p></section> },
   ];
+  const fdCount = (await familyDiscountCheck().catch(() => [])).length;   // 28 Nov
   return <>
     <div className="top"><div><h1>Payments</h1><div className="sub">{year ? `${yearLabel(year)} · ${money(yearPaid)} paid of ${money(yearTotal)} for the year` : "No school year set up"}</div></div>
       <span className="grow" /><Link className="abtn" href="/admin/payments/collect">Termly payments</Link><Link className="abtn" href="/admin/payments/export">Accounting export</Link><Link className="abtn" href="/admin/payments/stripe">Stripe payments</Link>
+      {fdCount > 0 && <Link className="abtn pri" href="/admin/payments/discounts">Family discount check ({fdCount})</Link>}
       {unscheduled > 0 && <form action={buildSchedulesAction}><button className="abtn pri" type="submit">Create payment schedules ({unscheduled} places)</button></form>}</div>
 
     {sp.built && <p className="note msg">Payment schedules created for {bp} course places: {bi} termly payments, {bm} of them already paid in TechSaga.</p>}

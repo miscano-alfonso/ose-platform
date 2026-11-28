@@ -1085,6 +1085,19 @@ export async function toggleCouponAction(f: FormData): Promise<void> {
   priceBack(str(f, "year", 40), "ok", "Coupon updated.");
 }
 
+/** 28 Nov: Payments → Family discount check: move a family's (or every listed family's) payments still to come to the
+ *  family-wide discount. Only scheduled payments not yet due change. */
+export async function applyFamilyDiscountAction(f: FormData): Promise<void> {
+  const me = await requireStaff();
+  const back = (k: "ok" | "err", m: string) => redirect(`/admin/payments/discounts?${k}=${encodeURIComponent(m)}`);
+  if (f.get("confirm") !== "on") back("err", "Tick the box to confirm.");
+  const { applyFamilyDiscount, familyDiscountCheck } = await import("@/lib/payments");
+  const ids = f.get("all") === "1" ? (await familyDiscountCheck()).map((x) => x.parent_id) : [str(f, "parent", 40)].filter((x) => /^[0-9a-f-]{36}$/.test(x));
+  let n = 0; for (const id of ids) n += await applyFamilyDiscount(me.id, id);
+  revalidatePath("/admin/payments"); revalidatePath("/admin/payments/discounts");
+  back("ok", `${ids.length} famil${ids.length === 1 ? "y" : "ies"} updated: ${n} payment${n === 1 ? "" : "s"} still to come now include the family discount.`);
+}
+
 /** 28 Nov: Marketing → Fill a class: invite the ticked families to a free taster of a class (or send the admin a test). */
 export async function sendPushAction(f: FormData): Promise<void> {
   const me = await requireStaff();
