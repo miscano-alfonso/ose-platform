@@ -96,13 +96,13 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
           const pct = g.capacity ? Math.min(100, Math.round((g.taken / g.capacity) * 100)) : 0;
           return <tbody key={g.id} id={`g-${g.id}`} className="cls-row">
             <ExpandRow target={`ed-${g.id}`} label={`Edit ${g.code}`}>
-              <td><span className="dot" style={{ background: g.colour }} /><b title={g.subject !== g.subject_full ? `${g.level} ${g.subject_full}` : undefined}>{g.level} {g.subject}</b>{g.trial && <> <span className="pill info" title="Opens for booking by itself once this many families join its waiting list">Trial · {g.waiting} of {g.waitlist_threshold} signed up</span></>}<div className="muted" style={{ fontSize: 15.5, marginLeft: 18 }}>{g.code}</div></td>
+              <td><span className="dot" style={{ background: g.colour }} /><b title={g.subject !== g.subject_full ? `${g.level} ${g.subject_full}` : undefined}>{g.level} {g.subject}</b><div className="muted" style={{ fontSize: 15.5, marginLeft: 18 }}>{g.code}</div></td>
               <td>{g.teacher ?? <span className="muted">Not set</span>}</td>
               <td>{g.slots ? <span className="cls-times">{g.slots.split(", ").map((x) => <span key={x}>{x}</span>)}</span> : <span className="muted">No lessons yet</span>}</td>
               <td><div className="fill"><div className="track"><i className={g.is_full ? "full" : ""} style={{ width: `${pct}%` }} /></div><span>{g.taken}/{g.capacity ?? "∞"}</span></div>{g.capacity_custom && <div className="muted" style={{ fontSize: 13 }}>own capacity</div>}
                 {g.capacity_mode !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>{MODE[g.capacity_mode]}</div>}
                 {g.waiting > 0 && <div className="muted" style={{ fontSize: 13.5 }}>{g.waiting} waiting</div>}</td>
-              <td>{statusPill(g.status, g.is_full)}</td>
+              <td>{g.trial ? <span className="pill info" title="A trial class: it opens for booking by itself once this many families join its waiting list">Trial · {g.waiting} of {g.waitlist_threshold}</span> : g.status === "waitlist" || g.status === "priority" ? <span className="pill info" title={`${g.waiting} on the waiting list; it opens at ${g.waitlist_threshold}`}>{STATUS[g.status]} · {g.waiting} of {g.waitlist_threshold}</span> : statusPill(g.status, g.is_full)}</td>
               <td>{g.label ?? <span className="muted">None</span>}{g.sticky_label !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand</div>}</td>
               <td>{onHome(g) ? <span className="pill good">Space Available</span> : <span className="muted">Not shown</span>}
                 {g.homepage !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand{g.homepage_order ? ` · position ${g.homepage_order}` : ""}</div>}</td>

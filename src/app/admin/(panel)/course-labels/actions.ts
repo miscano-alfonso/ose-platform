@@ -26,3 +26,18 @@ export async function shortNamesAction(f: FormData): Promise<void> {
   revalidatePath("/", "layout");
   redirect("/admin/course-labels?ok=Short names saved. Teacher, parent and student dashboards use them now.#short");
 }
+
+/** 28 Nov (Alfonso: "these labels ideally can be automated based on the facts of the lesson"): when the Automatic label
+ *  says "Almost full" or "Few spaces left" (places left at or below each number). A class can still choose its own. */
+export async function labelRulesAction(f: FormData): Promise<void> {
+  const me = await requireStaff(); if (me.role !== "school_admin") redirect("/admin");
+  const few = parseInt(String(f.get("few") ?? ""), 10), almost = parseInt(String(f.get("almost") ?? ""), 10);
+  if (!(few >= 0 && few <= 50) || !(almost >= 0 && almost <= 50)) redirect("/admin/course-labels?ok=Use numbers from 0 to 50.#auto");
+  const { withSchool } = await import("@/lib/db");
+  await withSchool(async (q) => {
+    await q(`update schools set few_places_at = $1, almost_full_at = $2 where id = current_school()`, [Math.max(few, almost), Math.min(few, almost)]);
+    await q(`insert into audit_log (school_id, actor_user_id, action, entity, detail) values (current_school(), $1, 'label_rules', 'school', $2)`, [me.id, JSON.stringify({ few, almost })]).catch(() => {});
+  });
+  revalidatePath("/", "layout");
+  redirect("/admin/course-labels?ok=Automatic label rules saved. Classes set to Automatic follow them now.#auto");
+}

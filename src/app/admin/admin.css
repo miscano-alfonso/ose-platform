@@ -2108,3 +2108,4 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 /* 28 Nov: Admin → Classes: each lesson on its own line, a day never apart from its time */
 .adm .cls-times{display:flex;flex-direction:column;gap:2px}.adm .cls-times span{white-space:nowrap}
 .adm .cls-gc{white-space:nowrap}
+.adm .lbl-rules ol{margin:0 0 12px;padding-left:22px;display:grid;gap:8px}.adm .lbl-rules input{width:64px;padding:4px 8px;border:1px solid var(--line);border-radius:8px;font:inherit;margin:0 4px}
