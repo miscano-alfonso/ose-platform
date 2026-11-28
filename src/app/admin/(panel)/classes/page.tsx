@@ -1,4 +1,5 @@
 import { labelWords } from "@/lib/course-labels";
+import { ClassroomPicker } from "../../ClassroomPicker";
 import Link from "next/link";
 import { getGroups, pendingInvites, classDefaults } from "@/lib/admin-data";
 import { classFormOptions } from "@/lib/rules";
@@ -90,7 +91,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
               <td>{g.label ?? <span className="muted">None</span>}{g.sticky_label !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand</div>}</td>
               <td>{onHome(g) ? <span className="pill good">Space Available</span> : <span className="muted">Not shown</span>}
                 {g.homepage !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand{g.homepage_order ? ` · position ${g.homepage_order}` : ""}</div>}</td>
-              <td>{g.classroom ? <span className="pill good">Linked</span> : <span className="pill mute">Not linked</span>}{g.meet_url ? <div className="muted" style={{ fontSize: 13.5 }}>{toolOf(g.meet_url).id === "other" ? "Lesson link set" : `${toolOf(g.meet_url).name} link set`}</div> : <div className="muted" style={{ fontSize: 13.5 }}>No lesson link</div>}</td>
+              <td>{g.classroom ? <span className="pill good">Linked</span> : <span className="pill mute">Not linked</span>} <ClassroomPicker groupId={g.id} cls={`${g.level} ${g.subject}`} level={g.level} code={g.code} linked={g.classroom} />{g.meet_url ? <div className="muted" style={{ fontSize: 13.5 }}>{toolOf(g.meet_url).id === "other" ? "Lesson link set" : `${toolOf(g.meet_url).name} link set`}</div> : <div className="muted" style={{ fontSize: 13.5 }}>No lesson link</div>}</td>
             </tr>
             <tr className="editrow"><td colSpan={8} style={{ paddingTop: 6, paddingBottom: 8 }}>
               <details className="edit"><summary className="abtn sm">Edit {g.code}</summary>
@@ -105,7 +106,8 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
                   <label className="fld">Lesson link ({tool.id === "other" ? "any video tool" : tool.name}, or any https link)<input type="url" name="meet_url" placeholder={tool.example} defaultValue={g.meet_url ?? ""} style={{ width: 340 }} /></label>
                   <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="hidden" name="trial_on_form" value="1" /><input type="checkbox" name="trial" value="1" defaultChecked={g.trial} /> Trial / taster class (everyone in its Classroom is trying it: never counted as a student or listed to match)</label>
                   <label className="fld">Sign-ups needed to open (waiting list)<input type="number" name="waitlist_threshold" min={1} max={99} placeholder={`${def.threshold}`} defaultValue={g.threshold_custom ? g.waitlist_threshold : ""} style={{ width: 80 }} /><small>{g.threshold_custom ? `Own number (default ${def.threshold}). Empty: use the default` : `Default (${def.threshold})`}</small></label>
-                  <label className="fld">Google Classroom (paste the class’s Classroom link)<input name="classroom" placeholder="https://classroom.google.com/c/…" defaultValue={g.course_id ? `https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64")}` : ""} style={{ width: 340 }} /></label>
+                  {g.classroom_code && g.course_id && <label className="fld">Invitation link (class code {g.classroom_code})<input readOnly value={`https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64").replace(/=+$/, "")}?cjc=${g.classroom_code}`} style={{ width: 340 }} /></label>}
+                  <label className="fld">Google Classroom (or press Connect Classroom above; or paste the Classroom link)<input name="classroom" placeholder="https://classroom.google.com/c/…" defaultValue={g.course_id ? `https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64")}` : ""} style={{ width: 340 }} /></label>
                   <button className="abtn pri" type="submit">Save</button>
                 </form></details></td></tr>
           </tbody>;

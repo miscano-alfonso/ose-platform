@@ -350,7 +350,7 @@ export async function setFamilyTermAction(f: FormData): Promise<void> {
 // ---------- timetable ----------
 const back = (path: string, err: string | null, ok: string) => redirect(`${path}?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok)}`);
 /** 28 Nov: Timetable setup's forms can come back to the layout they were sent from (?layout=…). */
-const ttBackTo = (f: FormData) => { const r = str(f, "ret", 200); return /^\/admin\/timetable-setup(\?[A-Za-z0-9=&%_.-]*)?$/.test(r) ? r : "/admin/timetable-setup"; };
+const ttBackTo = (f: FormData) => { const r = str(f, "ret", 200); return /^\/admin\/timetable-setup(\?[A-Za-z0-9=&%_.+-]*)?$/.test(r) ? r : "/admin/timetable-setup"; };
 const ttBack = (f: FormData, err: string | null, ok: string) => { const r = ttBackTo(f), [path, qs] = r.split("?"), p = new URLSearchParams(qs ?? ""); p.delete("ok"); p.delete("err");
   p.set(err ? "err" : "ok", err ?? ok); redirect(`${path}?${p}`); };
 export async function addSlotAction(f: FormData): Promise<void> {
@@ -1083,6 +1083,18 @@ export async function toggleCouponAction(f: FormData): Promise<void> {
   const me = await requireStaff();
   await setCouponActive(me.id, str(f, "id", 40), str(f, "active", 5) === "1");
   priceBack(str(f, "year", 40), "ok", "Coupon updated.");
+}
+
+/** 28 Nov: Admin → Classes → Connect Classroom: the school's Google Classrooms to choose from, then link one and pull its links. */
+export async function classroomCoursesAction() {
+  await requireStaff();
+  return (await import("@/lib/classroom-connect")).listCourses();
+}
+export async function connectClassroomAction(groupId: string, courseId: string, replaceMeet = false) {
+  const me = await requireStaff();
+  const r = await (await import("@/lib/classroom-connect")).connectCourse(me.id, String(groupId).slice(0, 40), String(courseId).slice(0, 30), !!replaceMeet);
+  if (r.ok) { revalidatePath("/admin/classes"); revalidatePath("/admin/timetable"); }
+  return r;
 }
 
 /** 28 Nov (Alfonso): Admin → Classes → Defaults: Capacity and Sign-ups needed for every class that doesn't have its own. */

@@ -2080,3 +2080,22 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 .adm .tsx-pick td.bad span,.adm .tsx-pick td.mine span{display:block;border-radius:6px;padding:7px 6px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .adm .tsx-pick td.bad span{background:var(--soft);color:var(--muted)}.adm .tsx-pick td.mine span{background:var(--brand);color:#fff;font-weight:600}
 @media (max-width:900px){.adm .tsx-c{grid-template-columns:1fr}.adm .tsx-side{position:static;max-height:none}}
+
+/* 28 Nov: Admin → Classes → Connect Classroom */
+.adm .crp{border:0;border-radius:18px;padding:0;width:min(980px,94vw);max-height:88vh;background:var(--panel);color:var(--ink);box-shadow:0 24px 60px rgba(0,0,0,.3)}
+.adm .crp::backdrop{background:rgba(10,14,30,.45)}
+.adm .crp-in{padding:20px 22px;display:grid;gap:12px}
+.adm .crp header{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}.adm .crp h2{margin:0}.adm .crp header p{margin:4px 0 0;font-size:14.5px}
+.adm .crp-q{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--panel);color:var(--ink)}
+.adm .crp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;max-height:58vh;overflow:auto;padding:2px}
+.adm .crp-card{display:flex;flex-direction:column;align-items:flex-start;gap:3px;text-align:left;padding:12px 14px;min-height:96px;border:1px solid var(--line);border-radius:12px;background:var(--soft);cursor:pointer;font:inherit;color:var(--ink)}
+.adm .crp-card b{font-size:16px}.adm .crp-card>span{font-size:13.5px;color:var(--muted)}
+.adm .crp-card:hover:not(:disabled){border-color:var(--accent);background:var(--hover)}.adm .crp-card.best{border:2px solid var(--info)}
+.adm .crp-card:disabled{opacity:.6;cursor:wait}
+.adm .crp-tags{display:flex;gap:4px;flex-wrap:wrap;margin-top:auto}.adm .crp-tags i{font-style:normal}
+.adm .crp-done ul{list-style:none;margin:8px 0;padding:0;display:grid;gap:10px}
+.adm .crp-done li{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14.5px}.adm .crp-done li .pill{min-width:120px;justify-content:center}
+.adm .crp-done code{background:var(--soft);padding:3px 8px;border-radius:6px;font-size:13px;overflow-wrap:anywhere}
+.adm .crp-ok{font-size:17px;margin:0}.adm .crp-acts{display:flex;justify-content:flex-end}
+.adm .tsx-tools{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.adm .tsx-teachers{flex-wrap:wrap}
+.adm .tsx-pop .tsx-sub{font-size:12.5px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
