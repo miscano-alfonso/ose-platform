@@ -18,7 +18,7 @@ const onHome = (g: { homepage: string; bookable: boolean; status: string }) => g
 const statusPill = (s: string, full: boolean) => full && (s === "open" || s === "priority") ? <span className="pill warn">Full</span>
   : s === "open" ? <span className="pill good">Open</span> : s === "waitlist" || s === "priority" ? <span className="pill info">{STATUS[s]}</span> : <span className="pill mute">{STATUS[s]}</span>;
 
-export default async function Classes({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; level?: string }> }) {
+export default async function Classes({ searchParams }: { searchParams: Promise<{ ok?: string; err?: string; level?: string; sort?: string }> }) {
   const sp = await searchParams;
   const [all, opts, pend, plan, inv, vid, def] = await Promise.all([getGroups(), classFormOptions(), pendingInvites(), invitePlan(), inviteStatus(), videoSettings(), classDefaults()]);
   const words = await labelWords();
@@ -26,7 +26,21 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
   const nIn = plan.invite.length + plan.tasterInvite.length, nOut = plan.remove.length + plan.tasterRemove.length;
   const levels = [...new Set(all.map((g) => g.level))];
   const level = levels.includes(sp.level ?? "") ? sp.level! : "All";
-  const groups = all.filter((g) => level === "All" || g.level === level);
+  // 28 Nov (Alfonso: "sort functionality, so i can see what classes could do with a sales push"): sort by any column
+  const SORTS: Record<string, (a: (typeof all)[number], b: (typeof all)[number]) => number> = {
+    class: (a, b) => `${a.level} ${a.subject}`.localeCompare(`${b.level} ${b.subject}`),
+    teacher: (a, b) => (a.teacher ?? "~").localeCompare(b.teacher ?? "~"),
+    lessons: (a, b) => (a.slots ?? "~").localeCompare(b.slots ?? "~"),
+    places: (a, b) => (a.capacity ? a.taken / a.capacity : 1) - (b.capacity ? b.taken / b.capacity : 1) || a.taken - b.taken,
+    places_desc: (a, b) => (b.capacity ? b.taken / b.capacity : 1) - (a.capacity ? a.taken / a.capacity : 1) || b.taken - a.taken,
+    status: (a, b) => a.status.localeCompare(b.status),
+  };
+  const sort = sp.sort && SORTS[sp.sort] ? sp.sort : "";
+  const groups = all.filter((g) => level === "All" || g.level === level).sort(sort ? SORTS[sort] : () => 0);
+  const sortHref = (k: string) => { const p = new URLSearchParams({ ...(level !== "All" ? { level } : {}), ...(k ? { sort: k } : {}) }); return `/admin/classes${p.size ? "?" + p : ""}`; };
+  const Th = ({ k, label }: { k: string; label: string }) => { const on = sort === k || (k === "places" && sort === "places_desc");
+    const next = k === "places" ? (sort === "places" ? "places_desc" : sort === "places_desc" ? "" : "places") : sort === k ? "" : k;
+    return <th aria-sort={on ? (sort === "places_desc" ? "descending" : "ascending") : undefined}><Link className="th-sort" href={sortHref(next)} title={k === "places" ? "Emptiest first, then fullest first" : `Sort by ${label.toLowerCase()}`}>{label}{on ? (sort === "places_desc" ? " ↓" : " ↑") : ""}</Link></th>; };
   const years = [...new Set(groups.map((g) => g.year_label))];
   return <>
     <div className="top"><div><h1>Classes</h1><div className="sub">{groups.length} classes. Edit a row to change its capacity, override, website label, status or whether it shows under Space Available on the homepage.</div></div></div>
@@ -57,7 +71,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
           <td>{new Date(p.invited_at + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}{p.reminded ? ` · reminded ${new Date(p.reminded + "T12:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : ""}</td>
           <td>{p.next ?? "—"}</td><td><form action={remindInviteAction}><input type="hidden" name="id" value={p.id} /><button className="abtn sm" type="submit">Send a reminder</button></form></td></tr>)}
       </tbody></table></div></section>}
-    <div className="segl" role="group" aria-label="Level" style={{ marginBottom: 12 }}>{["All", ...levels].map((l) => <Link key={l} href={l === "All" ? "/admin/classes" : `/admin/classes?level=${encodeURIComponent(l)}`} aria-current={l === level ? "true" : undefined}>{l}</Link>)}</div>
+    <div className="segl" role="group" aria-label="Level" style={{ marginBottom: 12 }}>{["All", ...levels].map((l) => <Link key={l} href={`/admin/classes${l === "All" && !sort ? "" : "?" + new URLSearchParams({ ...(l !== "All" ? { level: l } : {}), ...(sort ? { sort } : {}) })}`} aria-current={l === level ? "true" : undefined}>{l}</Link>)}</div>
     {/* 28 Nov (Alfonso): one Capacity and Sign-ups for every class, which a class can override under Edit */}
     <form action={saveClassDefaultsAction} className="card cls-defs">
       <b>Defaults for every class</b>
@@ -77,7 +91,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
     {years.map((y) => <div key={y}>
       {years.length > 1 && <h2 style={{ font: "600 20px Jost", margin: "8px 0 10px" }}>{yearLabel(y)}</h2>}
       <div className="tw"><table>
-        <thead><tr><th>Class</th><th>Teacher</th><th>Lessons</th><th>Places</th><th>Status</th><th>Website label</th><th>Homepage</th><th>Google Classroom</th></tr></thead>
+        <thead><tr><Th k="class" label="Class" /><Th k="teacher" label="Teacher" /><Th k="lessons" label="Lessons" /><Th k="places" label="Places" /><Th k="status" label="Status" /><th>Website label</th><th>Homepage</th><th>Google Classroom</th></tr></thead>
         {groups.filter((g) => g.year_label === y).map((g) => {
           const pct = g.capacity ? Math.min(100, Math.round((g.taken / g.capacity) * 100)) : 0;
           return <tbody key={g.id} id={`g-${g.id}`} className="cls-row">

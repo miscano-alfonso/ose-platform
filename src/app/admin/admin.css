@@ -2104,3 +2104,4 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 .adm .cls-row .editrow>td{padding:0;border:0;background:transparent}
 .adm .cls-row:has(details.edit[open]) .xrow>td{background:var(--soft);border-bottom-color:transparent}
 .adm .cls-row .editrow:has(details[open])>td{padding:2px 14px 14px;background:var(--soft)}
+.adm th .th-sort{color:inherit;text-decoration:none}.adm th .th-sort:hover{text-decoration:underline}.adm th[aria-sort]{color:var(--ink)}
