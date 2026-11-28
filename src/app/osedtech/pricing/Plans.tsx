@@ -22,6 +22,8 @@ export function Plans({ t }: { t: PlanText[] }) {
       {p.adds && <p className="adds">{t[i].adds}</p>}
       <ul>{t[i].features.map((f, j) => <li key={j}>{f}</li>)}</ul>
       <Link href={`/osedtech/trial?plan=${p.id}`} className={`edt-btn${p.highlight ? " teal" : ""}`}>{t[i].cta}</Link>
+      {/* 28 Nov: a demo for each kind of school */}
+      <Link href={p.id === "solo" ? "/osedtech/demo#solo" : "/osedtech/demo"} className="edt-plan-demo">{p.id === "solo" ? "See a Solo school in the demo" : "See it in the demo"}</Link>
     </div>)}</div>
   </>;
 }

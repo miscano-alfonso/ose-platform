@@ -55,14 +55,16 @@ export default async function EdTechHome() {
       <h2 className="edt-h2">Everything a teaching business runs on</h2>
       <p className="edt-lead">Stop stitching together a booking tool, a payment link, a spreadsheet and your inbox. It’s all connected: when a family books, they’re on the register, getting reminders and has the class’s lesson link.</p>
       <div className="edt-grid">
-        <div className="edt-card"><Ico n="site" /><h3>Your website</h3><p>Course pages, timetable, term dates and prices, all kept up to date from your dashboard.</p></div>
-        <div className="edt-card"><Ico n="card" /><h3>Bookings and payments</h3><p>Families book and pay by card, in full or in instalments. Failed payments are followed up for you.</p></div>
-        <div className="edt-card"><Ico n="cal" /><h3>Classes, 1:1s and workshops</h3><p>Weekly classes across your terms, private lessons and one-off workshops, with tasters and a waiting list.</p></div>
-        <div className="edt-card"><Ico n="meet" /><h3>Attendance, whatever you teach on</h3><p>Use Google Meet, Zoom, Teams or any video tool. Attendance comes from who joined in Google Meet or Zoom, or from each student’s Join check-in on any other tool.</p></div>
-        <div className="edt-card"><Ico n="mail" /><h3>Emails that send themselves</h3><p>Lesson reminders, receipts and follow-ups, sent at the right time, from your school’s address.</p></div>
+        <div className="edt-card"><Ico n="site" /><h3>Your website</h3><p>Course pages, timetable, term dates and prices, all kept up to date from your dashboard, with labels like “Few spaces left” set from the numbers.</p></div>
+        <div className="edt-card"><Ico n="card" /><h3>Bookings and payments</h3><p>Families book and pay by card, in full or in instalments, with discounts that count every child’s courses. Failed payments are followed up for you.</p></div>
+        <div className="edt-card"><Ico n="cal" /><h3>Classes, 1:1s and workshops</h3><p>Weekly classes across your terms, private lessons and one-off workshops. Set the week on a grid that warns you of clashes, and link each class’s Google Classroom in one click.</p></div>
+        <div className="edt-card"><Ico n="star" /><h3>Tasters that follow themselves up</h3><p>Confirmation, reminder, attendance and the follow-up all happen on their own, and you can see each taster’s journey to a booking.</p></div>
+        <div className="edt-card"><Ico n="meet" /><h3>Attendance, whatever you teach on</h3><p>Use Google Meet, Zoom, Teams or any video tool. Attendance comes from who joined in Google Meet or Zoom, or from each student’s Join check-in, and you can see 5/8 in the Meet while the lesson runs.</p></div>
+        <div className="edt-card"><Ico n="mail" /><h3>Messages and emails</h3><p>One place for messages with parents and teachers, where email replies land too. Reminders, receipts and follow-ups go out on their own, from your school’s address.</p></div>
         <div className="edt-card"><Ico n="video" /><h3>Recordings that post themselves</h3><p>Google Meet recordings renamed, filed and posted to the right Google Classroom, with a title card at the start. Zoom cloud recordings are posted too. <a href="/osedtech/features#recordings" style={{ color: "var(--teal-d)" }}>See how</a></p></div>
-        <div className="edt-card"><Ico n="report" /><h3>Reports and portals</h3><p>Reports to families, and accounts for parents and students with chats and reward points.</p></div>
-        <div className="edt-card"><Ico n="spark" /><h3>Marketing with Claude</h3><p>Newsletters, and social posts in your style that Claude drafts and illustrates, posted to Facebook and Instagram.</p></div>
+        <div className="edt-card"><Ico n="report" /><h3>Marking and reports</h3><p>Marking on a 7-day turnaround, and reports from Classroom marks, approved by you and emailed to parents as a PDF.</p></div>
+        <div className="edt-card"><Ico n="spark" /><h3>Marketing with Claude</h3><p>Newsletters, social posts that Claude drafts and illustrates, and “Fill a class”: invite the right families to a free taster when a class is low.</p></div>
+        <div className="edt-card"><Ico n="chart" /><h3>Dashboards you arrange</h3><p>Move and resize the boxes on every dashboard, with “How it works” tips on each page, and (on the School plan) an Assistant that answers questions about your school.</p></div>
       </div>
       <TrialCta />
     </div></section>
@@ -72,12 +74,12 @@ export default async function EdTechHome() {
       <h2 className="edt-h2">A proper account for every parent and student</h2>
       <p className="edt-lead">This is where you look like an established school. Parents and students sign in to your school, not a generic app, and find everything in one place instead of in your inbox.</p>
       <div className="edt-row" style={{ marginTop: 40 }}>
-        <div><h3>For parents</h3><p>Each child’s classes, lesson times and teachers, with their attendance and assignments.</p>
-          <ul><li>Payments: what’s been paid, what’s next, and a saved card</li><li>Reports from teachers, the day they’re published</li><li>Messages with the school, kept together</li><li>Book 1:1 lessons and workshops, and update their details</li></ul></div>
+        <div><h3>For parents</h3><p>Each child’s classes, teachers and work, with a month timetable showing who came to each lesson, where they report an absence too.</p>
+          <ul><li>Payments: what’s been paid, what’s next, and what’s left for the whole course</li><li>Reports from teachers, the day they’re published</li><li>Messages with the school and teachers, in one place</li><li>Home education information and exam dates for where they live, with reminders to book exams</li><li>Book 1:1 lessons and workshops, and update their details</li></ul></div>
         <Shot src="/osedtech/shots/parent.png" alt="A parent’s home page at Demo Academy: their child’s classes and attendance, assignments, next payment and reports" url="demoacademy.co.uk/parent" />
       </div>
       <div className="edt-row flip">
-        <div><h3>For students</h3><p>Their own login, with their classes, the next lesson and a button straight into it.</p>
+        <div><h3>For students</h3><p>Their own login, with their classes, the next lesson, and a Join button that opens 5 minutes before it starts.</p>
           <ul><li>A page for each class</li><li>Class chats, which parents switch on</li><li>Reward points from teachers, with a school leaderboard</li></ul></div>
         <Shot src="/osedtech/shots/student-rewards.png" alt="A student’s rewards page at Demo Academy: their points and the school leaderboard" url="demoacademy.co.uk/student/rewards" />
       </div>

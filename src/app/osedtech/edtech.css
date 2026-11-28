@@ -249,3 +249,5 @@
 .edt-google .edt-gdots{flex:none}
 .edt-foot .edt-admin{color:inherit;opacity:.7;margin-left:10px}
 .edt-foot .edt-admin:hover{opacity:1;color:var(--teal-d)}
+.edt-plan-demo{display:block;text-align:center;margin-top:10px;font-size:14px;color:var(--teal-d);text-decoration:underline}
+button.edt-btn{font-family:inherit;font-size:inherit;cursor:pointer}

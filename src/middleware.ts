@@ -6,7 +6,7 @@ import { FRONT_COOKIE, frontPassword, frontToken, sameText } from "@/lib/front-d
 // OH-SO EdTech (/osedtech) is public, and its demo visitors (a signed "ose_demo" cookie) can open the demo school's
 // dashboard, family pages and public website. Self-serve trial customers (a signed "ose_trial" cookie) can open /admin. The demo website is chosen here with the x-ose-site header, which is
 // always removed from what the browser sends, so it can only come from a valid demo cookie.
-const DEMO_SITE = "demo-academy";
+const DEMO_SITES = ["demo-academy", "demo-solo"];   // Demo Academy and the Solo demo (28 Nov)
 const demoKey = () => process.env.SITE_PASSWORD || process.env.ADMIN_SETUP_KEY || "";
 
 // 26 Nov: the platform moved from ose.miscano.co.uk to dev.ohsoed.co.uk. Once SITE_URL names the new address, page visits
@@ -53,8 +53,8 @@ export async function middleware(req: NextRequest) {
   const demo = key ? await demoCookieOk(req.cookies.get("ose_demo")?.value, key) : false;
   const familyOrAdmin = /^\/(admin|parent|student)(\/|$)/.test(path);
   // the demo school's own website, for demo visitors who opened it
-  if (demo && !familyOrAdmin && !/^\/osedtech(\/|$)/.test(path) && req.cookies.get("ose_site")?.value === DEMO_SITE) {
-    hdrs.set("x-ose-site", DEMO_SITE);
+  if (demo && !familyOrAdmin && !/^\/osedtech(\/|$)/.test(path) && DEMO_SITES.includes(req.cookies.get("ose_site")?.value ?? "")) {
+    hdrs.set("x-ose-site", req.cookies.get("ose_site")!.value);
     return robots(next());
   }
   if (!pass) return next();

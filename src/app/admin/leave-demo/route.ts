@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { cookies } from "next/headers";
 import { SCHOOL_COOKIE, runAsSchool } from "@/lib/db";
-import { DEMO } from "@/lib/demo";
+import { DEMO_SLUGS } from "@/lib/demo";
 import { VIEWAS_COOKIE, signOut } from "@/lib/auth";
 import { currentFamily, familySignOut } from "@/lib/family-auth";
 
@@ -12,8 +12,9 @@ const NEXT = ["/admin", "/admin/teacher", "/parent", "/student"];
 export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const jar = await cookies(), opts = { secure: process.env.NODE_ENV === "production" };
-  if (jar.get(SCHOOL_COOKIE)?.value === DEMO) {
-    await runAsSchool(DEMO, async () => { await signOut(); if ((await currentFamily())?.viewer) await familySignOut(); });
+  const was = jar.get(SCHOOL_COOKIE)?.value ?? "";
+  if (DEMO_SLUGS.includes(was)) {   // Demo Academy or the Solo demo (28 Nov)
+    await runAsSchool(was, async () => { await signOut(); if ((await currentFamily())?.viewer) await familySignOut(); });
     jar.delete({ name: SCHOOL_COOKIE, path: "/admin", ...opts }); jar.delete({ name: VIEWAS_COOKIE, path: "/admin", ...opts });
   }
   jar.delete({ name: SCHOOL_COOKIE + "_p", path: "/parent" }); jar.delete({ name: SCHOOL_COOKIE + "_s", path: "/student" });

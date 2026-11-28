@@ -10,7 +10,7 @@ const vs = (v: string) => v === "yes" ? <span className="edt-yes" aria-label="Ye
 const cell = (v: boolean | string) => v === true ? <span className="edt-yes" aria-label="Included" /> : v === false ? <span className="edt-no" aria-label="Not included">–</span> : <span>{v}</span>;
 
 function TrialCtaInline() {
-  return <div className="edt-btns"><Link href="/osedtech/trial" className="edt-btn">Start a free trial</Link><Link href="/osedtech/demo" className="edt-btn line">Look round the demo</Link></div>;
+  return <div className="edt-btns"><Link href="/osedtech/trial" className="edt-btn">Start a free trial</Link><Link href="/osedtech/demo" className="edt-btn line">Look round the demo</Link><Link href="/osedtech/demo#solo" className="edt-btn line">See a Solo school</Link></div>;
 }
 
 /** The plan cards' words, through the website editor. */

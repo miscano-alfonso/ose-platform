@@ -9,7 +9,7 @@ export type SchoolPlan = { plan: PlanId | null; trialEndsAt: string | null; days
 const PLATFORM_ONLY = ["/admin/edtech", "/admin/solo-dashboard", "/admin/cms", "/admin/hero-symbols", "/admin/home-ed", "/admin/styles"];
 const NOT_IN: Record<PlanId, string[]> = {
   solo: [...PLATFORM_ONLY, "/admin/payroll", "/admin/staff", "/admin/jobs", "/admin/privacy", "/admin/reports", "/admin/student-chat", "/admin/rewards",
-    "/admin/marketing", "/admin/newsletter", "/admin/subscribers", "/admin/email-stats", "/admin/social", "/admin/designs"],
+    "/admin/marketing", "/admin/fill-classes", "/admin/newsletter", "/admin/subscribers", "/admin/email-stats", "/admin/social", "/admin/designs"],
   growth: [...PLATFORM_ONLY, "/admin/payroll", "/admin/jobs", "/admin/privacy"],
   school: [...PLATFORM_ONLY],
 };

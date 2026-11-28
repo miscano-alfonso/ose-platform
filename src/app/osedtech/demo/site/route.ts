@@ -5,6 +5,6 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 120;
 // Opens the demo school's public website (its course shop) in this browser.
 export async function GET(req: NextRequest) {
-  const err = await openDemoSite();
+  const err = await openDemoSite(req.nextUrl.searchParams.get("school") === "solo" ? "solo" : "academy");
   return NextResponse.redirect(new URL(err ? `/osedtech/demo?error=${encodeURIComponent(err)}` : "/", req.url), 303);
 }

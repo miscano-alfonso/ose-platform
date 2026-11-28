@@ -19,9 +19,24 @@ export default async function Demo({ searchParams }: { searchParams: Promise<{ e
         <li>On the website: browse courses, check prices and timetables, and try booking (nothing is charged)</li>
       </ul>
       {sp.error && <p className="edt-msg bad" role="alert" style={{ marginTop: 22 }}>{sp.error}</p>}
-      <form action={openDemo} className="edt-btns"><button className="edt-btn" type="submit">Open the dashboard</button><a href="/osedtech/demo/site" className="edt-btn line">Open the school’s website</a></form>
+      <form action={openDemo} className="edt-btns"><input type="hidden" name="school" value="academy" /><button className="edt-btn" type="submit">Open the dashboard</button><a href="/osedtech/demo/site" className="edt-btn line">Open the school’s website</a></form>
       <p className="edt-note" style={{ marginTop: 14 }}>Everything is made up, and nothing is ever emailed, charged or posted from the demo. Other visitors may be looking round at the same time, and the demo is made fresh every day. The first visit of the day can take up to a minute while it’s prepared.</p>
     </div>
     <Shot src="/osedtech/shots/dashboard.png" alt="Demo Academy’s dashboard" url="admin.demoacademy.co.uk" />
+  </div>
+  {/* 28 Nov (Alfonso): a demo for the Solo plan too */}
+  <div className="edt-wrap edt-hero-grid" id="solo" style={{ alignItems: "start", marginTop: 56, scrollMarginTop: 90 }}>
+    <div>
+      <p className="edt-eyebrow">Solo plan</p>
+      <h2 className="edt-h2">Or look round a one-teacher school</h2>
+      <p className="edt-lead">Bright Maths Tuition is a made-up tutor on the Solo plan: one person runs the school and teaches every class, so the office dashboard and the teacher’s day are one page.</p>
+      <ul className="edt-ticks">
+        <li>One dashboard: today’s lessons with the Join button, marking, payments and messages together</li>
+        <li>Maths classes from KS3 to iGCSE, a dozen families, 1:1s and tasters</li>
+        <li>The Solo plan’s menu: website, bookings, payments, classes, attendance, recordings and email</li>
+      </ul>
+      <form action={openDemo} className="edt-btns"><input type="hidden" name="school" value="solo" /><button className="edt-btn" type="submit">Open the Solo dashboard</button><a href="/osedtech/demo/site?school=solo" className="edt-btn line">Open its website</a></form>
+    </div>
+    <Shot src="/osedtech/shots/solo.png" alt="Bright Maths Tuition’s Solo dashboard" url="admin.brightmaths.co.uk" />
   </div></section>);
 }

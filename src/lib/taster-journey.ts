@@ -62,7 +62,7 @@ export async function tasterJourneys(days = 120): Promise<Journey[]> {
       const answered = enrolled || !!r.rebooked_at || !!r.waitlist_at || !!r.replied_at;
       const steps: Step[] = [];
       steps.push({ key: "booked", label: "Booked", state: "done", note: `${D(r.created)} · ${r.pushed ? "from a Fill a class email" : r.source === "website" ? "on the website" : "by the office"}` });
-      steps.push(mail("confirm", "Confirmation", ["taster_booked", "taster_student_welcome"], "Sends within a few minutes"));
+      steps.push(mail("confirm", "Confirmed", ["taster_booked", "taster_student_welcome"], "Sends within a few minutes"));
       steps.push(r.classroom === "invited" ? { key: "classroom", label: "Classroom", state: "done", note: "Invited to the class" }
         : r.classroom === "removed" ? { key: "classroom", label: "Classroom", state: "done", note: "Invited, then taken out after 3 days" }
         : !r.course ? { key: "classroom", label: "Classroom", state: "skip", note: "Class isn’t linked to Google Classroom" }
