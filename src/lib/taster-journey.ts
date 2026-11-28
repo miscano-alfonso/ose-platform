@@ -92,13 +92,17 @@ export async function tasterJourneys(days = 120): Promise<Journey[]> {
       }
       // where it ended up
       const finalSent = my(finalKey).find((s) => ["sent", "scheduled", "held"].includes(s.status));
+      const firstSentRow = my(firstKey).find((s) => ["sent", "scheduled", "held"].includes(s.status)), firstAt = firstSentRow ? Date.parse(firstSentRow.at) : null;
       const [outcome, outcome_text]: [Outcome, string] = cancelled ? ["cancelled", "Cancelled"]
         : enrolled ? ["enrolled", r.enrolled_in ? `Enrolled: ${r.enrolled_in}` : "Booked a course"]
         : r.waitlist_at ? ["waitlist", `Joined the waiting list ${D(r.waitlist_at)}`]
         : r.rebooked_at ? ["rebooked", `Booked another taster ${D(r.rebooked_at)}`]
         : r.replied_at ? ["replied", `Replied by email ${D(r.replied_at)}`]
         : came === null ? ["upcoming", now < start ? "Lesson to come" : "Waiting for attendance"]
-        : finalSent && Date.parse(finalSent.at) + 7 * 864e5 < now ? ["no_reply", "No reply after the last reminder"]
+        // 28 Nov (Alfonso): a week after the last reminder with no response, they're "Not enrolled" (two weeks after the
+        // first follow-up if the last reminder is switched off, so nobody waits for ever)
+        : finalSent ? (Date.parse(finalSent.at) + 7 * 864e5 < now ? ["no_reply", "Not enrolled: no reply"] : ["waiting", "Waiting for the family"])
+        : firstAt && !on(finalKey) && firstAt + 14 * 864e5 < now ? ["no_reply", "Not enrolled: no reply"]
         : ["waiting", "Waiting for the family"];
       steps.push({ key: "outcome", label: "Outcome", state: outcome === "enrolled" ? "done" : outcome === "no_reply" || outcome === "cancelled" ? "bad" : ["waitlist", "rebooked", "replied"].includes(outcome) ? "done" : "wait", note: outcome_text });
       const doneUpTo = [...steps].reverse().find((s) => s.state === "done" || s.state === "bad" || s.state === "now" || s.state === "held");

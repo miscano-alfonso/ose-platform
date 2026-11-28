@@ -19,7 +19,8 @@ export default async function Tasters({ searchParams }: { searchParams: Promise<
     ["waiting", "Waiting for the family", (j) => j.outcome === "waiting"],
     ["enrolled", "Enrolled", (j) => j.outcome === "enrolled"],
     ["other", "Re-booked, waiting list or replied", (j) => ["rebooked", "waitlist", "replied"].includes(j.outcome)],
-    ["lost", "No reply or cancelled", (j) => j.outcome === "no_reply" || j.outcome === "cancelled"],
+    ["lost", "Not enrolled", (j) => j.outcome === "no_reply"],
+    ["cancelled", "Cancelled", (j) => j.outcome === "cancelled"],
   ];
   const f = FILTERS.find((x) => x[0] === sp.f) ?? FILTERS[0];
   const shown = list.filter(f[2]);
@@ -70,7 +71,7 @@ export default async function Tasters({ searchParams }: { searchParams: Promise<
   </>;
 }
 
-const OUT: Record<string, string> = { enrolled: "good", waitlist: "good", rebooked: "info", replied: "info", waiting: "warn", no_reply: "bad", upcoming: "info", cancelled: "mute" };
+const OUT: Record<string, string> = { enrolled: "good", waitlist: "good", rebooked: "info", replied: "info", waiting: "warn", no_reply: "mute", upcoming: "info", cancelled: "mute" };
 const STATE_WORD: Record<string, string> = { done: "Done", wait: "To come", held: "Held by test mode", bad: "Problem", off: "Switched off", skip: "Not needed", now: "On now" };
 
 function JourneyRow({ j }: { j: Journey }) {
