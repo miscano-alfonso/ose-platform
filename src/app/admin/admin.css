@@ -2107,3 +2107,4 @@ html:has(.adm[data-theme=dark]),html:has(.adm[data-theme=dark]) body{background:
 .adm th .th-sort{color:inherit;text-decoration:none}.adm th .th-sort:hover{text-decoration:underline}.adm th[aria-sort]{color:var(--ink)}
 /* 28 Nov: Admin → Classes: each lesson on its own line, a day never apart from its time */
 .adm .cls-times{display:flex;flex-direction:column;gap:2px}.adm .cls-times span{white-space:nowrap}
+.adm .cls-gc{white-space:nowrap}

@@ -36,7 +36,7 @@ export function ClassroomPicker({ groupId, cls, level, code, linked }: { groupId
   const copy = (t: string) => navigator.clipboard?.writeText(t).catch(() => null);
 
   return <>
-    <button type="button" className={`abtn sm${linked ? "" : " pri"}`} onClick={open}>{linked ? "Change Classroom" : "Connect Classroom"}</button>
+    <button type="button" className={`abtn sm${linked ? "" : " pri"}`} onClick={open} title={linked ? "Change the Google Classroom" : "Connect a Google Classroom"}>{linked ? "Change" : "Connect"}</button>
     <dialog ref={dlg} className="crp" aria-label={`Choose the Google Classroom for ${cls}`} onClick={(e) => { if (e.target === dlg.current) dlg.current?.close(); }}>
       <div className="crp-in">
         <header><div><h2>Choose the Google Classroom</h2><p className="muted">for <b>{cls}</b> ({code}). Its Classroom link, invitation link and Meet link are filled in for you.</p></div>

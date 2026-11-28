@@ -8,7 +8,7 @@ import { updateGroupAction, addClassAction, remindInviteAction, runInvitesAction
 import { invitePlan, inviteStatus } from "@/lib/classroom-invites";
 import { yearLabel } from "@/lib/format";
 import { videoSettings } from "@/lib/checkins";
-import { toolById, toolOf } from "@/lib/video";
+import { toolById } from "@/lib/video";
 
 const MODE: Record<string, string> = { auto: "Close when full", keep_open: "Keep open past capacity", full: "Mark as full now" };
 const LABEL: Record<string, string> = { auto: "Automatic", off: "No label", few_spaces: "Few spaces left", almost_full: "Almost full", new_group: "New Group!", launching_soon: "New Group Launching Soon!" };
@@ -106,7 +106,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
               <td>{g.label ?? <span className="muted">None</span>}{g.sticky_label !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand</div>}</td>
               <td>{onHome(g) ? <span className="pill good">Space Available</span> : <span className="muted">Not shown</span>}
                 {g.homepage !== "auto" && <div className="muted" style={{ fontSize: 13.5 }}>set by hand{g.homepage_order ? ` · position ${g.homepage_order}` : ""}</div>}</td>
-              <td>{g.classroom ? <span className="pill good">Linked</span> : <span className="pill mute">Not linked</span>} <ClassroomPicker groupId={g.id} cls={`${g.level} ${g.subject}`} level={g.level} code={g.code} linked={g.classroom} />{g.meet_url ? <div className="muted" style={{ fontSize: 13.5 }}>{toolOf(g.meet_url).id === "other" ? "Lesson link set" : `${toolOf(g.meet_url).name} link set`}</div> : <div className="muted" style={{ fontSize: 13.5 }}>No lesson link</div>}</td>
+              <td className="cls-gc">{g.classroom ? <span className="pill good">Linked</span> : <span className="pill mute">Not linked</span>} <ClassroomPicker groupId={g.id} cls={`${g.level} ${g.subject}`} level={g.level} code={g.code} linked={g.classroom} /></td>
             </ExpandRow>
             <tr className="editrow"><td colSpan={8}>
               <details className="edit" id={`ed-${g.id}`}><summary className="sr-only">Edit {g.code}</summary>
@@ -122,7 +122,7 @@ export default async function Classes({ searchParams }: { searchParams: Promise<
                   <label style={{ display: "flex", gap: 8, alignItems: "center" }}><input type="hidden" name="trial_on_form" value="1" /><input type="checkbox" name="trial" value="1" defaultChecked={g.trial} /> Trial / taster class (everyone in its Classroom is trying it: never counted as a student or listed to match)</label>
                   <label className="fld">Sign-ups needed to open (waiting list)<input type="number" name="waitlist_threshold" min={1} max={99} placeholder={`${def.threshold}`} defaultValue={g.threshold_custom ? g.waitlist_threshold : ""} style={{ width: 80 }} /><small>{g.threshold_custom ? `Own number (default ${def.threshold}). Empty: use the default` : `Default (${def.threshold})`}</small></label>
                   {g.classroom_code && g.course_id && <label className="fld">Invitation link (class code {g.classroom_code})<input readOnly value={`https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64").replace(/=+$/, "")}?cjc=${g.classroom_code}`} style={{ width: 340 }} /></label>}
-                  <label className="fld">Google Classroom (or press Connect Classroom above; or paste the Classroom link)<input name="classroom" placeholder="https://classroom.google.com/c/…" defaultValue={g.course_id ? `https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64")}` : ""} style={{ width: 340 }} /></label>
+                  <label className="fld">Google Classroom (or press Connect above; or paste the Classroom link)<input name="classroom" placeholder="https://classroom.google.com/c/…" defaultValue={g.course_id ? `https://classroom.google.com/c/${Buffer.from(g.course_id).toString("base64")}` : ""} style={{ width: 340 }} /></label>
                   <button className="abtn pri" type="submit">Save</button>
                 </form></details></td></tr>
           </tbody>;
