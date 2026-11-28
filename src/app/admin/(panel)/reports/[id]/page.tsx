@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { assessTermsAction, cycleDatesAction } from "../../../actions";
 import { notFound } from "next/navigation";
-import { getCycle, getCycles, gradeBands, cycleStudents, byTeacher } from "@/lib/reports";
+import { getCycle, getCycles, gradeBands, cycleStudents, byTeacher, approvedEntries } from "@/lib/reports";
+import { requireStaff } from "@/lib/auth";
 import { createEntriesAction, deleteCycleAction, reviewEntryAction, approveAllAction, publishCycleAction, saveBandAction, remindTeachersAction, emailReportsAction } from "../../../actions";
-import { reportEmailStatus } from "@/lib/report-email";
+import { reportEmailStatus, reportEmailPreview } from "@/lib/report-email";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;   // emailing a whole round of reports
@@ -16,11 +17,14 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
   const data = await getCycle(id);
   if (!data) notFound();
   const { cycle: c, classes, review } = data;
-  const tab = ["review", "classes", "students", "key", "past"].includes(sp.tab ?? "") ? sp.tab! : "review";
+  const tab = ["review", "approved", "email", "classes", "students", "key", "past"].includes(sp.tab ?? "") ? sp.tab! : "review";
   const [bands, students, teachers, all] = await Promise.all([gradeBands(), tab === "students" ? cycleStudents(id) : Promise.resolve([]), tab === "classes" ? byTeacher(id) : Promise.resolve([]), getCycles()]);
+  // 28 Nov (Alfonso): the approved reports, and the email parents get
+  const [approved, preview] = await Promise.all([tab === "approved" ? approvedEntries(id) : Promise.resolve([]),
+    tab === "email" ? requireStaff().then((me) => reportEmailPreview(id, me.name.split(" ")[0] || "OH-SO ED")) : Promise.resolve(null)]);
   const done = c.submitted + c.approved;
   const st = c.status === "published" ? await reportEmailStatus(id) : null;
-  const TABS: [string, string][] = [["review", `To review (${c.submitted})`], ["classes", "Classes and teachers"], ["students", "Preview reports"], ["key", "Grading key"], ["past", "All reports"]];
+  const TABS: [string, string][] = [["review", `To review (${c.submitted})`], ["approved", `Approved (${c.approved})`], ["email", "Parent email"], ["classes", "Classes and teachers"], ["students", "Preview reports"], ["key", "Grading key"], ["past", "All reports"]];
   return <>
     <div className="top"><div><h1>Reports</h1><div className="sub">{c.name} · teachers submit {day(c.opens_on ?? c.comments_due)} – {day(c.comments_due)} · reports go to parents {day(c.publish_on)}</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
@@ -45,13 +49,13 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
     <div className="tiles">
       <div className="tile"><span className="k">Comments written</span><span className="v">{done}/{c.total}</span><span className="h">{c.draft} in draft · {c.todo} not started</span></div>
       <div className={`tile${c.submitted ? " alert" : ""}`}><span className="k">Waiting for review</span><span className="v">{c.submitted}</span><span className="h">{c.returned} sent back to teachers</span></div>
-      <div className="tile"><span className="k">Approved</span><span className="v">{c.approved}</span><span className="h">ready to publish</span></div>
-      <div className="tile"><span className="k">Reports to parents</span><span className="v" style={{ fontSize: 20 }}>{c.status === "published" ? "Published" : day(c.publish_on)}</span><span className="h">on the Parent dashboard{c.status === "published" ? "" : " + email"}</span></div>
+      <Link className="tile tile-link" href={`/admin/reports/${id}?tab=approved`}><span className="k">Approved</span><span className="v">{c.approved}</span><span className="h">ready to publish · see them →</span></Link>
+      <Link className="tile tile-link" href={`/admin/reports/${id}?tab=email`}><span className="k">Reports to parents</span><span className="v" style={{ fontSize: 20 }}>{c.status === "published" ? "Published" : day(c.publish_on)}</span><span className="h">on the Parent dashboard + email · preview →</span></Link>
     </div>
     <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap", marginBottom: 14 }}>
       <div className="segl" role="tablist">{TABS.map(([k, l]) => <Link key={k} href={`/admin/reports/${id}?tab=${k}`} aria-current={tab === k ? "true" : undefined}>{l}</Link>)}</div>
       <span style={{ flex: 1 }} />
-      {c.status !== "published" && <form action={createEntriesAction}><input type="hidden" name="id" value={c.id} /><button className="abtn sm" type="submit">{c.total ? "Add late joiners" : "Start: a report for every student"}</button></form>}
+      {c.status !== "published" && !c.total && <form action={createEntriesAction}><input type="hidden" name="id" value={c.id} /><button className="abtn sm" type="submit">Start: a report for every student</button></form>}
       {c.status !== "published" && !c.total && <form action={deleteCycleAction}><input type="hidden" name="id" value={c.id} /><button className="abtn sm" type="submit">Delete this report round</button></form>}
       {c.status !== "published" ? <form action={publishCycleAction}><input type="hidden" name="id" value={c.id} /><button className="abtn pri" type="submit" disabled={!c.total || c.approved < c.total} title={c.approved < c.total ? "Every report has to be approved first" : undefined}>{c.total && c.approved >= c.total ? `Publish all ${c.total}` : `Publish (${c.approved} of ${c.total} approved)`}</button></form> : <span className="pill good">Published</span>}
     </div>
@@ -81,6 +85,28 @@ export default async function Cycle({ params, searchParams }: { params: Promise<
             <input name="note" className="mini" placeholder="What to change" maxLength={300} required /><button className="abtn sm" type="submit">Send back</button></form></div></section>)}
       {review.length > 1 && <form action={approveAllAction}><input type="hidden" name="id" value={c.id} /><button className="abtn" type="submit">Approve all {review.length}</button></form>}
     </div>}
+
+    {tab === "approved" && <div className="dstack">
+      {approved.length === 0 ? <p className="empty">No reports approved yet. Approve them under To review.</p> : approved.map((r) => <section className="card" key={r.id} style={{ margin: 0 }}>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}><b>{r.student}</b><span className="muted">{r.class} · {r.teacher}</span><span style={{ flex: 1 }} />
+          <span className="muted" style={{ fontSize: 13 }}>Progress</span><Score n={r.progress} /><span className="muted" style={{ fontSize: 13 }}>Effort</span><Score n={r.effort} />
+          {r.working_grade != null && <><span className="muted" style={{ fontSize: 13 }}>Working</span><span className="pill mute">{r.working_grade}</span><span className="muted" style={{ fontSize: 13 }}>Predicted</span><span className="pill mute">{r.predicted_grade}</span></>}</div>
+        <p style={{ whiteSpace: "pre-line", margin: "10px 0" }}>{r.comment}</p>
+        <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" }}><span className="pill good">Approved{r.approved_at ? ` ${day(r.approved_at)}` : ""}</span>
+          <Link className="abtn sm" href={`/admin/reports/${id}/student/${r.student_id}`}>See {r.student.split(" ")[0]}’s whole report</Link></div></section>)}
+    </div>}
+
+    {tab === "email" && <section className="card"><h2>What parents receive</h2>
+      <p className="cs">When the reports are published, each child’s report appears on the Parent dashboard. You then email them from this page: one email per child, to the account holder (and a second parent who gets reports), with the report attached as a PDF. Below is the email for the first family{preview ? `, one of ${preview.families}` : ""}.</p>
+      {!preview ? <p className="empty">No reports approved yet, so there’s nothing to show. Approve a report first.</p> : <div className="rp-mail">
+        <div className="rp-mail-head"><span className="muted">To</span><span>{preview.to}{preview.email ? ` <${preview.email}>` : " (no email address)"}{preview.second ? `, and ${preview.second}` : ""}</span>
+          <span className="muted">Subject</span><b>{preview.subject}</b></div>
+        <div className="rp-mail-body">{preview.body}</div>
+        <div className="rp-mail-att"><a className="abtn sm" href={`/admin/reports/${id}/student/${preview.studentId}/pdf`} target="_blank" rel="noopener">📎 {preview.child}’s report (PDF): open the attachment</a>
+          <Link className="abtn sm" href={`/admin/reports/${id}/student/${preview.studentId}`}>See it as the parent sees it on the dashboard</Link></div>
+      </div>}
+      <p className="note">To see it in your own inbox, publish the reports, then press “Send me a test first” here. Only you receive the test.</p>
+    </section>}
 
     {tab === "classes" && <div className="pgrid2" style={{ marginTop: 0 }}>
       <div className="tw" style={{ marginBottom: 0 }}><table><thead><tr><th>Class</th><th>Teacher</th><th className="n">Written</th><th className="n">Approved</th><th>Progress</th><th /></tr></thead><tbody>

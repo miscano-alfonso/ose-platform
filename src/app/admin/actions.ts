@@ -475,6 +475,14 @@ export async function setTasterStatusAction(f: FormData): Promise<void> {
   revalidatePath("/admin/tasters");
 }
 
+/** 28 Nov: Admin → Tasters, the "Places per lesson" tile's − and + (0 stops new taster bookings). */
+export async function setTasterPlacesAction(f: FormData): Promise<void> {
+  await requireStaff();
+  const n = Number(str(f, "n", 3));
+  await import("@/lib/taster-journey").then((m) => m.setTasterPlaces(n));
+  revalidatePath("/admin/tasters");
+}
+
 // ---------- payroll ----------
 const pounds = (v: string) => { const n = Number(v.replace(/[£,\s]/g, "")); return Number.isFinite(n) ? Math.round(n * 100) : NaN; };
 const payBack = (err: string | null, ok: string) => redirect(`/admin/payroll?${err ? "err=" + encodeURIComponent(err) : "ok=" + encodeURIComponent(ok)}`);

@@ -1,39 +1,46 @@
 import Link from "next/link";
 import { getTasters, tasterPlaces } from "@/lib/ops";
-import { bookTasterAction, setTasterStatusAction, setEnquiryHandledAction, tasterFollowUpAction } from "../../actions";
+import { tasterJourneys, tasterFunnel, type Journey } from "@/lib/taster-journey";
+import { settleTasters } from "@/lib/automations";
+import { bookTasterAction, setTasterStatusAction, setEnquiryHandledAction, setTasterPlacesAction } from "../../actions";
 
-const STATUS: Record<string, [string, string]> = { booked: ["Booked", "info"], attended: ["Attended", "good"], no_show: ["Didn’t come", "warn"], cancelled: ["Cancelled", "mute"], booked_course: ["Booked a course", "good"] };
 const day = (d: string) => new Date(d + "T12:00:00").toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" });
 
-export default async function Tasters({ searchParams }: { searchParams: Promise<{ group?: string; ok?: string; err?: string }> }) {
+export default async function Tasters({ searchParams }: { searchParams: Promise<{ group?: string; ok?: string; err?: string; f?: string }> }) {
   const sp = await searchParams;
-  const [{ rows, requests, classes, lessons }, places] = await Promise.all([getTasters(sp.group ?? null), tasterPlaces()]);
-  const today = new Date().toISOString().slice(0, 10), week = new Date(Date.now() + 7 * 864e5).toISOString().slice(0, 10);
-  const upcoming = rows.filter((r) => r.lesson_date >= today).reverse();
-  const past = rows.filter((r) => r.lesson_date < today);
+  await settleTasters();
+  const [{ requests, classes, lessons }, places, list] = await Promise.all([getTasters(sp.group ?? null), tasterPlaces(), tasterJourneys(120)]);
   const cls = classes.find((c) => c.id === sp.group);
-  const booked = upcoming.filter((r) => r.status === "booked");
-  const termStart = new Date(Date.now() - 90 * 864e5).toISOString().slice(0, 10);
-  const fams = new Set(rows.filter((r) => r.lesson_date >= termStart).map((r) => r.parent_email.toLowerCase()));
-  const conv = new Set(rows.filter((r) => r.lesson_date >= termStart && r.status === "booked_course").map((r) => r.parent_email.toLowerCase()));
+  const fn = tasterFunnel(list, 90);
+  // 28 Nov: one row per taster with its journey; filters for what's coming, what's waiting on the family, and how it ended
+  const FILTERS: [string, string, (j: Journey) => boolean][] = [
+    ["all", "All", () => true],
+    ["coming", "Coming up", (j) => j.outcome === "upcoming"],
+    ["waiting", "Waiting for the family", (j) => j.outcome === "waiting"],
+    ["enrolled", "Enrolled", (j) => j.outcome === "enrolled"],
+    ["other", "Re-booked, waiting list or replied", (j) => ["rebooked", "waitlist", "replied"].includes(j.outcome)],
+    ["lost", "No reply or cancelled", (j) => j.outcome === "no_reply" || j.outcome === "cancelled"],
+  ];
+  const f = FILTERS.find((x) => x[0] === sp.f) ?? FILTERS[0];
+  const shown = list.filter(f[2]);
   return <>
-    <div className="top"><div><h1>Tasters</h1><div className="sub">Free taster lessons, booked by families on the website’s taster page (/taster) or by the office here. Each child joins a real lesson and has Classroom access until 3 days after it</div></div></div>
+    <div className="top"><div><h1>Tasters</h1><div className="sub">Free taster lessons, booked by families on the website’s taster page or by the office here. Everything after booking happens by itself: confirmation emails, the Classroom invitation, a reminder before the lesson, attendance from Google Meet, a follow-up, and a last reminder a week later if the family hasn’t replied.</div></div></div>
     {sp.ok && <p className="note msg">{sp.ok}</p>}{sp.err && <p className="note msg bad">{sp.err}</p>}
     <div className="tiles">
-      <div className="tile"><span className="k">Coming up</span><span className="v">{booked.length}</span><span className="h">{booked.filter((r) => r.lesson_date <= week).length} in the next 7 days</span></div>
-      <div className="tile"><span className="k">Families</span><span className="v">{fams.size}</span><span className="h">this term</span></div>
-      <div className="tile"><span className="k">Booked a course after</span><span className="v">{conv.size}</span><span className="h">of {fams.size} families</span></div>
-      <div className="tile"><span className="k">Places per lesson</span><span className="v">{places}</span><span className="h">taster places in each lesson</span></div>
+      <div className="tile"><span className="k">Came to their taster</span><span className="v">{fn.came}<small style={{ fontSize: 18, fontWeight: 500 }}> of {fn.booked}</small></span><span className="h">lessons in the last 90 days</span></div>
+      <div className="tile"><span className="k">Enrolled after</span><span className="v">{fn.enrolled}</span><span className="h">{fn.rate == null ? "no tasters yet" : `${fn.rate}% of those who came`}</span></div>
+      <div className="tile"><span className="k">Coming up</span><span className="v">{fn.upcoming}</span><span className="h">{fn.waiting ? `${fn.waiting} waiting for the family to reply` : "taster lessons booked"}</span></div>
+      <div className="tile"><span className="k">Places per lesson</span>
+        <span className="v tj-places"><form action={setTasterPlacesAction}><input type="hidden" name="n" value={places - 1} /><button className="abtn sm" type="submit" disabled={places <= 0} aria-label="One place fewer">−</button></form>
+          {places}<form action={setTasterPlacesAction}><input type="hidden" name="n" value={places + 1} /><button className="abtn sm" type="submit" disabled={places >= 10} aria-label="One place more">+</button></form></span>
+        <span className="h">{places === 0 ? "taster booking is closed" : "taster places in each lesson"}</span></div>
     </div>
 
-    <section className="card"><h2>All tasters</h2><p className="cs">Parents can book several tasters at once (one per subject). Up to {places} taster places per lesson.</p>
-      <div className="tw" style={{ border: 0, marginBottom: 0 }}><table><thead><tr><th>Lesson</th><th>Child</th><th>Class</th><th>Status</th><th /></tr></thead><tbody>
-        <tr><td colSpan={5} style={{ background: "var(--soft)", fontWeight: 600 }}>Coming up · {upcoming.length}</td></tr>
-        {upcoming.length === 0 ? <tr><td colSpan={5} className="muted">None booked.</td></tr> : upcoming.map((r) => <Row key={r.id} r={r} today={today} />)}
-        <tr><td colSpan={5} style={{ background: "var(--soft)", fontWeight: 600 }}>Earlier</td></tr>
-        {past.length === 0 ? <tr><td colSpan={5} className="muted">Nothing yet.</td></tr> : past.map((r) => <Row key={r.id} r={r} today={today} />)}
-      </tbody></table></div>
-      <p className="note">The child gets the Google Meet invitation for that one lesson by email; the teacher sees the taster on their day. A taster who joins the Meet with the Google account given when booking is marked attended automatically. After the lesson, the follow-up email invites the family to book.</p></section>
+    <section className="card"><h2>Taster journeys</h2>
+      <p className="cs">Each taster from booking to enrolment. The emails are under <Link href="/admin/automations">Automations</Link> (the “Taster” ones); a grey step is still to come.</p>
+      <div className="segl" role="tablist" style={{ marginBottom: 14 }}>{FILTERS.map(([k, l, fx]) => <Link key={k} href={`/admin/tasters${k === "all" ? "" : `?f=${k}`}`} aria-current={f[0] === k ? "true" : undefined}>{l} ({list.filter(fx).length})</Link>)}</div>
+      {shown.length === 0 ? <p className="empty">None.</p> : <ol className="tj-list">{shown.map((j) => <JourneyRow key={j.id} j={j} />)}</ol>}
+    </section>
 
     {requests.length > 0 && <section className="card"><h2>Taster requests from the website</h2>
       {requests.map((r) => <div className="li" key={r.id}><div className="t"><b>{r.name} <a className="muted" href={`mailto:${r.email}`} style={{ fontWeight: 400 }}>{r.email}</a></b>
@@ -41,7 +48,7 @@ export default async function Tasters({ searchParams }: { searchParams: Promise<
         <form action={setEnquiryHandledAction}><input type="hidden" name="id" value={r.id} /><input type="hidden" name="handled" value="1" /><button className="abtn sm" type="submit">Done</button></form></div>)}</section>}
 
     <section className="card"><h2>Book a taster</h2>
-      <p className="cs">A taster is a free place in a real upcoming lesson. Each lesson takes up to 2 tasters, and a child can try each class once.</p>
+      <p className="cs">A taster is a free place in a real upcoming lesson. Each lesson takes up to {places} taster{places === 1 ? "" : "s"}, and a child can try each class once.</p>
       <form className="eform" style={{ marginBottom: 12 }}>
         <label className="fld">Class<select name="group" defaultValue={sp.group ?? ""}><option value="" disabled>Choose a class</option>{classes.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.code})</option>)}</select></label>
         <button className="abtn" type="submit">Show dates</button>
@@ -63,21 +70,30 @@ export default async function Tasters({ searchParams }: { searchParams: Promise<
   </>;
 }
 
-function Row({ r, today }: { r: Awaited<ReturnType<typeof getTasters>>["rows"][number]; today: string }) {
-  return <tr>
-    <td><b>{day(r.lesson_date)}</b> {r.starts_at}<div className="muted" style={{ fontSize: 14.5 }}><Link href={`/admin/register/${r.lesson_event_id}?back=%2Fadmin%2Ftasters`}>{r.code}</Link></div></td>
-    <td><b>{r.child_name}</b>{r.together > 1 && <> <span className="pill mute">{r.together} tasters booked together</span></>}
-      <div className="muted" style={{ fontSize: 14.5 }}>{r.parent_name} · <a href={`mailto:${r.parent_email}`}>{r.parent_email}</a></div>{r.message && <div className="muted" style={{ fontSize: 14.5 }}>“{r.message}”</div>}</td>
-    <td>{r.level} {r.subject}<div className="muted" style={{ fontSize: 14.5 }}>{r.teacher ?? "No teacher"}</div></td>
-    <td><span className={`pill ${STATUS[r.status][1]}`}>{STATUS[r.status][0]}</span>{r.source === "website" && <> <span className="pill mute">Website</span></>}
-      <div className="muted" style={{ fontSize: 13.5, marginTop: 4 }}>{r.classroom === "invited" ? `In Classroom until ${day(new Date(Date.parse(r.lesson_date + "T12:00:00Z") + 3 * 864e5).toISOString().slice(0, 10))}` : r.classroom === "removed" ? "Taken out of Classroom" : r.status === "booked" ? "Classroom invitation not sent yet" : ""}</div></td>
-    <td><div className="acts" style={{ whiteSpace: "nowrap" }}>
-      {r.status === "booked" && r.lesson_date < today && <><Btn id={r.id} status="attended" label="Attended" /><Btn id={r.id} status="no_show" label="Didn’t come" /></>}
-      {r.status === "booked" && r.lesson_date >= today && <Btn id={r.id} status="cancelled" label="Cancel" />}
-      {r.status === "attended" && <form action={tasterFollowUpAction}><input type="hidden" name="id" value={r.id} /><button className="abtn sm" type="submit">{r.followed_up_at ? "Followed up · send again" : "Send follow-up"}</button></form>}
-      {(r.status === "attended" || r.status === "no_show") && <Btn id={r.id} status="booked_course" label="Booked a course" />}
-    </div></td></tr>;
+const OUT: Record<string, string> = { enrolled: "good", waitlist: "good", rebooked: "info", replied: "info", waiting: "warn", no_reply: "bad", upcoming: "info", cancelled: "mute" };
+const STATE_WORD: Record<string, string> = { done: "Done", wait: "To come", held: "Held by test mode", bad: "Problem", off: "Switched off", skip: "Not needed", now: "On now" };
+
+function JourneyRow({ j }: { j: Journey }) {
+  const past = Date.parse(j.ends) < Date.now();
+  return <li className="tj">
+    <div className="tj-who">
+      <b>{j.child}</b> <span className="muted">· {j.cls}</span>
+      <div className="muted">{when(j.starts)} · <Link href={`/admin/register/${j.lesson_event_id}?back=%2Fadmin%2Ftasters`}>{j.code}</Link>{j.teacher ? ` · ${j.teacher}` : ""}</div>
+      <div className="muted">{j.parent} · <a href={`mailto:${j.parent_email}`}>{j.parent_email}</a></div>
+    </div>
+    <ol className="tj-steps" aria-label={`${j.child}’s taster journey`}>{j.steps.map((s) => <li key={s.key} className={`tj-s st-${s.state}`} title={`${s.label}: ${STATE_WORD[s.state]}${s.note ? ` · ${s.note}` : ""}`}>
+      <i aria-hidden="true" /><b>{s.label}</b><span>{s.note || STATE_WORD[s.state]}</span></li>)}</ol>
+    <div className="tj-end"><span className={`pill ${OUT[j.outcome]}`}>{j.outcome_text}</span>
+      {j.outcome !== "cancelled" && <details className="tj-fix"><summary>Change</summary><div>
+        {past && j.status !== "attended" && <Btn id={j.id} status="attended" label="They came" />}
+        {past && j.status !== "no_show" && <Btn id={j.id} status="no_show" label="They didn’t come" />}
+        {past && j.status !== "booked_course" && <Btn id={j.id} status="booked_course" label="They booked a course" />}
+        {!past && <Btn id={j.id} status="cancelled" label="Cancel this taster" />}
+      </div></details>}</div>
+  </li>;
 }
+
+const when = (iso: string) => new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit", timeZone: "Europe/London" }).replace(",", "");
 
 function Btn({ id, status, label }: { id: string; status: string; label: string }) {
   return <form action={setTasterStatusAction}><input type="hidden" name="id" value={id} /><input type="hidden" name="status" value={status} /><button className="abtn sm" type="submit">{label}</button></form>;

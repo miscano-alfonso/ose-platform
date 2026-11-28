@@ -49,6 +49,11 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
   const [{ t, attention }, m, flags, box, threads, officeAll] = await Promise.all([getDashboard(), getDashboardMore(LOW), openFlags().catch(() => []), inboxStatus().catch(() => null), listThreads(null, "open").catch(() => []), officeThreads("replies").catch(() => [])]);
   const waitCut = Date.now() - 2 * 864e5, waiting = threads.filter((x) => x.last_sender === "parent" && Date.parse(x.last_message_at) < waitCut).length;
   const liveStamp = await messagesStamp();   // 26 Nov: the Messages box updates by itself
+  // 28 Nov: the Tasters tile shows how tasters are going (came, enrolled) and where the latest ones are in their journey
+  const tj = await import("@/lib/taster-journey").then((x) => x.tasterJourneys(90)).catch(() => []);
+  const tfn = await import("@/lib/taster-journey").then((x) => x.tasterFunnel(tj, 90));
+  const nowMs = Date.now();
+  const tLatest = [...tj.filter((j) => j.outcome === "upcoming").sort((a, b) => Date.parse(a.starts) - Date.parse(b.starts)), ...tj.filter((j) => j.outcome !== "upcoming" && j.outcome !== "cancelled" && Date.parse(j.starts) < nowMs)].slice(0, 4);
   const [linkOpts, mine, so, la] = await Promise.all([linkOptions((h) => !notInPlan(plan, h)), myLinks(me.id), studentOverview({ termOnly: true }).catch(() => null),   // 26 Nov: this term's work only
     import("@/lib/lesson-access").then((m) => m.accessAlerts(7)).catch(() => ({ strangers: 0, open: 0 }))]);
   const sAgo = (iso: string) => { const n = Math.round((Date.now() - Date.parse(iso)) / 60000); return n < 1 ? "just now" : n < 60 ? `${n} min ago` : n < 1440 ? `${Math.round(n / 60)} h ago` : `${Math.round(n / 1440)} days ago`; };
@@ -159,7 +164,13 @@ export async function adminModules(me: Staff, plan: PlanId | null): Promise<Boar
         <b>{money(x.billed).replace(/\.\d+$/, "")}</b><span>T{x.number} · {dayMonth(x.bills_on)}</span></div>)}</div>
       <div className="legend"><span><i style={{ background: "var(--bar)" }} />Collected</span><span><i style={{ background: "var(--bad)" }} />Failed</span><span><i style={{ background: "var(--track)" }} />Still to bill</span></div>
     </section> },
-    { id: "tasters", title: "Taster requests", node: <Link href="/admin/tasters" className="dx-pop"><span>{tasters ? `${tasters} new enquir${tasters === 1 ? "y" : "ies"}` : "Tasters"}</span><b>{tasters ? "Review requests →" : "See taster bookings →"}</b></Link> },
+    { id: "tasters", title: "Tasters", node: <Link href="/admin/tasters" className="dx-pop dx-taster">
+      <span>Tasters · last 90 days{tasters ? ` · ${tasters} new request${tasters === 1 ? "" : "s"}` : ""}</span>
+      <div className="dx-tf"><div><b>{tfn.came}/{tfn.booked}</b><span>came</span></div><div><b>{tfn.enrolled}</b><span>enrolled{tfn.rate != null ? ` (${tfn.rate}%)` : ""}</span></div><div><b>{tfn.upcoming}</b><span>coming up</span></div></div>
+      {tLatest.length > 0 && <ul>{tLatest.map((j) => <li key={j.id}><span><b>{j.child.split(" ")[0]}</b> · {j.cls}</span>
+        <span className="dots" aria-label={j.stage}>{j.steps.map((st) => <i key={st.key} className={st.state === "done" || st.state === "now" ? "done" : st.state === "bad" ? "bad" : undefined} />)}</span>
+        <small>{j.stage}</small></li>)}</ul>}
+      <b>All tasters →</b></Link> },
     { id: "bookings", title: "Latest bookings", node: <section className="dx-card">
       <header><h2>Latest bookings</h2><Link className="dx-more" href="/admin/families">Families →</Link></header>
       {m.recent.length === 0 ? <p className="empty">No bookings yet.</p> : <MoreList className="dx-people" limit={4}>{m.recent.map((r, i) =>

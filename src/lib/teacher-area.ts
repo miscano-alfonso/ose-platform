@@ -30,6 +30,7 @@ export type MyDay = {
 
 export async function myDay(userId: string): Promise<MyDay> {
   await ensureLessonDates().catch(() => 0);
+  await import("./reports").then((r) => r.syncReportEntries()).catch(() => null);   // 28 Nov: a child who joined a class since gets a report to write
   return withSchool(async (q) => {
     const term = (await q<{ id: string; name: string; pay_date: string }>(`select id, name, term_pay_date(id)::text as pay_date from terms where id = ${TERM_NOW.replace("$1", "")}`))[0] ?? null;
     const [{ classes }] = await q<{ classes: number }>(`select count(*)::int as classes from course_groups g where g.teacher_id = ${ME} and g.academic_year_id = ${YEAR_NOW} and g.status <> 'hidden'`, [userId]);

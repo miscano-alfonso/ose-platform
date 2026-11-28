@@ -4,6 +4,7 @@ import { withSchool } from "./db";
 import { sendOne, cancelScheduled, emailReady, type Recipient } from "./email";
 import { joinPath, videoSettings } from "./checkins";
 import { linkWords } from "./email-layout";
+import { classroomUrl } from "./week-timetable";
 
 // Admin → Automations. Each automation is a trigger with an email; the school can switch it off and change the wording and
 // timing. A runner (after admin pages load, and from the daily job) finds what's due and sends it once, or schedules it with
@@ -19,6 +20,11 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "child", "class", "date", "time", "teacher", "school"],
     subject: "Thank you for booking {{child}}’s taster lesson",
     body: "Dear {{parent}},\n\nThank you for booking a free taster lesson for {{child}}: {{class}} on {{date}} at {{time}} with {{teacher}}.\n\n{{child}} will get the Google Meet invitation for the lesson by email, and we’ll send the joining link again shortly before it starts.\n\nWe look forward to meeting {{child}}.\n\n{{school}}" },
+  // 28 Nov: the child's own email when a taster is booked: the lesson link and the class's Google Classroom
+  { key: "taster_student_welcome", name: "Taster booked: the child’s lesson and Classroom links", when: "As soon as a taster lesson is booked, to the child’s Google email.", timing: null, to_parent: false, to_student: true,
+    fields: ["child", "class", "date", "time", "teacher", "meet_link", "classroom_link", "school"],
+    subject: "Your taster lesson: {{class}} on {{date}}",
+    body: "Hi {{child}},\n\nYou’re booked in for a free taster lesson: **{{class}}** on **{{date}} at {{time}}** with {{teacher}}.\n\n👉 [Join the lesson]({{meet_link}})\n\nYou’ll also get an invitation to the class’s Google Classroom. Please open it and press **Join**, so you can see the class’s work: [Open Google Classroom]({{classroom_link}})\n\nPlease use this Google account (the one this email came to) for both. We’ll send you the lesson link again just before it starts.\n\nSee you there!\n{{school}}" },
   { key: "taster_link", name: "Taster: joining link before the lesson", when: "Before the taster lesson starts.", timing: { label: "minutes before the lesson", unit: "minutes", default: 30 }, to_parent: true, to_student: true,
     fields: ["parent", "child", "class", "date", "time", "meet_link", "school"],
     subject: "{{child}}’s taster lesson starts at {{time}}",
@@ -41,6 +47,10 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "child", "class", "book_link", "school"],
     subject: "How did {{child}}’s taster go?",
     body: "Dear {{parent}},\n\nThank you for bringing {{child}} to the {{class}} taster lesson. We hope they enjoyed it.\n\nIf you’d like {{child}} to join the class, you can book a place here: [Book a place]({{book_link}})\n\nPlaces are limited, so do get in touch if you have any questions.\n\n{{school}}" },
+  { key: "taster_follow_up_final", name: "After a taster: last reminder to book", when: "Once, if the family hasn’t booked a course, joined a waiting list, booked another taster or replied after “After a taster: invite to book”.", timing: { label: "days after the first follow-up", unit: "days", default: 7 }, to_parent: true, to_student: false,
+    fields: ["parent", "child", "class", "date", "book_link", "school"],
+    subject: "A place in {{class}} for {{child}}?",
+    body: "Dear {{parent}},\n\nWe wanted to check in once more after {{child}}’s {{class}} taster lesson on {{date}}.\n\nIf {{child}} would like to join the class, you can book a place here: [Book a place]({{book_link}})\n\nIf you have any questions, or would like to talk it through, just reply to this email.\n\nKind regards,\n{{school}}" },
   { key: "trial_waitlist_invite", name: "After a trial taster: join the waiting list", when: "After a taster lesson in a trial class (a new course that isn’t running yet), instead of “After a taster: invite to book”. The link adds the child to the class’s waiting list in one click.", timing: { label: "hours after the lesson ends", unit: "hours", default: 2 }, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "needed", "join_link", "school"],
     subject: "Would {{child}} like to join {{class}}?",
@@ -57,6 +67,10 @@ export const DEFS: AutoDef[] = [
     fields: ["parent", "child", "class", "date", "time", "taster_link", "school"],
     subject: "We missed {{child}} at the taster lesson",
     body: "Dear {{parent}},\n\nWe didn’t see {{child}} at the {{class}} taster lesson on {{date}}. We hope everything is all right.\n\nIf {{child}} would still like to try a lesson, you can book another date here: [Book another taster lesson]({{taster_link}})\n\nIf something went wrong joining, just reply to this email and we’ll help.\n\nKind regards,\n{{school}}" },
+  { key: "taster_missed_final", name: "Taster missed: last reminder", when: "Once, if the family hasn’t booked another taster, booked a course or replied after “Taster missed: book another date”.", timing: { label: "days after the first email", unit: "days", default: 7 }, to_parent: true, to_student: false,
+    fields: ["parent", "child", "class", "date", "taster_link", "school"],
+    subject: "Would {{child}} still like to try {{class}}?",
+    body: "Dear {{parent}},\n\nWe’re sorry we missed {{child}} at the {{class}} taster lesson on {{date}}.\n\nThe offer of a free taster still stands: you can choose another date here: [Book another taster lesson]({{taster_link}})\n\nIf something got in the way, or you’d rather talk first, just reply to this email.\n\nKind regards,\n{{school}}" },
   { key: "waitlist_open", name: "Waiting list: places are open", when: "When a course reaches its waiting-list target and the families on the list can book first.", timing: null, to_parent: true, to_student: false,
     fields: ["parent", "child", "class", "book_link", "hours", "school"],
     subject: "{{class}} is opening: book {{child}}’s place first",
@@ -186,8 +200,15 @@ async function deliverDigest(q: Q, key: string, cfg: Cfg, to: Recipient, lines: 
   if (!res.ok && !res.held) await q(`delete from automation_sends where id = any($1::bigint[])`, [got.slice(1).map((g) => g.id)]);
 }
 
+/** Tasters whose lesson ended over 90 minutes ago: attended or didn't come, from Google Meet's log. */
+export async function settleTasters(): Promise<void> {
+  await withSchool((q) => q(`select settle_tasters()`)).catch((e) => console.error("settle tasters", e));
+}
+
 /** Find everything due and send it (or book it with Brevo for the right minute). Safe to run as often as you like. */
 export async function runAutomations(limit = 150): Promise<{ sent: number }> {
+  await import("./reports").then((r) => r.syncReportEntries()).catch(() => null);   // 28 Nov: report rounds follow who joins and leaves classes
+  await settleTasters();   // 28 Nov: whether each taster came is worked out even when email isn't set up (the journey on Admin → Tasters)
   if (!(await emailReady())) return { sent: 0 };
   await holdBooked().catch((e) => console.error("test mode", e));   // test mode: take back reminders booked for families before it was switched on
   const budget = { n: limit };
@@ -239,21 +260,33 @@ export async function runAutomations(limit = 150): Promise<{ sent: number }> {
       }
     }
     // tasters: thank-you now, joining link before the lesson, then (from Meet attendance) an invitation to book, or another date if they missed it
-    await q(`select settle_tasters()`).catch((e) => console.error("settle tasters", e));
-    const tasters = await q<{ id: string; status: string; starts: string; ends: string; class: string; teacher: string | null; meet: string | null; child: string; cemail: string; parent: string; pemail: string; created: string; trial: boolean; token: string; needed: number; was_trial: boolean }>(`
+    const tasters = await q<{ id: string; status: string; starts: string; ends: string; class: string; teacher: string | null; meet: string | null; child: string; cemail: string; parent: string; pemail: string; created: string; trial: boolean; token: string; needed: number; was_trial: boolean; course: string | null; answered: boolean }>(`
       select b.id, b.status::text, ((e.lesson_date + s.starts_at) at time zone sc.timezone)::text as starts, ((e.lesson_date + s.ends_at) at time zone sc.timezone)::text as ends,
         l.name || ' ' || sj.name as class, u.name as teacher, g.meet_url as meet, r.child_name as child, r.child_email::text as cemail, r.parent_first_name as parent, r.parent_email::text as pemail, b.created_at::text as created,
         g.trial, b.join_token::text as token, g.waitlist_threshold as needed,
-        (g.trial_ended_at is not null and e.lesson_date <= (g.trial_ended_at at time zone sc.timezone)::date) as was_trial
-      from taster_bookings b join taster_requests r on r.id = b.request_id join lesson_events e on e.id = b.lesson_event_id join lesson_slots s on s.id = e.slot_id
+        (g.trial_ended_at is not null and e.lesson_date <= (g.trial_ended_at at time zone sc.timezone)::date) as was_trial, g.google_course_id as course,
+        (tj.enrolled_at is not null or tj.rebooked_at is not null or tj.waitlist_at is not null or tj.replied_at is not null) as answered
+      from taster_bookings b join taster_journey tj on tj.id = b.id join taster_requests r on r.id = b.request_id join lesson_events e on e.id = b.lesson_event_id join lesson_slots s on s.id = e.slot_id
       join course_groups g on g.id = e.group_id join levels l on l.id = g.level_id join subjects sj on sj.id = g.subject_id join schools sc on sc.id = b.school_id
       left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id
       where e.lesson_date between current_date - 14 and current_date + 60 and b.status <> 'cancelled'`);
+    // 28 Nov: when each family got the first email after the lesson (for the last reminder a week later)
+    const firstSent = new Map((tasters.length ? await q<{ k: string; at: string }>(`select key || ':' || ref as k, min(coalesce(scheduled_for, created_at))::text as at from automation_sends
+      where key in ('taster_follow_up', 'taster_missed') and ref = any($1::text[]) and status in ('sent', 'scheduled', 'held') group by key, ref`, [tasters.map((t) => t.id)]) : []).map((r) => [r.k, Date.parse(r.at)]));
     for (const t of tasters) {
       const first = t.child.split(" ")[0];
       const vars = { child: first, parent: t.parent, class: t.class, date: fmtDate(t.starts), time: fmtTime(t.starts), teacher: t.teacher ?? "one of our teachers",
         meet_link: t.meet ?? "the Google Meet invitation sent to " + t.cemail, book_link: book, school };
       const who = (cf: Cfg) => [...(cf.to_parent ? [{ name: t.parent, email: t.pemail }] : []), ...(cf.to_student ? [{ name: first, email: t.cemail }] : [])];
+      c = cfg("taster_student_welcome");
+      if (c && t.status === "booked" && Date.parse(t.starts) > now && Date.parse(t.created) > now - 7 * 864e5)
+        await deliver(q, "taster_student_welcome", c, { ref: t.id, to: [{ name: first, email: t.cemail }], vars: { ...vars, classroom_link: t.course ? classroomUrl(t.course) : "https://classroom.google.com" } }, budget);
+      // the last reminder: once, a set number of days after the first email, only if the family hasn't done anything since
+      const last = (key: string, firstKey: string, extra: Record<string, string> = {}) => { const cf = cfg(key), sent = firstSent.get(`${firstKey}:${t.id}`);
+        if (!cf || !sent || t.answered || sent + (cf.minutes ?? 7) * 864e5 > now) return null;
+        return deliver(q, key, cf, { ref: t.id, to: who(cf), vars: { ...vars, ...extra } }, budget); };
+      if (t.status === "attended" && !t.trial && !t.was_trial) await last("taster_follow_up_final", "taster_follow_up");
+      if (t.status === "no_show") await last("taster_missed_final", "taster_missed", { taster_link: tasterLink });
       c = cfg("taster_booked");
       if (c && t.status === "booked" && Date.parse(t.starts) > now && Date.parse(t.created) > now - 7 * 864e5) await deliver(q, "taster_booked", c, { ref: t.id, to: who(c), vars }, budget);
       c = cfg("taster_link");

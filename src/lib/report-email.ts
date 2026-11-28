@@ -31,6 +31,18 @@ export async function reportEmail(cycleId: string, studentId: string, sender: st
   };
 }
 
+/** 28 Nov: Reports → Parent email: the email one family will get, without building the PDF (the page links to it). */
+export async function reportEmailPreview(cycleId: string, sender: string): Promise<{ to: string; email: string | null; second: string | null; child: string; studentId: string; subject: string; body: string; families: number } | null> {
+  const fam = await families(cycleId);
+  if (!fam.length) return null;
+  const f = fam[0], r = await studentReport(cycleId, f.student_id);
+  if (!r) return null;
+  const to = `${f.parent} ${f.parent_last}`, child = r.student.split(" ")[0];
+  return { to, email: f.email, second: f.g_email ? `${f.g_first ?? ""} ${f.g_last ?? ""}`.trim() : null, child, studentId: f.student_id, subject: `${r.school} ${r.cycle}`,
+    body: [`Dear ${to},`, `Please find attached ${child}’s ${r.school} ${r.cycle}.`, `If you have any questions about the report, please do let me know.`, `Best wishes,\n${sender}`].join("\n\n"),
+    families: new Set(fam.map((x) => x.email ?? x.student_id)).size };
+}
+
 export type ReportEmailStatus = { children: number; families: number; sent: number; failed: number; noEmail: number; lastAt: string | null };
 export async function reportEmailStatus(cycleId: string): Promise<ReportEmailStatus> {
   const fam = await families(cycleId);

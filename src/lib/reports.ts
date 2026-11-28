@@ -36,7 +36,7 @@ export async function createCycle(actorId: string, d: { name: string; termId: st
 
 /** One entry for every student in every class (taught classes only); safe to run again for late joiners (and it clears unwritten
  *  reports for children who have left a class). */
-export async function createEntries(actorId: string, cycleId: string): Promise<{ added: number; removed: number }> {
+export async function createEntries(actorId: string | null, cycleId: string): Promise<{ added: number; removed: number }> {
   return withSchool(async (q) => {
     const r = await q(`insert into report_entries (school_id, cycle_id, student_id, group_id, teacher_id)
       select current_school(), c.id, e.student_id, g.id, g.teacher_id from report_cycles c
@@ -51,13 +51,23 @@ export async function createEntries(actorId: string, cycleId: string): Promise<{
     const gone = await q(`delete from report_entries r using report_cycles c where r.cycle_id = c.id and c.id = $1 and c.status <> 'published'
         and r.status = 'todo' and r.comment is null and r.effort is null
         and not exists (select 1 from enrolments e where e.student_id = r.student_id and e.group_id = r.group_id and e.status = 'active' and not e.is_taster) returning r.id`, [cycleId]);
-    await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'entries', 'report_cycle', $2, $3)`,
-      [actorId, cycleId, JSON.stringify({ added: r.length, removed: gone.length })]);
+    if (actorId || r.length || gone.length) await q(`insert into audit_log (school_id, actor_user_id, action, entity, entity_id, detail) values (current_school(), $1, 'entries', 'report_cycle', $2, $3)`,
+      [actorId, cycleId, JSON.stringify({ added: r.length, removed: gone.length, auto: !actorId })]);
     return { added: r.length, removed: gone.length };
   });
 }
 
+/** 28 Nov (Alfonso): report rounds keep up with the classes by themselves. For every round that has started and isn't
+ *  published: a child who has joined a class since gets a report for their teacher to write, and a child who has left
+ *  loses theirs (if nothing has been written yet). Runs when the Reports page or a teacher's dashboard opens, and from
+ *  the regular job. */
+export async function syncReportEntries(): Promise<void> {
+  const open = await withSchool((q) => q<{ id: string }>(`select c.id from report_cycles c where c.status <> 'published' and exists (select 1 from report_entries e where e.cycle_id = c.id)`)).catch(() => []);
+  for (const c of open) await createEntries(null, c.id).catch((e) => console.error("report entries", e));
+}
+
 export async function getCycle(cycleId: string) {
+  await syncReportEntries();
   return withSchool(async (q) => {
     const cycle = (await q<Cycle>(`select c.id, c.name, null as term, c.marks_from::text, c.marks_to::text, (${DEADLINE_SQL})::text as comments_due, c.publish_on::text, c.assess_prev, c.assess_this, (select tn.number from terms tn where tn.id = c.term_id) as term_no, c.status::text, (${OPENS_SQL})::text as opens_on, c.submit_opens::text as submit_opens, c.comments_due::text as due_set, ${counts}
       from report_cycles c left join report_entries e on e.cycle_id = c.id where c.id = $1 group by c.id`, [cycleId]))[0];
@@ -263,4 +273,13 @@ export async function setAssessTerms(actorId: string, cycleId: string, prev: boo
     return u.length;
   });
   return r ? null : "That report round can’t be changed now.";
+}
+
+/** 28 Nov: Reports → Approved: every approved report in a round (what parents will see), by class. */
+export async function approvedEntries(cycleId: string): Promise<(ReviewEntry & { student_id: string; approved_at: string | null })[]> {
+  return withSchool((q) => q(`select e.id, e.student_id, s.first_name || ' ' || s.last_name as student, rl.level || ' ' || rl.subject as class, u.name as teacher,
+      rl.progress, rl.avg_pct::text, e.effort, e.working_grade, e.predicted_grade, e.comment, e.status::text, e.review_note, e.approved_at::text
+    from report_entries e join report_lines rl on rl.id = e.id join students s on s.id = e.student_id
+    left join teachers t on t.id = e.teacher_id left join users u on u.id = t.user_id
+    where e.cycle_id = $1 and e.status = 'approved' order by rl.level, rl.subject, s.first_name`, [cycleId]));
 }
